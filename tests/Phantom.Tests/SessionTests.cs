@@ -103,6 +103,54 @@ public class SessionTests
     }
 
     [Fact]
+    public void Osc52WritesReachTheClipboardWriter()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var copied = new List<string>();
+        session.ClipboardWriter = copied.Add;
+
+        session.WriteToScreen("\x1b]52;c;aMOpbGxv\x07"); // "héllo"
+        session.WriteToScreen("\x1b]52;p;aWdub3JlZA==\x07"); // primary selection: no Windows counterpart
+        Assert.Equal(["héllo"], copied);
+
+        session.ClipboardWriter = null; // denied: nothing arrives, nothing breaks
+        session.WriteToScreen("\x1b]52;c;aGk=\x07");
+        Assert.Single(copied);
+    }
+
+    [Fact]
+    public void Osc52ReadsAreAnsweredOnlyWhenAllowed()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var replies = new List<byte[]>();
+        session.PtyReplyObserver = replies.Add;
+
+        session.WriteToScreen("\x1b]52;c;?\x07");
+        Assert.DoesNotContain("aGk=", Joined(replies)); // denied by default
+
+        session.ClipboardReader = () => "hi";
+        session.WriteToScreen("\x1b]52;c;?\x07");
+        Assert.Contains("\x1b]52;c;aGk=", Joined(replies));
+    }
+
+    [Fact]
+    public void FindsHyperlinksAndPlainUrls()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        session.WriteToScreen("ab \x1b]8;;https://example.com/x\x1b\\link text\x1b]8;;\x1b\\ cd\r\n");
+        session.WriteToScreen("see (https://ghostty.org/docs) here");
+
+        // "link text" occupies columns 3..11.
+        Assert.Equal(new LinkMatch("https://example.com/x", 0, 3, 11, Explicit: true), session.LinkAt(7, 0));
+        Assert.Null(session.LinkAt(1, 0));
+        Assert.Null(session.LinkAt(13, 0));
+
+        // "https://ghostty.org/docs" occupies columns 5..28; the parentheses stay out.
+        Assert.Equal(new LinkMatch("https://ghostty.org/docs", 1, 5, 28, Explicit: false), session.LinkAt(10, 1));
+        Assert.Null(session.LinkAt(29, 1));
+    }
+
+    [Fact]
     public void ScrollbarReportsScrollbackAndScrollsToRow()
     {
         using var session = new TerminalSession(20, 10, TerminalTheme.Default);

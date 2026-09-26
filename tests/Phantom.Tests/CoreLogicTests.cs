@@ -64,6 +64,16 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void ClipboardWritesAllowedReadsDeniedByDefault()
+    {
+        Assert.True(Load("").ClipboardWrite);
+        Assert.False(Load("").ClipboardRead);
+        Assert.False(Load("clipboard-write = deny").ClipboardWrite);
+        Assert.True(Load("clipboard-read = allow").ClipboardRead);
+        Assert.False(Load("clipboard-read = ask").ClipboardRead); // Ghostty's "ask" isn't supported (yet)
+    }
+
+    [Fact]
     public void FontSizeIsInPoints()
     {
         var config = Load("font-size = 12");

@@ -34,6 +34,15 @@ public sealed record Config
     /// </summary>
     public bool TextPointer { get; init; }
 
+    /// <summary>Programs may set the clipboard with OSC 52. Config: <c>clipboard-write = allow | deny</c>.</summary>
+    public bool ClipboardWrite { get; init; } = true;
+
+    /// <summary>
+    /// Programs may read the clipboard with OSC 52 (off by default: anything running in the
+    /// terminal, e.g. over ssh, could read it). Config: <c>clipboard-read = allow | deny</c>.
+    /// </summary>
+    public bool ClipboardRead { get; init; }
+
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
@@ -70,6 +79,8 @@ public sealed record Config
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
             "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
+            "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
+            "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
                 this with { QuickTerminal = QuickTerminal with { Position = position } },
             "quick-terminal-screen" when Enum.TryParse<QuickTerminalScreen>(value, true, out var screen) =>

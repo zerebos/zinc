@@ -24,6 +24,11 @@ public sealed partial class TerminalControl
         var vk = (int)e.Key;
         if (Keyboard.IsModifierKey(vk))
         {
+            if (IsCtrlKey(e.Key))
+            {
+                UpdateHoverLink(ctrl: true);
+            }
+
             return;
         }
 
@@ -76,6 +81,11 @@ public sealed partial class TerminalControl
         // ends here; later chars without a KeyDown (on-screen keyboards, voice
         // typing, automation) must not be swallowed.
         _charHandledByKeyDown = false;
+
+        if (IsCtrlKey(e.Key))
+        {
+            UpdateHoverLink(ctrl: false);
+        }
 
         var session = _session;
         if (session == null || Keyboard.IsModifierKey((int)e.Key))

@@ -41,6 +41,18 @@ public sealed unsafe class TerminalSession : IDisposable
     /// <summary>The child process exited. Raised on a background thread.</summary>
     public event Action<uint>? ProcessExited;
 
+    /// <summary>
+    /// Receives text a program copies with OSC 52. Called on the reader thread while the
+    /// terminal is locked, so hand the text off rather than touch the terminal. Null denies.
+    /// </summary>
+    public Action<string>? ClipboardWriter { get; set; }
+
+    /// <summary>
+    /// Answers OSC 52 clipboard reads with the clipboard's text (null when it can't be read).
+    /// Called synchronously on the reader thread while the terminal is locked. Null denies.
+    /// </summary>
+    public Func<string?>? ClipboardReader { get; set; }
+
     public TerminalSession(ushort cols, ushort rows, TerminalTheme theme)
     {
         Check(Native.TerminalNew(0, out _terminal, cols, rows));
@@ -58,6 +70,11 @@ public sealed unsafe class TerminalSession : IDisposable
         Native.TerminalSet(_terminal, TerminalOption.Size,
             (delegate* unmanaged[Cdecl]<nint, nint, GhosttySizeReportSize*, byte>)&OnSize);
         _size = new GhosttySizeReportSize { Columns = cols, Rows = rows };
+        // OSC 52 (and OSC 1337 Copy / OSC 5522) clipboard access; see ClipboardWriter/Reader.
+        Native.TerminalSet(_terminal, TerminalOption.ClipboardWrite,
+            (delegate* unmanaged[Cdecl]<nint, nint, GhosttyClipboardWrite*, void>)&OnClipboardWrite);
+        Native.TerminalSet(_terminal, TerminalOption.ClipboardRead,
+            (delegate* unmanaged[Cdecl]<nint, nint, GhosttyClipboardRead*, void>)&OnClipboardRead);
 
         var fg = theme.Foreground;
         var bg = theme.Background;
@@ -490,6 +507,115 @@ public sealed unsafe class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// The link at viewport cell (<paramref name="col"/>, <paramref name="row"/>): an OSC 8
+    /// hyperlink, else a URL in that row's text. Links are found within one row.
+    /// </summary>
+    public LinkMatch? LinkAt(ushort col, uint row)
+    {
+        lock (Lock)
+        {
+            if (_disposed)
+            {
+                return null;
+            }
+
+            ushort cols;
+            Native.TerminalGet(_terminal, TerminalData.Cols, &cols);
+            if (col >= cols)
+            {
+                return null;
+            }
+
+            if (HyperlinkAt(col, row) is { Length: > 0 } uri)
+            {
+                // The link's extent: neighbors carrying the same URI.
+                var start = col;
+                while (start > 0 && HyperlinkAt((ushort)(start - 1), row) == uri) start--;
+                var end = col;
+                while (end + 1 < cols && HyperlinkAt((ushort)(end + 1), row) == uri) end++;
+                return new LinkMatch(uri, row, start, end, Explicit: true);
+            }
+
+            // Plain text: one string for the row, remembering where each cell starts.
+            var text = new StringBuilder(cols);
+            var cellStart = new int[cols + 1];
+            Span<uint> graphemes = stackalloc uint[16];
+            for (ushort c = 0; c < cols; c++)
+            {
+                cellStart[c] = text.Length;
+                var gridRef = GhosttyGridRef.Init();
+                var point = new GhosttyPoint { Tag = PointTag.Viewport, X = c, Y = row };
+                nuint len = 0;
+                if (Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success)
+                {
+                    fixed (uint* p = graphemes)
+                    {
+                        if (Native.GridRefGraphemes(&gridRef, p, (nuint)graphemes.Length, out len) != GhosttyResult.Success)
+                        {
+                            len = 0;
+                        }
+                    }
+                }
+
+                if (len == 0)
+                {
+                    text.Append(' ');
+                }
+
+                for (var i = 0; i < (int)len; i++)
+                {
+                    text.Append(char.ConvertFromUtf32((int)graphemes[i]));
+                }
+            }
+
+            cellStart[cols] = text.Length;
+            if (UrlDetector.Find(text.ToString(), cellStart[col]) is not { } found)
+            {
+                return null;
+            }
+
+            // Map the string range back to the cells it covers.
+            var (s, l) = found;
+            var first = (ushort)(Array.FindLastIndex(cellStart, cols - 1, cols, i => i <= s));
+            var last = (ushort)(Array.FindLastIndex(cellStart, cols - 1, cols, i => i < s + l));
+            return new LinkMatch(text.ToString(s, l), row, first, last, Explicit: false);
+        }
+    }
+
+    private string? HyperlinkAt(ushort col, uint row)
+    {
+        var gridRef = GhosttyGridRef.Init();
+        var point = new GhosttyPoint { Tag = PointTag.Viewport, X = col, Y = row };
+        if (Native.TerminalGridRef(_terminal, point, &gridRef) != GhosttyResult.Success)
+        {
+            return null;
+        }
+
+        Span<byte> buf = stackalloc byte[512];
+        fixed (byte* p = buf)
+        {
+            var result = Native.GridRefHyperlinkUri(&gridRef, p, (nuint)buf.Length, out var len);
+            if (result == GhosttyResult.Success)
+            {
+                return len == 0 ? null : Encoding.UTF8.GetString(p, (int)len);
+            }
+
+            if (result != GhosttyResult.OutOfSpace)
+            {
+                return null;
+            }
+
+            var big = new byte[(int)len];
+            fixed (byte* pb = big)
+            {
+                return Native.GridRefHyperlinkUri(&gridRef, pb, (nuint)big.Length, out len) == GhosttyResult.Success
+                    ? Encoding.UTF8.GetString(pb, (int)len)
+                    : null;
+            }
+        }
+    }
+
     public void ClearSelection()
     {
         lock (Lock)
@@ -533,6 +659,96 @@ public sealed unsafe class TerminalSession : IDisposable
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnBell(nint terminal, nint userdata) => FromUserdata(userdata)._bell = true;
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnClipboardWrite(nint terminal, nint userdata, GhosttyClipboardWrite* write)
+    {
+        var result = ClipboardWriteResult.Denied;
+        try
+        {
+            result = FromUserdata(userdata).WriteClipboard(write);
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"clipboard write failed: {ex.Message}");
+        }
+
+        var reply = new GhosttyClipboardWriteReply { Size = (nuint)sizeof(GhosttyClipboardWriteReply), Result = result };
+        ((delegate* unmanaged[Cdecl]<GhosttyClipboardWrite*, GhosttyClipboardWriteReply*, void>)write->Reply)(write, &reply);
+    }
+
+    private ClipboardWriteResult WriteClipboard(GhosttyClipboardWrite* write)
+    {
+        if (ClipboardWriter is not { } writer)
+        {
+            return ClipboardWriteResult.Denied;
+        }
+
+        // Windows has one clipboard; X11's selection/primary have no counterpart.
+        if (write->Location != ClipboardLocation.Standard)
+        {
+            return ClipboardWriteResult.Unsupported;
+        }
+
+        var contents = (GhosttyClipboardContent*)write->Contents;
+        for (nuint i = 0; i < write->ContentsLen; i++)
+        {
+            if (Utf8(contents[i].Mime).StartsWith("text/plain", StringComparison.Ordinal))
+            {
+                writer(Utf8(contents[i].Data));
+                return ClipboardWriteResult.Success;
+            }
+        }
+
+        // No text representation, or a request to clear: leave the clipboard alone.
+        return write->ContentsLen == 0 ? ClipboardWriteResult.Success : ClipboardWriteResult.Unsupported;
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnClipboardRead(nint terminal, nint userdata, GhosttyClipboardRead* read)
+    {
+        string? text = null;
+        var result = ClipboardReadResult.Denied;
+        try
+        {
+            var session = FromUserdata(userdata);
+            if (session.ClipboardReader is { } reader)
+            {
+                text = read->Location == ClipboardLocation.Standard ? reader() : null;
+                result = read->Location != ClipboardLocation.Standard ? ClipboardReadResult.Unsupported
+                    : text == null ? ClipboardReadResult.Busy
+                    : ClipboardReadResult.Success;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"clipboard read failed: {ex.Message}");
+            result = ClipboardReadResult.IoError;
+        }
+
+        var data = Encoding.UTF8.GetBytes(text ?? "");
+        var mime = "text/plain"u8;
+        fixed (byte* pData = data)
+        fixed (byte* pMime = mime)
+        {
+            var content = new GhosttyClipboardContent
+            {
+                Mime = new GhosttyString { Ptr = (nint)pMime, Len = (nuint)mime.Length },
+                Data = new GhosttyString { Ptr = (nint)pData, Len = (nuint)data.Length },
+            };
+            var reply = new GhosttyClipboardReadReply
+            {
+                Size = (nuint)sizeof(GhosttyClipboardReadReply),
+                Result = result,
+                Contents = (nint)(&content),
+                ContentsLen = result == ClipboardReadResult.Success ? 1u : 0u,
+            };
+            ((delegate* unmanaged[Cdecl]<GhosttyClipboardRead*, GhosttyClipboardReadReply*, void>)read->Reply)(read, &reply);
+        }
+    }
+
+    private static string Utf8(GhosttyString s) =>
+        s.Len == 0 ? "" : Encoding.UTF8.GetString((byte*)s.Ptr, (int)s.Len);
 
     private static void Check(GhosttyResult result)
     {

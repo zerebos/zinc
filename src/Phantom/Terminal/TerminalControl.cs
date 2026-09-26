@@ -67,7 +67,8 @@ public sealed partial class TerminalControl : UserControl
         UseSystemFocusVisuals = false;
         TabFocusNavigation = KeyboardNavigationMode.Cycle;
         _arrowCursor = !config.TextPointer;
-        ProtectedCursor = InputSystemCursor.Create(_arrowCursor ? InputSystemCursorShape.Arrow : InputSystemCursorShape.IBeam);
+        _cursorShape = _arrowCursor ? InputSystemCursorShape.Arrow : InputSystemCursorShape.IBeam;
+        ProtectedCursor = InputSystemCursor.Create(_cursorShape);
         // The scrollbar handles its own pointer events; proximity tracking must see them too.
         AddHandler(PointerMovedEvent, new PointerEventHandler(TrackScrollBarProximity), handledEventsToo: true);
 
@@ -172,6 +173,16 @@ public sealed partial class TerminalControl : UserControl
             TitleChanged?.Invoke(title);
         });
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
+        // OSC 52. Writes arrive mid-parse on the reader thread: set the clipboard on the UI thread.
+        if (_config.ClipboardWrite)
+        {
+            session.ClipboardWriter = text => dq.TryEnqueue(() => ClipboardText.Set(text));
+        }
+
+        if (_config.ClipboardRead)
+        {
+            session.ClipboardReader = ClipboardText.ReadNow;
+        }
 
         _session = session;
         session.Start(_commandLine, _workingDirectory, cols, rows);

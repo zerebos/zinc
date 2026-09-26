@@ -85,6 +85,11 @@ window-padding-y = 10
 - `window-padding-x`, `window-padding-y`: points; `N` or `left,right` / `top,bottom`.
 - `mouse-pointer`: `arrow` (default, like Windows Terminal) or `text` (an I-beam over text,
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
+- `clipboard-write`: `allow` (default) or `deny`, for programs copying with OSC 52
+  (tmux, neovim, remote shells over ssh).
+- `clipboard-read`: `deny` (default) or `allow`, for programs reading the clipboard with
+  OSC 52. Off by default because anything running in the terminal, including a remote
+  host, could read it. Ghostty's `ask` isn't supported yet.
 
 These are Ghostty's key names and units, so color and font lines can be copied
 straight from a Ghostty config.
@@ -169,6 +174,14 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | `Ctrl+Alt+1..8`, `Ctrl+Alt+9` | Go to tab N / last tab |
 | `Ctrl+Shift+N` | New window |
 | `Shift` + mouse | Bypass app mouse reporting to select text |
+| `Ctrl` + hover / click | Underline / open the link under the pointer |
+
+Links are OSC 8 hyperlinks (e.g. `ls --hyperlink`) and plain `http(s)`,
+`ftp`, `mailto` and `file` URLs in the text. Hovering a hyperlink with Ctrl shows its
+target in a tooltip. Web and mail links open in their default app. `file:` links are
+shown in Explorer (the file selected) rather than opened, so a link can't run a program.
+Links to files on another host are ignored, including WSL's `ls --hyperlink`, which names the
+Linux host.
 
 Each pane has a scrollbar (thin until the pointer nears the right edge) while there is scrollback; it hides for
 full-screen apps, whose alternate screen has none. The selected tab takes the focused
@@ -216,5 +229,5 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 - IME (CJK input methods) is untested; there is no composition UI.
 - Keybindings aren't configurable yet.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
-- Kitty graphics, hyperlinks (OSC 8) and desktop notifications are parsed by
-  libghostty but not surfaced yet.
+- Kitty graphics and desktop notifications are parsed by libghostty but not surfaced yet.
+- Links and URLs are detected within one row; a URL wrapped onto the next line is cut there.

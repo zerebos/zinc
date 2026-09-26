@@ -117,6 +117,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
     }
 
+    /// <summary>The link under the pointer while Ctrl is held; drawn underlined.</summary>
+    public LinkMatch? HoverLink { get; set; }
+
     /// <summary>Draws one frame. Returns whether the cursor is visible and blinking.</summary>
     public bool Draw(CanvasDrawingSession ds, TerminalSession session, int rows, CursorPresentation presentation)
     {
@@ -156,6 +159,10 @@ public sealed unsafe class TerminalRenderer : IDisposable
             DrawBackgrounds(ds, count, top);
             DrawText(ds, count, top);
             DrawDecorations(ds, count, top);
+            if (HoverLink is { } link && link.Row == y)
+            {
+                DrawLinkUnderline(ds, link, count, top);
+            }
 
             if (cursor.Visible != 0 && cursor.ViewportHasValue != 0 && cursor.ViewportY == y)
             {
@@ -462,6 +469,16 @@ public sealed unsafe class TerminalRenderer : IDisposable
             {
                 ds.FillRectangle(left, top, width, thickness, cell.Fg);
             }
+        }
+    }
+
+    private void DrawLinkUnderline(CanvasDrawingSession ds, LinkMatch link, int count, float top)
+    {
+        var m = Metrics;
+        var thickness = MathF.Max(1, MathF.Round(_fontSize / 14 * m.Scale)) / m.Scale;
+        for (var x = link.StartCol; x <= link.EndCol && x < count; x++)
+        {
+            ds.FillRectangle(PadLeft + x * m.Width, top + m.Baseline + 2 * thickness, m.Width, thickness, _cells[x].Fg);
         }
     }
 

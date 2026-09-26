@@ -38,6 +38,9 @@ public unsafe partial class AbiTests
         [typeof(MouseEncoderOption)] = "GhosttyMouseEncoderOption",
         [typeof(SelectionGestureEventType)] = "GhosttySelectionGestureEventType",
         [typeof(SelectionGestureEventOption)] = "GhosttySelectionGestureEventOption",
+        [typeof(ClipboardLocation)] = "GhosttyClipboardLocation",
+        [typeof(ClipboardWriteResult)] = "GhosttyClipboardWriteResult",
+        [typeof(ClipboardReadResult)] = "GhosttyClipboardReadResult",
     };
 
     // Enums that mirror #defines rather than C enums, so the manifest can't describe them.

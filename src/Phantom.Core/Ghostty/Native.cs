@@ -52,6 +52,90 @@ public struct GhosttyString
     public nuint Len;
 }
 
+public enum ClipboardLocation : int
+{
+    Standard = 0,
+    Selection = 1,
+    Primary = 2,
+}
+
+public enum ClipboardWriteResult : int
+{
+    Success = 0,
+    Denied = 1,
+    Unsupported = 2,
+    Busy = 3,
+    InvalidData = 4,
+    IoError = 5,
+}
+
+public enum ClipboardReadResult : int
+{
+    Success = 0,
+    Denied = 1,
+    Unsupported = 2,
+    Busy = 3,
+    IoError = 4,
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 32)]
+public struct GhosttyClipboardContent
+{
+    [FieldOffset(0)] public GhosttyString Mime;
+    [FieldOffset(16)] public GhosttyString Data;
+}
+
+/// <summary>An OSC 52 / 1337 / 5522 clipboard write; answer it by calling <see cref="Reply"/>.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 72)]
+public struct GhosttyClipboardWrite
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public ClipboardLocation Location;
+    [FieldOffset(16)] public nint Contents; // GhosttyClipboardContent*
+    [FieldOffset(24)] public nuint ContentsLen;
+    [FieldOffset(32)] public GhosttyString Name;
+    [FieldOffset(48)] public byte Granted;
+    [FieldOffset(49)] public byte CanRemember;
+    [FieldOffset(56)] public nint Ctx;
+    [FieldOffset(64)] public nint Reply; // void (*)(const GhosttyClipboardWrite*, const GhosttyClipboardWriteReply*)
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 16)]
+public struct GhosttyClipboardWriteReply
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public ClipboardWriteResult Result;
+    [FieldOffset(12)] public byte Remember;
+}
+
+/// <summary>An OSC 52 "?" / 5522 clipboard read; answer it by calling <see cref="Reply"/>.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 80)]
+public struct GhosttyClipboardRead
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public ClipboardLocation Location;
+    [FieldOffset(16)] public nint Mimes; // GhosttyString*
+    [FieldOffset(24)] public nuint MimesLen;
+    [FieldOffset(32)] public byte List;
+    [FieldOffset(40)] public GhosttyString Name;
+    [FieldOffset(56)] public byte Granted;
+    [FieldOffset(57)] public byte CanRemember;
+    [FieldOffset(64)] public nint Ctx;
+    [FieldOffset(72)] public nint Reply; // void (*)(const GhosttyClipboardRead*, const GhosttyClipboardReadReply*)
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 56)]
+public struct GhosttyClipboardReadReply
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public ClipboardReadResult Result;
+    [FieldOffset(16)] public nint Contents; // GhosttyClipboardContent*
+    [FieldOffset(24)] public nuint ContentsLen;
+    [FieldOffset(32)] public nint Available; // GhosttyString*
+    [FieldOffset(40)] public nuint AvailableLen;
+    [FieldOffset(48)] public byte Remember;
+}
+
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct GhosttyRenderStateCursor
 {
@@ -340,8 +424,10 @@ public enum TerminalOption : int
     ColorCursor = 13,
     ColorPalette = 14,
     Selection = 21,
+    ClipboardWrite = 26,
     ScrollbackMaxLines = 28,
     ModeDefault = 33,
+    ClipboardRead = 38,
 }
 
 public enum TerminalData : int
@@ -462,6 +548,12 @@ public static unsafe partial class Native
 
     [LibraryImport(Lib, EntryPoint = "ghostty_terminal_grid_ref")]
     public static partial GhosttyResult TerminalGridRef(nint terminal, GhosttyPoint point, GhosttyGridRef* outRef);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_graphemes")]
+    public static partial GhosttyResult GridRefGraphemes(GhosttyGridRef* gridRef, uint* buf, nuint bufLen, out nuint outLen);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_hyperlink_uri")]
+    public static partial GhosttyResult GridRefHyperlinkUri(GhosttyGridRef* gridRef, byte* buf, nuint bufLen, out nuint outLen);
 
     [LibraryImport(Lib, EntryPoint = "ghostty_terminal_selection_format_alloc")]
     public static partial GhosttyResult TerminalSelectionFormatAlloc(

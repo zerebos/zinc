@@ -14,6 +14,7 @@ public sealed partial class TerminalControl
     private bool _selecting;
     private MouseButton? _reportedButton;
     private bool _arrowCursor;
+    private InputSystemCursorShape _cursorShape;
 
     protected override void OnPointerPressed(PointerRoutedEventArgs e)
     {
@@ -26,8 +27,16 @@ public sealed partial class TerminalControl
 
         var point = e.GetCurrentPoint(_canvas);
         var props = point.Properties;
-        CapturePointer(e.Pointer);
         e.Handled = true;
+        if (props.IsLeftButtonPressed && (e.KeyModifiers & VirtualKeyModifiers.Control) != 0 &&
+            LinkUnder(point.Position) is { } link)
+        {
+            // Links win over app mouse reporting, like selecting with Shift.
+            OpenLink(link.Uri);
+            return;
+        }
+
+        CapturePointer(e.Pointer);
 
         if (ShouldReportMouse(session, e))
         {
@@ -64,6 +73,8 @@ public sealed partial class TerminalControl
         }
 
         var point = e.GetCurrentPoint(_canvas);
+        _pointerPosition = point.Position;
+        UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0);
         var reporting = !_selecting && ShouldReportMouse(session, e);
         UpdatePointerCursor(arrow: reporting || _nearScrollBar || !_config.TextPointer);
 
@@ -145,6 +156,7 @@ public sealed partial class TerminalControl
         }
 
         session.ScrollLines((up ? -3 : 3) * notches);
+        UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0); // new text under the pointer
         _canvas.Invalidate();
     }
 
@@ -152,6 +164,8 @@ public sealed partial class TerminalControl
     {
         SetScrollBarExpanded(false);
         _nearScrollBar = false;
+        _pointerPosition = null;
+        UpdateHoverLink(ctrl: false);
     }
 
     /// <summary>
@@ -161,13 +175,16 @@ public sealed partial class TerminalControl
     /// </summary>
     private void UpdatePointerCursor(bool arrow)
     {
-        if (arrow == _arrowCursor)
-        {
-            return;
-        }
-
         _arrowCursor = arrow;
-        ProtectedCursor = InputSystemCursor.Create(arrow ? InputSystemCursorShape.Arrow : InputSystemCursorShape.IBeam);
+        // A hand over a Ctrl+hovered link, else what the pointer would do here.
+        var shape = _renderer.HoverLink != null ? InputSystemCursorShape.Hand
+            : arrow ? InputSystemCursorShape.Arrow
+            : InputSystemCursorShape.IBeam;
+        if (shape != _cursorShape)
+        {
+            _cursorShape = shape;
+            ProtectedCursor = InputSystemCursor.Create(shape);
+        }
     }
 
     private static bool ShouldReportMouse(TerminalSession session, PointerRoutedEventArgs e) =>
