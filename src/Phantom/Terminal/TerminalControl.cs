@@ -40,8 +40,9 @@ public sealed unsafe partial class TerminalControl : UserControl
 
     // Font and cell metrics. DIP values are derived from whole device pixels
     // so cell edges land on pixel boundaries.
-    private string _fontFamily = "Cascadia Mono";
-    private float _fontSize = 14;
+    private readonly Config _config;
+    private string _fontFamily;
+    private float _fontSize;
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
     private readonly Dictionary<(uint, int), int> _glyphCache = new();
@@ -71,8 +72,11 @@ public sealed unsafe partial class TerminalControl : UserControl
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;
 
-    public TerminalControl(string commandLine, string? workingDirectory)
+    public TerminalControl(Config config, string commandLine, string? workingDirectory)
     {
+        _config = config;
+        _fontFamily = config.FontFamily;
+        _fontSize = Math.Clamp(config.FontSize, MinFontSize, MaxFontSize);
         _commandLine = commandLine;
         _workingDirectory = workingDirectory;
 
@@ -126,9 +130,15 @@ public sealed unsafe partial class TerminalControl : UserControl
     private void UpdateFont()
     {
         var fonts = CanvasFontSet.GetSystemFontSet();
-        if (fonts.GetMatchingFonts(_fontFamily, FontWeights.Normal, FontStretch.Normal, FontStyle.Normal).Fonts.Count == 0)
+        // Fall back if the configured family isn't installed (DirectWrite would
+        // otherwise substitute a proportional font and break the grid).
+        foreach (var candidate in new[] { _config.FontFamily, "Cascadia Mono", "Consolas" })
         {
-            _fontFamily = "Consolas";
+            if (fonts.GetMatchingFonts(candidate, FontWeights.Normal, FontStretch.Normal, FontStyle.Normal).Fonts.Count > 0)
+            {
+                _fontFamily = candidate;
+                break;
+            }
         }
 
         for (var v = 0; v < 4; v++)
@@ -562,7 +572,11 @@ public sealed unsafe partial class TerminalControl : UserControl
         format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
         using var layout = new CanvasTextLayout(ds, text, format, width, _cellH);
         format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
-        layout.Options = CanvasDrawTextOptions.EnableColorFont;
+        // Color glyphs only for emoji presentation. Default-emoji characters are
+        // East Asian Wide (two cells); narrow symbols like U+2714 are text unless
+        // followed by VS16 (U+FE0F), matching how Windows Terminal renders them.
+        var emoji = (cell.Flags & CellFlags.Wide) != 0 || text.Contains('️');
+        layout.Options = emoji ? CanvasDrawTextOptions.EnableColorFont : CanvasDrawTextOptions.Default;
 
         // Align the fallback font's baseline with the grid's baseline.
         var lines = layout.LineMetrics;
@@ -900,7 +914,7 @@ public sealed unsafe partial class TerminalControl : UserControl
 
         if (ctrl && key is VirtualKey.Number0 or VirtualKey.NumberPad0)
         {
-            SetFontSize(14);
+            SetFontSize(_config.FontSize);
             return true;
         }
 
@@ -1007,16 +1021,36 @@ public sealed unsafe partial class TerminalControl : UserControl
         }
 
         var point = e.GetCurrentPoint(_canvas);
+        var reporting = !_selecting && ShouldReportMouse(session, e);
+        UpdatePointerCursor(arrow: reporting);
+
         if (_selecting)
         {
             RunGesture(session, _gestureDrag, point.Position, isPress: false);
             e.Handled = true;
         }
-        else if (ShouldReportMouse(session, e))
+        else if (reporting)
         {
             SendMouse(session, MouseAction.Motion, _reportedButton, e, anyPressed: _reportedButton != null);
             e.Handled = true;
         }
+    }
+
+    private bool _arrowCursor;
+
+    /// <summary>
+    /// Like Windows Terminal: an arrow while the app consumes the mouse, an
+    /// I-beam when the mouse selects text (including Shift-bypass).
+    /// </summary>
+    private void UpdatePointerCursor(bool arrow)
+    {
+        if (arrow == _arrowCursor)
+        {
+            return;
+        }
+
+        _arrowCursor = arrow;
+        ProtectedCursor = InputSystemCursor.Create(arrow ? InputSystemCursorShape.Arrow : InputSystemCursorShape.IBeam);
     }
 
     protected override void OnPointerReleased(PointerRoutedEventArgs e)

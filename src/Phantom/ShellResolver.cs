@@ -3,7 +3,7 @@ namespace Phantom;
 /// <summary>Picks the command line to run inside the terminal.</summary>
 public static class ShellResolver
 {
-    public static string Resolve()
+    public static string Resolve(Config config)
     {
         // 1. Anything after the executable on our own command line: `Phantom.exe wsl.exe -d Ubuntu`.
         var args = Environment.GetCommandLineArgs();
@@ -19,7 +19,13 @@ public static class ShellResolver
             return fromEnv;
         }
 
-        // 3. PowerShell 7, then Windows PowerShell, then cmd.
+        // 3. `command` from the config file.
+        if (config.Command is { } command)
+        {
+            return command;
+        }
+
+        // 4. PowerShell 7, then Windows PowerShell, then cmd.
         return FindOnPath("pwsh.exe") ?? FindOnPath("powershell.exe") ?? "cmd.exe";
     }
 
