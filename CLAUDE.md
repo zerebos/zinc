@@ -165,10 +165,10 @@ and read state after the write (see `_titleDirty`).
   zone from a handledEventsToo PointerMoved handler (the bar handles its own pointer events).
 - Hover and pointer shape can't be tested here (posted WM_MOUSEMOVE doesn't become WM_POINTER;
   screenshots omit the cursor) — ask the user.
-- Caption buttons come only in 32 px (Standard) or 48 px (Tall); TabView's natural strip is ~41 px,
-  so neither fit (hover boxes hung over the terminal, or stopped short of it). Fix: Tall buttons
-  + `TabViewHeaderPadding` top 16 (strip = 16 + 32 = 48). A spacer in TabStripHeader made the strip
-  48 but left the tabs floating 8 px above the terminal. Verify with a pixel-column scan.
+- Caption buttons: keep `TitleBarHeightOption.Standard` (32 px) with TabView's default ~41 px strip —
+  the user's choice, matching File Explorer (short buttons, tabs on the strip's bottom edge).
+  Tall (48 px) hung over the terminal; Tall + a 48 px strip was tried and reverted at the user's
+  request. Don't describe other apps' UI from memory — ask for or check a screenshot.
 - Alt+character chords beep unless `MenuKeySuppressor` swallows WM_SYSCOMMAND/SC_KEYMENU:
   handling KeyDown doesn't stop DefWindowProc's menu-mnemonic lookup (no menu bar → beep).
   Alt+Space (system menu) and a bare Alt tap are passed through.

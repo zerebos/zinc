@@ -67,10 +67,9 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(DragRegion);
         var titleBar = AppWindow.TitleBar;
-        // Tall (48 px) caption buttons, with the tab strip padded to the same height
-        // (TabViewHeaderPadding in XAML): Windows only offers 32 or 48 px buttons, and
-        // either mismatches TabView's natural ~41 px strip.
-        titleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+        // Standard (32 px) caption buttons fit inside the ~41 px tab strip; Tall (48 px)
+        // hung below it, so their hover highlight covered the top of the terminal.
+        titleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
         titleBar.ButtonBackgroundColor = Colors.Transparent;
         titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
         titleBar.ButtonForegroundColor = Colors.White;
