@@ -64,6 +64,7 @@ public sealed partial class MainWindow : Window
         SystemBackdrop = new MicaBackdrop();
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phantom.ico"));
+        MenuKeySuppressor.Attach(this);
 
         // Selected tabs blend into the terminal below them, like Windows Terminal.
         var bg = TerminalRenderer.ToColor(config.Global.Theme.Background);

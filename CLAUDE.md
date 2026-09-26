@@ -138,6 +138,9 @@ and read state after the write (see `_titleDirty`).
 - Set a tab's content once (a Grid) and rebuild inside it: a ContentControl's old content
   isn't detached until its next layout pass.
 - Panels (Grid) have no OnPointer* overrides — subscribe to PointerPressed etc.
+- Alt+character chords beep unless `MenuKeySuppressor` swallows WM_SYSCOMMAND/SC_KEYMENU:
+  handling KeyDown doesn't stop DefWindowProc's menu-mnemonic lookup (no menu bar → beep).
+  Alt+Space (system menu) and a bare Alt tap are passed through.
 - Focus is the window's job (`FocusActive`, low-priority dispatch after layout); panes must
   not grab focus on Loaded, since every rebuild re-loads every pane.
 - App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
