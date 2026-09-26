@@ -193,6 +193,13 @@ When an app turns on mouse reporting (vim, htop, tmux, flow), clicks, drags and
 the wheel go to the app, and the pointer becomes an arrow instead of an I-beam. On the alternate screen with alternate-scroll mode, the
 wheel sends arrow keys (`less`, `man`).
 
+Images use the [kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/):
+direct placements (e.g. fastfetch `--kitty-direct`) and Unicode placeholders (e.g. yazi's
+previews). Programs may send image data inline, or name a file to load
+(or a temp file under `%TEMP%`); paths from WSL or a remote host don't resolve here, so
+those programs must send data inline. Images keep their place in scrollback. Programs detect
+support with the protocol's query; Phantom answers it (and identifies as libghostty).
+
 Right-clicking a tab offers rename, tab color, duplicate, split, export text (whole
 scrollback to a file), and closing this / other / right-hand tabs.
 
@@ -231,5 +238,6 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 - IME (CJK input methods) is untested; there is no composition UI.
 - Keybindings aren't configurable yet.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
-- Kitty graphics and desktop notifications are parsed by libghostty but not surfaced yet.
+- Desktop notifications are parsed by libghostty but not surfaced yet. Sixel isn't supported
+  (libghostty has no sixel API); kitty graphics animation shows the current frame only.
 - Links and URLs are detected within one row; a URL wrapped onto the next line is cut there.

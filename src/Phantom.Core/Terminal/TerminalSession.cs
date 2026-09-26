@@ -22,6 +22,7 @@ public sealed unsafe class TerminalSession : IDisposable
     private readonly nint _keyEvent;
     private readonly nint _mouseEncoder;
     private readonly nint _mouseEvent;
+    private readonly nint _placements;
     private GCHandle _self;
     private ConPty? _pty;
     private GhosttySizeReportSize _size;
@@ -110,6 +111,23 @@ public sealed unsafe class TerminalSession : IDisposable
         nuint scrollback = 10_000;
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &scrollback);
 
+        // Kitty graphics: on once storage is allowed. Besides inline data (t=d), programs may
+        // name a file to load (t=f; fastfetch's kitty-direct) or a temp file we delete after
+        // (t=t, only inside %TEMP%). A program can read those files itself anyway; paths from
+        // WSL or a remote host simply fail to load. Shared memory stays off.
+        KittyImages.InstallPngDecoder();
+        var storageLimit = KittyImages.StorageLimit;
+        Native.TerminalSet(_terminal, TerminalOption.KittyImageStorageLimit, &storageLimit);
+        byte fileMedium = 1;
+        Native.TerminalSet(_terminal, TerminalOption.KittyImageMediumFile, &fileMedium);
+        var temp = Encoding.UTF8.GetBytes(Path.GetTempPath());
+        fixed (byte* p = temp)
+        {
+            var tempDir = new GhosttyString { Ptr = (nint)p, Len = (nuint)temp.Length };
+            Native.TerminalSet(_terminal, TerminalOption.KittyImageMediumTempFile, &tempDir);
+        }
+        Check(Native.KittyPlacementIteratorNew(0, out _placements));
+
         Check(Native.KeyEncoderNew(0, out _keyEncoder));
         Check(Native.KeyEventNew(0, out _keyEvent));
         Check(Native.MouseEncoderNew(0, out _mouseEncoder));
@@ -132,6 +150,12 @@ public sealed unsafe class TerminalSession : IDisposable
         // Children inherit our environment; advertise what the terminal supports.
         Environment.SetEnvironmentVariable("COLORTERM", "truecolor");
         Environment.SetEnvironmentVariable("TERM_PROGRAM", "phantom");
+        // Launched from another terminal, we'd pass on its identity, and programs would pick
+        // features for it (e.g. image protocols for Windows Terminal instead of kitty graphics).
+        foreach (var name in (string[])["WT_SESSION", "WT_PROFILE_ID", "TERM_PROGRAM_VERSION", "KITTY_WINDOW_ID", "WEZTERM_PANE"])
+        {
+            Environment.SetEnvironmentVariable(name, null);
+        }
 
         _pty = new ConPty(commandLine, workingDirectory, (short)cols, (short)rows);
         _pty.OutputReceived += OnPtyOutput;
@@ -616,6 +640,101 @@ public sealed unsafe class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// Appends the kitty graphics placements to draw now (visible ones, and all virtual ones) to
+    /// <paramref name="into"/>, copying an image's pixels (premultiplied RGBA) only when
+    /// <paramref name="needsPixels"/>(id, generation) says the caller hasn't cached them.
+    /// Take this snapshot under the same lock as the render state update so they agree.
+    /// </summary>
+    public void CollectImages(List<ImagePlacement> into, Func<uint, ulong, bool> needsPixels)
+    {
+        lock (Lock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            nint graphics;
+            ulong storageGeneration = 0;
+            if (Native.TerminalGet(_terminal, TerminalData.KittyGraphics, &graphics) != GhosttyResult.Success ||
+                Native.KittyGraphicsGet(graphics, KittyGraphicsData.Generation, &storageGeneration) != GhosttyResult.Success ||
+                storageGeneration == 0)
+            {
+                return; // nothing was ever stored on this screen
+            }
+
+            var iterator = _placements;
+            if (Native.KittyGraphicsGet(graphics, KittyGraphicsData.PlacementIterator, &iterator) != GhosttyResult.Success)
+            {
+                return;
+            }
+
+            while (Native.KittyPlacementNext(_placements) != 0)
+            {
+                uint imageId;
+                byte isVirtual;
+                int z;
+                uint offsetX, offsetY;
+                Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.ImageId, &imageId);
+                Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.IsVirtual, &isVirtual);
+                Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.Z, &z);
+                Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.XOffset, &offsetX);
+                Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.YOffset, &offsetY);
+                var image = Native.KittyGraphicsImage(graphics, imageId);
+                var info = GhosttyKittyGraphicsPlacementRenderInfo.Init();
+                uint placementId = 0, columns = 0, rows = 0;
+                if (isVirtual != 0)
+                {
+                    // Shown by placeholder cells wherever they are; the renderer needs its grid.
+                    Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.PlacementId, &placementId);
+                    Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.Columns, &columns);
+                    Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.Rows, &rows);
+                }
+
+                if (image == 0 ||
+                    (isVirtual == 0 &&
+                     (Native.KittyPlacementRenderInfo(_placements, image, _terminal, &info) != GhosttyResult.Success ||
+                      info.ViewportVisible == 0)))
+                {
+                    continue;
+                }
+
+                uint width, height;
+                ulong generation;
+                Native.KittyImageGet(image, KittyGraphicsImageData.Width, &width);
+                Native.KittyImageGet(image, KittyGraphicsImageData.Height, &height);
+                Native.KittyImageGet(image, KittyGraphicsImageData.Generation, &generation);
+
+                byte[]? pixels = null;
+                if (needsPixels(imageId, generation))
+                {
+                    KittyImageFormat format;
+                    byte* data;
+                    nuint len;
+                    if (Native.KittyImageGet(image, KittyGraphicsImageData.Format, &format) != GhosttyResult.Success ||
+                        Native.KittyImageGet(image, KittyGraphicsImageData.DataPtr, &data) != GhosttyResult.Success ||
+                        Native.KittyImageGet(image, KittyGraphicsImageData.DataLen, &len) != GhosttyResult.Success)
+                    {
+                        continue; // payload still pending
+                    }
+
+                    var count = (int)(width * height);
+                    if ((long)count * KittyImages.BytesPerPixel(format) > (long)len)
+                    {
+                        continue;
+                    }
+
+                    pixels = KittyImages.ToPremultipliedRgba(format, new ReadOnlySpan<byte>(data, (int)len), count);
+                }
+
+                into.Add(new ImagePlacement(imageId, generation, z, info.ViewportCol, info.ViewportRow, offsetX, offsetY,
+                    info.PixelWidth, info.PixelHeight, info.SourceX, info.SourceY, info.SourceWidth, info.SourceHeight,
+                    (int)width, (int)height, pixels, isVirtual != 0, placementId, columns, rows));
+            }
+        }
+    }
+
     public void ClearSelection()
     {
         lock (Lock)
@@ -773,6 +892,7 @@ public sealed unsafe class TerminalSession : IDisposable
             Native.KeyEncoderFree(_keyEncoder);
             Native.MouseEventFree(_mouseEvent);
             Native.MouseEncoderFree(_mouseEncoder);
+            Native.KittyPlacementIteratorFree(_placements);
             Native.TerminalFree(_terminal);
             _self.Free();
         }

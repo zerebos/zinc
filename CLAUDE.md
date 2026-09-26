@@ -46,6 +46,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
   defaults follow Windows Terminal. New actions go here, handled by whoever owns them.
 - `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
+- Kitty graphics: `Terminal/KittyImages.cs` (the process-wide PNG decoder libghostty calls —
+  WIC via WinRT, blocking is fine on the MTA reader thread; premultiplied RGBA conversion),
+  `TerminalSession.CollectImages` (per-frame placement snapshot, pixels copied only for images
+  the renderer hasn't cached by id+generation; call under the render-state lock),
+  `Terminal/KittyPlaceholders.cs` (Unicode placeholders = virtual placements, ported from
+  Ghostty's graphics_unicode.zig; the `.Diacritics.g.cs` table is copied from there). Renderer:
+  z<0 images under all rows, placeholders in the text pass, z>=0 above. Images need a cell
+  size in pixels (`Resize` passes it) and storage enabled (`KittyImageStorageLimit`).
 - `Terminal/Links.cs` — `UrlDetector` (plain URLs in a row), `LinkTarget.Classify` (what a
   Ctrl+click may do: open web/mail, *reveal* local files, reject the rest; tested). File
   links map per pane via `LinkContext` (app `ShellEnvironment`: WSL distro, MSYS root).

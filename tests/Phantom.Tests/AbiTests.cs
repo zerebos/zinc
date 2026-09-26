@@ -41,6 +41,12 @@ public unsafe partial class AbiTests
         [typeof(ClipboardLocation)] = "GhosttyClipboardLocation",
         [typeof(ClipboardWriteResult)] = "GhosttyClipboardWriteResult",
         [typeof(ClipboardReadResult)] = "GhosttyClipboardReadResult",
+        [typeof(SysOption)] = "GhosttySysOption",
+        [typeof(KittyGraphicsData)] = "GhosttyKittyGraphicsData",
+        [typeof(KittyGraphicsPlacementData)] = "GhosttyKittyGraphicsPlacementData",
+        [typeof(KittyPlacementLayer)] = "GhosttyKittyPlacementLayer",
+        [typeof(KittyImageFormat)] = "GhosttyKittyImageFormat",
+        [typeof(KittyGraphicsImageData)] = "GhosttyKittyGraphicsImageData",
     };
 
     // Enums that mirror #defines rather than C enums, so the manifest can't describe them.

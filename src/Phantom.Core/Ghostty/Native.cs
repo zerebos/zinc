@@ -173,8 +173,12 @@ public unsafe struct GhosttyRenderStateColors
 public struct GhosttyStyle
 {
     [FieldOffset(0)] public nuint Size;
-    // fg/bg/underline colors live at 8/24/40 (GhosttyStyleColor, 16 bytes each).
-    // Renderers get resolved colors from the row-cells API instead.
+    // Style colors as set (tag: 0 none, 1 palette, 2 rgb; value: palette index or r,g,b bytes).
+    // Renderers get resolved colors from the row-cells API; kitty placeholders need these.
+    [FieldOffset(8), AbiField("fg_color.tag")] public int FgColorTag;
+    [FieldOffset(16), AbiField("fg_color.value._padding")] public ulong FgColorValue;
+    [FieldOffset(40), AbiField("underline_color.tag")] public int UnderlineColorTag;
+    [FieldOffset(48), AbiField("underline_color.value._padding")] public ulong UnderlineColorValue;
     [FieldOffset(56)] public byte Bold;
     [FieldOffset(57)] public byte Italic;
     [FieldOffset(58)] public byte Faint;
@@ -423,11 +427,101 @@ public enum TerminalOption : int
     ColorBackground = 12,
     ColorCursor = 13,
     ColorPalette = 14,
+    KittyImageStorageLimit = 15,
+    KittyImageMediumFile = 16,
+    KittyImageMediumTempFile = 17,
+    KittyImageMediumSharedMem = 18,
     Selection = 21,
     ClipboardWrite = 26,
     ScrollbackMaxLines = 28,
     ModeDefault = 33,
     ClipboardRead = 38,
+}
+
+public enum SysOption : int
+{
+    Userdata = 0,
+    DecodePng = 1,
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+public struct GhosttySysImage
+{
+    [FieldOffset(0)] public uint Width;
+    [FieldOffset(4)] public uint Height;
+    [FieldOffset(8)] public nint Data; // uint8_t*, allocated with the callback's allocator
+    [FieldOffset(16)] public nuint DataLen;
+}
+
+public enum KittyGraphicsData : int
+{
+    PlacementIterator = 1,
+    Generation = 2,
+}
+
+public enum KittyGraphicsPlacementData : int
+{
+    ImageId = 1,
+    PlacementId = 2,
+    IsVirtual = 3,
+    XOffset = 4,
+    YOffset = 5,
+    SourceX = 6,
+    SourceY = 7,
+    SourceWidth = 8,
+    SourceHeight = 9,
+    Columns = 10,
+    Rows = 11,
+    Z = 12,
+}
+
+public enum KittyPlacementLayer : int
+{
+    All = 0,
+    BelowBg = 1,
+    BelowText = 2,
+    AboveText = 3,
+}
+
+public enum KittyImageFormat : int
+{
+    Rgb = 0,
+    Rgba = 1,
+    Png = 2,
+    GrayAlpha = 3,
+    Gray = 4,
+}
+
+public enum KittyGraphicsImageData : int
+{
+    Id = 1,
+    Number = 2,
+    Width = 3,
+    Height = 4,
+    Format = 5,
+    Compression = 6,
+    DataPtr = 7,
+    DataLen = 8,
+    Generation = 9,
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 56)]
+public struct GhosttyKittyGraphicsPlacementRenderInfo
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public uint PixelWidth;
+    [FieldOffset(12)] public uint PixelHeight;
+    [FieldOffset(16)] public uint GridCols;
+    [FieldOffset(20)] public uint GridRows;
+    [FieldOffset(24)] public int ViewportCol;
+    [FieldOffset(28)] public int ViewportRow;
+    [FieldOffset(32)] public byte ViewportVisible;
+    [FieldOffset(36)] public uint SourceX;
+    [FieldOffset(40)] public uint SourceY;
+    [FieldOffset(44)] public uint SourceWidth;
+    [FieldOffset(48)] public uint SourceHeight;
+
+    public static GhosttyKittyGraphicsPlacementRenderInfo Init() => new() { Size = 56 };
 }
 
 public enum TerminalData : int
@@ -442,6 +536,7 @@ public enum TerminalData : int
     ColorPaletteDefault = 25,
     Selection = 31,
     ViewportActive = 32,
+    KittyGraphics = 30,
     Mode = 37,
 }
 
@@ -611,6 +706,39 @@ public static unsafe partial class Native
 
     [LibraryImport(Lib, EntryPoint = "ghostty_cell_get")]
     public static partial GhosttyResult CellGet(ulong cell, CellData data, void* value);
+
+    // ---- sys / allocation ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_sys_set")]
+    public static partial GhosttyResult SysSet(SysOption option, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_alloc")]
+    public static partial byte* Alloc(nint allocator, nuint len);
+
+    // ---- kitty graphics ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_get")]
+    public static partial GhosttyResult KittyGraphicsGet(nint graphics, KittyGraphicsData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_image")]
+    public static partial nint KittyGraphicsImage(nint graphics, uint imageId);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_image_get")]
+    public static partial GhosttyResult KittyImageGet(nint image, KittyGraphicsImageData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_iterator_new")]
+    public static partial GhosttyResult KittyPlacementIteratorNew(nint allocator, out nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_iterator_free")]
+    public static partial void KittyPlacementIteratorFree(nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_next")]
+    public static partial byte KittyPlacementNext(nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_get")]
+    public static partial GhosttyResult KittyPlacementGet(nint iterator, KittyGraphicsPlacementData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_render_info")]
+    public static partial GhosttyResult KittyPlacementRenderInfo(nint iterator, nint image, nint terminal,
+        GhosttyKittyGraphicsPlacementRenderInfo* info);
 
     // ---- key encoding ----
     [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_new")]

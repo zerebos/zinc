@@ -3,6 +3,8 @@ using Microsoft.Graphics.Canvas;
 using Microsoft.Graphics.Canvas.Brushes;
 using Microsoft.Graphics.Canvas.Text;
 using Phantom.Ghostty;
+using Windows.Foundation;
+using Windows.Graphics.DirectX;
 using Windows.UI;
 using Windows.UI.Text;
 using Colors = Microsoft.UI.Colors;
@@ -35,11 +37,23 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
     // Per-row scratch buffers reused across frames.
     private Cell[] _cells = [];
+    private KittyPlaceholders.Cell?[] _placeholders = [];
+    private bool _rowHasPlaceholders;
+    private readonly List<KittyPlaceholders.Run> _runs = [];
     private uint[] _codepoints = new uint[1024];
     private CanvasGlyph[] _glyphs = [];
 
+    // Kitty graphics: this frame's placements, and one GPU bitmap per image id (with the
+    // image generation it was made from).
+    private readonly List<ImagePlacement> _images = [];
+    private readonly Dictionary<uint, (ulong Generation, CanvasBitmap Bitmap)> _bitmaps = new();
+    private readonly HashSet<uint> _pendingImages = [];
+    private readonly Func<uint, ulong, bool> _needsPixels;
+
     public TerminalRenderer(Config config)
     {
+        _needsPixels = (id, generation) =>
+            (!_bitmaps.TryGetValue(id, out var cached) || cached.Generation != generation) && _pendingImages.Add(id);
         _config = config;
         _fontFamily = config.FontFamily;
         Check(Native.RenderStateNew(0, out _renderState));
@@ -57,7 +71,17 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private float PadLeft => _config.PaddingLeft;
     private float PadTop => _config.PaddingTop;
 
-    public void CreateResources(ICanvasResourceCreator device) => _brush = new CanvasSolidColorBrush(device, Colors.White);
+    public void CreateResources(ICanvasResourceCreator device)
+    {
+        _brush = new CanvasSolidColorBrush(device, Colors.White);
+        // Bitmaps belong to the old device.
+        foreach (var entry in _bitmaps.Values)
+        {
+            entry.Bitmap.Dispose();
+        }
+
+        _bitmaps.Clear();
+    }
 
     /// <summary>Loads the font at <paramref name="sizeDip"/> and recomputes cell metrics.</summary>
     public void SetFont(ICanvasResourceCreator device, float sizeDip, float scale)
@@ -114,6 +138,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         {
             _cells = new Cell[cols];
             _glyphs = new CanvasGlyph[cols];
+            _placeholders = new KittyPlaceholders.Cell?[cols];
         }
     }
 
@@ -128,13 +153,20 @@ public sealed unsafe class TerminalRenderer : IDisposable
             return false;
         }
 
+        _images.Clear();
+        _pendingImages.Clear();
         lock (session.Lock)
         {
             if (Native.RenderStateUpdate(_renderState, session.Handle) != GhosttyResult.Success)
             {
                 return false;
             }
+
+            // Under the same lock, so images and text come from the same terminal state.
+            session.CollectImages(_images, _needsPixels);
         }
+
+        UpdateImageCache(ds);
 
         // The render state is a snapshot, so the rest runs without the lock.
         var colors = new GhosttyRenderStateColors { Size = (nuint)sizeof(GhosttyRenderStateColors) };
@@ -146,6 +178,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var defaultBg = ToColor(colors.Background);
         var cursorColor = colors.CursorHasValue != 0 ? ToColor(colors.Cursor) : defaultFg;
         ds.Clear(defaultBg);
+        DrawImages(ds, rows, belowText: true);
 
         var iterator = _rowIterator;
         Native.RenderStateGet(_renderState, RenderStateData.RowIterator, &iterator);
@@ -157,6 +190,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var count = ReadRow(defaultFg, defaultBg);
             var top = PadTop + y * m.Height;
             DrawBackgrounds(ds, count, top);
+            if (_rowHasPlaceholders)
+            {
+                DrawPlaceholders(ds, count, top);
+            }
+
             DrawText(ds, count, top);
             DrawDecorations(ds, count, top);
             if (HoverLink is { } link && link.Row == y)
@@ -172,12 +210,19 @@ public sealed unsafe class TerminalRenderer : IDisposable
             y++;
         }
 
+        DrawImages(ds, rows, belowText: false);
         Native.RenderStateClean(_renderState);
         return cursor.Blinking != 0 && cursor.Visible != 0;
     }
 
     public void Dispose()
     {
+        foreach (var entry in _bitmaps.Values)
+        {
+            entry.Bitmap.Dispose();
+        }
+
+        _bitmaps.Clear();
         Native.RowCellsFree(_rowCells);
         Native.RowIteratorFree(_rowIterator);
         Native.RenderStateFree(_renderState);
@@ -197,6 +242,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         Overline = 32,
         Wide = 64,
         SpacerTail = 128,
+        Placeholder = 256, // kitty graphics Unicode placeholder: an image slice, not text
     }
 
     private struct Cell
@@ -222,6 +268,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         var x = 0;
         var cp = 0;
+        _rowHasPlaceholders = false;
         while (x < _cells.Length && Native.RowCellsNext(_rowCells) != 0)
         {
             ref var cell = ref _cells[x];
@@ -257,7 +304,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 }
             }
 
+            _placeholders[x] = null;
             var inverse = false;
+            uint fgId = 0, underlineId = 0;
             byte hasStyling = 0;
             Native.RowCellsGet(_rowCells, RenderStateRowCellsData.HasStyling, &hasStyling);
             if (hasStyling != 0)
@@ -272,6 +321,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 if (style.Overline != 0) cell.Flags |= CellFlags.Overline;
                 cell.Underline = style.Underline;
                 inverse = style.Inverse != 0;
+                fgId = KittyPlaceholders.ColorId(style.FgColorTag, style.FgColorValue);
+                underlineId = KittyPlaceholders.ColorId(style.UnderlineColorTag, style.UnderlineColorValue);
+            }
+
+            if (cell.CpLen > 0 && _codepoints[cell.CpStart] == KittyPlaceholders.Placeholder)
+            {
+                _placeholders[x] = KittyPlaceholders.Parse(_codepoints.AsSpan(cell.CpStart + 1, cell.CpLen - 1), fgId, underlineId);
+                cell.Flags |= CellFlags.Placeholder;
+                _rowHasPlaceholders = true;
             }
 
             GhosttyColorRgb rgb;
@@ -349,7 +407,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         for (var x = 0; x < count; x++)
         {
             ref var cell = ref _cells[x];
-            var blank = cell.CpLen == 0 || (cell.Flags & (CellFlags.Invisible | CellFlags.SpacerTail)) != 0 ||
+            var blank = cell.CpLen == 0 || (cell.Flags & (CellFlags.Invisible | CellFlags.SpacerTail | CellFlags.Placeholder)) != 0 ||
                         (cell.CpLen == 1 && _codepoints[cell.CpStart] == ' ');
 
             if (blank)
@@ -442,7 +500,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         for (var x = 0; x < count; x++)
         {
             ref var cell = ref _cells[x];
-            if ((cell.Flags & CellFlags.Invisible) != 0)
+            if ((cell.Flags & (CellFlags.Invisible | CellFlags.Placeholder)) != 0)
             {
                 continue;
             }
@@ -469,6 +527,92 @@ public sealed unsafe class TerminalRenderer : IDisposable
             {
                 ds.FillRectangle(left, top, width, thickness, cell.Fg);
             }
+        }
+    }
+
+    // ---- kitty graphics ----
+
+    private void UpdateImageCache(ICanvasResourceCreator device)
+    {
+        foreach (var p in _images)
+        {
+            if (p.Pixels is { } pixels)
+            {
+                if (_bitmaps.Remove(p.ImageId, out var stale))
+                {
+                    stale.Bitmap.Dispose();
+                }
+
+                // 96 DPI: one bitmap DIP per image pixel, so source rects are in pixels.
+                var bitmap = CanvasBitmap.CreateFromBytes(device, pixels, p.ImageWidth, p.ImageHeight,
+                    DirectXPixelFormat.R8G8B8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
+                _bitmaps[p.ImageId] = (p.Generation, bitmap);
+            }
+        }
+
+        // Drop images no longer placed on screen (deleted, or scrolled out of view).
+        if (_bitmaps.Count > 0)
+        {
+            foreach (var id in _bitmaps.Keys.Where(id => !_images.Exists(p => p.ImageId == id)).ToList())
+            {
+                _bitmaps.Remove(id, out var gone);
+                gone.Bitmap.Dispose();
+            }
+        }
+
+        _images.Sort((a, b) => a.Z.CompareTo(b.Z));
+    }
+
+    /// <summary>Draws the image slices this row's placeholder cells stand for.</summary>
+    private void DrawPlaceholders(CanvasDrawingSession ds, int count, float top)
+    {
+        var m = Metrics;
+        _runs.Clear();
+        KittyPlaceholders.Runs(_placeholders.AsSpan(0, count), _runs);
+        foreach (var run in _runs)
+        {
+            // The run's virtual placement: the one it names, else the image's first.
+            var placement = _images.Find(p => p.Virtual && p.ImageId == run.ImageId &&
+                                              (run.PlacementId == 0 || p.PlacementId == run.PlacementId));
+            if (!placement.Virtual || !_bitmaps.TryGetValue(run.ImageId, out var entry) ||
+                KittyPlaceholders.Geometry(run, placement.ImageWidth, placement.ImageHeight, placement.Columns,
+                    placement.Rows, m.WidthPx, m.HeightPx) is not { } slice)
+            {
+                continue;
+            }
+
+            var dest = new Rect(PadLeft + run.X * m.Width + slice.OffsetX / m.Scale, top + slice.OffsetY / m.Scale,
+                slice.DestWidth / m.Scale, slice.DestHeight / m.Scale);
+            ds.DrawImage(entry.Bitmap, dest, new Rect(slice.SourceX, slice.SourceY, slice.SourceWidth, slice.SourceHeight));
+        }
+    }
+
+    /// <summary>
+    /// Draws placements below the text (negative z) or above it, clipped to the grid rows.
+    /// Below-text images go under all rows (so under cell backgrounds that set a color too).
+    /// </summary>
+    private void DrawImages(CanvasDrawingSession ds, int rows, bool belowText)
+    {
+        if (_images.Count == 0)
+        {
+            return;
+        }
+
+        var m = Metrics;
+        using var clip = ds.CreateLayer(1f, new Rect(0, PadTop, 100_000, rows * m.Height));
+        foreach (var p in _images)
+        {
+            if (p.Virtual || (p.Z < 0) != belowText || !_bitmaps.TryGetValue(p.ImageId, out var entry))
+            {
+                continue;
+            }
+
+            var dest = new Rect(
+                PadLeft + p.Col * m.Width + p.OffsetX / m.Scale,
+                PadTop + p.Row * m.Height + p.OffsetY / m.Scale,
+                p.PixelWidth / m.Scale,
+                p.PixelHeight / m.Scale);
+            ds.DrawImage(entry.Bitmap, dest, new Rect(p.SourceX, p.SourceY, p.SourceWidth, p.SourceHeight));
         }
     }
 
