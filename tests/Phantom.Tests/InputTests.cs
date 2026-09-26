@@ -137,7 +137,26 @@ public class KeybindingTests
     public void DefaultsFollowWindowsTerminal(string chord, TerminalAction expected)
     {
         Assert.True(Keybindings.Default.TryGet(KeyChord.Parse(chord), out var action));
-        Assert.Equal(expected, action);
+        Assert.Equal(expected, action.Action);
+    }
+
+    [Theory]
+    [InlineData("ctrl+shift+t", TerminalAction.NewTab, 0)]
+    [InlineData("ctrl+shift+1", TerminalAction.NewTabFromProfile, 0)]
+    [InlineData("ctrl+shift+9", TerminalAction.NewTabFromProfile, 8)]
+    [InlineData("ctrl+alt+1", TerminalAction.SwitchToTab, 0)]
+    [InlineData("ctrl+alt+8", TerminalAction.SwitchToTab, 7)]
+    [InlineData("ctrl+alt+9", TerminalAction.SwitchToTab, -1)]
+    [InlineData("ctrl+shift+w", TerminalAction.ClosePane, 0)]
+    [InlineData("ctrl+tab", TerminalAction.NextTab, 0)]
+    [InlineData("ctrl+shift+tab", TerminalAction.PreviousTab, 0)]
+    [InlineData("ctrl+shift+space", TerminalAction.OpenNewTabMenu, 0)]
+    [InlineData("ctrl+shift+d", TerminalAction.DuplicateTab, 0)]
+    [InlineData("ctrl+shift+n", TerminalAction.NewWindow, 0)]
+    public void TabDefaultsFollowWindowsTerminal(string chord, TerminalAction expected, int index)
+    {
+        Assert.True(Keybindings.Default.TryGet(KeyChord.Parse(chord), out var action));
+        Assert.Equal(new ActionInvocation(expected, index), action);
     }
 
     [Theory]

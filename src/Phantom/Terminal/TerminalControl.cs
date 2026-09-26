@@ -34,7 +34,18 @@ public sealed partial class TerminalControl : UserControl
     private bool _focused;
     private bool _exited;
 
+    private bool _subscribedToXamlRoot;
+
     public event Action<string>? TitleChanged;
+
+    /// <summary>
+    /// Handles bound actions the pane doesn't own (tabs, windows). Returns false to let
+    /// the key through to the app.
+    /// </summary>
+    public Func<ActionInvocation, bool>? ActionHandler { get; set; }
+
+    /// <summary>The last title the app set (OSC 0/2), or "" if none.</summary>
+    public string Title { get; private set; } = "";
 
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;
@@ -70,12 +81,19 @@ public sealed partial class TerminalControl : UserControl
             _canvas.Invalidate();
         };
 
+        // Hosts like TabView unload hidden content and reload it when shown again, so
+        // the pane's lifetime is explicit (Close) rather than tied to Unloaded.
         Loaded += (_, _) =>
         {
-            XamlRoot.Changed += (_, _) => UpdateScale();
+            Log.Write($"pane: Loaded ({ActualWidth}x{ActualHeight})");
+            if (!_subscribedToXamlRoot)
+            {
+                _subscribedToXamlRoot = true;
+                XamlRoot.Changed += (_, _) => UpdateScale();
+            }
+
             Focus(FocusState.Programmatic);
         };
-        Unloaded += (_, _) => Close();
     }
 
     private float DisplayScale => (float)(XamlRoot?.RasterizationScale ?? 1.0);
@@ -84,6 +102,7 @@ public sealed partial class TerminalControl : UserControl
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
     {
+        Log.Write($"pane: CreateResources ({args.Reason})");
         _renderer.CreateResources(sender);
         var size = _renderer.FontSize > 0 ? _renderer.FontSize : Math.Clamp(_config.FontSizeDip, MinFontSize, MaxFontSize);
         _renderer.SetFont(sender, size, DisplayScale);
@@ -110,6 +129,7 @@ public sealed partial class TerminalControl : UserControl
         var m = _renderer.Metrics;
         if (m.Width <= 0 || _canvas.ActualWidth <= 0 || _canvas.ActualHeight <= 0)
         {
+            Log.Write($"pane: UpdateGrid skipped (cell {m.Width}, canvas {_canvas.ActualWidth}x{_canvas.ActualHeight})");
             return;
         }
 
@@ -135,6 +155,7 @@ public sealed partial class TerminalControl : UserControl
 
     private void StartSession(ushort cols, ushort rows)
     {
+        Log.Write($"pane: start {cols}x{rows}: {_commandLine}");
         var m = _renderer.Metrics;
         var session = new TerminalSession(cols, rows, _config.Theme);
         session.Resize(cols, rows, m.WidthPx, m.HeightPx);
@@ -142,7 +163,11 @@ public sealed partial class TerminalControl : UserControl
 
         var dq = DispatcherQueue;
         session.OutputProcessed += RequestRedraw;
-        session.TitleChanged += title => dq.TryEnqueue(() => TitleChanged?.Invoke(title));
+        session.TitleChanged += title => dq.TryEnqueue(() =>
+        {
+            Title = title;
+            TitleChanged?.Invoke(title);
+        });
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
 
         _session = session;
@@ -181,6 +206,7 @@ public sealed partial class TerminalControl : UserControl
         }
     }
 
+    /// <summary>Ends the session (killing the child if still running) and frees resources.</summary>
     public void Close()
     {
         _blinkTimer.Stop();

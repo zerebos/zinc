@@ -16,6 +16,29 @@ public enum TerminalAction
     ScrollPageDown,
     ScrollToTop,
     ScrollToBottom,
+
+    // Window actions, handled by whoever hosts the pane.
+    NewTab,
+
+    /// <summary>New tab with profile number <see cref="ActionInvocation.Index"/> (0-based).</summary>
+    NewTabFromProfile,
+    DuplicateTab,
+    OpenNewTabMenu,
+
+    /// <summary>Close the focused pane (the tab, while tabs hold a single pane).</summary>
+    ClosePane,
+    NextTab,
+    PreviousTab,
+
+    /// <summary>Go to tab <see cref="ActionInvocation.Index"/> (0-based; -1 = last).</summary>
+    SwitchToTab,
+    NewWindow,
+}
+
+/// <summary>An action plus its argument (a tab or profile index), as bound to a key.</summary>
+public readonly record struct ActionInvocation(TerminalAction Action, int Index = 0)
+{
+    public static implicit operator ActionInvocation(TerminalAction action) => new(action);
 }
 
 /// <summary>A key plus exact modifier state, parsed from Windows Terminal-style names ("ctrl+shift+c").</summary>
@@ -96,13 +119,13 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
 /// <summary>Maps key chords to actions. Defaults follow Windows Terminal.</summary>
 public sealed class Keybindings
 {
-    private readonly Dictionary<KeyChord, TerminalAction> _map = new();
+    private readonly Dictionary<KeyChord, ActionInvocation> _map = new();
 
     public static Keybindings Default { get; } = CreateDefault();
 
-    public void Bind(string chord, TerminalAction action) => _map[KeyChord.Parse(chord)] = action;
+    public void Bind(string chord, ActionInvocation action) => _map[KeyChord.Parse(chord)] = action;
 
-    public bool TryGet(KeyChord chord, out TerminalAction action) => _map.TryGetValue(chord, out action);
+    public bool TryGet(KeyChord chord, out ActionInvocation action) => _map.TryGetValue(chord, out action);
 
     private static Keybindings CreateDefault()
     {
@@ -126,6 +149,21 @@ public sealed class Keybindings
         b.Bind("shift+pgdn", TerminalAction.ScrollPageDown);
         b.Bind("ctrl+shift+home", TerminalAction.ScrollToTop);
         b.Bind("ctrl+shift+end", TerminalAction.ScrollToBottom);
+
+        b.Bind("ctrl+shift+t", TerminalAction.NewTab);
+        b.Bind("ctrl+shift+d", TerminalAction.DuplicateTab);
+        b.Bind("ctrl+shift+space", TerminalAction.OpenNewTabMenu);
+        b.Bind("ctrl+shift+w", TerminalAction.ClosePane);
+        b.Bind("ctrl+tab", TerminalAction.NextTab);
+        b.Bind("ctrl+shift+tab", TerminalAction.PreviousTab);
+        b.Bind("ctrl+shift+n", TerminalAction.NewWindow);
+        for (var i = 1; i <= 9; i++)
+        {
+            b.Bind($"ctrl+shift+{i}", new ActionInvocation(TerminalAction.NewTabFromProfile, i - 1));
+            // Windows Terminal: ctrl+alt+1..8 pick a tab, ctrl+alt+9 the last one.
+            b.Bind($"ctrl+alt+{i}", new ActionInvocation(TerminalAction.SwitchToTab, i == 9 ? -1 : i - 1));
+        }
+
         return b;
     }
 }

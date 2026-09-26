@@ -134,6 +134,13 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | Drag / double-click / triple-click | Select cells / word / line |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
+| `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab (default profile / profile N) |
+| `Ctrl+Shift+Space`, ▾ button | Profile menu |
+| `Ctrl+Shift+D` | Duplicate tab |
+| `Ctrl+Shift+W` | Close tab |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
+| `Ctrl+Alt+1..8`, `Ctrl+Alt+9` | Go to tab N / last tab |
+| `Ctrl+Shift+N` | New window |
 | `Shift` + mouse | Bypass app mouse reporting to select text |
 
 When an app turns on mouse reporting (vim, htop, tmux, flow), clicks, drags and
@@ -173,7 +180,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 ## Known gaps
 
 - IME (CJK input methods) is untested; there is no composition UI.
-- No tabs, splits, or scrollbar yet; the config only covers font and command.
+- No split panes, command palette, quick terminal or scrollbar yet.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
 - Kitty graphics, hyperlinks (OSC 8) and desktop notifications are parsed by
   libghostty but not surfaced yet.

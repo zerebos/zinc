@@ -1,22 +1,33 @@
 using Microsoft.UI.Xaml;
+using Phantom.Input;
 
 namespace Phantom;
 
 public partial class App : Application
 {
-    private Window? _window;
+    private readonly List<Window> _windows = [];
+    private ConfigFile _config = null!;
 
     public App()
     {
         InitializeComponent();
     }
 
+    internal static App Instance => (App)Current;
+
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        var config = ConfigFile.Load();
-        var profile = config.DefaultProfile;
-        _window = new MainWindow(profile.Config, ShellResolver.Resolve(profile.Config),
-            profile.Config.ResolveWorkingDirectory());
-        _window.Activate();
+        _config = ConfigFile.Load();
+        var profile = _config.DefaultProfile;
+        // Our own arguments / PHANTOM_SHELL override the first tab's command only.
+        OpenWindow(profile, ShellResolver.Resolve(profile.Config));
+    }
+
+    internal void OpenWindow(Profile profile, string? command = null)
+    {
+        var window = new MainWindow(_config, Keybindings.Default, profile, command ?? ShellResolver.ForProfile(profile.Config));
+        _windows.Add(window);
+        window.Closed += (_, _) => _windows.Remove(window);
+        window.Activate();
     }
 }

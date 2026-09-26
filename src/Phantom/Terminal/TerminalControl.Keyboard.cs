@@ -146,8 +146,9 @@ public sealed partial class TerminalControl
     }
 
     /// <summary>Runs a bound action. Returns false to let the key through to the app.</summary>
-    private bool RunAction(TerminalAction action, TerminalSession session)
+    private bool RunAction(ActionInvocation invocation, TerminalSession session)
     {
+        var action = invocation.Action;
         switch (action)
         {
             case TerminalAction.Copy:
@@ -187,7 +188,7 @@ public sealed partial class TerminalControl
                 _canvas.Invalidate();
                 return true;
             default:
-                return false;
+                return ActionHandler?.Invoke(invocation) ?? false;
         }
     }
 

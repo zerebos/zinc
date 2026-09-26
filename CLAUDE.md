@@ -19,6 +19,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Never stop every Phantom process.
 - Shell: args after the exe, else `PHANTOM_SHELL`, else pwsh → powershell → cmd.
 - `PHANTOM_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
+- `PHANTOM_LOG=<file>` appends diagnostics from `Log.Write` (Core). Cheap to add a line
+  when something "doesn't happen" (e.g. pane lifecycle: Loaded / CreateResources / sizes).
 - Config: `%APPDATA%\Phantom\config` (Ghostty `key = value` syntax and units — font-size and
   padding are *points*; `Config.cs`).
   `PHANTOM_CONFIG=<file>` overrides the path — use it for tests instead of editing the
@@ -41,7 +43,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   defaults follow Windows Terminal. New actions go here, handled by whoever owns them.
 - `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
 
-`src/Phantom` (WinUI app), `Terminal/`:
+`src/Phantom` (WinUI app): `MainWindow` = TabView in the title bar (ExtendsContentIntoTitleBar,
+Mica), one `TerminalControl` per tab, handles window actions via `pane.ActionHandler`;
+`App.OpenWindow` for new windows. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
 - `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.
   `.Keyboard.cs` (keybindings → actions, KeyDecision → encoder / WM_CHAR path, clipboard),
@@ -120,6 +124,12 @@ and read state after the write (see `_titleDirty`).
 ## Windows / WinUI / ConPTY footguns
 
 - WinUI 3: `FontWeights` is `Microsoft.UI.Text.FontWeights`; `Colors` is `Microsoft.UI.Colors`.
+- TabView's style defaults to `VerticalAlignment=Top`: without `Stretch` it's only as tall as
+  its strip and tab content gets 0 px (panes never start their session).
+- TabView unloads hidden tabs' content and reloads it on selection. Never tie session
+  lifetime to `Unloaded` — panes are closed explicitly by their window (`CloseTab`,
+  `Closed`); `Loaded` handlers must tolerate running more than once.
+- Flyouts/menus are separate popup windows: PrintWindow of the main HWND won't show them.
 - App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
   `.scratch/venv`) builds the .ico from assets/shade-phosphor-fluent.svg. The mark is pixel
   art, so small sizes are re-drawn snapped to whole pixels — rerun after SVG edits and look
@@ -161,6 +171,11 @@ and read state after the write (see `_titleDirty`).
 - **Never** use SendKeys / SendInput (they hit whatever window is focused). Post messages
   to our own `InputSiteWindowClass` child instead (`keys.ps1`, `win.ps1`).
 - PrintWindow doesn't capture the mouse pointer, so pointer-shape changes need the user.
+- UI actions (tabs, buttons, menus): `.scratch/tools/uia.ps1 -ProcessId N -Action
+  list|invoke|select` drives our window via UI Automation — no mouse, no focus stealing.
+  Give buttons an `AutomationProperties.Name` (also needed for screen readers).
+  Keybindings with modifiers can't be exercised (posted keys carry no modifier state):
+  cover the chord→action map with unit tests and ask the user to try the keys.
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.
