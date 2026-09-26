@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using Phantom.Ghostty;
 using Phantom.Input;
+using Phantom.Terminal;
 using Windows.System;
 
 namespace Phantom.Tests;
@@ -51,6 +52,87 @@ public class ConfigTests : IDisposable
             unknown-key = 1
             """);
         Assert.Equal(16f, config.FontSize);
+    }
+
+    [Fact]
+    public void FontSizeIsInPoints()
+    {
+        var config = Load("font-size = 12");
+        Assert.Equal(12f, config.FontSize);
+        Assert.Equal(16f, config.FontSizeDip);
+    }
+
+    [Fact]
+    public void ParsesGhosttyColors()
+    {
+        var config = Load("""
+            background = #181818
+            foreground = d8d8d8
+            cursor-color = #FCFCFA
+            palette = 1=#AC4242
+            palette = 15 = #f8f8f8
+            palette = 256=#000000
+            palette = 3=nothex
+            background = #12345
+            """);
+        Assert.Equal(new GhosttyColorRgb(0x18, 0x18, 0x18), config.Theme.Background);
+        Assert.Equal(new GhosttyColorRgb(0xD8, 0xD8, 0xD8), config.Theme.Foreground);
+        Assert.Equal(new GhosttyColorRgb(0xFC, 0xFC, 0xFA), config.Theme.Cursor);
+        Assert.Equal(2, config.Theme.Palette.Count);
+        Assert.Equal(new GhosttyColorRgb(0xAC, 0x42, 0x42), config.Theme.Palette[1]);
+        Assert.Equal(new GhosttyColorRgb(0xF8, 0xF8, 0xF8), config.Theme.Palette[15]);
+    }
+
+    [Fact]
+    public void ParsesGhosttyPaddingInPoints()
+    {
+        var config = Load("""
+            window-padding-x = 15
+            window-padding-y = 6,12
+            """);
+        Assert.Equal(20f, config.PaddingLeft);
+        Assert.Equal(20f, config.PaddingRight);
+        Assert.Equal(8f, config.PaddingTop);
+        Assert.Equal(16f, config.PaddingBottom);
+    }
+
+    [Fact]
+    public void PaletteOverridesReachTerminal()
+    {
+        var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(1, 2, 3) } };
+        using var session = new TerminalSession(20, 2, theme);
+        session.WriteToScreen("\x1b[31mX");
+
+        // Read the rendered color back through the render state API.
+        Assert.Equal(new GhosttyColorRgb(1, 2, 3), FirstCellForeground(session));
+    }
+
+    private static unsafe GhosttyColorRgb FirstCellForeground(TerminalSession session)
+    {
+        Native.RenderStateNew(0, out var state);
+        Native.RowIteratorNew(0, out var rows);
+        Native.RowCellsNew(0, out var cells);
+        try
+        {
+            lock (session.Lock)
+            {
+                Native.RenderStateUpdate(state, session.Handle);
+            }
+
+            Native.RenderStateGet(state, RenderStateData.RowIterator, &rows);
+            Native.RowIteratorNext(rows);
+            Native.RowGet(rows, RenderStateRowData.Cells, &cells);
+            Native.RowCellsNext(cells);
+            GhosttyColorRgb fg;
+            Assert.Equal(GhosttyResult.Success, Native.RowCellsGet(cells, RenderStateRowCellsData.FgColor, &fg));
+            return fg;
+        }
+        finally
+        {
+            Native.RowCellsFree(cells);
+            Native.RowIteratorFree(rows);
+            Native.RenderStateFree(state);
+        }
     }
 
     [Fact]

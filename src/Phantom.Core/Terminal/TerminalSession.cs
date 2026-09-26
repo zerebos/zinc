@@ -74,6 +74,22 @@ public sealed unsafe class TerminalSession : IDisposable
             Native.TerminalSet(_terminal, TerminalOption.ModeDefault, &grapheme);
         }
 
+        if (theme.Palette.Count > 0)
+        {
+            // libghostty takes the whole 256-color table: start from its defaults.
+            var palette = new GhosttyColorRgb[256];
+            fixed (GhosttyColorRgb* p = palette)
+            {
+                Native.TerminalGet(_terminal, TerminalData.ColorPaletteDefault, p);
+                foreach (var (index, color) in theme.Palette)
+                {
+                    p[index] = color;
+                }
+
+                Native.TerminalSet(_terminal, TerminalOption.ColorPalette, p);
+            }
+        }
+
         nuint scrollback = 10_000;
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &scrollback);
 

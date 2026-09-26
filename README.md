@@ -66,14 +66,26 @@ syntax: one `key = value` per line, `#` comments, later lines win.
 
 ```
 font-family = JetBrainsMono NF
-font-size = 14
+font-size = 11
 command = wsl.exe --cd ~
+background = #181818
+foreground = #d8d8d8
+cursor-color = #d8d8d8
+palette = 1=#AC4242
+window-padding-x = 15
+window-padding-y = 10
 ```
 
 - `font-family`: any installed monospace family; Nerd Fonts work. If it isn't
   installed, Phantom falls back to Cascadia Mono, then Consolas.
-- `font-size`: in DIPs; `Ctrl+0` resets to this.
+- `font-size`: in points, like Ghostty and Windows Terminal; `Ctrl+0` resets to this.
 - `command`: the default command line (see below for precedence).
+- `background`, `foreground`, `cursor-color`: `#rrggbb`.
+- `palette = N=#rrggbb`: override palette entry N (0-255), one line per entry.
+- `window-padding-x`, `window-padding-y`: points; `N` or `left,right` / `top,bottom`.
+
+These are Ghostty's key names and units, so color and font lines can be copied
+straight from a Ghostty config.
 
 ## Choosing a shell
 
@@ -89,7 +101,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | Input | Action |
 | --- | --- |
 | `Ctrl+Shift+C`, or `Ctrl+C` with a selection | Copy selection |
-| `Ctrl+Shift+V`, `Shift+Insert` | Paste (bracketed when the app enables it) |
+| `Ctrl+V`, `Ctrl+Shift+V`, `Shift+Insert` | Paste (bracketed when the app enables it) |
 | Right click | Copy the selection if there is one, otherwise paste |
 | Drag / double-click / triple-click | Select cells / word / line |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |

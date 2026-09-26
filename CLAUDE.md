@@ -19,7 +19,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Never stop every Phantom process.
 - Shell: args after the exe, else `PHANTOM_SHELL`, else pwsh → powershell → cmd.
 - `PHANTOM_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
-- Config: `%APPDATA%\Phantom\config` (Ghostty `key = value` syntax; `Config.cs`).
+- Config: `%APPDATA%\Phantom\config` (Ghostty `key = value` syntax and units — font-size and
+  padding are *points*; `Config.cs`).
   `PHANTOM_CONFIG=<file>` overrides the path — use it for tests instead of editing the
   user's real config (which sets `font-family = JetBrainsMono NF`).
 
@@ -81,6 +82,11 @@ and read state after the write (see `_titleDirty`).
 
 - .NET 10 `dotnet test` needs `global.json` `{"test":{"runner":"Microsoft.Testing.Platform"}}`
   (xUnit v3 is MTP-based; the VSTest path errors out).
+- Phantom.slnx maps every project to `x64` explicitly. Without that mapping, `dotnet build`
+  (solution) built into `bin\Debug\` while project builds used `bin\x64\Debug\`, and the
+  exe we launched for testing was silently stale. If an app change "doesn't take", check
+  the timestamp of Phantom.Core.dll next to the exe you launched. ARM64 is deliberately
+  not in the solution until native/arm64 exists.
 - Solution builds can pass `Platform=AnyCPU` as a *global* property, which a csproj's
   Platform default can't override; WinAppSDK self-contained then fails ("requires a supported
   Windows architecture") unless a RuntimeIdentifier is set — hence the `win-x64` RID

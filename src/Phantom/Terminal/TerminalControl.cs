@@ -25,12 +25,15 @@ namespace Phantom.Terminal;
 /// </summary>
 public sealed unsafe partial class TerminalControl : UserControl
 {
-    private const float PaddingDip = 8;
     private const float MinFontSize = 6, MaxFontSize = 72;
 
     private readonly CanvasControl _canvas;
     private readonly DispatcherTimer _blinkTimer;
-    private readonly TerminalTheme _theme = TerminalTheme.Default;
+    private TerminalTheme Theme => _config.Theme;
+
+    // Padding around the grid, in DIPs (from window-padding-x/y).
+    private float PadLeft => _config.PaddingLeft;
+    private float PadTop => _config.PaddingTop;
     private readonly string _commandLine;
     private readonly string? _workingDirectory;
 
@@ -76,7 +79,7 @@ public sealed unsafe partial class TerminalControl : UserControl
     {
         _config = config;
         _fontFamily = config.FontFamily;
-        _fontSize = Math.Clamp(config.FontSize, MinFontSize, MaxFontSize);
+        _fontSize = Math.Clamp(config.FontSizeDip, MinFontSize, MaxFontSize);
         _commandLine = commandLine;
         _workingDirectory = workingDirectory;
 
@@ -85,7 +88,7 @@ public sealed unsafe partial class TerminalControl : UserControl
         TabFocusNavigation = KeyboardNavigationMode.Cycle;
         ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.IBeam);
 
-        _canvas = new CanvasControl { ClearColor = ToColor(_theme.Background) };
+        _canvas = new CanvasControl { ClearColor = ToColor(Theme.Background) };
         _canvas.CreateResources += OnCreateResources;
         _canvas.Draw += OnDraw;
         _canvas.SizeChanged += (_, _) => UpdateGrid();
@@ -179,8 +182,8 @@ public sealed unsafe partial class TerminalControl : UserControl
             return;
         }
 
-        var cols = (ushort)Math.Clamp((int)((_canvas.ActualWidth - 2 * PaddingDip) / _cellW), 2, 1000);
-        var rows = (ushort)Math.Clamp((int)((_canvas.ActualHeight - 2 * PaddingDip) / _cellH), 1, 1000);
+        var cols = (ushort)Math.Clamp((int)((_canvas.ActualWidth - PadLeft - _config.PaddingRight) / _cellW), 2, 1000);
+        var rows = (ushort)Math.Clamp((int)((_canvas.ActualHeight - PadTop - _config.PaddingBottom) / _cellH), 1, 1000);
 
         if (_session == null)
         {
@@ -206,7 +209,7 @@ public sealed unsafe partial class TerminalControl : UserControl
 
     private void StartSession(ushort cols, ushort rows)
     {
-        var session = new TerminalSession(cols, rows, _theme);
+        var session = new TerminalSession(cols, rows, Theme);
         session.Resize(cols, rows, _cellWPx, _cellHPx);
 
         Check(Native.RenderStateNew(0, out _renderState));
@@ -348,7 +351,7 @@ public sealed unsafe partial class TerminalControl : UserControl
         while (Native.RowIteratorNext(_rowIterator) != 0 && y < _rows)
         {
             var count = ReadRow(defaultFg, defaultBg);
-            var top = PaddingDip + y * _cellH;
+            var top = PadTop + y * _cellH;
             DrawBackgrounds(ds, count, top);
             DrawText(ds, count, top);
             DrawDecorations(ds, count, top);
@@ -480,7 +483,7 @@ public sealed unsafe partial class TerminalControl : UserControl
                 x++;
             }
 
-            ds.FillRectangle(PaddingDip + start * _cellW, top, (x - start) * _cellW, _cellH, color);
+            ds.FillRectangle(PadLeft + start * _cellW, top, (x - start) * _cellW, _cellH, color);
         }
 
         ds.Antialiasing = CanvasAntialiasing.Antialiased;
@@ -560,7 +563,7 @@ public sealed unsafe partial class TerminalControl : UserControl
 
         _brush!.Color = color;
         ds.DrawGlyphRun(
-            new Vector2(PaddingDip + start * _cellW, top + _baseline),
+            new Vector2(PadLeft + start * _cellW, top + _baseline),
             face, _fontSize, _glyphs.AsSpan(0, len).ToArray(), false, 0, _brush);
     }
 
@@ -581,7 +584,7 @@ public sealed unsafe partial class TerminalControl : UserControl
         // Align the fallback font's baseline with the grid's baseline.
         var lines = layout.LineMetrics;
         var offset = lines.Length > 0 ? _baseline - lines[0].Baseline : 0;
-        ds.DrawTextLayout(layout, PaddingDip + x * _cellW, top + offset, cell.Fg);
+        ds.DrawTextLayout(layout, PadLeft + x * _cellW, top + offset, cell.Fg);
     }
 
     private void DrawDecorations(CanvasDrawingSession ds, int count, float top)
@@ -595,7 +598,7 @@ public sealed unsafe partial class TerminalControl : UserControl
                 continue;
             }
 
-            var left = PaddingDip + x * _cellW;
+            var left = PadLeft + x * _cellW;
             var width = (cell.Flags & CellFlags.Wide) != 0 ? 2 * _cellW : _cellW;
             if (cell.Underline != 0)
             {
@@ -624,7 +627,7 @@ public sealed unsafe partial class TerminalControl : UserControl
         Color color, Color defaultBg)
     {
         var x = (int)cursor.ViewportX;
-        var left = PaddingDip + x * _cellW;
+        var left = PadLeft + x * _cellW;
         var wide = x < count && (_cells[x].Flags & CellFlags.Wide) != 0;
         var width = wide ? 2 * _cellW : _cellW;
         var thin = MathF.Max(1, MathF.Round(_scale)) / _scale;
@@ -894,7 +897,7 @@ public sealed unsafe partial class TerminalControl : UserControl
             return true;
         }
 
-        if (ctrlShift && key == VirtualKey.V || state.Shift && !state.Ctrl && key == VirtualKey.Insert)
+        if (ctrl && key == VirtualKey.V || state.Shift && !state.Ctrl && key == VirtualKey.Insert)
         {
             PasteFromClipboard();
             return true;
@@ -914,7 +917,7 @@ public sealed unsafe partial class TerminalControl : UserControl
 
         if (ctrl && key is VirtualKey.Number0 or VirtualKey.NumberPad0)
         {
-            SetFontSize(_config.FontSize);
+            SetFontSize(_config.FontSizeDip);
             return true;
         }
 
@@ -1137,17 +1140,18 @@ public sealed unsafe partial class TerminalControl : UserControl
 
         var widthPx = (uint)(_canvas.ActualWidth * _scale);
         var heightPx = (uint)(_canvas.ActualHeight * _scale);
-        var padPx = (uint)(PaddingDip * _scale);
+        var padLeftPx = (uint)(PadLeft * _scale);
+        var padTopPx = (uint)(PadTop * _scale);
         var size = new GhosttyMouseEncoderSize
         {
             ScreenWidth = widthPx,
             ScreenHeight = heightPx,
             CellWidth = _cellWPx,
             CellHeight = _cellHPx,
-            PaddingLeft = padPx,
-            PaddingTop = padPx,
-            PaddingRight = (uint)Math.Max(0, (int)widthPx - (int)padPx - _cols * (int)_cellWPx),
-            PaddingBottom = (uint)Math.Max(0, (int)heightPx - (int)padPx - _rows * (int)_cellHPx),
+            PaddingLeft = padLeftPx,
+            PaddingTop = padTopPx,
+            PaddingRight = (uint)Math.Max(0, (int)widthPx - (int)padLeftPx - _cols * (int)_cellWPx),
+            PaddingBottom = (uint)Math.Max(0, (int)heightPx - (int)padTopPx - _rows * (int)_cellHPx),
         };
 
         var bytes = session.EncodeMouse(action, button, mods, (float)(pos.X * _scale), (float)(pos.Y * _scale), size,
@@ -1160,8 +1164,8 @@ public sealed unsafe partial class TerminalControl : UserControl
 
     private void RunGesture(TerminalSession session, nint gestureEvent, Windows.Foundation.Point pos, bool isPress)
     {
-        var col = (ushort)Math.Clamp((int)((pos.X - PaddingDip) / _cellW), 0, _cols - 1);
-        var row = (uint)Math.Clamp((int)((pos.Y - PaddingDip) / _cellH), 0, _rows - 1);
+        var col = (ushort)Math.Clamp((int)((pos.X - PadLeft) / _cellW), 0, _cols - 1);
+        var row = (uint)Math.Clamp((int)((pos.Y - PadTop) / _cellH), 0, _rows - 1);
 
         lock (session.Lock)
         {
@@ -1183,7 +1187,7 @@ public sealed unsafe partial class TerminalControl : UserControl
             {
                 Columns = _cols,
                 CellWidth = _cellWPx,
-                PaddingLeft = (uint)(PaddingDip * _scale),
+                PaddingLeft = (uint)(PadLeft * _scale),
                 ScreenHeight = (uint)(_canvas.ActualHeight * _scale),
             };
             Native.SelectionGestureEventSet(gestureEvent, SelectionGestureEventOption.Geometry, &geometry);
