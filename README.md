@@ -44,11 +44,28 @@ The app is unpackaged and Windows App SDK self-contained, so
 `src/Phantom/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phantom.exe`
 runs directly.
 
+## Configuration
+
+`%APPDATA%\Phantom\config` (override the path with `PHANTOM_CONFIG`), in Ghostty's
+syntax: one `key = value` per line, `#` comments, later lines win.
+
+```
+font-family = JetBrainsMono NF
+font-size = 14
+command = wsl.exe --cd ~
+```
+
+- `font-family`: any installed monospace family; Nerd Fonts work. If it isn't
+  installed, Phantom falls back to Cascadia Mono, then Consolas.
+- `font-size`: in DIPs; `Ctrl+0` resets to this.
+- `command`: the default command line (see below for precedence).
+
 ## Choosing a shell
 
 1. Arguments after the executable: `Phantom.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
 2. The `PHANTOM_SHELL` environment variable (a full command line)
-3. Otherwise `pwsh.exe`, then `powershell.exe`, then `cmd.exe`
+3. `command` from the config file
+4. Otherwise `pwsh.exe`, then `powershell.exe`, then `cmd.exe`
 
 Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 
@@ -64,8 +81,8 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Shift` + mouse | Bypass app mouse reporting to select text |
 
-When an app turns on mouse reporting (vim, htop, tmux), clicks, drags and the
-wheel go to the app. On the alternate screen with alternate-scroll mode, the
+When an app turns on mouse reporting (vim, htop, tmux, flow), clicks, drags and
+the wheel go to the app, and the pointer becomes an arrow instead of an I-beam. On the alternate screen with alternate-scroll mode, the
 wheel sends arrow keys (`less`, `man`).
 
 If the shell exits with a non-zero code, the window stays open showing the code
@@ -94,7 +111,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 ## Known gaps
 
 - IME (CJK input methods) is untested; there is no composition UI.
-- No tabs, splits, config file, or scrollbar yet.
+- No tabs, splits, or scrollbar yet; the config only covers font and command.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
 - Kitty graphics, hyperlinks (OSC 8) and desktop notifications are parsed by
   libghostty but not surfaced yet.

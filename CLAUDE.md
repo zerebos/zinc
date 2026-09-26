@@ -15,6 +15,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `Get-Process Phantom -ErrorAction SilentlyContinue | Stop-Process -Force`.
 - Shell: args after the exe, else `PHANTOM_SHELL`, else pwsh → powershell → cmd.
 - `PHANTOM_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
+- Config: `%APPDATA%\Phantom\config` (Ghostty `key = value` syntax; `Config.cs`).
+  `PHANTOM_CONFIG=<file>` overrides the path — use it for tests instead of editing the
+  user's real config (which sets `font-family = JetBrainsMono NF`).
 
 ## Architecture (where to look)
 
@@ -71,6 +74,10 @@ and read state after the write (see `_titleDirty`).
   writes for `seq 1 200000` (~10 s, Phantom idle waiting). Bulk writers are fast
   (`cat` 44 MB ≈ 0.5 s; libghostty parses ~500 MB/s). Measure reader blocked-vs-busy time
   before optimizing rendering.
+- Fallback glyphs (DirectWrite layout) use color fonts only for wide cells or clusters
+  with VS16 (U+FE0F); otherwise text-presentation symbols like U+2714 turn into emoji.
+- Nerd Font "NF" icons intentionally overflow their single cell (the "NFM" variant
+  doesn't); same as Windows Terminal.
 - ~190 native threads at idle is normal here (GPU driver/framework; .NET pool is 0).
 - Children inherit Phantom's environment. Claude Code's shell sets `NO_COLOR=1` — clear it
   when launching Phantom for tests or everything renders colorless.
@@ -81,6 +88,7 @@ and read state after the write (see `_titleDirty`).
   **Never** `CopyFromScreen` — it captured another app's private window once.
 - **Never** use SendKeys / SendInput (they hit whatever window is focused). Post messages
   to our own `InputSiteWindowClass` child instead (`keys.ps1`, `win.ps1`).
+- PrintWindow doesn't capture the mouse pointer, so pointer-shape changes need the user.
 - Posted WM_CHAR/WM_KEYDOWN and WM_MOUSEWHEEL work; posted WM_LBUTTON* do NOT reach
   WinUI pointer events (it uses WM_POINTER). Posted keys don't update GetKeyboardState,
   so modifiers look released. Verify mouse/selection logic by replaying libghostty calls
