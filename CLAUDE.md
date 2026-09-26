@@ -13,8 +13,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `src/Phantom/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phantom.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
   always after bumping the Ghostty commit. ~1 s, 81 tests.
-- **A running Phantom.exe locks the output** → build fails with MSB3027. Kill it first:
-  `Get-Process Phantom -ErrorAction SilentlyContinue | Stop-Process -Force`.
+- **A running Phantom.exe locks the output** → build fails with MSB3027. Stop only *dev*
+  builds — the user daily-drives the installed copy, and this session may be running in it:
+  `Get-Process Phantom -ErrorAction SilentlyContinue | Where-Object Path -like 'C:\Users\Zack\dev\phantom\*' | Stop-Process -Force`
+  Never stop every Phantom process.
 - Shell: args after the exe, else `PHANTOM_SHELL`, else pwsh → powershell → cmd.
 - `PHANTOM_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
 - Config: `%APPDATA%\Phantom\config` (Ghostty `key = value` syntax; `Config.cs`).
@@ -85,6 +87,19 @@ and read state after the write (see `_titleDirty`).
   fallback in the app and test csprojs.
 - Long inline heredocs mixing Python and shell quoting can fail to parse and silently
   apply nothing; put multi-edit scripts in a file under .scratch/ instead.
+- `dotnet publish` of an unpackaged WinUI app omits `Phantom.pri`/`.xbf` unless
+  `EnableMsixTooling=true` → the published exe dies at startup with 0xC000027B in
+  Microsoft.UI.Xaml.dll. `bin/` builds don't show this; smoke-test a *publish* after
+  csproj changes (scripts/install.ps1 publishes).
+- Reference the WinAppSDK component packages (WinUI/Foundation/InteractiveExperiences),
+  not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
+  (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
+  metapackage release they came from.
+- Installed copies live in `%LOCALAPPDATA%\Programs\Phantom\versions\<stamp>-<rev>`; the
+  user's Start Menu shortcut points at the newest. A post-commit hook (if installed)
+  reinstalls in the background after every commit — including Claude's; log at
+  `.git/phantom-install.log`. Installed Phantom.exe processes are the user's own
+  windows: never kill `Get-Process Phantom` blindly — filter by Path to the dev bin/.
 
 ## Windows / WinUI / ConPTY footguns
 

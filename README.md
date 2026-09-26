@@ -47,6 +47,18 @@ The app is unpackaged and Windows App SDK self-contained, so
 `src/Phantom/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phantom.exe`
 runs directly.
 
+## Installing locally
+
+```bash
+pwsh scripts/install.ps1                  # Release build -> Start Menu "Phantom" (Raycast finds it)
+pwsh scripts/install.ps1 -InstallGitHook  # also reinstall in the background after each commit
+pwsh scripts/install.ps1 -Uninstall       # remove install, shortcut and hook (keeps config)
+```
+
+Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Phantom\versions\`
+and repoints the Start Menu shortcut, so open windows are never disturbed; the three
+newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundled).
+
 ## Configuration
 
 `%APPDATA%\Phantom\config` (override the path with `PHANTOM_CONFIG`), in Ghostty's
