@@ -50,7 +50,8 @@ Mica); each tab = `PaneTree<Pane>` (Core/Panes, tested) rendered into the tab's 
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
 - `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.
   `.Keyboard.cs` (keybindings → actions, KeyDecision → encoder / WM_CHAR path, clipboard),
-  `.Mouse.cs` (mouse reporting, selection, wheel, pointer shape).
+  `.Mouse.cs` (mouse reporting, selection, wheel, pointer shape), `.Scrollbar.cs` (overlay
+  ScrollBar synced from `GetScrollbar()` each frame; `ScrollToRow` uses the same units).
 
 `src/Phantom.Native.targets` — imported by every *runnable* project (app, tests): copies
 ghostty-vt.dll and references the ConPTY package (its OpenConsole copy step is in build/,

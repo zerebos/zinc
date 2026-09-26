@@ -19,7 +19,7 @@ public sealed partial class TerminalControl
     {
         Focus(FocusState.Pointer);
         var session = _session;
-        if (session == null)
+        if (session == null || IsFromScrollBar(e.OriginalSource))
         {
             return;
         }
@@ -58,7 +58,7 @@ public sealed partial class TerminalControl
     protected override void OnPointerMoved(PointerRoutedEventArgs e)
     {
         var session = _session;
-        if (session == null)
+        if (session == null || (!_selecting && IsFromScrollBar(e.OriginalSource)))
         {
             return;
         }

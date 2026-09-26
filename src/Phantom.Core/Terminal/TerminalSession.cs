@@ -248,6 +248,10 @@ public sealed unsafe class TerminalSession : IDisposable
     public void ScrollLines(int delta) =>
         ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Delta, Value = delta });
 
+    /// <summary>Scrolls the viewport so <paramref name="row"/> (the scrollbar's offset units) is on top.</summary>
+    public void ScrollToRow(ulong row) =>
+        ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Row, Value = (nint)row });
+
     public GhosttyTerminalScrollbar GetScrollbar()
     {
         GhosttyTerminalScrollbar sb;

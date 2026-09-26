@@ -48,6 +48,9 @@ public sealed partial class MainWindow : Window
 
         /// <summary>Set by "Change tab color".</summary>
         public Windows.UI.Color? Color { get; set; }
+
+        /// <summary>The (tab color, pane background) last applied to the item's resources.</summary>
+        public object? AppliedColors { get; set; }
     }
 
     public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command)
@@ -71,10 +74,6 @@ public sealed partial class MainWindow : Window
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phantom.ico"));
         MenuKeySuppressor.Attach(this);
-
-        // Selected tabs blend into the terminal below them, like Windows Terminal.
-        var bg = TerminalRenderer.ToColor(config.Global.Theme.Background);
-        Root.Resources["TabViewItemHeaderBackgroundSelected"] = new SolidColorBrush(bg);
 
         Tabs.Loaded += (_, _) => DisableTabAnimations();
         Root.Loaded += (_, _) =>
@@ -353,6 +352,8 @@ public sealed partial class MainWindow : Window
         {
             tab.Item.IconSource = icon;
         }
+
+        ApplyTabBackground(tab);
 
         if (SelectedTab == tab && Title != title)
         {

@@ -149,6 +149,10 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | `Ctrl+Shift+N` | New window |
 | `Shift` + mouse | Bypass app mouse reporting to select text |
 
+Each pane has a scrollbar (thin until hovered) while there is scrollback; it hides for
+full-screen apps, whose alternate screen has none. The selected tab takes the focused
+pane's background color unless you give the tab a color.
+
 When an app turns on mouse reporting (vim, htop, tmux, flow), clicks, drags and
 the wheel go to the app, and the pointer becomes an arrow instead of an I-beam. On the alternate screen with alternate-scroll mode, the
 wheel sends arrow keys (`less`, `man`).
@@ -189,7 +193,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 ## Known gaps
 
 - IME (CJK input methods) is untested; there is no composition UI.
-- No command palette, quick terminal or scrollbar yet; keybindings aren't configurable yet.
+- No command palette or quick terminal yet; keybindings aren't configurable yet.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
 - Kitty graphics, hyperlinks (OSC 8) and desktop notifications are parsed by
   libghostty but not surfaced yet.

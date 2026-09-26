@@ -102,6 +102,54 @@ public class SessionTests
         Assert.Contains("\x1b[48;30;100;540;900t", all);
     }
 
+    [Fact]
+    public void ScrollbarReportsScrollbackAndScrollsToRow()
+    {
+        using var session = new TerminalSession(20, 10, TerminalTheme.Default);
+        var sb = session.GetScrollbar();
+        Assert.Equal(sb.Len, sb.Total); // nothing to scroll yet
+
+        session.WriteToScreen(string.Concat(Enumerable.Range(1, 100).Select(i => $"line {i}\r\n")));
+        sb = session.GetScrollbar();
+        Assert.Equal(10u, sb.Len);
+        Assert.True(sb.Total > sb.Len, $"total {sb.Total}");
+        Assert.Equal(sb.Total - sb.Len, sb.Offset); // following the bottom
+
+        session.ScrollToRow(5);
+        Assert.Equal(5u, session.GetScrollbar().Offset);
+        Assert.StartsWith("line 6", ViewportTopLine(session));
+
+        session.ScrollToRow(0);
+        Assert.Equal(0u, session.GetScrollbar().Offset);
+        Assert.StartsWith("line 1", ViewportTopLine(session));
+    }
+
+    private static unsafe string ViewportTopLine(TerminalSession session)
+    {
+        // Read the first viewport row's text through a grid ref.
+        var text = new System.Text.StringBuilder();
+        lock (session.Lock)
+        {
+            for (ushort x = 0; x < 8; x++)
+            {
+                var gridRef = Phantom.Ghostty.GhosttyGridRef.Init();
+                var point = new Phantom.Ghostty.GhosttyPoint { Tag = Phantom.Ghostty.PointTag.Viewport, X = x, Y = 0 };
+                Phantom.Ghostty.Native.TerminalGridRef(session.Handle, point, &gridRef);
+                var cps = stackalloc uint[4];
+                nuint n;
+                if (GridRefGraphemes(&gridRef, cps, 4, &n) == 0 && n > 0)
+                {
+                    text.Append((char)cps[0]);
+                }
+            }
+        }
+
+        return text.ToString();
+    }
+
+    [System.Runtime.InteropServices.DllImport("ghostty-vt", EntryPoint = "ghostty_grid_ref_graphemes")]
+    private static extern unsafe int GridRefGraphemes(Phantom.Ghostty.GhosttyGridRef* gridRef, uint* buf, nuint len, nuint* outLen);
+
     private static string Joined(List<byte[]> replies) => string.Concat(replies.Select(Encoding.UTF8.GetString));
 
     private sealed class TestSession : IDisposable

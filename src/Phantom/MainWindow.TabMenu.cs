@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Phantom.Input;
 using Phantom.Panes;
+using Phantom.Terminal;
 using Windows.Storage.Pickers;
 
 namespace Phantom;
@@ -146,12 +147,30 @@ public sealed partial class MainWindow
     private void SetTabColor(Tab tab, Windows.UI.Color? color)
     {
         tab.Color = color;
-        foreach (var key in TabBackgroundKeys)
+        ApplyTabBackground(tab, force: true);
+    }
+
+    /// <summary>
+    /// Colors a tab: a chosen tab color if set; otherwise the selected tab takes the
+    /// focused pane's terminal background, so it flows into the terminal below it.
+    /// Only touches the item when the colors change (re-applying flickers).
+    /// </summary>
+    private void ApplyTabBackground(Tab tab, bool force = false)
+    {
+        var paneBackground = TerminalRenderer.ToColor(tab.Active.Profile.Config.Theme.Background);
+        var key = (tab.Color, paneBackground);
+        if (!force && Equals(tab.AppliedColors, key))
         {
-            tab.Item.Resources.Remove(key);
+            return;
         }
 
-        if (color is { } c)
+        tab.AppliedColors = key;
+        foreach (var resource in TabBackgroundKeys)
+        {
+            tab.Item.Resources.Remove(resource);
+        }
+
+        if (tab.Color is { } c)
         {
             // Selected tabs get the full color; others a translucent tint of it.
             var tint = new SolidColorBrush(Windows.UI.Color.FromArgb(0x80, c.R, c.G, c.B));
@@ -160,6 +179,10 @@ public sealed partial class MainWindow
             tab.Item.Resources["TabViewItemHeaderBackgroundPointerOver"] = tint;
             tab.Item.Resources["TabViewItemHeaderBackgroundPressed"] = solid;
             tab.Item.Resources["TabViewItemHeaderBackgroundSelected"] = solid;
+        }
+        else
+        {
+            tab.Item.Resources["TabViewItemHeaderBackgroundSelected"] = new SolidColorBrush(paneBackground);
         }
 
         // Theme resources are resolved when the template applies; flipping the theme

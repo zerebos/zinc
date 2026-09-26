@@ -72,7 +72,8 @@ public sealed partial class TerminalControl : UserControl
         _canvas.CreateResources += OnCreateResources;
         _canvas.Draw += OnDraw;
         _canvas.SizeChanged += (_, _) => UpdateGrid();
-        Content = _canvas;
+        // The scrollbar overlays the canvas's right edge (inside the padding when idle).
+        Content = new Grid { Children = { _canvas, CreateScrollBar() } };
 
         _blinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
         _blinkTimer.Tick += (_, _) =>
@@ -237,6 +238,7 @@ public sealed partial class TerminalControl : UserControl
 
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, new CursorPresentation(_focused, _blinkOn));
         UpdateBlinkTimer(blinking);
+        UpdateScrollBar(session);
     }
 
     private void UpdateBlinkTimer(bool blinking)
