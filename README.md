@@ -139,8 +139,18 @@ and Alt+Tab, and it keeps its tabs while hidden. Global settings:
 - `quick-terminal-autohide`: `true` (default) hides it when it loses focus.
 
 If another app holds the hotkey (Windows Terminal's quake mode uses ``Win+` ``), windows
-show a notice, and Phantom retries whenever one of its windows is activated. A hidden quick
-terminal keeps Phantom running after its other windows close.
+show a notice, and Phantom retries whenever one of its windows is activated.
+
+### Tray icon and background
+
+Phantom shows a notification-area icon while it runs. Clicking it brings back the most
+recently used window (or opens one); right-clicking offers New window, Show/Hide quick
+terminal, and Quit Phantom, which closes every window, the hidden quick terminal included.
+Quit Phantom is also in the command palette.
+
+When the last window closes, Phantom keeps running in the tray while its quick terminal hotkey
+works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
+`quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
 ## Choosing a shell
 

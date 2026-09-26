@@ -16,6 +16,8 @@ public sealed partial class MainWindow
 
     public bool IsQuickShownAndActive => _quickShown && _active;
 
+    public bool IsQuickShown => _quickShown;
+
     private void ConfigureQuickWindow()
     {
         // Out of the taskbar and Alt+Tab, above other windows while shown.
@@ -42,6 +44,7 @@ public sealed partial class MainWindow
 
         if (_active)
         {
+            App.Instance.NoteActivated(this);
             ShowHotkeyNoticeIfNeeded();
         }
     }

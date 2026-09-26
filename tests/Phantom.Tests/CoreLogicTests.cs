@@ -64,6 +64,15 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void QuitAfterLastWindowDefaultsToAutomatic()
+    {
+        Assert.Null(Load("").QuitAfterLastWindowClosed);
+        Assert.True(Load("quit-after-last-window-closed = true").QuitAfterLastWindowClosed);
+        Assert.False(Load("quit-after-last-window-closed = false").QuitAfterLastWindowClosed);
+        Assert.Null(Load("quit-after-last-window-closed = sometimes").QuitAfterLastWindowClosed);
+    }
+
+    [Fact]
     public void ClipboardWritesAllowedReadsDeniedByDefault()
     {
         Assert.True(Load("").ClipboardWrite);

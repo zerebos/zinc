@@ -79,10 +79,14 @@ Mica); each tab = `PaneTree<Pane>` (Core/Panes, tested) rendered into the tab's 
 `pane.ActionHandler`; `App.OpenWindow` for new windows. `MainWindow.CommandPalette.cs` builds the palette's command
 list fresh on open and runs actions through `TerminalControl.Invoke` (same path as keys);
 `MainWindow.TabMenu.cs` is the tab context menu. Quick terminal: layout/hotkey parsing in
-Core `QuickTerminal.cs` (tested); `HotkeyListener` (message-only window + RegisterHotKey,
-logs its hwnd), `App.ToggleQuickTerminal`, `MainWindow.Quick.cs` (placement, autohide on
-deactivate, hotkey-taken InfoBar). Test a press with `.scratch/tools/quick-toggle.ps1` (posts
-WM_HOTKEY to the logged hwnd; needs PHANTOM_LOG). Don't launch `powershell.exe` consoles
+Core `QuickTerminal.cs` (tested); `HotkeyListener` (RegisterHotKey on the `MessageWindow`),
+`App.ToggleQuickTerminal`, `MainWindow.Quick.cs` (placement, autohide on deactivate,
+hotkey-taken InfoBar). `MessageWindow` is a hidden *top-level* window (message-only windows
+miss Explorer's TaskbarCreated broadcast) that logs its hwnd and dispatches WM_HOTKEY and the
+`TrayIcon` callbacks. App lifetime: `DispatcherShutdownMode.OnExplicitShutdown`;
+`App.OnWindowClosed` decides stay-in-tray vs `Quit()` (tray icon must be removed on exit).
+Test a press with `.scratch/tools/quick-toggle.ps1` and lifetime with `lifetime.ps1` (both post
+to the logged hwnd; need PHANTOM_LOG). Don't launch `powershell.exe` consoles
 mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
 - `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.

@@ -43,6 +43,13 @@ public sealed record Config
     /// </summary>
     public bool ClipboardRead { get; init; }
 
+    /// <summary>
+    /// Whether closing the last window quits Phantom (global only). Null (the default): keep
+    /// running in the tray while the quick terminal hotkey works, so it still summons one.
+    /// Config: <c>quit-after-last-window-closed = true | false</c>.
+    /// </summary>
+    public bool? QuitAfterLastWindowClosed { get; init; }
+
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
@@ -79,6 +86,8 @@ public sealed record Config
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
             "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
+            "quit-after-last-window-closed" when bool.TryParse(value, out var quit) =>
+                this with { QuitAfterLastWindowClosed = quit },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>

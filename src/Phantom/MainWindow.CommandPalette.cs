@@ -231,6 +231,7 @@ public sealed partial class MainWindow
         Custom("Rename tab…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));
         Action("New window", TerminalAction.NewWindow);
+        Custom("Quit Phantom", App.Instance.Quit, null);
 
         // Panes.
         Action("Split right", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
