@@ -202,6 +202,15 @@ public struct GhosttyMouseEncoderSize
 }
 
 [StructLayout(LayoutKind.Sequential)]
+public struct GhosttySizeReportSize
+{
+    public ushort Rows;
+    public ushort Columns;
+    public uint CellWidth;
+    public uint CellHeight;
+}
+
+[StructLayout(LayoutKind.Sequential)]
 public struct GhosttyMousePosition
 {
     public float X;
@@ -273,6 +282,7 @@ public enum TerminalOption : int
     WritePty = 1,
     Bell = 2,
     TitleChanged = 5,
+    Size = 6,
     ColorForeground = 11,
     ColorBackground = 12,
     ColorCursor = 13,

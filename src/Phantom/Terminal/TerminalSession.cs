@@ -24,6 +24,7 @@ public sealed unsafe class TerminalSession : IDisposable
     private readonly nint _mouseEvent;
     private GCHandle _self;
     private ConPty? _pty;
+    private GhosttySizeReportSize _size;
     private bool _titleDirty;
     private bool _bell;
     private bool _disposed;
@@ -52,6 +53,11 @@ public sealed unsafe class TerminalSession : IDisposable
             (delegate* unmanaged[Cdecl]<nint, nint, void>)&OnTitleChanged);
         Native.TerminalSet(_terminal, TerminalOption.Bell,
             (delegate* unmanaged[Cdecl]<nint, nint, void>)&OnBell);
+        // Without this, libghostty suppresses XTWINOPS size replies (CSI 14/16/18 t)
+        // and the report sent when an app enables in-band resize (mode 2048).
+        Native.TerminalSet(_terminal, TerminalOption.Size,
+            (delegate* unmanaged[Cdecl]<nint, nint, GhosttySizeReportSize*, byte>)&OnSize);
+        _size = new GhosttySizeReportSize { Columns = cols, Rows = rows };
 
         var fg = theme.Foreground;
         var bg = theme.Background;
@@ -202,6 +208,7 @@ public sealed unsafe class TerminalSession : IDisposable
     {
         lock (Lock)
         {
+            _size = new GhosttySizeReportSize { Columns = cols, Rows = rows, CellWidth = cellWidthPx, CellHeight = cellHeightPx };
             Native.TerminalResize(_terminal, cols, rows, cellWidthPx, cellHeightPx);
         }
 
@@ -440,6 +447,20 @@ public sealed unsafe class TerminalSession : IDisposable
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnTitleChanged(nint terminal, nint userdata) => FromUserdata(userdata)._titleDirty = true;
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static byte OnSize(nint terminal, nint userdata, GhosttySizeReportSize* size)
+    {
+        // Called under Lock (from vt_write or resize), so _size is consistent.
+        var s = FromUserdata(userdata)._size;
+        if (s.CellWidth == 0)
+        {
+            return 0;
+        }
+
+        *size = s;
+        return 1;
+    }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnBell(nint terminal, nint userdata) => FromUserdata(userdata)._bell = true;
