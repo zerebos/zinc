@@ -207,9 +207,10 @@ and read state after the write (see `_titleDirty`).
 - Focus is the window's job (`FocusActive`, low-priority dispatch after layout); panes must
   not grab focus on Loaded, since every rebuild re-loads every pane.
 - App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
-  `.scratch/venv`) builds the .ico from assets/shade-phosphor-fluent.svg. The mark is pixel
-  art, so small sizes are re-drawn snapped to whole pixels — rerun after SVG edits and look
-  at `--preview`. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
+  `.scratch/venv`) builds the .ico from assets/phosphor-icon.svg (the user's design, 2026-09-26;
+  shade-phosphor-fluent.svg is the previous one). The mark is a dot-matrix of lit cells, so
+  sizes below 256 are re-drawn snapped to whole pixels — rerun after SVG edits and look at
+  `--preview`. The SVG carries a large C2PA `<metadata>` blob; the script strips it. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
   uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
 - `await` is illegal inside an `unsafe` class → async code lives in `ClipboardText`.
 - Keyboard: a key's WM_CHAR arrives after its KeyDown and before its KeyUp. Suppress the
