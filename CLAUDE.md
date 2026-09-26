@@ -131,6 +131,17 @@ and read state after the write (see `_titleDirty`).
   lifetime to `Unloaded` — panes are closed explicitly by their window (`CloseTab`,
   `Closed`); `Loaded` handlers must tolerate running more than once.
 - Flyouts/menus are separate popup windows: PrintWindow of the main HWND won't show them.
+- TabViewItem applies Horizontal/VerticalContentAlignment to its *header*: Stretch there
+  pushed the label 4 px above the icon.
+- Don't re-set TabViewItem.Header/IconSource unless they changed: each set replays the
+  header's content transition (label "slides in") and reloads the icon. ProfileIcons caches
+  one IconSource per profile so reference equality works.
+- The tab strip needs `DragRegion.MinWidth >= AppWindow.TitleBar.RightInset/scale`, or tabs
+  and +/▾ slide under the caption buttons instead of shrinking/scrolling.
+- TabView's inner `TabListView` has entrance transitions; new tabs slid in after their
+  terminal rendered — `DisableTabAnimations` clears them.
+- Per-item lightweight styling (tab color) set after the template applied only takes effect
+  after flipping the item's RequestedTheme (Light → Dark) to re-resolve ThemeResources.
 - `FrameworkElement.Parent` is null for children added to a Panel in code — don't use it to
   detach reusable elements. Pane hosts are reused across layout rebuilds, so `Rebuild`
   dismantles the old Grids first; adding an element that still has a parent fails fast
@@ -191,6 +202,8 @@ and read state after the write (see `_titleDirty`).
   "alt+shift+plus,alt+left"` replays chords (1/s) through the real keybindings and
   `HandleAction` in the focused pane (see `MainWindow.ReplayTestKeys`; logs to PHANTOM_LOG).
   The chord→action map itself is unit-tested; the user confirms real key delivery.
+  Entries like `menu:Split pane/Split right` run that tab context-menu item's command
+  (context menus can't be opened by posted input or UIA).
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.

@@ -205,6 +205,9 @@ public sealed partial class TerminalControl : UserControl
         }
     }
 
+    /// <summary>The whole screen including scrollback as plain text ("" before the session starts).</summary>
+    public string ReadText() => _session?.ReadScreenText() ?? "";
+
     /// <summary>Ends the session (killing the child if still running) and frees resources.</summary>
     public void Close()
     {

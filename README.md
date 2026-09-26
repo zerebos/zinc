@@ -107,7 +107,9 @@ working-directory = ~/dev
 ```
 
 - `default-profile` (global only): the profile Phantom starts with; defaults to the first.
-- `icon`: image shown for the profile in tabs.
+- `icon`: image shown for the profile in tabs. Without one, Phantom picks one like Windows
+  Terminal: the WSL distro's registered icon, Git for Windows' icon for Git Bash, a network
+  glyph for `ssh`, else the command's executable icon.
 - `working-directory`: `~`/`home` (the default) or a path; `~/sub` and `%VARS%` expand.
 - Without any sections, the global settings act as a single "Default" profile.
 - Problems (unknown keys, bad values, duplicate profiles) are collected as warnings
@@ -150,6 +152,9 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 When an app turns on mouse reporting (vim, htop, tmux, flow), clicks, drags and
 the wheel go to the app, and the pointer becomes an arrow instead of an I-beam. On the alternate screen with alternate-scroll mode, the
 wheel sends arrow keys (`less`, `man`).
+
+Right-clicking a tab offers rename, tab color, duplicate, split, export text (whole
+scrollback to a file), and closing this / other / right-hand tabs.
 
 If the shell exits with a non-zero code, the window stays open showing the code
 until a key is pressed; a clean exit closes it.

@@ -42,6 +42,12 @@ public sealed partial class MainWindow : Window
         public Grid Container { get; } = new();
         public PaneTree<Pane> Panes { get; } = panes;
         public Pane Active { get; set; } = active;
+
+        /// <summary>Set by "Rename tab"; overrides the app/profile title until cleared.</summary>
+        public string? CustomTitle { get; set; }
+
+        /// <summary>Set by "Change tab color".</summary>
+        public Windows.UI.Color? Color { get; set; }
     }
 
     public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command)
@@ -69,6 +75,13 @@ public sealed partial class MainWindow : Window
         // Selected tabs blend into the terminal below them, like Windows Terminal.
         var bg = TerminalRenderer.ToColor(config.Global.Theme.Background);
         Root.Resources["TabViewItemHeaderBackgroundSelected"] = new SolidColorBrush(bg);
+
+        Tabs.Loaded += (_, _) => DisableTabAnimations();
+        Root.Loaded += (_, _) =>
+        {
+            UpdateCaptionInset();
+            Root.XamlRoot.Changed += (_, _) => UpdateCaptionInset();
+        };
 
         BuildNewTabMenu();
         OpenTab(profile, command, profile.Config.ResolveWorkingDirectory());
@@ -276,16 +289,13 @@ public sealed partial class MainWindow : Window
     {
         Tab? tab = null;
         var pane = CreatePane(profile, command, workingDirectory, () => tab!);
-        var item = new TabViewItem
-        {
-            Header = profile.Name,
-            IconSource = IconFor(profile),
-            HorizontalContentAlignment = HorizontalAlignment.Stretch,
-            VerticalContentAlignment = VerticalAlignment.Stretch,
-        };
+        // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
+        // to its header, and Stretch pushed the label above the icon.
+        var item = new TabViewItem { Header = profile.Name, IconSource = ProfileIcons.For(profile) };
         tab = new Tab(item, new PaneTree<Pane>(pane), pane);
         item.Tag = tab;
         item.Content = tab.Container;
+        item.ContextFlyout = BuildTabMenu(tab);
 
         Tabs.TabItems.Add(item);
         Rebuild(tab);
@@ -327,13 +337,64 @@ public sealed partial class MainWindow : Window
     private void UpdateTitle(Tab tab)
     {
         var pane = tab.Active;
-        var title = string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title;
-        tab.Item.Header = title;
-        tab.Item.IconSource = IconFor(pane.Profile);
-        ToolTipService.SetToolTip(tab.Item, title);
-        if (SelectedTab == tab)
+        var title = tab.CustomTitle ??
+                    (string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title);
+
+        // Only touch the header/icon when they actually change: re-setting them replays
+        // the header's content transition (the label "slides in") and reloads the icon.
+        if (!Equals(tab.Item.Header, title))
+        {
+            tab.Item.Header = title;
+            ToolTipService.SetToolTip(tab.Item, title);
+        }
+
+        var icon = ProfileIcons.For(pane.Profile);
+        if (!ReferenceEquals(tab.Item.IconSource, icon))
+        {
+            tab.Item.IconSource = icon;
+        }
+
+        if (SelectedTab == tab && Title != title)
         {
             Title = title;
+        }
+    }
+
+    /// <summary>
+    /// Keeps the tab strip clear of the caption buttons: the footer's drag area is at
+    /// least as wide as the buttons (plus some room to grab), so tabs shrink and then
+    /// scroll instead of sliding under Minimize/Maximize/Close.
+    /// </summary>
+    private void UpdateCaptionInset()
+    {
+        var scale = Root.XamlRoot?.RasterizationScale ?? 1.0;
+        DragRegion.MinWidth = AppWindow.TitleBar.RightInset / scale + 48;
+    }
+
+    /// <summary>
+    /// Turns off the tab strip's add/remove/reorder transitions: new tabs otherwise
+    /// slide in visibly after their terminal has already rendered.
+    /// </summary>
+    private void DisableTabAnimations()
+    {
+        foreach (var list in VisualDescendants(Tabs).OfType<ListView>())
+        {
+            list.ItemContainerTransitions = [];
+            Log.Write($"tab strip: cleared transitions on {list.Name}");
+        }
+    }
+
+    private static IEnumerable<DependencyObject> VisualDescendants(DependencyObject root)
+    {
+        var count = VisualTreeHelper.GetChildrenCount(root);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var d in VisualDescendants(child))
+            {
+                yield return d;
+            }
         }
     }
 
@@ -356,7 +417,7 @@ public sealed partial class MainWindow : Window
         var index = 0;
         foreach (var profile in _config.Profiles)
         {
-            var item = new MenuFlyoutItem { Text = profile.Name, Icon = IconFor(profile) is { } icon ? new ImageIconElement(icon) : null };
+            var item = new MenuFlyoutItem { Text = profile.Name, Icon = new ImageIconElement(ProfileIcons.For(profile)) };
             if (index < 9)
             {
                 // Mirrors the Ctrl+Shift+N (profile N) bindings.
@@ -368,11 +429,6 @@ public sealed partial class MainWindow : Window
             index++;
         }
     }
-
-    private static IconSource? IconFor(Profile profile) =>
-        profile.Config.Icon is { } path && File.Exists(path)
-            ? new BitmapIconSource { UriSource = new Uri(path), ShowAsMonochrome = false }
-            : null;
 
     /// <summary>
     /// Test hook: PHANTOM_TEST_KEYS="alt+shift+plus,alt+left" replays chords (one per second)
@@ -397,6 +453,15 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord.StartsWith("menu:"))
+            {
+                // "menu:Split pane/Split right" runs that tab context menu item's command.
+                var item = FindMenuItem(tab.Item.ContextFlyout as MenuFlyout, chord["menu:".Length..].Split('/'));
+                Log.Write($"test menu {chord}: {(item != null ? "found" : "missing")}");
+                item?.Command?.Execute(null);
+                return;
+            }
+
             var bound = _keybindings.TryGet(KeyChord.Parse(chord), out var invocation);
             Log.Write($"test key {chord}: {(bound ? invocation.ToString() : "unbound")}");
             if (bound)
@@ -405,6 +470,23 @@ public sealed partial class MainWindow : Window
             }
         };
         timer.Start();
+    }
+
+    private static MenuFlyoutItem? FindMenuItem(MenuFlyout? menu, string[] path)
+    {
+        IList<MenuFlyoutItemBase>? items = menu?.Items;
+        for (var i = 0; items != null && i < path.Length; i++)
+        {
+            var match = items.FirstOrDefault(x => x is MenuFlyoutItem m && m.Text == path[i] || x is MenuFlyoutSubItem sub && sub.Text == path[i]);
+            if (i == path.Length - 1)
+            {
+                return match as MenuFlyoutItem;
+            }
+
+            items = (match as MenuFlyoutSubItem)?.Items;
+        }
+
+        return null;
     }
 
     // ------------------------------------------------------------- actions
