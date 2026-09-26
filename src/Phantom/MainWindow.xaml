@@ -5,6 +5,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Phantom">
     <Grid x:Name="Root" RequestedTheme="Dark">
+        <Grid.Resources>
+            <!-- 16 px above the 32 px tabs makes the strip exactly as tall as the Tall
+                 (48 px) caption buttons, with the tabs resting on the terminal below.
+                 (Default 8 px gives ~41 px, which matches neither caption height.) -->
+            <Thickness x:Key="TabViewHeaderPadding">0,16,0,0</Thickness>
+        </Grid.Resources>
         <!-- The tab strip doubles as the title bar (ExtendsContentIntoTitleBar).
              TabView's style defaults to VerticalAlignment=Top: without Stretch the control
              is only as tall as its strip and tab content gets 0 px. -->
