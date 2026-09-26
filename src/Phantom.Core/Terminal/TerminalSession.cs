@@ -88,6 +88,12 @@ public sealed unsafe class TerminalSession : IDisposable
 
     public bool HasExited { get; private set; }
 
+    /// <summary>The child's process id, or 0 before <see cref="Start"/>.</summary>
+    public int ProcessId => _pty?.ProcessId ?? 0;
+
+    /// <summary>Test hook: observes every reply libghostty writes back to the PTY.</summary>
+    internal Action<byte[]>? PtyReplyObserver;
+
     public void Start(string commandLine, string? workingDirectory, ushort cols, ushort rows)
     {
         // Children inherit our environment; advertise what the terminal supports.
@@ -394,6 +400,46 @@ public sealed unsafe class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>Formats the whole screen (including scrollback) as plain text.</summary>
+    public string ReadScreenText()
+    {
+        lock (Lock)
+        {
+            if (_disposed ||
+                Native.FormatterTerminalNew(0, out var formatter, _terminal, GhosttyFormatterTerminalOptions.Init()) != GhosttyResult.Success)
+            {
+                return "";
+            }
+
+            try
+            {
+                if (Native.FormatterFormatAlloc(formatter, 0, out var ptr, out var len) != GhosttyResult.Success)
+                {
+                    return "";
+                }
+
+                // An empty screen comes back as (NULL, 0).
+                if (ptr == null || len == 0)
+                {
+                    return "";
+                }
+
+                try
+                {
+                    return Encoding.UTF8.GetString(ptr, (int)len);
+                }
+                finally
+                {
+                    Native.Free(0, ptr, len);
+                }
+            }
+            finally
+            {
+                Native.FormatterFree(formatter);
+            }
+        }
+    }
+
     /// <summary>Returns the selected text, or null when nothing is selected.</summary>
     public string? GetSelectionText()
     {
@@ -442,7 +488,10 @@ public sealed unsafe class TerminalSession : IDisposable
     {
         // Replies to queries (DSR, DA, DECRQM...). ConPTY itself sends a DSR
         // cursor position query at startup and waits for this answer.
-        FromUserdata(userdata)._pty?.Write(new ReadOnlySpan<byte>(data, (int)len));
+        var session = FromUserdata(userdata);
+        var bytes = new ReadOnlySpan<byte>(data, (int)len);
+        session.PtyReplyObserver?.Invoke(bytes.ToArray());
+        session._pty?.Write(bytes);
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]

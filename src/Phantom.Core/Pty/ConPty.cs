@@ -15,6 +15,9 @@ public sealed unsafe partial class ConPty : IDisposable
     private readonly SafeFileHandle _inputWrite;
     private readonly SafeFileHandle _outputRead;
     private readonly SafeWaitHandle _process;
+
+    /// <summary>The child's process id.</summary>
+    public int ProcessId { get; }
     private readonly FileStream _input;
     private readonly Thread _reader;
     private readonly object _writeLock = new();
@@ -58,7 +61,7 @@ public sealed unsafe partial class ConPty : IDisposable
             throw Marshal.GetExceptionForHR(hr)!;
         }
 
-        _process = StartProcess(commandLine, workingDirectory, _hpc);
+        (_process, ProcessId) = StartProcess(commandLine, workingDirectory, _hpc);
         _input = new FileStream(_inputWrite, FileAccess.Write, 1);
 
         _reader = new Thread(ReadLoop) { IsBackground = true, Name = "ConPty reader" };
@@ -186,7 +189,7 @@ public sealed unsafe partial class ConPty : IDisposable
         ThreadPool.QueueUserWorkItem(_ => Close());
     }
 
-    private static SafeWaitHandle StartProcess(string commandLine, string? workingDirectory, nint hpc)
+    private static (SafeWaitHandle Process, int Id) StartProcess(string commandLine, string? workingDirectory, nint hpc)
     {
         nuint size = 0;
         InitializeProcThreadAttributeList(null, 1, 0, ref size);
@@ -222,7 +225,7 @@ public sealed unsafe partial class ConPty : IDisposable
                 }
 
                 CloseHandle(pi.hThread);
-                return new SafeWaitHandle(pi.hProcess, ownsHandle: true);
+                return (new SafeWaitHandle(pi.hProcess, ownsHandle: true), pi.dwProcessId);
             }
         }
         finally

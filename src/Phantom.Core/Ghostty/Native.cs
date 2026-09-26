@@ -9,6 +9,16 @@ namespace Phantom.Ghostty;
 // bumping the pinned commit in scripts/build-libghostty.sh, re-check them.
 // C `bool` is mapped to `byte` everywhere to keep every signature blittable.
 
+/// <summary>
+/// Maps a flattened field to its dotted path in the C struct (through unions), for the
+/// ABI check in Phantom.Tests. Fields without it map to the snake_case of their name.
+/// </summary>
+[AttributeUsage(AttributeTargets.Field)]
+public sealed class AbiFieldAttribute(string path) : Attribute
+{
+    public string Path { get; } = path;
+}
+
 public enum GhosttyResult : int
 {
     Success = 0,
@@ -120,7 +130,7 @@ public enum ScrollViewportTag : int
 public struct GhosttyTerminalScrollViewport
 {
     [FieldOffset(0)] public ScrollViewportTag Tag;
-    [FieldOffset(8)] public nint Value;
+    [FieldOffset(8), AbiField("value.delta")] public nint Value;
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 24)]
@@ -146,8 +156,8 @@ public enum PointTag : int
 public struct GhosttyPoint
 {
     [FieldOffset(0)] public PointTag Tag;
-    [FieldOffset(8)] public ushort X;
-    [FieldOffset(12)] public uint Y;
+    [FieldOffset(8), AbiField("value.coordinate.x")] public ushort X;
+    [FieldOffset(12), AbiField("value.coordinate.y")] public uint Y;
 }
 
 [StructLayout(LayoutKind.Explicit, Size = 64)]
@@ -169,6 +179,48 @@ public struct GhosttyTerminalSelectionFormatOptions
     [FieldOffset(12)] public byte Unwrap;
     [FieldOffset(13)] public byte Trim;
     [FieldOffset(16)] public nint Selection; // GhosttySelection*, NULL = active selection
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 16)]
+public struct GhosttyFormatterScreenExtra
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public byte Cursor;
+    [FieldOffset(9)] public byte Style;
+    [FieldOffset(10)] public byte Hyperlink;
+    [FieldOffset(11)] public byte Protection;
+    [FieldOffset(12)] public byte KittyKeyboard;
+    [FieldOffset(13)] public byte Charsets;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 32)]
+public struct GhosttyFormatterTerminalExtra
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public byte Palette;
+    [FieldOffset(9)] public byte Modes;
+    [FieldOffset(10)] public byte ScrollingRegion;
+    [FieldOffset(11)] public byte Tabstops;
+    [FieldOffset(12)] public byte Pwd;
+    [FieldOffset(13)] public byte Keyboard;
+    [FieldOffset(16)] public GhosttyFormatterScreenExtra Screen;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 56)]
+public struct GhosttyFormatterTerminalOptions
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public int Emit; // GhosttyFormatterFormat: 0 = plain
+    [FieldOffset(12)] public byte Unwrap;
+    [FieldOffset(13)] public byte Trim;
+    [FieldOffset(16)] public GhosttyFormatterTerminalExtra Extra;
+    [FieldOffset(48)] public nint Selection; // const GhosttySelection*, NULL = whole screen
+
+    public static GhosttyFormatterTerminalOptions Init() => new()
+    {
+        Size = 56,
+        Extra = new GhosttyFormatterTerminalExtra { Size = 32, Screen = new GhosttyFormatterScreenExtra { Size = 16 } },
+    };
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -412,6 +464,16 @@ public static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "ghostty_terminal_selection_format_alloc")]
     public static partial GhosttyResult TerminalSelectionFormatAlloc(
         nint terminal, nint allocator, GhosttyTerminalSelectionFormatOptions options, out byte* outPtr, out nuint outLen);
+
+    // ---- formatter ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_formatter_terminal_new")]
+    public static partial GhosttyResult FormatterTerminalNew(nint allocator, out nint formatter, nint terminal, GhosttyFormatterTerminalOptions options);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_formatter_format_alloc")]
+    public static partial GhosttyResult FormatterFormatAlloc(nint formatter, nint allocator, out byte* outPtr, out nuint outLen);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_formatter_free")]
+    public static partial void FormatterFree(nint formatter);
 
     // ---- render state ----
     [LibraryImport(Lib, EntryPoint = "ghostty_render_state_new")]

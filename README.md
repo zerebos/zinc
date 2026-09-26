@@ -38,6 +38,9 @@ scripts/build-libghostty.sh x64
 
 # 2. Build and run the app
 dotnet run --project src/Phantom
+
+# 3. Run the tests (ABI check against libghostty's manifest, headless ConPTY sessions)
+dotnet test
 ```
 
 The app is unpackaged and Windows App SDK self-contained, so
@@ -91,12 +94,17 @@ until a key is pressed; a clean exit closes it.
 ## Layout
 
 ```
-scripts/build-libghostty.sh    fetch + build libghostty-vt at a pinned commit
-scripts/gen-keys.py            regenerate GhosttyKey.g.cs from the C header
-src/Phantom/Ghostty/           P/Invoke bindings (layouts checked against ghostty_type_json)
-src/Phantom/Pty/ConPty.cs      pseudoconsole + child process + reader thread
-src/Phantom/Terminal/          TerminalSession (terminal+pty glue), TerminalControl (render+input)
-src/Phantom/Input/             scan code -> GhosttyKey map, Win32 keyboard layout translation
+scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
+scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
+src/Phantom.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
+src/Phantom.Core/                 everything testable without a window:
+  Ghostty/                          P/Invoke bindings
+  Pty/ConPty.cs                     pseudoconsole + child process + reader thread
+  Terminal/TerminalSession.cs       terminal + pty glue, libghostty callbacks
+  Input/                            scan code -> GhosttyKey map, keyboard layout translation
+  Config.cs, ShellResolver.cs       config file, command resolution
+src/Phantom/                      WinUI app: window, TerminalControl (Win2D render + input)
+tests/Phantom.Tests/              xUnit v3: ABI check, headless sessions, unit tests
 ```
 
 ## Updating libghostty-vt
@@ -105,8 +113,8 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 
 1. Change `COMMIT` in `scripts/build-libghostty.sh` and run it.
 2. Run `python scripts/gen-keys.py`.
-3. Check the struct layouts in `src/Phantom/Ghostty/Native.cs` against the
-   library's ABI manifest (`ghostty_type_json()`), and the enum values used.
+3. Run `dotnet test`. `AbiTests` compares every binding struct, enum and imported
+   function against the library's own ABI manifest (`ghostty_type_json()`).
 
 ## Known gaps
 

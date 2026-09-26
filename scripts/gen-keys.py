@@ -1,4 +1,4 @@
-"""Generates src/Phantom/Ghostty/GhosttyKey.g.cs from the libghostty-vt key header."""
+"""Generates src/Phantom.Core/Ghostty/GhosttyKey.g.cs from the libghostty-vt key header."""
 import pathlib, re
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -22,5 +22,5 @@ out = [
 ]
 out += [f"    {pascal(n)} = {i}," for i, n in enumerate(names)]
 out.append("}")
-(root / "src/Phantom/Ghostty/GhosttyKey.g.cs").write_text("\n".join(out) + "\n", newline="\n")
+(root / "src/Phantom.Core/Ghostty/GhosttyKey.g.cs").write_text("\n".join(out) + "\n", newline="\n")
 print(f"{len(names)} keys")
