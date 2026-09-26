@@ -36,6 +36,25 @@ $hookMarker = '# phantom-install-hook'
 
 function Say($msg) { if (-not $Quiet) { Write-Host $msg } }
 
+# Background (hook) installs have nobody watching the log: surface failures as a
+# Windows notification. Toasts need WinRT projections, which Windows PowerShell 5.1
+# has and pwsh doesn't, hence powershell.exe.
+function Notify($title, $text) {
+    if (-not $Quiet) { return }
+    $toast = Join-Path ([IO.Path]::GetTempPath()) 'phantom-install-toast.ps1'
+    @'
+param($Title, $Text)
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+$xml = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)
+$lines = $xml.GetElementsByTagName('text')
+$lines.Item(0).InnerText = $Title
+$lines.Item(1).InnerText = $Text
+$appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe'
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier($appId).Show([Windows.UI.Notifications.ToastNotification]::new($xml))
+'@ | Set-Content -Encoding utf8 $toast
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File $toast -Title $title -Text $text | Out-Null
+}
+
 if ($RemoveGitHook -or $Uninstall) {
     if ((Test-Path $hook) -and (Get-Content $hook -Raw) -match $hookMarker) {
         Remove-Item $hook
@@ -85,6 +104,8 @@ $publishLog = dotnet publish (Join-Path $repo 'src\Phantom\Phantom.csproj') -c R
 if ($LASTEXITCODE -ne 0) {
     $publishLog | Write-Host
     if (Test-Path $target) { Remove-Item $target -Recurse -Force }
+    $firstError = ($publishLog | Select-String ' error ' | Select-Object -First 1) -replace '^.*?error ', ''
+    Notify "Phantom install failed ($rev)" "The build failed, so the previous version is still installed. $firstError"
     throw 'dotnet publish failed.'
 }
 

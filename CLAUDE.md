@@ -12,7 +12,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `dotnet build` (Phantom.slnx; add `-c Release` for perf work). App output:
   `src/Phantom/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phantom.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
-  always after bumping the Ghostty commit. ~1 s, 81 tests.
+  always after bumping the Ghostty commit.
+- **Before every commit: `dotnet build` (the solution) AND `dotnet test`.** `dotnet test`
+  alone does not build the app project (tests don't reference it): a compile error in
+  src/Phantom once got committed, the post-commit install failed, and a "verification"
+  ran the stale exe. When verifying the app, check the exe/dll timestamp is fresh.
 - **A running Phantom.exe locks the output** → build fails with MSB3027. Stop only *dev*
   builds — the user daily-drives the installed copy, and this session may be running in it:
   `Get-Process Phantom -ErrorAction SilentlyContinue | Where-Object Path -like 'C:\Users\Zack\dev\phantom\*' | Stop-Process -Force`
