@@ -137,7 +137,11 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab (default profile / profile N) |
 | `Ctrl+Shift+Space`, ▾ button | Profile menu |
 | `Ctrl+Shift+D` | Duplicate tab |
-| `Ctrl+Shift+W` | Close tab |
+| `Ctrl+Shift+W` | Close pane (the tab, if it's the last one) |
+| `Alt+Shift+Plus` / `Alt+Shift+Minus` | Split right / down (default profile) |
+| `Alt+Shift+D` | Duplicate pane (splits along the longer side) |
+| `Alt+Arrow` | Focus the pane in that direction |
+| `Alt+Shift+Arrow` | Move the nearest divider (or drag it) |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
 | `Ctrl+Alt+1..8`, `Ctrl+Alt+9` | Go to tab N / last tab |
 | `Ctrl+Shift+N` | New window |
@@ -180,7 +184,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 ## Known gaps
 
 - IME (CJK input methods) is untested; there is no composition UI.
-- No split panes, command palette, quick terminal or scrollbar yet.
+- No command palette, quick terminal or scrollbar yet; keybindings aren't configurable yet.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
 - Kitty graphics, hyperlinks (OSC 8) and desktop notifications are parsed by
   libghostty but not surfaced yet.

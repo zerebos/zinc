@@ -44,8 +44,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
 
 `src/Phantom` (WinUI app): `MainWindow` = TabView in the title bar (ExtendsContentIntoTitleBar,
-Mica), one `TerminalControl` per tab, handles window actions via `pane.ActionHandler`;
-`App.OpenWindow` for new windows. `Terminal/`:
+Mica); each tab = `PaneTree<Pane>` (Core/Panes, tested) rendered into the tab's persistent
+`Container` Grid by `Rebuild` (nested Grids + `PaneDivider`); window actions arrive via
+`pane.ActionHandler`; `App.OpenWindow` for new windows. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
 - `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.
   `.Keyboard.cs` (keybindings → actions, KeyDecision → encoder / WM_CHAR path, clipboard),
@@ -130,6 +131,15 @@ and read state after the write (see `_titleDirty`).
   lifetime to `Unloaded` — panes are closed explicitly by their window (`CloseTab`,
   `Closed`); `Loaded` handlers must tolerate running more than once.
 - Flyouts/menus are separate popup windows: PrintWindow of the main HWND won't show them.
+- `FrameworkElement.Parent` is null for children added to a Panel in code — don't use it to
+  detach reusable elements. Pane hosts are reused across layout rebuilds, so `Rebuild`
+  dismantles the old Grids first; adding an element that still has a parent fails fast
+  inside XAML (0x800F1000 in combase, no managed exception).
+- Set a tab's content once (a Grid) and rebuild inside it: a ContentControl's old content
+  isn't detached until its next layout pass.
+- Panels (Grid) have no OnPointer* overrides — subscribe to PointerPressed etc.
+- Focus is the window's job (`FocusActive`, low-priority dispatch after layout); panes must
+  not grab focus on Loaded, since every rebuild re-loads every pane.
 - App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
   `.scratch/venv`) builds the .ico from assets/shade-phosphor-fluent.svg. The mark is pixel
   art, so small sizes are re-drawn snapped to whole pixels — rerun after SVG edits and look
@@ -174,8 +184,10 @@ and read state after the write (see `_titleDirty`).
 - UI actions (tabs, buttons, menus): `.scratch/tools/uia.ps1 -ProcessId N -Action
   list|invoke|select` drives our window via UI Automation — no mouse, no focus stealing.
   Give buttons an `AutomationProperties.Name` (also needed for screen readers).
-  Keybindings with modifiers can't be exercised (posted keys carry no modifier state):
-  cover the chord→action map with unit tests and ask the user to try the keys.
+  Keybindings with modifiers can't be posted (no modifier state). `PHANTOM_TEST_KEYS=
+  "alt+shift+plus,alt+left"` replays chords (1/s) through the real keybindings and
+  `HandleAction` in the focused pane (see `MainWindow.ReplayTestKeys`; logs to PHANTOM_LOG).
+  The chord→action map itself is unit-tested; the user confirms real key delivery.
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.

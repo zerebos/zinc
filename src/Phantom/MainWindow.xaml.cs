@@ -4,22 +4,51 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Phantom.Input;
+using Phantom.Panes;
 using Phantom.Terminal;
 
 namespace Phantom;
 
-/// <summary>A window of tabs; each tab hosts one terminal pane.</summary>
+/// <summary>A window of tabs; each tab holds a tree of terminal panes.</summary>
 public sealed partial class MainWindow : Window
 {
     private readonly ConfigFile _config;
     private readonly Keybindings _keybindings;
+    private readonly Brush _dividerBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A));
+    private readonly Brush _focusBrush;
+    private readonly Brush _noFocusBrush = new SolidColorBrush(Colors.Transparent);
 
-    private sealed record Tab(Profile Profile, string Command, string WorkingDirectory, TerminalControl Pane, TabViewItem Item);
+    /// <summary>One terminal: the profile/command it was opened with, and its control.</summary>
+    private sealed class Pane(Profile profile, string command, string workingDirectory, TerminalControl control)
+    {
+        public Profile Profile { get; } = profile;
+        public string Command { get; } = command;
+        public string WorkingDirectory { get; } = workingDirectory;
+        public TerminalControl Control { get; } = control;
+
+        /// <summary>Wraps the control; its border marks the focused pane when a tab has several.</summary>
+        public Border Host { get; } = new() { Child = control };
+    }
+
+    private sealed class Tab(TabViewItem item, PaneTree<Pane> panes, Pane active)
+    {
+        public TabViewItem Item { get; } = item;
+
+        /// <summary>
+        /// The tab's content, set once. Layouts are rebuilt inside it so pane hosts only
+        /// ever live in Panels, where removing a child detaches it immediately (a
+        /// ContentControl's content lets go only on its next layout pass).
+        /// </summary>
+        public Grid Container { get; } = new();
+        public PaneTree<Pane> Panes { get; } = panes;
+        public Pane Active { get; set; } = active;
+    }
 
     public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command)
     {
         _config = config;
         _keybindings = keybindings;
+        _focusBrush = new SolidColorBrush((Windows.UI.Color)Application.Current.Resources["SystemAccentColor"]);
         InitializeComponent();
 
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
@@ -42,12 +71,16 @@ public sealed partial class MainWindow : Window
 
         BuildNewTabMenu();
         OpenTab(profile, command, profile.Config.ResolveWorkingDirectory());
+        ReplayTestKeys();
 
         Closed += (_, _) =>
         {
             foreach (var tab in AllTabs().ToList())
             {
-                tab.Pane.Close();
+                foreach (var leaf in tab.Panes.Leaves)
+                {
+                    leaf.Content.Control.Close();
+                }
             }
         };
     }
@@ -56,39 +89,223 @@ public sealed partial class MainWindow : Window
 
     private Tab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as Tab;
 
+    // ---------------------------------------------------------------- panes
+
+    private Pane CreatePane(Profile profile, string command, string workingDirectory, Func<Tab> tab)
+    {
+        var control = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
+        {
+            // A canvas has no desired size of its own; make sure it fills its slot.
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Stretch,
+        };
+        var pane = new Pane(profile, command, workingDirectory, control);
+
+        control.ActionHandler = invocation => HandleAction(invocation, tab(), pane);
+        control.TitleChanged += _ => UpdateTitle(tab());
+        control.CloseRequested += () => ClosePane(tab(), pane);
+        control.GotFocus += (_, _) =>
+        {
+            var t = tab();
+            t.Active = pane;
+            UpdateFocusBorders(t);
+            UpdateTitle(t);
+        };
+        return pane;
+    }
+
+    private void SplitPane(Tab tab, Pane origin, PaneDirection where, Profile profile, string command, string workingDirectory)
+    {
+        if (tab.Panes.Find(origin) is not { } leaf)
+        {
+            return;
+        }
+
+        var pane = CreatePane(profile, command, workingDirectory, () => tab);
+        tab.Panes.Split(leaf, where, pane);
+        tab.Active = pane;
+        Rebuild(tab);
+    }
+
+    private void ClosePane(Tab tab, Pane pane)
+    {
+        if (tab.Panes.Find(pane) is not { } leaf)
+        {
+            return;
+        }
+
+        pane.Control.Close();
+        var next = tab.Panes.Remove(leaf);
+        if (next == null)
+        {
+            RemoveTab(tab);
+            return;
+        }
+
+        tab.Active = next.Content;
+        Rebuild(tab);
+    }
+
+    /// <summary>Rebuilds a tab's content from its pane tree and focuses the active pane.</summary>
+    private void Rebuild(Tab tab)
+    {
+        // Take the old layout apart first: pane hosts are reused and XAML elements can't
+        // have two parents (0x800F1000). FrameworkElement.Parent is null for children
+        // added to a Panel in code, so detaching by asking each host for its parent fails.
+        Dismantle(tab.Container);
+        if (tab.Panes.Root is { } root)
+        {
+            tab.Container.Children.Add(Build(root));
+        }
+
+        UpdateFocusBorders(tab);
+        UpdateTitle(tab);
+        FocusActive(tab);
+    }
+
+    private UIElement Build(PaneNode node)
+    {
+        if (node is PaneLeaf<Pane> leaf)
+        {
+            // The host may still sit in the previous layout's Grid; detach it first.
+            return leaf.Content.Host;
+        }
+
+        var split = (PaneSplit)node;
+        var grid = new Grid { Tag = split };
+        var horizontal = split.Orientation == SplitOrientation.Horizontal;
+        for (var i = 0; i < 3; i++)
+        {
+            if (horizontal)
+            {
+                grid.ColumnDefinitions.Add(new ColumnDefinition());
+            }
+            else
+            {
+                grid.RowDefinitions.Add(new RowDefinition());
+            }
+        }
+
+        if (horizontal)
+        {
+            grid.ColumnDefinitions[1].Width = new GridLength(PaneDivider.Thickness);
+        }
+        else
+        {
+            grid.RowDefinitions[1].Height = new GridLength(PaneDivider.Thickness);
+        }
+
+        PaneDivider.ApplyRatio(grid, split);
+        var slots = new[] { Build(split.First), new PaneDivider(split, grid, _dividerBrush), Build(split.Second) };
+        for (var slot = 0; slot < 3; slot++)
+        {
+            var element = (FrameworkElement)slots[slot];
+            if (horizontal)
+            {
+                Grid.SetColumn(element, slot);
+            }
+            else
+            {
+                Grid.SetRow(element, slot);
+            }
+
+            grid.Children.Add(element);
+        }
+
+        return grid;
+    }
+
+    private static void Dismantle(Panel panel)
+    {
+        foreach (var child in panel.Children.OfType<Panel>().ToList())
+        {
+            Dismantle(child);
+        }
+
+        panel.Children.Clear();
+    }
+
+    private void UpdateFocusBorders(Tab tab)
+    {
+        // Borders only appear once a tab is split, so a lone pane uses the full area.
+        var several = tab.Panes.Count > 1;
+        foreach (var leaf in tab.Panes.Leaves)
+        {
+            leaf.Content.Host.BorderThickness = new Thickness(several ? 1 : 0);
+            leaf.Content.Host.BorderBrush = several && leaf.Content == tab.Active ? _focusBrush : _noFocusBrush;
+        }
+    }
+
+    private void FocusActive(Tab tab)
+    {
+        // After a rebuild the panes are re-parented and not loaded yet; focus once
+        // layout has run.
+        var control = tab.Active.Control;
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+            () => control.Focus(FocusState.Programmatic));
+    }
+
+    /// <summary>Finds the Grid built for a split in a tab's current content.</summary>
+    private static Grid? GridFor(Tab tab, PaneSplit split) =>
+        Descendants(tab.Container).OfType<Grid>().FirstOrDefault(g => g.Tag == split);
+
+    private static IEnumerable<UIElement> Descendants(UIElement? element)
+    {
+        if (element == null)
+        {
+            yield break;
+        }
+
+        yield return element;
+        if (element is Panel panel)
+        {
+            foreach (var child in panel.Children)
+            {
+                foreach (var d in Descendants(child))
+                {
+                    yield return d;
+                }
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- tabs
 
     private void OpenTab(Profile profile, string command, string workingDirectory)
     {
-        var pane = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Stretch,
-        };
-        // A canvas has no desired size of its own; make sure it fills the tab.
+        Tab? tab = null;
+        var pane = CreatePane(profile, command, workingDirectory, () => tab!);
         var item = new TabViewItem
         {
             Header = profile.Name,
-            Content = pane,
             IconSource = IconFor(profile),
             HorizontalContentAlignment = HorizontalAlignment.Stretch,
             VerticalContentAlignment = VerticalAlignment.Stretch,
         };
-        var tab = new Tab(profile, command, workingDirectory, pane, item);
+        tab = new Tab(item, new PaneTree<Pane>(pane), pane);
         item.Tag = tab;
-
-        pane.ActionHandler = invocation => HandleAction(invocation, tab);
-        pane.TitleChanged += _ => UpdateTitle(tab);
-        pane.CloseRequested += () => CloseTab(tab);
+        item.Content = tab.Container;
 
         Tabs.TabItems.Add(item);
+        Rebuild(tab);
         Tabs.SelectedItem = item;
     }
 
     private void OpenTab(Profile profile) =>
         OpenTab(profile, ShellResolver.ForProfile(profile.Config), profile.Config.ResolveWorkingDirectory());
 
+    /// <summary>Closes every pane in a tab and removes it.</summary>
     private void CloseTab(Tab tab)
+    {
+        foreach (var leaf in tab.Panes.Leaves.ToList())
+        {
+            leaf.Content.Control.Close();
+        }
+
+        RemoveTab(tab);
+    }
+
+    private void RemoveTab(Tab tab)
     {
         var index = Tabs.TabItems.IndexOf(tab.Item);
         if (index < 0)
@@ -96,7 +313,6 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        tab.Pane.Close();
         Tabs.TabItems.RemoveAt(index);
         if (Tabs.TabItems.Count == 0)
         {
@@ -109,8 +325,10 @@ public sealed partial class MainWindow : Window
 
     private void UpdateTitle(Tab tab)
     {
-        var title = string.IsNullOrWhiteSpace(tab.Pane.Title) ? tab.Profile.Name : tab.Pane.Title;
+        var pane = tab.Active;
+        var title = string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title;
         tab.Item.Header = title;
+        tab.Item.IconSource = IconFor(pane.Profile);
         ToolTipService.SetToolTip(tab.Item, title);
         if (SelectedTab == tab)
         {
@@ -123,9 +341,7 @@ public sealed partial class MainWindow : Window
         if (SelectedTab is { } tab)
         {
             UpdateTitle(tab);
-            // The pane focuses itself when (re)loaded; this covers selection changes
-            // where it stays loaded.
-            DispatcherQueue.TryEnqueue(() => tab.Pane.Focus(FocusState.Programmatic));
+            FocusActive(tab);
         }
     }
 
@@ -157,15 +373,49 @@ public sealed partial class MainWindow : Window
             ? new BitmapIconSource { UriSource = new Uri(path), ShowAsMonochrome = false }
             : null;
 
+    /// <summary>
+    /// Test hook: PHANTOM_TEST_KEYS="alt+shift+plus,alt+left" replays chords (one per second)
+    /// through the keybindings and action handler, as if pressed in the focused pane.
+    /// Automated tests can't post real modifier state to the window.
+    /// </summary>
+    private void ReplayTestKeys()
+    {
+        if (Environment.GetEnvironmentVariable("PHANTOM_TEST_KEYS") is not { Length: > 0 } keys)
+        {
+            return;
+        }
+
+        var queue = new Queue<string>(keys.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(1);
+        timer.Tick += (_, _) =>
+        {
+            if (!queue.TryDequeue(out var chord) || SelectedTab is not { } tab)
+            {
+                timer.Stop();
+                return;
+            }
+
+            var bound = _keybindings.TryGet(KeyChord.Parse(chord), out var invocation);
+            Log.Write($"test key {chord}: {(bound ? invocation.ToString() : "unbound")}");
+            if (bound)
+            {
+                HandleAction(invocation, tab, tab.Active);
+            }
+        };
+        timer.Start();
+    }
+
     // ------------------------------------------------------------- actions
 
-    private bool HandleAction(ActionInvocation invocation, Tab origin)
+    private bool HandleAction(ActionInvocation invocation, Tab tab, Pane origin)
     {
         var count = Tabs.TabItems.Count;
+        var defaults = _config.DefaultProfile;
         switch (invocation.Action)
         {
             case TerminalAction.NewTab:
-                OpenTab(_config.DefaultProfile);
+                OpenTab(defaults);
                 return true;
             case TerminalAction.NewTabFromProfile:
                 if (invocation.Index < _config.Profiles.Count)
@@ -181,7 +431,7 @@ public sealed partial class MainWindow : Window
                 NewTabMenu.ShowAt(NewTabMenuButton);
                 return true;
             case TerminalAction.ClosePane:
-                CloseTab(origin);
+                ClosePane(tab, origin);
                 return true;
             case TerminalAction.NextTab:
                 Tabs.SelectedIndex = (Tabs.SelectedIndex + 1) % count;
@@ -198,7 +448,32 @@ public sealed partial class MainWindow : Window
 
                 return true;
             case TerminalAction.NewWindow:
-                App.Instance.OpenWindow(_config.DefaultProfile);
+                App.Instance.OpenWindow(defaults);
+                return true;
+            case TerminalAction.SplitPane:
+                SplitPane(tab, origin, invocation.Direction, defaults, ShellResolver.ForProfile(defaults.Config),
+                    defaults.Config.ResolveWorkingDirectory());
+                return true;
+            case TerminalAction.DuplicatePane:
+                var where = PaneTree<Pane>.AutoDirection(origin.Control.ActualWidth, origin.Control.ActualHeight);
+                SplitPane(tab, origin, where, origin.Profile, origin.Command, origin.WorkingDirectory);
+                return true;
+            case TerminalAction.MoveFocus:
+                if (tab.Panes.Find(origin) is { } from && tab.Panes.Neighbor(from, invocation.Direction) is { } to)
+                {
+                    tab.Active = to.Content;
+                    FocusActive(tab);
+                }
+
+                return true;
+            case TerminalAction.ResizePane:
+                if (tab.Panes.Find(origin) is { } leaf &&
+                    tab.Panes.Resize(leaf, invocation.Direction, 0.05) is { } split &&
+                    GridFor(tab, split) is { } grid)
+                {
+                    PaneDivider.ApplyRatio(grid, split);
+                }
+
                 return true;
             default:
                 return false;

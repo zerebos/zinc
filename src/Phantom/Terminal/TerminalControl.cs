@@ -81,8 +81,9 @@ public sealed partial class TerminalControl : UserControl
             _canvas.Invalidate();
         };
 
-        // Hosts like TabView unload hidden content and reload it when shown again, so
-        // the pane's lifetime is explicit (Close) rather than tied to Unloaded.
+        // Hosts like TabView unload hidden content and reload it when shown again, and
+        // pane layouts re-parent panes, so the pane's lifetime is explicit (Close) rather
+        // than tied to Unloaded, and focus is the host's decision (not taken on Loaded).
         Loaded += (_, _) =>
         {
             Log.Write($"pane: Loaded ({ActualWidth}x{ActualHeight})");
@@ -91,8 +92,6 @@ public sealed partial class TerminalControl : UserControl
                 _subscribedToXamlRoot = true;
                 XamlRoot.Changed += (_, _) => UpdateScale();
             }
-
-            Focus(FocusState.Programmatic);
         };
     }
 

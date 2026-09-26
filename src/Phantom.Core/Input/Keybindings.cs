@@ -1,3 +1,4 @@
+using Phantom.Panes;
 using Windows.System;
 
 namespace Phantom.Input;
@@ -25,7 +26,7 @@ public enum TerminalAction
     DuplicateTab,
     OpenNewTabMenu,
 
-    /// <summary>Close the focused pane (the tab, while tabs hold a single pane).</summary>
+    /// <summary>Close the focused pane (and its tab, if it was the last one).</summary>
     ClosePane,
     NextTab,
     PreviousTab,
@@ -33,10 +34,18 @@ public enum TerminalAction
     /// <summary>Go to tab <see cref="ActionInvocation.Index"/> (0-based; -1 = last).</summary>
     SwitchToTab,
     NewWindow,
+
+    /// <summary>New pane with the default profile on side <see cref="ActionInvocation.Direction"/>.</summary>
+    SplitPane,
+
+    /// <summary>Duplicate the focused pane, split along its longer side.</summary>
+    DuplicatePane,
+    MoveFocus,
+    ResizePane,
 }
 
-/// <summary>An action plus its argument (a tab or profile index), as bound to a key.</summary>
-public readonly record struct ActionInvocation(TerminalAction Action, int Index = 0)
+/// <summary>An action plus its argument (a tab/profile index or a pane direction), as bound to a key.</summary>
+public readonly record struct ActionInvocation(TerminalAction Action, int Index = 0, PaneDirection Direction = default)
 {
     public static implicit operator ActionInvocation(TerminalAction action) => new(action);
 }
@@ -157,6 +166,18 @@ public sealed class Keybindings
         b.Bind("ctrl+tab", TerminalAction.NextTab);
         b.Bind("ctrl+shift+tab", TerminalAction.PreviousTab);
         b.Bind("ctrl+shift+n", TerminalAction.NewWindow);
+        b.Bind("alt+shift+plus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
+        b.Bind("alt+shift+minus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
+        b.Bind("alt+shift+d", TerminalAction.DuplicatePane);
+        foreach (var (name, direction) in new[]
+                 {
+                     ("left", PaneDirection.Left), ("right", PaneDirection.Right),
+                     ("up", PaneDirection.Up), ("down", PaneDirection.Down),
+                 })
+        {
+            b.Bind($"alt+{name}", new ActionInvocation(TerminalAction.MoveFocus, Direction: direction));
+            b.Bind($"alt+shift+{name}", new ActionInvocation(TerminalAction.ResizePane, Direction: direction));
+        }
         for (var i = 1; i <= 9; i++)
         {
             b.Bind($"ctrl+shift+{i}", new ActionInvocation(TerminalAction.NewTabFromProfile, i - 1));

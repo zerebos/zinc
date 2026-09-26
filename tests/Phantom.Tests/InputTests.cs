@@ -1,5 +1,6 @@
 using Phantom.Ghostty;
 using Phantom.Input;
+using Phantom.Panes;
 using Windows.System;
 
 namespace Phantom.Tests;
@@ -157,6 +158,21 @@ public class KeybindingTests
     {
         Assert.True(Keybindings.Default.TryGet(KeyChord.Parse(chord), out var action));
         Assert.Equal(new ActionInvocation(expected, index), action);
+    }
+
+    [Theory]
+    [InlineData("alt+shift+plus", TerminalAction.SplitPane, PaneDirection.Right)]
+    [InlineData("alt+shift+minus", TerminalAction.SplitPane, PaneDirection.Down)]
+    [InlineData("alt+shift+d", TerminalAction.DuplicatePane, PaneDirection.Left)]
+    [InlineData("alt+left", TerminalAction.MoveFocus, PaneDirection.Left)]
+    [InlineData("alt+down", TerminalAction.MoveFocus, PaneDirection.Down)]
+    [InlineData("alt+shift+right", TerminalAction.ResizePane, PaneDirection.Right)]
+    [InlineData("alt+shift+up", TerminalAction.ResizePane, PaneDirection.Up)]
+    public void PaneDefaultsFollowWindowsTerminal(string chord, TerminalAction expected, PaneDirection direction)
+    {
+        // DuplicatePane carries no direction (default Left) — it picks one from the pane's shape.
+        Assert.True(Keybindings.Default.TryGet(KeyChord.Parse(chord), out var action));
+        Assert.Equal(new ActionInvocation(expected, Direction: direction), action);
     }
 
     [Theory]

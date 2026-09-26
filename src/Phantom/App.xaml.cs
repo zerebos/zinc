@@ -11,6 +11,7 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        UnhandledException += (_, e) => Log.Write($"unhandled: {e.Exception}");
     }
 
     internal static App Instance => (App)Current;
