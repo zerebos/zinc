@@ -128,6 +128,7 @@ public class SessionTests
     {
         // Read the first viewport row's text through a grid ref.
         var text = new System.Text.StringBuilder();
+        var cps = stackalloc uint[4];
         lock (session.Lock)
         {
             for (ushort x = 0; x < 8; x++)
@@ -135,7 +136,6 @@ public class SessionTests
                 var gridRef = Phantom.Ghostty.GhosttyGridRef.Init();
                 var point = new Phantom.Ghostty.GhosttyPoint { Tag = Phantom.Ghostty.PointTag.Viewport, X = x, Y = 0 };
                 Phantom.Ghostty.Native.TerminalGridRef(session.Handle, point, &gridRef);
-                var cps = stackalloc uint[4];
                 nuint n;
                 if (GridRefGraphemes(&gridRef, cps, 4, &n) == 0 && n > 0)
                 {

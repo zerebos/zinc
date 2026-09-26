@@ -134,9 +134,9 @@ and read state after the write (see `_titleDirty`).
 - Flyouts/menus are separate popup windows: PrintWindow of the main HWND won't show them.
 - TabViewItem applies Horizontal/VerticalContentAlignment to its *header*: Stretch there
   pushed the label 4 px above the icon.
-- Don't re-set TabViewItem.Header/IconSource unless they changed: each set replays the
-  header's content transition (label "slides in") and reloads the icon. ProfileIcons caches
-  one IconSource per profile so reference equality works.
+- Never set TabViewItem.Header/IconSource to new values: each set replays the header's content
+  transition (label "slides in") and re-decodes the icon. Tabs use a persistent `TabHeader`
+  (one TextBlock + one pre-decoded icon element per profile, toggled by Visibility).
 - The tab strip needs `DragRegion.MinWidth >= AppWindow.TitleBar.RightInset/scale`, or tabs
   and +/▾ slide under the caption buttons instead of shrinking/scrolling.
 - TabView's inner `TabListView` has entrance transitions; new tabs slid in after their

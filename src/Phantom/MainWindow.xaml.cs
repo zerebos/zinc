@@ -43,6 +43,9 @@ public sealed partial class MainWindow : Window
         public PaneTree<Pane> Panes { get; } = panes;
         public Pane Active { get; set; } = active;
 
+        /// <summary>Icon + title, updated in place.</summary>
+        public TabHeader Header { get; } = new(item);
+
         /// <summary>Set by "Rename tab"; overrides the app/profile title until cleared.</summary>
         public string? CustomTitle { get; set; }
 
@@ -292,8 +295,9 @@ public sealed partial class MainWindow : Window
         var pane = CreatePane(profile, command, workingDirectory, () => tab!);
         // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
         // to its header, and Stretch pushed the label above the icon.
-        var item = new TabViewItem { Header = profile.Name, IconSource = ProfileIcons.For(profile) };
+        var item = new TabViewItem();
         tab = new Tab(item, new PaneTree<Pane>(pane), pane);
+        item.Header = tab.Header;
         item.Tag = tab;
         item.Content = tab.Container;
         item.ContextFlyout = BuildTabMenu(tab);
@@ -341,20 +345,9 @@ public sealed partial class MainWindow : Window
         var title = tab.CustomTitle ??
                     (string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title);
 
-        // Only touch the header/icon when they actually change: re-setting them replays
-        // the header's content transition (the label "slides in") and reloads the icon.
-        if (!Equals(tab.Item.Header, title))
-        {
-            tab.Item.Header = title;
-            ToolTipService.SetToolTip(tab.Item, title);
-        }
-
-        var icon = ProfileIcons.For(pane.Profile);
-        if (!ReferenceEquals(tab.Item.IconSource, icon))
-        {
-            tab.Item.IconSource = icon;
-        }
-
+        // Updated in place (see TabHeader): no header transition, no icon re-decode.
+        tab.Header.SetTitle(title);
+        tab.Header.SetProfile(pane.Profile);
         ApplyTabBackground(tab);
 
         if (SelectedTab == tab && Title != title)
@@ -432,13 +425,6 @@ public sealed partial class MainWindow : Window
             index++;
         }
 
-        // Windows Terminal's modifier-click conventions, spelled out since they're hidden.
-        NewTabMenu.Items.Add(new MenuFlyoutSeparator());
-        NewTabMenu.Items.Add(new MenuFlyoutItem
-        {
-            Text = "Alt+click: split pane · Shift+click: new window",
-            IsEnabled = false,
-        });
     }
 
     /// <summary>

@@ -101,7 +101,7 @@ public sealed partial class MainWindow
     {
         var box = new TextBox
         {
-            Text = tab.CustomTitle ?? (tab.Item.Header as string ?? ""),
+            Text = tab.CustomTitle ?? tab.Header.Title,
             PlaceholderText = "Empty resets to the app's title",
             MinWidth = 240,
         };
