@@ -95,44 +95,18 @@ internal static class ProfileIcons
     /// <summary>The icon WSL registered for the distro named in <c>-d</c>/<c>--distribution(-id)</c>.</summary>
     private static string? WslDistroIcon(string args)
     {
-        var tokens = args.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        string? name = null, id = null;
-        for (var i = 0; i + 1 < tokens.Length; i++)
-        {
-            switch (tokens[i])
-            {
-                case "-d" or "--distribution": name = tokens[i + 1]; break;
-                case "--distribution-id": id = tokens[i + 1]; break;
-            }
-        }
-
-        using var lxss = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
-        if (lxss == null)
+        using var key = ShellEnvironment.WslDistroKey(args);
+        if (key?.GetValue("BasePath") is not string basePath)
         {
             return null;
         }
 
-        var defaultId = lxss.GetValue("DefaultDistribution") as string;
-        foreach (var keyName in lxss.GetSubKeyNames())
-        {
-            using var key = lxss.OpenSubKey(keyName);
-            var matches = id != null
-                ? keyName.Equals(id, StringComparison.OrdinalIgnoreCase)
-                : name != null
-                    ? string.Equals(key?.GetValue("DistributionName") as string, name, StringComparison.OrdinalIgnoreCase)
-                    : keyName.Equals(defaultId, StringComparison.OrdinalIgnoreCase);
-            if (matches && key?.GetValue("BasePath") is string basePath)
-            {
-                var icon = Path.Combine(basePath.Replace(@"\\?\", ""), "shortcut.ico");
-                return File.Exists(icon) ? icon : null;
-            }
-        }
-
-        return null;
+        var icon = Path.Combine(basePath.Replace(@"\\?\", ""), "shortcut.ico");
+        return File.Exists(icon) ? icon : null;
     }
 
     /// <summary>Resolves a bare executable name like CreateProcess would (System32, then PATH).</summary>
-    private static string? FindExecutable(string exe)
+    internal static string? FindExecutable(string exe)
     {
         exe = Environment.ExpandEnvironmentVariables(exe);
         if (Path.IsPathRooted(exe))

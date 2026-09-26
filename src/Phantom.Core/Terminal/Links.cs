@@ -82,16 +82,33 @@ public enum LinkAction
     Reject,
 }
 
-public static class LinkTarget
+/// <summary>
+/// Where a pane's file links point. Shells name this machine as the host but use their own
+/// paths: Git Bash/MSYS2 write <c>/c/Users/..</c> (and <c>/usr/..</c> under
+/// <see cref="PosixRoot"/>); WSL writes Linux paths inside <see cref="WslDistro"/>.
+/// </summary>
+public sealed record LinkContext(string MachineName, string? WslDistro = null, string? PosixRoot = null)
+{
+    public static LinkContext Windows { get; } = new(Environment.MachineName);
+}
+
+public static partial class LinkTarget
 {
     private static readonly string[] OpenSchemes = ["http", "https", "mailto", "ftp"];
+
+    // "/c", "/c/rest" (MSYS, Git Bash) or "/cygdrive/c/rest"; with WSL, "/mnt/c/rest".
+    [GeneratedRegex("^(?:/cygdrive)?/([a-zA-Z])(/.*)?$")]
+    private static partial Regex MsysDrive();
+
+    [GeneratedRegex("^/mnt/([a-zA-Z])(/.*)?$")]
+    private static partial Regex WslDrive();
 
     /// <summary>
     /// What Ctrl+click on <paramref name="uri"/> may do. Links come from whatever a program
     /// prints, so only web/mail schemes open directly; file links are revealed rather than
     /// opened, so a link can't launch an executable.
     /// </summary>
-    public static LinkAction Classify(string uri, out string target)
+    public static LinkAction Classify(string uri, LinkContext context, out string target)
     {
         target = uri;
         if (!Uri.TryCreate(uri, UriKind.Absolute, out var parsed))
@@ -105,19 +122,46 @@ public static class LinkTarget
             return LinkAction.Open;
         }
 
-        if (parsed.IsFile && parsed.Host.Length == 0)
+        var host = parsed.Host;
+        if (!parsed.IsFile || !(host.Length == 0 || host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+                                host.Equals(context.MachineName, StringComparison.OrdinalIgnoreCase)))
         {
-            target = parsed.LocalPath;
+            return LinkAction.Reject;
+        }
+
+        // Not LocalPath: with a host that's the UNC path \\host\..., and /c/.. isn't a Windows path.
+        // (Uri drops the leading slash of file:///C:/.., but keeps it after a host.)
+        var path = Uri.UnescapeDataString(parsed.AbsolutePath);
+        var windows = path.TrimStart('/');
+        if (windows.Length >= 2 && char.IsAsciiLetter(windows[0]) && windows[1] == ':')
+        {
+            target = windows.Replace('/', '\\');
             return LinkAction.Reveal;
         }
 
-        if (parsed.IsFile && parsed.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
+        if (context.WslDistro is { } distro)
         {
-            // LocalPath would be the UNC path \\localhost\C:\...; the path is what's meant.
-            target = Uri.UnescapeDataString(parsed.AbsolutePath).TrimStart('/').Replace('/', '\\');
+            target = WslDrive().Match(path) is { Success: true } m
+                ? DrivePath(m)
+                : $@"\\wsl.localhost\{distro}{path.Replace('/', '\\')}";
+            return LinkAction.Reveal;
+        }
+
+        if (MsysDrive().Match(path) is { Success: true } drive)
+        {
+            target = DrivePath(drive);
+            return LinkAction.Reveal;
+        }
+
+        if (context.PosixRoot is { } root && path.StartsWith('/'))
+        {
+            target = Path.Join(root, path.Replace('/', '\\'));
             return LinkAction.Reveal;
         }
 
         return LinkAction.Reject;
     }
+
+    private static string DrivePath(Match m) =>
+        char.ToUpperInvariant(m.Groups[1].Value[0]) + @":\" + m.Groups[2].Value.TrimStart('/').Replace('/', '\\');
 }

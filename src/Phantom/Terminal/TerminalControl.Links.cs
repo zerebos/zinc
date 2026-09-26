@@ -11,6 +11,7 @@ public sealed partial class TerminalControl
 {
     private Windows.Foundation.Point? _pointerPosition;
     private ToolTip? _linkTip;
+    private LinkContext? _linkContext;
 
     private static bool IsCtrlKey(VirtualKey key) =>
         key is VirtualKey.Control or VirtualKey.LeftControl or VirtualKey.RightControl;
@@ -61,11 +62,13 @@ public sealed partial class TerminalControl
         }
     }
 
-    private static void OpenLink(string uri)
+    private void OpenLink(string uri)
     {
         try
         {
-            switch (LinkTarget.Classify(uri, out var target))
+            // File links use the shell's own paths (WSL, Git Bash): resolve them per pane.
+            _linkContext ??= ShellEnvironment.LinkContextFor(_commandLine);
+            switch (LinkTarget.Classify(uri, _linkContext, out var target))
             {
                 case LinkAction.Open:
                     Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });

@@ -180,8 +180,10 @@ Links are OSC 8 hyperlinks (e.g. `ls --hyperlink`) and plain `http(s)`,
 `ftp`, `mailto` and `file` URLs in the text. Hovering a hyperlink with Ctrl shows its
 target in a tooltip. Web and mail links open in their default app. `file:` links are
 shown in Explorer (the file selected) rather than opened, so a link can't run a program.
-Links to files on another host are ignored, including WSL's `ls --hyperlink`, which names the
-Linux host.
+File links follow the pane's shell: in WSL panes, `/home/you` means
+`\\wsl.localhost\<distro>\home\you` and `/mnt/c/..` means `C:\..`; in Git Bash and MSYS2,
+`/c/..` means `C:\..` and `/usr/..` is under the installation. Links to files on other
+machines (e.g. over ssh) are ignored.
 
 Each pane has a scrollbar (thin until the pointer nears the right edge) while there is scrollback; it hides for
 full-screen apps, whose alternate screen has none. The selected tab takes the focused
