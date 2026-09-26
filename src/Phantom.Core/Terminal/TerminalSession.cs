@@ -111,6 +111,9 @@ public sealed unsafe class TerminalSession : IDisposable
 
         nuint scrollback = 10_000;
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &scrollback);
+        // libghostty prunes at whichever limit comes first, and its default byte limit kept
+        // only ~700 rows of history at 120 columns. Lines are the limit users think in.
+        Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxBytes, null);
 
         // Kitty graphics: on once storage is allowed. Besides inline data (t=d), programs may
         // name a file to load (t=f; fastfetch's kitty-direct) or a temp file we delete after
@@ -472,9 +475,9 @@ public sealed unsafe class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// Finds <paramref name="pattern"/> in the active screen and its scrollback, oldest first,
-    /// matching within rows (a match can't span a line break, even a soft wrap). Rows are
-    /// screen rows: 0 is the oldest scrollback row, in the scrollbar's units.
+    /// Finds <paramref name="pattern"/> in the active screen and its scrollback, oldest first.
+    /// Matches may span soft wraps but not real line breaks. Rows are screen rows: 0 is the
+    /// oldest scrollback row, in the scrollbar's units.
     /// </summary>
     public void Search(Regex pattern, List<SearchMatch> into, int limit = 10_000)
     {
@@ -485,31 +488,74 @@ public sealed unsafe class TerminalSession : IDisposable
                 return;
             }
 
-            // Find candidate rows fast in the formatted text (one line per row: no unwrapping),
-            // then map matches to columns cell by cell on those rows only. Rows are matched
+            // Find candidate lines fast in the formatted text (soft wraps joined: one line per
+            // logical line), then map matches to cells on those lines only. Lines are matched
             // without their trailing blanks, so "$" means the end of the text.
             var options = GhosttyFormatterTerminalOptions.Init();
+            options.Unwrap = 1;
             options.Trim = 1;
             var lines = Format(options).Split('\n');
             ushort cols;
             Native.TerminalGet(_terminal, TerminalData.Cols, &cols);
-            for (var row = 0; row < lines.Length && into.Count < limit; row++)
+            GhosttyTerminalScrollbar sb;
+            Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
+
+            // Logical line k covers screen rows [start, start + count): rows continue while wrapped.
+            var row = 0ul;
+            for (var k = 0; k < lines.Length && row < sb.Total && into.Count < limit; k++)
             {
-                if (!pattern.IsMatch(lines[row]))
+                var start = row;
+                while (row + 1 < sb.Total && IsWrapped(row))
                 {
-                    continue;
+                    row++;
                 }
 
-                var rowText = RowText.Read(_terminal, PointTag.Screen, (uint)row, cols);
-                foreach (Match m in pattern.Matches(rowText.Text.TrimEnd(' ')))
+                row++;
+                if (pattern.IsMatch(lines[k]))
                 {
-                    if (m.Length > 0 && into.Count < limit)
-                    {
-                        var (first, last) = rowText.Columns(m.Index, m.Length);
-                        into.Add(new SearchMatch((ulong)row, first, last));
-                    }
+                    MatchLine(pattern, start, (int)(row - start), cols, into, limit);
                 }
             }
+        }
+    }
+
+    private bool IsWrapped(ulong row)
+    {
+        var gridRef = GhosttyGridRef.Init();
+        var point = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)row };
+        byte wrap = 0;
+        return Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success &&
+               Native.GridRefRow(&gridRef, out var raw) == GhosttyResult.Success &&
+               Native.ScreenRowGet(raw, RowData.Wrap, &wrap) == GhosttyResult.Success && wrap != 0;
+    }
+
+    /// <summary>Matches one logical line (screen rows first..first+count-1) cell by cell.</summary>
+    private void MatchLine(Regex pattern, ulong first, int count, ushort cols, List<SearchMatch> into, int limit)
+    {
+        var rows = new RowText[count];
+        var offsets = new int[count + 1];
+        var text = new StringBuilder();
+        for (var i = 0; i < count; i++)
+        {
+            rows[i] = RowText.Read(_terminal, PointTag.Screen, (uint)(first + (ulong)i), cols);
+            offsets[i] = text.Length;
+            text.Append(rows[i].Text);
+        }
+
+        offsets[count] = text.Length;
+        foreach (Match m in pattern.Matches(text.ToString().TrimEnd(' ')))
+        {
+            if (m.Length == 0 || into.Count >= limit)
+            {
+                continue;
+            }
+
+            // The rows holding the first and last characters, and their columns there.
+            var a = Array.FindLastIndex(offsets, count - 1, count, o => o <= m.Index);
+            var b = Array.FindLastIndex(offsets, count - 1, count, o => o <= m.Index + m.Length - 1);
+            var startCol = rows[a].Columns(m.Index - offsets[a], 1).First;
+            var endCol = rows[b].Columns(m.Index + m.Length - 1 - offsets[b], 1).Last;
+            into.Add(new SearchMatch(first + (ulong)a, startCol, first + (ulong)b, endCol));
         }
     }
 

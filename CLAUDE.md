@@ -54,9 +54,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Ghostty's graphics_unicode.zig; the `.Diacritics.g.cs` table is copied from there). Renderer:
   z<0 images under all rows, placeholders in the text pass, z>=0 above. Images need a cell
   size in pixels (`Resize` passes it) and storage enabled (`KittyImageStorageLimit`).
-- Find: `TerminalSession.Search(regex)` formats the screen+scrollback (plain, no unwrap, trim:
-  one line per screen row, verified by SearchTests) to find candidate rows, then maps matches
-  to columns with `RowText` (cell-by-cell via grid refs; wide chars whole) on those rows only.
+- Find: `TerminalSession.Search(regex)` formats the screen+scrollback (plain, unwrap, trim: one
+  line per logical line) to find candidate lines, maps line k to screen rows via each row's
+  WRAP flag, then matches the stitched `RowText`s of those rows (cell-by-cell via grid refs;
+  wide chars whole; spacer heads add no text) — matches can span soft wraps (EndRow > Row).
+  ~25 ms over a full 10k-row scrollback.
+- Scrollback: 10,000 lines with libghostty's byte limit removed (its default kept ~700 rows).
   libghostty's own search API is literal + ASCII-case-insensitive only, hence our own. App side:
   `TerminalControl.Search.cs` (find box in the pane's `_root` grid; key/char/pointer handlers
   ignore events from it via `IsFromSearch`), renderer draws highlights, OnDraw the ticks.

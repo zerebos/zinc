@@ -186,6 +186,8 @@ File links follow the pane's shell: in WSL panes, `/home/you` means
 `/c/..` means `C:\..` and `/usr/..` is under the installation. Links to files on other
 machines (e.g. over ssh) are ignored.
 
+Each pane keeps about 10,000 lines of scrollback.
+
 Each pane has a scrollbar (thin until the pointer nears the right edge) while there is scrollback; it hides for
 full-screen apps, whose alternate screen has none. The selected tab takes the focused
 pane's background color unless you give the tab a color.
@@ -205,8 +207,9 @@ Find (`Ctrl+Shift+F`) opens a box at the pane's top right. Matches highlight as 
 their positions marked beside the scrollbar; `Enter` moves to the next older match and
 `Shift+Enter` the next newer one (both wrap), and `Esc` closes the box. `Aa` makes it
 case-sensitive and `.*` treats the text as a .NET regular expression (`^`/`$` are the start
-and end of a row's text). Matches stay within one row: text soft-wrapped onto the next row
-is searched as two rows. Results refresh as new output arrives.
+and end of a line). Lines soft-wrapped across rows are searched as one line, so matches can
+continue onto the next row; real line breaks separate lines. Results refresh as new output
+arrives.
 
 Right-clicking a tab offers rename, tab color, duplicate, split, export text (whole
 scrollback to a file), and closing this / other / right-hand tabs.

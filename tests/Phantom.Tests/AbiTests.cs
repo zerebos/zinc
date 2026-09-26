@@ -33,6 +33,7 @@ public unsafe partial class AbiTests
         [typeof(RenderStateRowData)] = "GhosttyRenderStateRowData",
         [typeof(RenderStateRowCellsData)] = "GhosttyRenderStateRowCellsData",
         [typeof(CellData)] = "GhosttyCellData",
+        [typeof(RowData)] = "GhosttyRowData",
         [typeof(CellWide)] = "GhosttyCellWide",
         [typeof(KeyEncoderOption)] = "GhosttyKeyEncoderOption",
         [typeof(MouseEncoderOption)] = "GhosttyMouseEncoderOption",

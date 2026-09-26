@@ -433,6 +433,7 @@ public enum TerminalOption : int
     KittyImageMediumSharedMem = 18,
     Selection = 21,
     ClipboardWrite = 26,
+    ScrollbackMaxBytes = 27,
     ScrollbackMaxLines = 28,
     ModeDefault = 33,
     ClipboardRead = 38,
@@ -567,6 +568,13 @@ public enum RenderStateRowCellsData : int
     HasStyling = 8,
 }
 
+/// <summary>Screen row data (ghostty_row_get on a GhosttyRow from a grid ref).</summary>
+public enum RowData : int
+{
+    Wrap = 1,
+    WrapContinuation = 2,
+}
+
 public enum CellData : int
 {
     Wide = 3,
@@ -643,6 +651,12 @@ public static unsafe partial class Native
 
     [LibraryImport(Lib, EntryPoint = "ghostty_terminal_grid_ref")]
     public static partial GhosttyResult TerminalGridRef(nint terminal, GhosttyPoint point, GhosttyGridRef* outRef);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_row")]
+    public static partial GhosttyResult GridRefRow(GhosttyGridRef* gridRef, out ulong row);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_row_get")]
+    public static partial GhosttyResult ScreenRowGet(ulong row, RowData data, void* value);
 
     [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_cell")]
     public static partial GhosttyResult GridRefCell(GhosttyGridRef* gridRef, out ulong cell);

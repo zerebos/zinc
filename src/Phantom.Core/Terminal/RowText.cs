@@ -22,6 +22,9 @@ internal sealed unsafe class RowText
 
     public string Text { get; }
 
+    /// <summary>Number of columns.</summary>
+    public int Width => _spacerTail.Length;
+
     /// <summary>The string index where column <paramref name="col"/> starts.</summary>
     public int IndexOf(int col) => _cellStart[col];
 
@@ -41,8 +44,11 @@ internal sealed unsafe class RowText
             if (Native.TerminalGridRef(terminal, point, &gridRef) == GhosttyResult.Success)
             {
                 int wide;
+                // A wide char's second half, or the gap left at a row's end when a wide char
+                // wrapped to the next row: no text of their own.
                 if (Native.GridRefCell(&gridRef, out var cell) == GhosttyResult.Success &&
-                    Native.CellGet(cell, CellData.Wide, &wide) == GhosttyResult.Success && wide == (int)CellWide.SpacerTail)
+                    Native.CellGet(cell, CellData.Wide, &wide) == GhosttyResult.Success &&
+                    wide is (int)CellWide.SpacerTail or (int)CellWide.SpacerHead)
                 {
                     spacerTail[c] = true;
                     continue;

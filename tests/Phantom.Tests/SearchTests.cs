@@ -47,12 +47,24 @@ public class SearchTests
     }
 
     [Fact]
-    public void SoftWrappedRowsAreSeparateLines()
+    public void MatchesContinueAcrossSoftWraps()
     {
         using var session = new TerminalSession(10, 5, TerminalTheme.Default);
-        session.WriteToScreen("xxxxxxxneedle needle"); // wraps after 10 columns
-        // "nee|dle" splits across the wrap; the second fits on row 1 (cols 4..9).
-        Assert.Equal([new SearchMatch(1, 4, 9)], Find(session, "needle"));
+        session.WriteToScreen("xxxxxxxneedle needle\r\nnext line"); // wraps after 10 columns
+        // "nee|dle" spans the wrap (row 0 col 7 to row 1 col 2); the second fits on row 1.
+        Assert.Equal([new SearchMatch(0, 7, 1, 2), new SearchMatch(1, 4, 9)], Find(session, "needle"));
+        // The real line break still separates lines: "next" is on screen row 2.
+        Assert.Equal([new SearchMatch(2, 0, 3)], Find(session, "next"));
+        Assert.Empty(Find(session, @"needle\s*next", regex: true));
+    }
+
+    [Fact]
+    public void WideCharactersWrappedToTheNextRowDontSplitWords()
+    {
+        // 5 columns: "abcd" + 語 doesn't fit, so 語 moves to row 1 leaving a gap at row 0 col 4.
+        using var session = new TerminalSession(5, 4, TerminalTheme.Default);
+        session.WriteToScreen("abcd語z");
+        Assert.Equal([new SearchMatch(0, 3, 1, 2)], Find(session, "d語z"));
     }
 
     [Fact]

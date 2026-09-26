@@ -203,7 +203,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var count = ReadRow(defaultFg, defaultBg);
             var top = PadTop + y * m.Height;
             DrawBackgrounds(ds, count, top);
-            DrawMatches(ds, y, top);
+            DrawMatches(ds, y, count, top);
             if (_rowHasPlaceholders)
             {
                 DrawPlaceholders(ds, count, top);
@@ -578,28 +578,33 @@ public sealed unsafe class TerminalRenderer : IDisposable
     }
 
     /// <summary>Highlights find results on viewport row <paramref name="y"/>, under the text.</summary>
-    private void DrawMatches(CanvasDrawingSession ds, int y, float top)
+    private void DrawMatches(CanvasDrawingSession ds, int y, int count, float top)
     {
         if (SearchMatches is not { Count: > 0 } matches)
         {
             return;
         }
 
-        // Matches are sorted by row: find this row's first, then walk.
+        // Matches are sorted and don't overlap, so their end rows are sorted too: find the first
+        // ending on or after this row, then walk those that start on or before it.
         var row = _viewportTop + (ulong)y;
         int lo = 0, hi = matches.Count;
         while (lo < hi)
         {
             var mid = (lo + hi) / 2;
-            if (matches[mid].Row < row) lo = mid + 1;
+            if (matches[mid].EndRow < row) lo = mid + 1;
             else hi = mid;
         }
 
         var m = Metrics;
-        for (var i = lo; i < matches.Count && matches[i].Row == row; i++)
+        for (var i = lo; i < matches.Count && matches[i].Row <= row; i++)
         {
+            // A match spanning a soft wrap covers the rest of its first row, whole middle rows,
+            // and the start of its last row.
             var match = matches[i];
-            var rect = new Rect(PadLeft + match.StartCol * m.Width, top, (match.EndCol - match.StartCol + 1) * m.Width, m.Height);
+            var start = match.Row == row ? match.StartCol : 0;
+            var end = match.EndRow == row ? match.EndCol : count - 1;
+            var rect = new Rect(PadLeft + start * m.Width, top, (end - start + 1) * m.Width, m.Height);
             ds.FillRectangle(rect, i == CurrentMatch ? CurrentMatchColor : MatchColor);
         }
     }

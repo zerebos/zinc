@@ -151,6 +151,22 @@ public class SessionTests
     }
 
     [Fact]
+    public void ScrollbackKeepsTenThousandLines()
+    {
+        // Regression: libghostty's default byte limit pruned to ~700 rows at 120 columns.
+        using var session = new TerminalSession(120, 30, TerminalTheme.Default);
+        var text = new System.Text.StringBuilder();
+        for (var i = 0; i < 12_000; i++)
+        {
+            text.Append($"line {i} some typical build output text here\r\n");
+        }
+
+        session.WriteToScreen(text.ToString());
+        var total = session.GetScrollbar().Total;
+        Assert.InRange(total, 9_000ul, 11_000ul); // the line limit, give or take a page (pruned whole)
+    }
+
+    [Fact]
     public void ScrollbarReportsScrollbackAndScrollsToRow()
     {
         using var session = new TerminalSession(20, 10, TerminalTheme.Default);

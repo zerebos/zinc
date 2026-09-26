@@ -2,8 +2,16 @@ using System.Text.RegularExpressions;
 
 namespace Phantom.Terminal;
 
-/// <summary>A search hit: screen row (0 = oldest scrollback row), columns StartCol..EndCol inclusive.</summary>
-public readonly record struct SearchMatch(ulong Row, ushort StartCol, ushort EndCol);
+/// <summary>
+/// A search hit from (Row, StartCol) through (EndRow, EndCol) inclusive, in screen rows (0 = the
+/// oldest scrollback row). EndRow > Row when the match continues across a soft wrap.
+/// </summary>
+public readonly record struct SearchMatch(ulong Row, ushort StartCol, ulong EndRow, ushort EndCol)
+{
+    public SearchMatch(ulong row, ushort startCol, ushort endCol) : this(row, startCol, row, endCol)
+    {
+    }
+}
 
 public static class SearchPattern
 {
