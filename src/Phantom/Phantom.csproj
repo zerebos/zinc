@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>Phantom</RootNamespace>
+    <Platforms>x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GhosttyArch Condition="'$(Platform)' == 'ARM64'">arm64</GhosttyArch>
+    <GhosttyArch Condition="'$(GhosttyArch)' == ''">x64</GhosttyArch>
+    <GhosttyNativeDir>$(MSBuildThisFileDirectory)..\..\native\$(GhosttyArch)\</GhosttyNativeDir>
+
+    <!-- The ConPTY package picks which OpenConsole hosts to ship from $(Platform) in its
+         .props, which run before Platform is set above; choose them explicitly instead.
+         An x64 app may also run emulated on ARM64, so it ships both hosts. -->
+    <ConptyRequiresx64Host Condition="'$(GhosttyArch)' == 'x64'">true</ConptyRequiresx64Host>
+    <ConptyRequiresARM64Host>true</ConptyRequiresARM64Host>
+  </PropertyGroup>
+
+  <!-- libghostty-vt is built by scripts/build-libghostty.sh into native/<arch>/. -->
+  <ItemGroup>
+    <None Include="$(GhosttyNativeDir)ghostty-vt.dll" Link="ghostty-vt.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
+  </ItemGroup>
+
+  <Target Name="CheckGhostty" BeforeTargets="Build">
+    <Error Condition="!Exists('$(GhosttyNativeDir)ghostty-vt.dll')"
+           Text="ghostty-vt.dll not found in $(GhosttyNativeDir). Run: scripts/build-libghostty.sh $(GhosttyArch)" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
+    <!-- Windows Terminal's out-of-box ConPTY (conpty.dll + OpenConsole.exe): far higher
+         throughput than the inbox conhost, and grapheme-aware width measurement. -->
+    <PackageReference Include="Microsoft.Windows.Console.ConPTY" Version="1.24.260710001" />
+  </ItemGroup>
+</Project>

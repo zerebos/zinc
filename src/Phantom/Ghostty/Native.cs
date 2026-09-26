@@ -1,0 +1,548 @@
+using System.Runtime.InteropServices;
+
+namespace Phantom.Ghostty;
+
+// Raw bindings for libghostty-vt (ghostty-vt.dll).
+//
+// The C API is explicitly unstable. Struct layouts here use explicit offsets
+// taken from the library's own ABI manifest (`ghostty_type_json()`), so when
+// bumping the pinned commit in scripts/build-libghostty.sh, re-check them.
+// C `bool` is mapped to `byte` everywhere to keep every signature blittable.
+
+public enum GhosttyResult : int
+{
+    Success = 0,
+    OutOfMemory = -1,
+    InvalidValue = -2,
+    OutOfSpace = -3,
+    NoValue = -4,
+    IoError = -5,
+    LimitExceeded = -6,
+    Rejected = -7,
+}
+
+[StructLayout(LayoutKind.Sequential, Size = 3)]
+public struct GhosttyColorRgb
+{
+    public byte R, G, B;
+
+    public GhosttyColorRgb(byte r, byte g, byte b)
+    {
+        R = r; G = g; B = b;
+    }
+
+    public static GhosttyColorRgb FromHex(uint rgb) =>
+        new((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GhosttyString
+{
+    public nint Ptr;
+    public nuint Len;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+public struct GhosttyRenderStateCursor
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public byte ViewportHasValue;
+    [FieldOffset(10)] public ushort ViewportX;
+    [FieldOffset(12)] public ushort ViewportY;
+    [FieldOffset(14)] public byte WideTail;
+    [FieldOffset(15)] public byte Visible;
+    [FieldOffset(16)] public byte Blinking;
+    [FieldOffset(17)] public byte PasswordInput;
+    [FieldOffset(20)] public CursorVisualStyle VisualStyle;
+}
+
+public enum CursorVisualStyle : int
+{
+    Bar = 0,
+    Block = 1,
+    Underline = 2,
+    BlockHollow = 3,
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 792)]
+public unsafe struct GhosttyRenderStateColors
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public GhosttyColorRgb Background;
+    [FieldOffset(11)] public GhosttyColorRgb Foreground;
+    [FieldOffset(14)] public GhosttyColorRgb Cursor;
+    [FieldOffset(17)] public byte CursorHasValue;
+    [FieldOffset(18)] public fixed byte Palette[768];
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 72)]
+public struct GhosttyStyle
+{
+    [FieldOffset(0)] public nuint Size;
+    // fg/bg/underline colors live at 8/24/40 (GhosttyStyleColor, 16 bytes each).
+    // Renderers get resolved colors from the row-cells API instead.
+    [FieldOffset(56)] public byte Bold;
+    [FieldOffset(57)] public byte Italic;
+    [FieldOffset(58)] public byte Faint;
+    [FieldOffset(59)] public byte Blink;
+    [FieldOffset(60)] public byte Inverse;
+    [FieldOffset(61)] public byte Invisible;
+    [FieldOffset(62)] public byte Strikethrough;
+    [FieldOffset(63)] public byte Overline;
+    [FieldOffset(64)] public int Underline;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 16)]
+public struct GhosttyRenderStateRowSelection
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public ushort StartX;
+    [FieldOffset(10)] public ushort EndX;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GhosttyTerminalScrollbar
+{
+    public ulong Total;
+    public ulong Offset;
+    public ulong Len;
+}
+
+public enum ScrollViewportTag : int
+{
+    Top = 0,
+    Bottom = 1,
+    Delta = 2,
+    Row = 3,
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+public struct GhosttyTerminalScrollViewport
+{
+    [FieldOffset(0)] public ScrollViewportTag Tag;
+    [FieldOffset(8)] public nint Value;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+public struct GhosttyGridRef
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public nint Node;
+    [FieldOffset(16)] public ushort X;
+    [FieldOffset(18)] public ushort Y;
+
+    public static GhosttyGridRef Init() => new() { Size = 24 };
+}
+
+public enum PointTag : int
+{
+    Active = 0,
+    Viewport = 1,
+    Screen = 2,
+    History = 3,
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+public struct GhosttyPoint
+{
+    [FieldOffset(0)] public PointTag Tag;
+    [FieldOffset(8)] public ushort X;
+    [FieldOffset(12)] public uint Y;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 64)]
+public struct GhosttySelection
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public GhosttyGridRef Start;
+    [FieldOffset(32)] public GhosttyGridRef End;
+    [FieldOffset(56)] public byte Rectangle;
+
+    public static GhosttySelection Init() => new() { Size = 64 };
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 24)]
+public struct GhosttyTerminalSelectionFormatOptions
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public int Emit; // GhosttyFormatterFormat: 0 = plain
+    [FieldOffset(12)] public byte Unwrap;
+    [FieldOffset(13)] public byte Trim;
+    [FieldOffset(16)] public nint Selection; // GhosttySelection*, NULL = active selection
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GhosttySelectionGestureGeometry
+{
+    public uint Columns;
+    public uint CellWidth;
+    public uint PaddingLeft;
+    public uint ScreenHeight;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GhosttySurfacePosition
+{
+    public double X;
+    public double Y;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 40)]
+public struct GhosttyMouseEncoderSize
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public uint ScreenWidth;
+    [FieldOffset(12)] public uint ScreenHeight;
+    [FieldOffset(16)] public uint CellWidth;
+    [FieldOffset(20)] public uint CellHeight;
+    [FieldOffset(24)] public uint PaddingTop;
+    [FieldOffset(28)] public uint PaddingBottom;
+    [FieldOffset(32)] public uint PaddingRight;
+    [FieldOffset(36)] public uint PaddingLeft;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct GhosttyMousePosition
+{
+    public float X;
+    public float Y;
+}
+
+[StructLayout(LayoutKind.Explicit, Size = 4)]
+public struct GhosttyTerminalModeConfig
+{
+    [FieldOffset(0)] public ushort Mode;
+    [FieldOffset(2)] public byte Value;
+}
+
+public static class GhosttyMode
+{
+    // Mirrors the static inline ghostty_mode_new() from modes.h.
+    public static ushort New(ushort value, bool ansi) => (ushort)((value & 0x7FFF) | (ansi ? 0x8000 : 0));
+
+    public static readonly ushort BracketedPaste = New(2004, false);
+    public static readonly ushort FocusEvent = New(1004, false);
+    public static readonly ushort AltScroll = New(1007, false);
+    public static readonly ushort DecCkm = New(1, false);
+    public static readonly ushort GraphemeCluster = New(2027, false);
+}
+
+[Flags]
+public enum GhosttyMods : ushort
+{
+    None = 0,
+    Shift = 1 << 0,
+    Ctrl = 1 << 1,
+    Alt = 1 << 2,
+    Super = 1 << 3,
+    CapsLock = 1 << 4,
+    NumLock = 1 << 5,
+    ShiftSide = 1 << 6,
+    CtrlSide = 1 << 7,
+    AltSide = 1 << 8,
+    SuperSide = 1 << 9,
+}
+
+public enum KeyAction : int
+{
+    Release = 0,
+    Press = 1,
+    Repeat = 2,
+}
+
+public enum MouseAction : int
+{
+    Press = 0,
+    Release = 1,
+    Motion = 2,
+}
+
+public enum MouseButton : int
+{
+    Unknown = 0,
+    Left = 1,
+    Right = 2,
+    Middle = 3,
+    Four = 4,
+    Five = 5,
+}
+
+public enum TerminalOption : int
+{
+    Userdata = 0,
+    WritePty = 1,
+    Bell = 2,
+    TitleChanged = 5,
+    ColorForeground = 11,
+    ColorBackground = 12,
+    ColorCursor = 13,
+    Selection = 21,
+    ScrollbackMaxLines = 28,
+    ModeDefault = 33,
+}
+
+public enum TerminalData : int
+{
+    Cols = 1,
+    Rows = 2,
+    ActiveScreen = 6,
+    KittyKeyboardFlags = 8,
+    Scrollbar = 9,
+    MouseTracking = 11,
+    Title = 12,
+    Selection = 31,
+    ViewportActive = 32,
+    Mode = 37,
+}
+
+public enum RenderStateData : int
+{
+    Dirty = 3,
+    RowIterator = 4,
+    Cursor = 18,
+    Colors = 19,
+}
+
+public enum RenderStateRowData : int
+{
+    Dirty = 1,
+    Cells = 3,
+    Selection = 4,
+}
+
+public enum RenderStateRowCellsData : int
+{
+    Raw = 1,
+    Style = 2,
+    GraphemesLen = 3,
+    GraphemesBuf = 4,
+    BgColor = 5,
+    FgColor = 6,
+    Selected = 7,
+    HasStyling = 8,
+}
+
+public enum CellData : int
+{
+    Wide = 3,
+}
+
+public enum CellWide : int
+{
+    Narrow = 0,
+    Wide = 1,
+    SpacerTail = 2,
+    SpacerHead = 3,
+}
+
+public enum KeyEncoderOption : int
+{
+    KittyFlags = 5,
+}
+
+public enum MouseEncoderOption : int
+{
+    Size = 2,
+    AnyButtonPressed = 3,
+    TrackLastCell = 4,
+}
+
+public enum SelectionGestureEventType : int
+{
+    Press = 0,
+    Release = 1,
+    Drag = 2,
+    AutoscrollTick = 3,
+    DeepPress = 4,
+}
+
+public enum SelectionGestureEventOption : int
+{
+    Ref = 0,
+    Position = 1,
+    RepeatDistance = 2,
+    TimeNs = 3,
+    RepeatIntervalNs = 4,
+    Geometry = 8,
+}
+
+public static unsafe partial class Native
+{
+    private const string Lib = "ghostty-vt";
+
+    // ---- memory ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_free")]
+    public static partial void Free(nint allocator, byte* ptr, nuint len);
+
+    // ---- terminal ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_new")]
+    public static partial GhosttyResult TerminalNew(nint allocator, out nint terminal, ushort cols, ushort rows);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_free")]
+    public static partial void TerminalFree(nint terminal);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_resize")]
+    public static partial GhosttyResult TerminalResize(nint terminal, ushort cols, ushort rows, uint cellWidthPx, uint cellHeightPx);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_set")]
+    public static partial GhosttyResult TerminalSet(nint terminal, TerminalOption option, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_get")]
+    public static partial GhosttyResult TerminalGet(nint terminal, TerminalData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_vt_write")]
+    public static partial void TerminalVtWrite(nint terminal, byte* data, nuint len);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_scroll_viewport")]
+    public static partial void TerminalScrollViewport(nint terminal, GhosttyTerminalScrollViewport behavior);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_grid_ref")]
+    public static partial GhosttyResult TerminalGridRef(nint terminal, GhosttyPoint point, GhosttyGridRef* outRef);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_selection_format_alloc")]
+    public static partial GhosttyResult TerminalSelectionFormatAlloc(
+        nint terminal, nint allocator, GhosttyTerminalSelectionFormatOptions options, out byte* outPtr, out nuint outLen);
+
+    // ---- render state ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_new")]
+    public static partial GhosttyResult RenderStateNew(nint allocator, out nint state);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_free")]
+    public static partial void RenderStateFree(nint state);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_update")]
+    public static partial GhosttyResult RenderStateUpdate(nint state, nint terminal);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_get")]
+    public static partial GhosttyResult RenderStateGet(nint state, RenderStateData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_clean")]
+    public static partial GhosttyResult RenderStateClean(nint state);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_iterator_new")]
+    public static partial GhosttyResult RowIteratorNew(nint allocator, out nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_iterator_free")]
+    public static partial void RowIteratorFree(nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_iterator_next")]
+    public static partial byte RowIteratorNext(nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_get")]
+    public static partial GhosttyResult RowGet(nint iterator, RenderStateRowData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_cells_new")]
+    public static partial GhosttyResult RowCellsNew(nint allocator, out nint cells);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_cells_free")]
+    public static partial void RowCellsFree(nint cells);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_cells_next")]
+    public static partial byte RowCellsNext(nint cells);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_cells_get")]
+    public static partial GhosttyResult RowCellsGet(nint cells, RenderStateRowCellsData data, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_cell_get")]
+    public static partial GhosttyResult CellGet(ulong cell, CellData data, void* value);
+
+    // ---- key encoding ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_new")]
+    public static partial GhosttyResult KeyEncoderNew(nint allocator, out nint encoder);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_free")]
+    public static partial void KeyEncoderFree(nint encoder);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_setopt_from_terminal")]
+    public static partial void KeyEncoderSetoptFromTerminal(nint encoder, nint terminal);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_encode")]
+    public static partial GhosttyResult KeyEncoderEncode(nint encoder, nint keyEvent, byte* outBuf, nuint outBufSize, out nuint outLen);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_new")]
+    public static partial GhosttyResult KeyEventNew(nint allocator, out nint keyEvent);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_free")]
+    public static partial void KeyEventFree(nint keyEvent);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_set_action")]
+    public static partial void KeyEventSetAction(nint keyEvent, KeyAction action);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_set_key")]
+    public static partial void KeyEventSetKey(nint keyEvent, GhosttyKey key);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_set_mods")]
+    public static partial void KeyEventSetMods(nint keyEvent, GhosttyMods mods);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_set_consumed_mods")]
+    public static partial void KeyEventSetConsumedMods(nint keyEvent, GhosttyMods mods);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_set_utf8")]
+    public static partial void KeyEventSetUtf8(nint keyEvent, byte* utf8, nuint len);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_key_event_set_unshifted_codepoint")]
+    public static partial void KeyEventSetUnshiftedCodepoint(nint keyEvent, uint codepoint);
+
+    // ---- mouse encoding ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_encoder_new")]
+    public static partial GhosttyResult MouseEncoderNew(nint allocator, out nint encoder);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_encoder_free")]
+    public static partial void MouseEncoderFree(nint encoder);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_encoder_setopt")]
+    public static partial void MouseEncoderSetopt(nint encoder, MouseEncoderOption option, void* value);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_encoder_setopt_from_terminal")]
+    public static partial void MouseEncoderSetoptFromTerminal(nint encoder, nint terminal);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_encoder_encode")]
+    public static partial GhosttyResult MouseEncoderEncode(nint encoder, nint mouseEvent, byte* outBuf, nuint outBufSize, out nuint outLen);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_new")]
+    public static partial GhosttyResult MouseEventNew(nint allocator, out nint mouseEvent);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_free")]
+    public static partial void MouseEventFree(nint mouseEvent);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_set_action")]
+    public static partial void MouseEventSetAction(nint mouseEvent, MouseAction action);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_set_button")]
+    public static partial void MouseEventSetButton(nint mouseEvent, MouseButton button);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_clear_button")]
+    public static partial void MouseEventClearButton(nint mouseEvent);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_set_mods")]
+    public static partial void MouseEventSetMods(nint mouseEvent, GhosttyMods mods);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_mouse_event_set_position")]
+    public static partial void MouseEventSetPosition(nint mouseEvent, GhosttyMousePosition position);
+
+    // ---- selection gestures ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_new")]
+    public static partial GhosttyResult SelectionGestureNew(nint allocator, out nint gesture);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_free")]
+    public static partial void SelectionGestureFree(nint gesture, nint terminal);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_reset")]
+    public static partial void SelectionGestureReset(nint gesture, nint terminal);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_event")]
+    public static partial GhosttyResult SelectionGestureEvent(nint gesture, nint terminal, nint gestureEvent, GhosttySelection* outSelection);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_event_new")]
+    public static partial GhosttyResult SelectionGestureEventNew(nint allocator, out nint gestureEvent, SelectionGestureEventType type);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_event_free")]
+    public static partial void SelectionGestureEventFree(nint gestureEvent);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_selection_gesture_event_set")]
+    public static partial GhosttyResult SelectionGestureEventSet(nint gestureEvent, SelectionGestureEventOption option, void* value);
+
+    // ---- paste ----
+    [LibraryImport(Lib, EntryPoint = "ghostty_paste_encode")]
+    public static partial GhosttyResult PasteEncode(byte* data, nuint dataLen, byte bracketed, byte* buf, nuint bufLen, out nuint outWritten);
+}
