@@ -1,4 +1,4 @@
-# Phantom
+# Phosphor
 
 A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 **libghostty-vt**, the terminal emulation core extracted from
@@ -12,7 +12,7 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 
 - **libghostty-vt** (`ghostty-vt.dll`, C API via P/Invoke) does VT parsing,
   screen/scrollback state, reflow, selection, and key/mouse/paste encoding.
-- **ConPTY** runs the child process. Phantom ships Windows Terminal's
+- **ConPTY** runs the child process. Phosphor ships Windows Terminal's
   out-of-box ConPTY (`conpty.dll` + `OpenConsole.exe` from the
   `Microsoft.Windows.Console.ConPTY` package) and falls back to the inbox one
   if those files are missing.
@@ -37,31 +37,31 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 scripts/build-libghostty.sh x64
 
 # 2. Build and run the app
-dotnet run --project src/Phantom
+dotnet run --project src/Phosphor
 
 # 3. Run the tests (ABI check against libghostty's manifest, headless ConPTY sessions)
 dotnet test
 ```
 
 The app is unpackaged and Windows App SDK self-contained, so
-`src/Phantom/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phantom.exe`
+`src/Phosphor/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phosphor.exe`
 runs directly.
 
 ## Installing locally
 
 ```bash
-pwsh scripts/install.ps1                  # Release build -> Start Menu "Phantom" (Raycast finds it)
+pwsh scripts/install.ps1                  # Release build -> Start Menu "Phosphor" (Raycast finds it)
 pwsh scripts/install.ps1 -InstallGitHook  # also reinstall in the background after each commit
 pwsh scripts/install.ps1 -Uninstall       # remove install, shortcut and hook (keeps config)
 ```
 
-Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Phantom\versions\`
+Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Phosphor\versions\`
 and repoints the Start Menu shortcut, so open windows are never disturbed; the three
 newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundled).
 
 ## Configuration
 
-`%APPDATA%\Phantom\config` (override the path with `PHANTOM_CONFIG`), in Ghostty's
+`%APPDATA%\Phosphor\config` (override the path with `PHOSPHOR_CONFIG`), in Ghostty's
 syntax: one `key = value` per line, `#` comments, later lines win.
 
 ```
@@ -77,7 +77,7 @@ window-padding-y = 10
 ```
 
 - `font-family`: any installed monospace family; Nerd Fonts work. If it isn't
-  installed, Phantom falls back to Cascadia Mono, then Consolas.
+  installed, Phosphor falls back to Cascadia Mono, then Consolas.
 - `font-size`: in points, like Ghostty and Windows Terminal; `Ctrl+0` resets to this.
 - `command`: the default command line (see below for precedence).
 - `background`, `foreground`, `cursor-color`: `#rrggbb`.
@@ -113,16 +113,16 @@ command = "C:\Program Files\Git\bin\bash.exe" --login -i
 working-directory = ~/dev
 ```
 
-- `default-profile` (global only): the profile Phantom starts with; defaults to the first.
-- `icon`: image shown for the profile in tabs. Without one, Phantom picks one like Windows
+- `default-profile` (global only): the profile Phosphor starts with; defaults to the first.
+- `icon`: image shown for the profile in tabs. Without one, Phosphor picks one like Windows
   Terminal: the WSL distro's registered icon, Git for Windows' icon for Git Bash, a network
   glyph for `ssh`, else the command's executable icon.
 - `working-directory`: `~`/`home` (the default) or a path; `~/sub` and `%VARS%` expand.
 - Without any sections, the global settings act as a single "Default" profile.
 - Problems (unknown keys, bad values, duplicate profiles) are collected as warnings
-  instead of stopping Phantom.
+  instead of stopping Phosphor.
 
-This section syntax is an interim step; a Phantom-specific config format is planned.
+This section syntax is an interim step; a Phosphor-specific config format is planned.
 
 ### Quick terminal
 
@@ -139,27 +139,27 @@ and Alt+Tab, and it keeps its tabs while hidden. Global settings:
 - `quick-terminal-autohide`: `true` (default) hides it when it loses focus.
 
 If another app holds the hotkey (Windows Terminal's quake mode uses ``Win+` ``), windows
-show a notice, and Phantom retries whenever one of its windows is activated.
+show a notice, and Phosphor retries whenever one of its windows is activated.
 
 ### Tray icon and background
 
-Phantom shows a notification-area icon while it runs. Clicking it brings back the most
+Phosphor shows a notification-area icon while it runs. Clicking it brings back the most
 recently used window (or opens one); right-clicking offers New window, Show/Hide quick
-terminal, and Quit Phantom, which closes every window, the hidden quick terminal included.
-Quit Phantom is also in the command palette.
+terminal, and Quit Phosphor, which closes every window, the hidden quick terminal included.
+Quit Phosphor is also in the command palette.
 
-When the last window closes, Phantom keeps running in the tray while its quick terminal hotkey
+When the last window closes, Phosphor keeps running in the tray while its quick terminal hotkey
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
 `quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
 ## Choosing a shell
 
-1. Arguments after the executable: `Phantom.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
-2. The `PHANTOM_SHELL` environment variable (a full command line)
+1. Arguments after the executable: `Phosphor.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
+2. The `PHOSPHOR_SHELL` environment variable (a full command line)
 3. The default profile's `command` (tabs opened later use their profile's)
 4. Otherwise `pwsh.exe`, then `powershell.exe`, then `cmd.exe`
 
-Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
+Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 
 ## Keys and mouse
 
@@ -211,7 +211,7 @@ direct placements (e.g. fastfetch `--kitty-direct`) and Unicode placeholders (e.
 previews). Programs may send image data inline, or name a file to load
 (or a temp file under `%TEMP%`); paths from WSL or a remote host don't resolve here, so
 those programs must send data inline. Images keep their place in scrollback. Programs detect
-support with the protocol's query; Phantom answers it (and identifies as libghostty).
+support with the protocol's query; Phosphor answers it (and identifies as libghostty).
 
 Find (`Ctrl+Shift+F`) opens a box at the pane's top right. Matches highlight as you type, with
 their positions marked beside the scrollbar; `Enter` moves to the next older match and
@@ -232,17 +232,17 @@ until a key is pressed; a clean exit closes it.
 ```
 scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
-scripts/gen-icon.py               assets/*.svg -> src/Phantom/Assets/Phantom.ico (pixel-snapped sizes)
+scripts/gen-icon.py               assets/*.svg -> src/Phosphor/Assets/Phosphor.ico (pixel-snapped sizes)
 assets/                           source artwork (app icon SVG)
-src/Phantom.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
-src/Phantom.Core/                 everything testable without a window:
+src/Phosphor.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
+src/Phosphor.Core/                 everything testable without a window:
   Ghostty/                          P/Invoke bindings
   Pty/ConPty.cs                     pseudoconsole + child process + reader thread
   Terminal/TerminalSession.cs       terminal + pty glue, libghostty callbacks
   Input/                            scan code -> GhosttyKey map, keyboard layout translation
   Config.cs, ShellResolver.cs       config file, command resolution
-src/Phantom/                      WinUI app: window, TerminalControl (Win2D render + input)
-tests/Phantom.Tests/              xUnit v3: ABI check, headless sessions, unit tests
+src/Phosphor/                      WinUI app: window, TerminalControl (Win2D render + input)
+tests/Phosphor.Tests/              xUnit v3: ABI check, headless sessions, unit tests
 ```
 
 ## Updating libghostty-vt

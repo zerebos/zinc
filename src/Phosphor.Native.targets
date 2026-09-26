@@ -1,0 +1,36 @@
+<!--
+  Native runtime dependencies for anything that *runs* Phosphor.Core (the app and the tests):
+  libghostty-vt and Windows Terminal's out-of-box ConPTY. Import after Platform is set.
+-->
+<Project>
+  <PropertyGroup>
+    <GhosttyArch Condition="'$(Platform)' == 'ARM64'">arm64</GhosttyArch>
+    <GhosttyArch Condition="'$(GhosttyArch)' == ''">x64</GhosttyArch>
+    <GhosttyNativeDir>$(MSBuildThisFileDirectory)..\native\$(GhosttyArch)\</GhosttyNativeDir>
+
+    <!-- The ConPTY package picks which OpenConsole hosts to ship from $(Platform) in its
+         .props, which run before the project sets Platform; choose them explicitly instead.
+         An x64 app may also run emulated on ARM64, so it ships both hosts. -->
+    <ConptyRequiresx64Host Condition="'$(GhosttyArch)' == 'x64'">true</ConptyRequiresx64Host>
+    <ConptyRequiresARM64Host>true</ConptyRequiresARM64Host>
+  </PropertyGroup>
+
+  <!-- libghostty-vt is built by scripts/build-libghostty.sh into native/<arch>/. -->
+  <ItemGroup>
+    <None Include="$(GhosttyNativeDir)ghostty-vt.dll" Link="ghostty-vt.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
+  </ItemGroup>
+
+  <Target Name="CheckGhostty" BeforeTargets="Build">
+    <Error Condition="!Exists('$(GhosttyNativeDir)ghostty-vt.dll')"
+           Text="ghostty-vt.dll not found in $(GhosttyNativeDir). Run: scripts/build-libghostty.sh $(GhosttyArch)" />
+  </Target>
+
+  <ItemGroup>
+    <!-- Windows Terminal's out-of-box ConPTY (conpty.dll + OpenConsole.exe): far higher
+         throughput than the inbox conhost, and grapheme-aware width measurement.
+         Referenced here, not in Phosphor.Core, because its OpenConsole copy step lives in
+         build/ (not buildTransitive/) and so only runs for direct references. -->
+    <PackageReference Include="Microsoft.Windows.Console.ConPTY" Version="1.24.260710001" />
+  </ItemGroup>
+</Project>

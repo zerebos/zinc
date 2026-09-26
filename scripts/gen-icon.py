@@ -1,4 +1,4 @@
-"""Generates src/Phantom/Assets/Phantom.ico from assets/phosphor-icon.svg.
+"""Generates src/Phosphor/Assets/Phosphor.ico from assets/phosphor-icon.svg.
 
 The mark is a dot-matrix of lit cells on a 10-unit pitch (in a 240-unit tile), which
 no icon size maps onto exactly (a cell is 0.67 px at 16 px, 1.33 px at 32 px...). A
@@ -27,7 +27,7 @@ from PIL import Image, ImageDraw
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SVG = ROOT / "assets" / "phosphor-icon.svg"
-ICO = ROOT / "src" / "Phantom" / "Assets" / "Phantom.ico"
+ICO = ROOT / "src" / "Phosphor" / "Assets" / "Phosphor.ico"
 SIZES = [256, 128, 96, 64, 48, 40, 32, 24, 20, 16]
 
 src = SVG.read_text(encoding="utf-8")
