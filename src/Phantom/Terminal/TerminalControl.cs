@@ -66,7 +66,10 @@ public sealed partial class TerminalControl : UserControl
         IsTabStop = true;
         UseSystemFocusVisuals = false;
         TabFocusNavigation = KeyboardNavigationMode.Cycle;
-        ProtectedCursor = InputSystemCursor.Create(InputSystemCursorShape.IBeam);
+        _arrowCursor = !config.TextPointer;
+        ProtectedCursor = InputSystemCursor.Create(_arrowCursor ? InputSystemCursorShape.Arrow : InputSystemCursorShape.IBeam);
+        // The scrollbar handles its own pointer events; proximity tracking must see them too.
+        AddHandler(PointerMovedEvent, new PointerEventHandler(TrackScrollBarProximity), handledEventsToo: true);
 
         _canvas = new CanvasControl { ClearColor = TerminalRenderer.ToColor(config.Theme.Background) };
         _canvas.CreateResources += OnCreateResources;

@@ -55,6 +55,15 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void MousePointerDefaultsToArrow()
+    {
+        Assert.False(Load("").TextPointer);
+        Assert.True(Load("mouse-pointer = text").TextPointer);
+        Assert.False(Load("mouse-pointer = text\nmouse-pointer = arrow").TextPointer);
+        Assert.False(Load("mouse-pointer = sparkly").TextPointer);
+    }
+
+    [Fact]
     public void FontSizeIsInPoints()
     {
         var config = Load("font-size = 12");

@@ -28,6 +28,12 @@ public sealed record Config
 
     public TerminalTheme Theme { get; init; } = TerminalTheme.Default;
 
+    /// <summary>
+    /// Pointer over the terminal: an arrow (default, like Windows Terminal) or a text
+    /// I-beam (like Ghostty, kitty, WezTerm). Config: <c>mouse-pointer = arrow | text</c>.
+    /// </summary>
+    public bool TextPointer { get; init; }
+
     /// <summary>Padding around the grid, in DIPs.</summary>
     public float PaddingLeft { get; init; } = 8;
     public float PaddingRight { get; init; } = 8;
@@ -60,6 +66,7 @@ public sealed record Config
             "command" when value.Length > 0 => this with { Command = value },
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
+            "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
             "background" when TryColor(value, out var c) => this with { Theme = theme with { Background = c } },
             "foreground" when TryColor(value, out var c) => this with { Theme = theme with { Foreground = c } },
             "cursor-color" when TryColor(value, out var c) => this with { Theme = theme with { Cursor = c } },

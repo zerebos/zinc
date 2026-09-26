@@ -83,6 +83,8 @@ window-padding-y = 10
 - `background`, `foreground`, `cursor-color`: `#rrggbb`.
 - `palette = N=#rrggbb`: override palette entry N (0-255), one line per entry.
 - `window-padding-x`, `window-padding-y`: points; `N` or `left,right` / `top,bottom`.
+- `mouse-pointer`: `arrow` (default, like Windows Terminal) or `text` (an I-beam over text,
+  like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
 
 These are Ghostty's key names and units, so color and font lines can be copied
 straight from a Ghostty config.
@@ -149,7 +151,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | `Ctrl+Shift+N` | New window |
 | `Shift` + mouse | Bypass app mouse reporting to select text |
 
-Each pane has a scrollbar (thin until hovered) while there is scrollback; it hides for
+Each pane has a scrollbar (thin until the pointer nears the right edge) while there is scrollback; it hides for
 full-screen apps, whose alternate screen has none. The selected tab takes the focused
 pane's background color unless you give the tab a color.
 

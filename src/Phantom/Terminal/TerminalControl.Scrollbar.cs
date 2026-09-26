@@ -8,8 +8,13 @@ namespace Phantom.Terminal;
 // The scrollbar: mirrors libghostty's scrollback position and scrolls it when dragged.
 public sealed partial class TerminalControl
 {
+    /// <summary>Width of the right-edge zone (DIPs) that expands the scrollbar on approach.</summary>
+    private const double ScrollBarHotZone = 20;
+
     private ScrollBar? _scrollBar;
     private bool _updatingScrollBar;
+    private bool _scrollBarExpanded;
+    private bool _nearScrollBar;
 
     /// <summary>Creates the overlay scrollbar (called once from the constructor).</summary>
     private ScrollBar CreateScrollBar()
@@ -25,10 +30,6 @@ public sealed partial class TerminalControl
             Visibility = Visibility.Collapsed,
             IsTabStop = false,
         };
-        // Widen on hover the way a ScrollViewer does, via the bar's "conscious" visual
-        // states. (IndicatorMode.None does not mean "full bar": it hides the bar.)
-        bar.PointerEntered += (_, _) => VisualStateManager.GoToState(bar, "Expanded", true);
-        bar.PointerExited += (_, _) => VisualStateManager.GoToState(bar, "Collapsed", true);
         bar.ValueChanged += (_, e) =>
         {
             if (_updatingScrollBar || _session is not { } session)
@@ -74,6 +75,36 @@ public sealed partial class TerminalControl
         finally
         {
             _updatingScrollBar = false;
+        }
+    }
+
+    /// <summary>
+    /// Expands the scrollbar while the pointer is over it or within the right-edge hot
+    /// zone, so it doesn't have to be hit exactly; the pointer is an arrow there.
+    /// </summary>
+    private void TrackScrollBarProximity(object sender, PointerRoutedEventArgs e)
+    {
+        var near = _scrollBar is { Visibility: Visibility.Visible } &&
+                   (IsFromScrollBar(e.OriginalSource) || e.GetCurrentPoint(this).Position.X >= ActualWidth - ScrollBarHotZone);
+        _nearScrollBar = near;
+        SetScrollBarExpanded(near);
+        if (near)
+        {
+            UpdatePointerCursor(arrow: true);
+        }
+    }
+
+    /// <summary>
+    /// Switches the bar between its thin and full looks via the visual states a
+    /// ScrollViewer uses. (IndicatorMode.None does not mean "full bar": it hides it.)
+    /// </summary>
+    private void SetScrollBarExpanded(bool expanded)
+    {
+        if (_scrollBar is { } bar && expanded != _scrollBarExpanded &&
+            VisualStateManager.GoToState(bar, expanded ? "Expanded" : "Collapsed", true))
+        {
+            // GoToState fails until the template has applied; retry on the next move.
+            _scrollBarExpanded = expanded;
         }
     }
 

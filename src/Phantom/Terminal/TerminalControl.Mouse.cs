@@ -65,7 +65,7 @@ public sealed partial class TerminalControl
 
         var point = e.GetCurrentPoint(_canvas);
         var reporting = !_selecting && ShouldReportMouse(session, e);
-        UpdatePointerCursor(arrow: reporting);
+        UpdatePointerCursor(arrow: reporting || _nearScrollBar || !_config.TextPointer);
 
         if (_selecting)
         {
@@ -148,9 +148,16 @@ public sealed partial class TerminalControl
         _canvas.Invalidate();
     }
 
+    protected override void OnPointerExited(PointerRoutedEventArgs e)
+    {
+        SetScrollBarExpanded(false);
+        _nearScrollBar = false;
+    }
+
     /// <summary>
-    /// Like Windows Terminal: an arrow while the app consumes the mouse, an
-    /// I-beam when the mouse selects text (including Shift-bypass).
+    /// The pointer shape: an arrow by default (like Windows Terminal), over the
+    /// scrollbar, and while the app consumes the mouse; with <c>mouse-pointer = text</c>,
+    /// an I-beam where the mouse selects text.
     /// </summary>
     private void UpdatePointerCursor(bool arrow)
     {
