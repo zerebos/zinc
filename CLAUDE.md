@@ -140,6 +140,9 @@ and read state after the write (see `_titleDirty`).
 - **Never** use SendKeys / SendInput (they hit whatever window is focused). Post messages
   to our own `InputSiteWindowClass` child instead (`keys.ps1`, `win.ps1`).
 - PrintWindow doesn't capture the mouse pointer, so pointer-shape changes need the user.
+- Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
+  misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
+  box drawing once turned out to be anti-aliasing seen at low resolution.
 - Posted WM_CHAR/WM_KEYDOWN and WM_MOUSEWHEEL work; posted WM_LBUTTON* do NOT reach
   WinUI pointer events (it uses WM_POINTER). Posted keys don't update GetKeyboardState,
   so modifiers look released. Verify mouse/selection logic by replaying libghostty calls
