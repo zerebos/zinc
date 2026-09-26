@@ -137,7 +137,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab (default profile / profile N) |
-| `Ctrl+Shift+Space`, ▾ button | Profile menu |
+| `Ctrl+Shift+Space`, ▾ button | Profile menu (Alt+click: open as a split; Shift+click: new window) |
 | `Ctrl+Shift+D` | Duplicate tab |
 | `Ctrl+Shift+W` | Close pane (the tab, if it's the last one) |
 | `Alt+Shift+Plus` / `Alt+Shift+Minus` | Split right / down (default profile) |

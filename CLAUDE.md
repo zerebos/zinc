@@ -150,6 +150,11 @@ and read state after the write (see `_titleDirty`).
 - Set a tab's content once (a Grid) and rebuild inside it: a ContentControl's old content
   isn't detached until its next layout pass.
 - Panels (Grid) have no OnPointer* overrides — subscribe to PointerPressed etc.
+- Standalone ScrollBar: `IndicatorMode.None` *hides* it (it doesn't mean "full bar"). Widen on
+  hover with `VisualStateManager.GoToState(bar, "Expanded"/"Collapsed")` (what ScrollViewer does);
+  GoToState returns false until the template has applied.
+- Caption buttons: `TitleBarHeightOption.Tall` (48 px) is taller than the ~41 px tab strip and
+  their hover highlight hung over the terminal; use Standard (32 px).
 - Alt+character chords beep unless `MenuKeySuppressor` swallows WM_SYSCOMMAND/SC_KEYMENU:
   handling KeyDown doesn't stop DefWindowProc's menu-mnemonic lookup (no menu bar → beep).
   Alt+Space (system menu) and a bare Alt tap are passed through.

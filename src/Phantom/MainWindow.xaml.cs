@@ -64,7 +64,9 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(DragRegion);
         var titleBar = AppWindow.TitleBar;
-        titleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
+        // Standard (32 px) caption buttons fit inside the ~41 px tab strip; Tall (48 px)
+        // hung below it, so their hover highlight covered the top of the terminal.
+        titleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
         titleBar.ButtonBackgroundColor = Colors.Transparent;
         titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
         titleBar.ButtonForegroundColor = Colors.White;
@@ -425,9 +427,41 @@ public sealed partial class MainWindow : Window
                 item.KeyboardAcceleratorTextOverride = $"Ctrl+Shift+{index + 1}";
             }
 
-            item.Click += (_, _) => OpenTab(profile);
+            item.Click += (_, _) => OpenProfile(profile);
             NewTabMenu.Items.Add(item);
             index++;
+        }
+
+        // Windows Terminal's modifier-click conventions, spelled out since they're hidden.
+        NewTabMenu.Items.Add(new MenuFlyoutSeparator());
+        NewTabMenu.Items.Add(new MenuFlyoutItem
+        {
+            Text = "Alt+click: split pane · Shift+click: new window",
+            IsEnabled = false,
+        });
+    }
+
+    /// <summary>
+    /// Opens a profile from the profile menu: a new tab, or with Alt held a split of the
+    /// focused pane (along its longer side), or with Shift held a new window.
+    /// </summary>
+    private void OpenProfile(Profile profile)
+    {
+        var keys = Keyboard.State.Capture();
+        if (keys.Alt && SelectedTab is { } tab)
+        {
+            var pane = tab.Active;
+            var where = PaneTree<Pane>.AutoDirection(pane.Control.ActualWidth, pane.Control.ActualHeight);
+            SplitPane(tab, pane, where, profile, ShellResolver.ForProfile(profile.Config),
+                profile.Config.ResolveWorkingDirectory());
+        }
+        else if (keys.Shift)
+        {
+            App.Instance.OpenWindow(profile);
+        }
+        else
+        {
+            OpenTab(profile);
         }
     }
 

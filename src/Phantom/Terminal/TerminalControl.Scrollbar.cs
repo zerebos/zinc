@@ -25,8 +25,10 @@ public sealed partial class TerminalControl
             Visibility = Visibility.Collapsed,
             IsTabStop = false,
         };
-        bar.PointerEntered += (_, _) => bar.IndicatorMode = ScrollingIndicatorMode.None;
-        bar.PointerExited += (_, _) => bar.IndicatorMode = ScrollingIndicatorMode.MouseIndicator;
+        // Widen on hover the way a ScrollViewer does, via the bar's "conscious" visual
+        // states. (IndicatorMode.None does not mean "full bar": it hides the bar.)
+        bar.PointerEntered += (_, _) => VisualStateManager.GoToState(bar, "Expanded", true);
+        bar.PointerExited += (_, _) => VisualStateManager.GoToState(bar, "Collapsed", true);
         bar.ValueChanged += (_, e) =>
         {
             if (_updatingScrollBar || _session is not { } session)
