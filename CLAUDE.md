@@ -150,9 +150,12 @@ and read state after the write (see `_titleDirty`).
 - Set a tab's content once (a Grid) and rebuild inside it: a ContentControl's old content
   isn't detached until its next layout pass.
 - Panels (Grid) have no OnPointer* overrides — subscribe to PointerPressed etc.
-- Standalone ScrollBar: `IndicatorMode.None` *hides* it (it doesn't mean "full bar"). Widen on
-  hover with `VisualStateManager.GoToState(bar, "Expanded"/"Collapsed")` (what ScrollViewer does);
-  GoToState returns false until the template has applied.
+- Standalone ScrollBar: `IndicatorMode.None` *hides* it (it doesn't mean "full bar"). Widen with
+  `VisualStateManager.GoToState(bar, "Expanded"/"Collapsed")` (what ScrollViewer does); GoToState
+  returns false until the template has applied. Expansion is driven by a 20-DIP right-edge hot
+  zone from a handledEventsToo PointerMoved handler (the bar handles its own pointer events).
+- Hover and pointer shape can't be tested here (posted WM_MOUSEMOVE doesn't become WM_POINTER;
+  screenshots omit the cursor) — ask the user.
 - Caption buttons: `TitleBarHeightOption.Tall` (48 px) is taller than the ~41 px tab strip and
   their hover highlight hung over the terminal; use Standard (32 px).
 - Alt+character chords beep unless `MenuKeySuppressor` swallows WM_SYSCOMMAND/SC_KEYMENU:
@@ -223,5 +226,7 @@ and read state after the write (see `_titleDirty`).
   `/tmp/...` paths to wsl.exe.
 - PowerShell tool quirk: `Remove-Item Env:X` next to quoted `C:\Program Files` paths was
   blocked as a "system path" removal; use `$env:X = $null`.
-- Writing C# via Python string literals mangles `\n`, `\x1b`, `\\` — use the Edit tool for
-  anything containing escapes.
+- Writing C# via Python string literals mangles `\n`, `\r`, `\x1b`, `\\` into real control
+  characters — this has bitten three times (C# "Newline in constant" errors), and Python
+  replace scripts also fail to *match* lines containing backslashes. Python edit scripts are
+  fine for plain code; anything with a backslash goes through the Edit tool.
