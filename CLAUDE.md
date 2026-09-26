@@ -110,6 +110,11 @@ and read state after the write (see `_titleDirty`).
 ## Windows / WinUI / ConPTY footguns
 
 - WinUI 3: `FontWeights` is `Microsoft.UI.Text.FontWeights`; `Colors` is `Microsoft.UI.Colors`.
+- App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
+  `.scratch/venv`) builds the .ico from assets/shade-phosphor-fluent.svg. The mark is pixel
+  art, so small sizes are re-drawn snapped to whole pixels — rerun after SVG edits and look
+  at `--preview`. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
+  uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
 - `await` is illegal inside an `unsafe` class → async code lives in `ClipboardText`.
 - Keyboard: a key's WM_CHAR arrives after its KeyDown and before its KeyUp. Suppress the
   char only when KeyDown already encoded the key (`_charHandledByKeyDown`), and clear the

@@ -14,6 +14,8 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
         AppWindow.TitleBar.PreferredTheme = TitleBarTheme.Dark;
+        // Unpackaged WinUI windows don't pick up the exe's icon on their own.
+        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phantom.ico"));
 
         // Match the terminal background so resizes never flash a different color.
         var bg = config.Theme.Background;

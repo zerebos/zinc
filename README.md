@@ -120,6 +120,8 @@ until a key is pressed; a clean exit closes it.
 ```
 scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
+scripts/gen-icon.py               assets/*.svg -> src/Phantom/Assets/Phantom.ico (pixel-snapped sizes)
+assets/                           source artwork (app icon SVG)
 src/Phantom.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
 src/Phantom.Core/                 everything testable without a window:
   Ghostty/                          P/Invoke bindings
