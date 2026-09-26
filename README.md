@@ -119,6 +119,24 @@ working-directory = ~/dev
 
 This section syntax is an interim step; a Phantom-specific config format is planned.
 
+### Quick terminal
+
+A global hotkey (default ``Win+` ``) summons a terminal window above other windows and
+dismisses it again, like Ghostty's quick terminal. It stays out of the taskbar
+and Alt+Tab, and it keeps its tabs while hidden. Global settings:
+
+- `quick-terminal-hotkey`: e.g. `win+grave`, `ctrl+alt+t` (needs a modifier).
+- `quick-terminal-position`: `top` (default), `bottom`, `left`, `right`, `center`.
+- `quick-terminal-screen`: `mouse` (default; the monitor under the pointer) or `main`.
+- `quick-terminal-size`: `primary[,secondary]`, each `N%` or `Npx`. Primary is the height for
+  top/bottom and the width for left/right/center; secondary is the other side. Defaults:
+  50% for the edges, 70%,60% for center.
+- `quick-terminal-autohide`: `true` (default) hides it when it loses focus.
+
+If another app holds the hotkey (Windows Terminal's quake mode uses ``Win+` ``), windows
+show a notice, and Phantom retries whenever one of its windows is activated. A hidden quick
+terminal keeps Phantom running after its other windows close.
+
 ## Choosing a shell
 
 1. Arguments after the executable: `Phantom.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
@@ -196,7 +214,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 ## Known gaps
 
 - IME (CJK input methods) is untested; there is no composition UI.
-- No quick terminal yet; keybindings aren't configurable yet.
+- Keybindings aren't configurable yet.
 - Ligatures are intentionally disabled (glyphs are placed per cell).
 - Kitty graphics, hyperlinks (OSC 8) and desktop notifications are parsed by
   libghostty but not surfaced yet.

@@ -58,9 +58,12 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
     // Terminal calls "plus" and "minus".
     private const VirtualKey OemPlus = (VirtualKey)0xBB, OemMinus = (VirtualKey)0xBD;
 
+    // VK_OEM_3: the `/~ key on US layouts ("grave" in Ghostty, "`" in Windows Terminal).
+    private const VirtualKey OemGrave = (VirtualKey)0xC0;
+
     private static readonly Dictionary<string, VirtualKey> Names = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["plus"] = OemPlus, ["minus"] = OemMinus,
+        ["plus"] = OemPlus, ["minus"] = OemMinus, ["grave"] = OemGrave, ["grave_accent"] = OemGrave, ["`"] = OemGrave,
         ["numpad_plus"] = VirtualKey.Add, ["numpad_minus"] = VirtualKey.Subtract,
         ["tab"] = VirtualKey.Tab, ["enter"] = VirtualKey.Enter, ["space"] = VirtualKey.Space,
         ["esc"] = VirtualKey.Escape, ["escape"] = VirtualKey.Escape, ["backspace"] = VirtualKey.Back,
@@ -78,6 +81,7 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
         {
             OemPlus => "Plus",
             OemMinus => "Minus",
+            OemGrave => "`",
             VirtualKey.Add => "Numpad Plus",
             VirtualKey.Subtract => "Numpad Minus",
             VirtualKey.PageUp => "PgUp",

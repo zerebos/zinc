@@ -56,14 +56,26 @@ public sealed partial class MainWindow : Window
         public object? AppliedColors { get; set; }
     }
 
-    public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command)
+    public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command, bool quick = false)
     {
         _config = config;
         _keybindings = keybindings;
+        _quick = quick;
         _focusBrush = new SolidColorBrush((Windows.UI.Color)Application.Current.Resources["SystemAccentColor"]);
         InitializeComponent();
 
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
+        if (quick)
+        {
+            // Sized and placed by ShowQuick each time it's summoned.
+            ConfigureQuickWindow();
+        }
+        else
+        {
+            AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
+        }
+
+        Activated += OnActivated;
+        HotkeyNotice.Closed += (_, _) => _hotkeyNoticeDismissed = true;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(DragRegion);
         var titleBar = AppWindow.TitleBar;

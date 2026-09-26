@@ -47,6 +47,17 @@
             </TabView.TabStripFooter>
         </TabView>
 
+        <!-- Shown when the quick terminal's global hotkey is held by another app. -->
+        <InfoBar
+            x:Name="HotkeyNotice"
+            MaxWidth="520"
+            Margin="12"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            IsOpen="False"
+            Severity="Warning"
+            Title="Quick terminal hotkey unavailable" />
+
         <!-- Command palette (Ctrl+Shift+P). The transparent layer catches clicks outside
              the panel to close it. -->
         <Grid x:Name="PaletteLayer" Background="Transparent" Visibility="Collapsed">

@@ -34,6 +34,9 @@ public sealed record Config
     /// </summary>
     public bool TextPointer { get; init; }
 
+    /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
+    public QuickTerminalSettings QuickTerminal { get; init; } = new();
+
     /// <summary>Padding around the grid, in DIPs.</summary>
     public float PaddingLeft { get; init; } = 8;
     public float PaddingRight { get; init; } = 8;
@@ -67,6 +70,16 @@ public sealed record Config
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
             "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
+            "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
+                this with { QuickTerminal = QuickTerminal with { Position = position } },
+            "quick-terminal-screen" when Enum.TryParse<QuickTerminalScreen>(value, true, out var screen) =>
+                this with { QuickTerminal = QuickTerminal with { Screen = screen } },
+            "quick-terminal-size" when TryQuickSize(value, out var primary, out var secondary) =>
+                this with { QuickTerminal = QuickTerminal with { Primary = primary, Secondary = secondary } },
+            "quick-terminal-autohide" when bool.TryParse(value, out var autohide) =>
+                this with { QuickTerminal = QuickTerminal with { Autohide = autohide } },
+            "quick-terminal-hotkey" when TryHotkey(value) =>
+                this with { QuickTerminal = QuickTerminal with { Hotkey = value } },
             "background" when TryColor(value, out var c) => this with { Theme = theme with { Background = c } },
             "foreground" when TryColor(value, out var c) => this with { Theme = theme with { Foreground = c } },
             "cursor-color" when TryColor(value, out var c) => this with { Theme = theme with { Cursor = c } },
@@ -93,6 +106,42 @@ public sealed record Config
             var dir when dir.StartsWith("~/") || dir.StartsWith("~\\") => Path.Combine(home, dir[2..]),
             var dir => Environment.ExpandEnvironmentVariables(dir),
         };
+    }
+
+    private static bool TryQuickSize(string value, out QuickTerminalLength? primary, out QuickTerminalLength? secondary)
+    {
+        primary = secondary = null;
+        var parts = value.Split(',');
+        if (parts.Length is < 1 or > 2 || !QuickTerminalLength.TryParse(parts[0], out var p))
+        {
+            return false;
+        }
+
+        primary = p;
+        if (parts.Length == 2)
+        {
+            if (!QuickTerminalLength.TryParse(parts[1], out var s))
+            {
+                return false;
+            }
+
+            secondary = s;
+        }
+
+        return true;
+    }
+
+    private static bool TryHotkey(string value)
+    {
+        try
+        {
+            GlobalHotkey.Parse(value);
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     internal static string Unquote(string value) =>
