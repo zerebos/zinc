@@ -32,7 +32,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Terminal/TerminalSession.cs` — owns the GhosttyTerminal + encoders + ConPty; libghostty
   callbacks; `ReadScreenText()` (formatter) for tests; internal `PtyReplyObserver` test hook.
 - `Input/` — scan code → GhosttyKey map; Win32 `ToUnicodeEx` layout translation.
-- `Config.cs`, `ShellResolver.cs` (`Resolve(config, args, getEnv)` is the testable overload).
+- `Config.cs` (one resolved settings set; `Apply(key, value)` parses a line),
+  `ConfigFile.cs` (globals + `[profile "Name"]` sections → `Profile`s, warnings),
+  `ShellResolver.cs` (`Resolve` for the first tab: args > PHANTOM_SHELL > profile;
+  `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
 - `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
   defaults follow Windows Terminal. New actions go here, handled by whoever owns them.

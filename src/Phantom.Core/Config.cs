@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using Phantom.Ghostty;
 using Phantom.Terminal;
@@ -38,79 +37,58 @@ public sealed record Config
     public static string DefaultPath { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phantom", "config");
 
-    public static Config Load(string? path = null)
+    /// <summary>Loads the global settings (see <see cref="ConfigFile"/> for profiles).</summary>
+    public static Config Load(string? path = null) => ConfigFile.Load(path).Global;
+
+    /// <summary>Profile tab icon (image path); only meaningful inside a profile.</summary>
+    public string? Icon { get; init; }
+
+    /// <summary>Starting directory for the command; null means the user's home.</summary>
+    public string? WorkingDirectory { get; init; }
+
+    /// <summary>
+    /// Applies one <c>key = value</c> setting. Returns null when the key is unknown
+    /// or the value invalid, leaving the caller to report it.
+    /// </summary>
+    public Config? Apply(string key, string value)
     {
-        path ??= Environment.GetEnvironmentVariable("PHANTOM_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
-        var config = new Config();
-        if (!File.Exists(path))
+        var theme = Theme;
+        return key switch
         {
-            return config;
-        }
-
-        var palette = new Dictionary<int, GhosttyColorRgb>();
-        foreach (var (raw, lineNumber) in File.ReadLines(path).Select((l, i) => (l, i + 1)))
-        {
-            var line = raw.Trim();
-            if (line.Length == 0 || line.StartsWith('#'))
-            {
-                continue;
-            }
-
-            var eq = line.IndexOf('=');
-            if (eq < 0)
-            {
-                Debug.WriteLine($"config:{lineNumber}: expected 'key = value'");
-                continue;
-            }
-
-            var key = line[..eq].Trim();
-            var value = Unquote(line[(eq + 1)..].Trim());
-            var theme = config.Theme;
-            var ok = true;
-            switch (key)
-            {
-                case "font-family" when value.Length > 0:
-                    config = config with { FontFamily = value };
-                    break;
-                case "font-size" when TryFloat(value, out var size) && size > 0:
-                    config = config with { FontSize = size };
-                    break;
-                case "command" when value.Length > 0:
-                    config = config with { Command = value };
-                    break;
-                case "background" when TryColor(value, out var c):
-                    config = config with { Theme = theme with { Background = c } };
-                    break;
-                case "foreground" when TryColor(value, out var c):
-                    config = config with { Theme = theme with { Foreground = c } };
-                    break;
-                case "cursor-color" when TryColor(value, out var c):
-                    config = config with { Theme = theme with { Cursor = c } };
-                    break;
-                case "palette" when TryPaletteEntry(value, out var index, out var c):
-                    palette[index] = c;
-                    break;
-                case "window-padding-x" when TryPadding(value, out var left, out var right):
-                    config = config with { PaddingLeft = left, PaddingRight = right };
-                    break;
-                case "window-padding-y" when TryPadding(value, out var top, out var bottom):
-                    config = config with { PaddingTop = top, PaddingBottom = bottom };
-                    break;
-                default:
-                    ok = false;
-                    break;
-            }
-
-            if (!ok)
-            {
-                Debug.WriteLine($"config:{lineNumber}: ignored '{line}'");
-            }
-        }
-
-        return palette.Count == 0 ? config : config with { Theme = config.Theme with { Palette = palette } };
+            "font-family" when value.Length > 0 => this with { FontFamily = value },
+            "font-size" when TryFloat(value, out var size) && size > 0 => this with { FontSize = size },
+            "command" when value.Length > 0 => this with { Command = value },
+            "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
+            "icon" when value.Length > 0 => this with { Icon = value },
+            "background" when TryColor(value, out var c) => this with { Theme = theme with { Background = c } },
+            "foreground" when TryColor(value, out var c) => this with { Theme = theme with { Foreground = c } },
+            "cursor-color" when TryColor(value, out var c) => this with { Theme = theme with { Cursor = c } },
+            "palette" when TryPaletteEntry(value, out var index, out var c) =>
+                this with { Theme = theme with { Palette = new Dictionary<int, GhosttyColorRgb>(theme.Palette) { [index] = c } } },
+            "window-padding-x" when TryPadding(value, out var left, out var right) =>
+                this with { PaddingLeft = left, PaddingRight = right },
+            "window-padding-y" when TryPadding(value, out var top, out var bottom) =>
+                this with { PaddingTop = top, PaddingBottom = bottom },
+            _ => null,
+        };
     }
 
-    private static string Unquote(string value) =>
+    /// <summary>
+    /// The directory to start in: <see cref="WorkingDirectory"/> with <c>~</c> / <c>home</c>
+    /// expanded, or the user's home.
+    /// </summary>
+    public string ResolveWorkingDirectory()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return WorkingDirectory switch
+        {
+            null or "~" or "home" => home,
+            var dir when dir.StartsWith("~/") || dir.StartsWith("~\\") => Path.Combine(home, dir[2..]),
+            var dir => Environment.ExpandEnvironmentVariables(dir),
+        };
+    }
+
+    internal static string Unquote(string value) =>
         value.Length >= 2 && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
 
     private static bool TryFloat(string s, out float value) =>

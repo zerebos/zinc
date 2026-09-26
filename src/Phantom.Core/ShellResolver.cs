@@ -26,14 +26,23 @@ public static class ShellResolver
             return fromEnv;
         }
 
-        // 3. `command` from the config file.
-        if (config.Command is { } command)
+        // 3. The profile's `command`, else 4. a default shell.
+        return ForProfile(config, getEnv);
+    }
+
+    /// <summary>
+    /// The command for a profile opened from the UI (new tab/pane): its `command`, else a
+    /// default shell. Our own arguments and PHANTOM_SHELL only apply to the first tab.
+    /// </summary>
+    public static string ForProfile(Config profile, Func<string, string?>? getEnv = null)
+    {
+        if (profile.Command is { } command)
         {
             return command;
         }
 
-        // 4. PowerShell 7, then Windows PowerShell, then cmd.
-        var path = getEnv("PATH") ?? "";
+        // PowerShell 7, then Windows PowerShell, then cmd.
+        var path = (getEnv ?? Environment.GetEnvironmentVariable)("PATH") ?? "";
         return FindOnPath(path, "pwsh.exe") ?? FindOnPath(path, "powershell.exe") ?? "cmd.exe";
     }
 

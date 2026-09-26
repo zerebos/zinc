@@ -13,9 +13,10 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        var config = Config.Load();
-        _window = new MainWindow(config, ShellResolver.Resolve(config),
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        var config = ConfigFile.Load();
+        var profile = config.DefaultProfile;
+        _window = new MainWindow(profile.Config, ShellResolver.Resolve(profile.Config),
+            profile.Config.ResolveWorkingDirectory());
         _window.Activate();
     }
 }

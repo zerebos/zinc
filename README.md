@@ -87,11 +87,39 @@ window-padding-y = 10
 These are Ghostty's key names and units, so color and font lines can be copied
 straight from a Ghostty config.
 
+### Profiles
+
+Lines before the first section are global; each `[profile "Name"]` section inherits
+them and overrides what it sets. Profiles appear in file order.
+
+```
+font-family = JetBrainsMono NF
+default-profile = Fedora
+
+[profile "Fedora"]
+command = wsl.exe -d Fedora --cd ~
+icon = C:\Users\me\Pictures\fedora.png
+background = #181818
+
+[profile "Git Bash"]
+command = "C:\Program Files\Git\bin\bash.exe" --login -i
+working-directory = ~/dev
+```
+
+- `default-profile` (global only): the profile Phantom starts with; defaults to the first.
+- `icon`: image shown for the profile in tabs.
+- `working-directory`: `~`/`home` (the default) or a path; `~/sub` and `%VARS%` expand.
+- Without any sections, the global settings act as a single "Default" profile.
+- Problems (unknown keys, bad values, duplicate profiles) are collected as warnings
+  instead of stopping Phantom.
+
+This section syntax is an interim step; a Phantom-specific config format is planned.
+
 ## Choosing a shell
 
 1. Arguments after the executable: `Phantom.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
 2. The `PHANTOM_SHELL` environment variable (a full command line)
-3. `command` from the config file
+3. The default profile's `command` (tabs opened later use their profile's)
 4. Otherwise `pwsh.exe`, then `powershell.exe`, then `cmd.exe`
 
 Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
