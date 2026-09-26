@@ -42,6 +42,7 @@ public enum TerminalAction
     DuplicatePane,
     MoveFocus,
     ResizePane,
+    OpenCommandPalette,
 }
 
 /// <summary>An action plus its argument (a tab/profile index or a pane direction), as bound to a key.</summary>
@@ -69,6 +70,24 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
         ["pgdn"] = VirtualKey.PageDown, ["pagedown"] = VirtualKey.PageDown,
         ["up"] = VirtualKey.Up, ["down"] = VirtualKey.Down, ["left"] = VirtualKey.Left, ["right"] = VirtualKey.Right,
     };
+
+    /// <summary>Display form, e.g. "Ctrl+Shift+T" or "Alt+Shift+Plus".</summary>
+    public override string ToString()
+    {
+        var name = Key switch
+        {
+            OemPlus => "Plus",
+            OemMinus => "Minus",
+            VirtualKey.Add => "Numpad Plus",
+            VirtualKey.Subtract => "Numpad Minus",
+            VirtualKey.PageUp => "PgUp",
+            VirtualKey.PageDown => "PgDn",
+            >= VirtualKey.Number0 and <= VirtualKey.Number9 => ((char)('0' + (Key - VirtualKey.Number0))).ToString(),
+            >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 => $"Numpad {Key - VirtualKey.NumberPad0}",
+            _ => Key.ToString(),
+        };
+        return (Ctrl ? "Ctrl+" : "") + (Alt ? "Alt+" : "") + (Shift ? "Shift+" : "") + name;
+    }
 
     public static KeyChord Parse(string text)
     {
@@ -130,11 +149,27 @@ public sealed class Keybindings
 {
     private readonly Dictionary<KeyChord, ActionInvocation> _map = new();
 
+    // Binding order, for display (Dictionary enumeration order isn't guaranteed).
+    private readonly List<KeyChord> _order = [];
+
     public static Keybindings Default { get; } = CreateDefault();
 
-    public void Bind(string chord, ActionInvocation action) => _map[KeyChord.Parse(chord)] = action;
+    public void Bind(string chord, ActionInvocation action)
+    {
+        var parsed = KeyChord.Parse(chord);
+        if (!_map.ContainsKey(parsed))
+        {
+            _order.Add(parsed);
+        }
+
+        _map[parsed] = action;
+    }
 
     public bool TryGet(KeyChord chord, out ActionInvocation action) => _map.TryGetValue(chord, out action);
+
+    /// <summary>The chord to show for an action, if it has one: the first bound for it.</summary>
+    public KeyChord? ChordFor(ActionInvocation action) =>
+        _order.Where(c => _map[c] == action).Select(c => (KeyChord?)c).FirstOrDefault();
 
     private static Keybindings CreateDefault()
     {
@@ -166,6 +201,7 @@ public sealed class Keybindings
         b.Bind("ctrl+tab", TerminalAction.NextTab);
         b.Bind("ctrl+shift+tab", TerminalAction.PreviousTab);
         b.Bind("ctrl+shift+n", TerminalAction.NewWindow);
+        b.Bind("ctrl+shift+p", TerminalAction.OpenCommandPalette);
         b.Bind("alt+shift+plus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         b.Bind("alt+shift+minus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
         b.Bind("alt+shift+d", TerminalAction.DuplicatePane);

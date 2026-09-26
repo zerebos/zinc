@@ -531,6 +531,9 @@ public sealed partial class MainWindow : Window
             case TerminalAction.DuplicateTab:
                 OpenTab(origin.Profile, origin.Command, origin.WorkingDirectory);
                 return true;
+            case TerminalAction.OpenCommandPalette:
+                OpenCommandPalette();
+                return true;
             case TerminalAction.OpenNewTabMenu:
                 NewTabMenu.ShowAt(NewTabMenuButton);
                 return true;

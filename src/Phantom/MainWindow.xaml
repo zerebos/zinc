@@ -46,5 +46,39 @@
                 </Grid>
             </TabView.TabStripFooter>
         </TabView>
+
+        <!-- Command palette (Ctrl+Shift+P). The transparent layer catches clicks outside
+             the panel to close it. -->
+        <Grid x:Name="PaletteLayer" Background="Transparent" Visibility="Collapsed">
+            <Border
+                x:Name="PalettePanel"
+                Width="640"
+                MaxHeight="460"
+                Margin="0,52,0,0"
+                Padding="6"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Top"
+                Background="{ThemeResource AcrylicInAppFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
+                BorderThickness="1"
+                CornerRadius="8">
+                <Grid RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBox
+                        x:Name="PaletteQuery"
+                        AutomationProperties.Name="Command palette search"
+                        PlaceholderText="Type a command (tabs, panes, profiles…)" />
+                    <ListView
+                        x:Name="PaletteList"
+                        Grid.Row="1"
+                        AutomationProperties.Name="Commands"
+                        IsItemClickEnabled="True"
+                        SelectionMode="Single" />
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

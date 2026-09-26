@@ -46,11 +46,16 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
   defaults follow Windows Terminal. New actions go here, handled by whoever owns them.
 - `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
+- `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
+  `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
+  give shortcut labels.
 
 `src/Phantom` (WinUI app): `MainWindow` = TabView in the title bar (ExtendsContentIntoTitleBar,
 Mica); each tab = `PaneTree<Pane>` (Core/Panes, tested) rendered into the tab's persistent
 `Container` Grid by `Rebuild` (nested Grids + `PaneDivider`); window actions arrive via
-`pane.ActionHandler`; `App.OpenWindow` for new windows. `Terminal/`:
+`pane.ActionHandler`; `App.OpenWindow` for new windows. `MainWindow.CommandPalette.cs` builds the palette's command
+list fresh on open and runs actions through `TerminalControl.Invoke` (same path as keys);
+`MainWindow.TabMenu.cs` is the tab context menu. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
 - `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.
   `.Keyboard.cs` (keybindings → actions, KeyDecision → encoder / WM_CHAR path, clipboard),

@@ -145,6 +145,13 @@ public sealed partial class TerminalControl
         ResetBlink();
     }
 
+    /// <summary>
+    /// Runs an action as if its key had been pressed in this pane (the command palette
+    /// uses this): pane actions run here, the rest go to <see cref="ActionHandler"/>.
+    /// </summary>
+    public bool Invoke(ActionInvocation invocation) =>
+        _session is { } session ? RunAction(invocation, session) : ActionHandler?.Invoke(invocation) ?? false;
+
     /// <summary>Runs a bound action. Returns false to let the key through to the app.</summary>
     private bool RunAction(ActionInvocation invocation, TerminalSession session)
     {
