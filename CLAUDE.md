@@ -33,9 +33,16 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   callbacks; `ReadScreenText()` (formatter) for tests; internal `PtyReplyObserver` test hook.
 - `Input/` — scan code → GhosttyKey map; Win32 `ToUnicodeEx` layout translation.
 - `Config.cs`, `ShellResolver.cs` (`Resolve(config, args, getEnv)` is the testable overload).
+- `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
+- `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
+  defaults follow Windows Terminal. New actions go here, handled by whoever owns them.
+- `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
 
-`src/Phantom` (WinUI app): `Terminal/TerminalControl.cs` — Win2D rendering,
-keyboard/mouse/selection/clipboard, font metrics (~1200 lines; split before tabs).
+`src/Phantom` (WinUI app), `Terminal/`:
+- `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
+- `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.
+  `.Keyboard.cs` (keybindings → actions, KeyDecision → encoder / WM_CHAR path, clipboard),
+  `.Mouse.cs` (mouse reporting, selection, wheel, pointer shape).
 
 `src/Phantom.Native.targets` — imported by every *runnable* project (app, tests): copies
 ghostty-vt.dll and references the ConPTY package (its OpenConsole copy step is in build/,
@@ -139,6 +146,12 @@ and read state after the write (see `_titleDirty`).
   when launching Phantom for tests or everything renders colorless.
 
 ## Testing without a human (see `.scratch/tools/`)
+
+- Rendering regressions: `.scratch/tools/visual.ps1 -OutDir <dir>` captures the render test
+  scripts under a pinned config (`.scratch/visual-config`); `.scratch/venv/Scripts/python
+  .scratch/tools/visual-diff.py <before> <after>` compares pixel by pixel (title bar ignored:
+  its active/inactive look is noise). Capture a baseline *before* touching rendering code.
+  Runs are deterministic (verified: two captures of one build are identical).
 
 - Screenshot ONLY our window with `PrintWindow(PW_RENDERFULLCONTENT)` (`shot.ps1`).
   **Never** `CopyFromScreen` — it captured another app's private window once.
