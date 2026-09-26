@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Phantom.Ghostty;
 using Phantom.Pty;
 
@@ -466,38 +467,85 @@ public sealed unsafe class TerminalSession : IDisposable
     {
         lock (Lock)
         {
-            if (_disposed ||
-                Native.FormatterTerminalNew(0, out var formatter, _terminal, GhosttyFormatterTerminalOptions.Init()) != GhosttyResult.Success)
+            return Format(GhosttyFormatterTerminalOptions.Init());
+        }
+    }
+
+    /// <summary>
+    /// Finds <paramref name="pattern"/> in the active screen and its scrollback, oldest first,
+    /// matching within rows (a match can't span a line break, even a soft wrap). Rows are
+    /// screen rows: 0 is the oldest scrollback row, in the scrollbar's units.
+    /// </summary>
+    public void Search(Regex pattern, List<SearchMatch> into, int limit = 10_000)
+    {
+        lock (Lock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            // Find candidate rows fast in the formatted text (one line per row: no unwrapping),
+            // then map matches to columns cell by cell on those rows only. Rows are matched
+            // without their trailing blanks, so "$" means the end of the text.
+            var options = GhosttyFormatterTerminalOptions.Init();
+            options.Trim = 1;
+            var lines = Format(options).Split('\n');
+            ushort cols;
+            Native.TerminalGet(_terminal, TerminalData.Cols, &cols);
+            for (var row = 0; row < lines.Length && into.Count < limit; row++)
+            {
+                if (!pattern.IsMatch(lines[row]))
+                {
+                    continue;
+                }
+
+                var rowText = RowText.Read(_terminal, PointTag.Screen, (uint)row, cols);
+                foreach (Match m in pattern.Matches(rowText.Text.TrimEnd(' ')))
+                {
+                    if (m.Length > 0 && into.Count < limit)
+                    {
+                        var (first, last) = rowText.Columns(m.Index, m.Length);
+                        into.Add(new SearchMatch((ulong)row, first, last));
+                    }
+                }
+            }
+        }
+    }
+
+    private string Format(GhosttyFormatterTerminalOptions options)
+    {
+        if (_disposed ||
+            Native.FormatterTerminalNew(0, out var formatter, _terminal, options) != GhosttyResult.Success)
+        {
+            return "";
+        }
+
+        try
+        {
+            if (Native.FormatterFormatAlloc(formatter, 0, out var ptr, out var len) != GhosttyResult.Success)
+            {
+                return "";
+            }
+
+            // An empty screen comes back as (NULL, 0).
+            if (ptr == null || len == 0)
             {
                 return "";
             }
 
             try
             {
-                if (Native.FormatterFormatAlloc(formatter, 0, out var ptr, out var len) != GhosttyResult.Success)
-                {
-                    return "";
-                }
-
-                // An empty screen comes back as (NULL, 0).
-                if (ptr == null || len == 0)
-                {
-                    return "";
-                }
-
-                try
-                {
-                    return Encoding.UTF8.GetString(ptr, (int)len);
-                }
-                finally
-                {
-                    Native.Free(0, ptr, len);
-                }
+                return Encoding.UTF8.GetString(ptr, (int)len);
             }
             finally
             {
-                Native.FormatterFree(formatter);
+                Native.Free(0, ptr, len);
             }
+        }
+        finally
+        {
+            Native.FormatterFree(formatter);
         }
     }
 
@@ -561,49 +609,16 @@ public sealed unsafe class TerminalSession : IDisposable
                 return new LinkMatch(uri, row, start, end, Explicit: true);
             }
 
-            // Plain text: one string for the row, remembering where each cell starts.
-            var text = new StringBuilder(cols);
-            var cellStart = new int[cols + 1];
-            Span<uint> graphemes = stackalloc uint[16];
-            for (ushort c = 0; c < cols; c++)
-            {
-                cellStart[c] = text.Length;
-                var gridRef = GhosttyGridRef.Init();
-                var point = new GhosttyPoint { Tag = PointTag.Viewport, X = c, Y = row };
-                nuint len = 0;
-                if (Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success)
-                {
-                    fixed (uint* p = graphemes)
-                    {
-                        if (Native.GridRefGraphemes(&gridRef, p, (nuint)graphemes.Length, out len) != GhosttyResult.Success)
-                        {
-                            len = 0;
-                        }
-                    }
-                }
-
-                if (len == 0)
-                {
-                    text.Append(' ');
-                }
-
-                for (var i = 0; i < (int)len; i++)
-                {
-                    text.Append(char.ConvertFromUtf32((int)graphemes[i]));
-                }
-            }
-
-            cellStart[cols] = text.Length;
-            if (UrlDetector.Find(text.ToString(), cellStart[col]) is not { } found)
+            // Plain text: the row's URL covering this column.
+            var rowText = RowText.Read(_terminal, PointTag.Viewport, row, cols);
+            if (UrlDetector.Find(rowText.Text, rowText.IndexOf(col)) is not { } found)
             {
                 return null;
             }
 
-            // Map the string range back to the cells it covers.
             var (s, l) = found;
-            var first = (ushort)(Array.FindLastIndex(cellStart, cols - 1, cols, i => i <= s));
-            var last = (ushort)(Array.FindLastIndex(cellStart, cols - 1, cols, i => i < s + l));
-            return new LinkMatch(text.ToString(s, l), row, first, last, Explicit: false);
+            var (first, last) = rowText.Columns(s, l);
+            return new LinkMatch(rowText.Text.Substring(s, l), row, first, last, Explicit: false);
         }
     }
 

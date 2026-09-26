@@ -499,7 +499,8 @@ public sealed partial class MainWindow : Window
             Log.Write($"test key {chord}: {(bound ? invocation.ToString() : "unbound")}");
             if (bound)
             {
-                HandleAction(invocation, tab, tab.Active);
+                // The pane first, like a real key press (pane actions: copy, find, ...).
+                tab.Active.Control.Invoke(invocation);
             }
         };
         timer.Start();

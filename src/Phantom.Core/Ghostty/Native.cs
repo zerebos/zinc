@@ -644,6 +644,9 @@ public static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "ghostty_terminal_grid_ref")]
     public static partial GhosttyResult TerminalGridRef(nint terminal, GhosttyPoint point, GhosttyGridRef* outRef);
 
+    [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_cell")]
+    public static partial GhosttyResult GridRefCell(GhosttyGridRef* gridRef, out ulong cell);
+
     [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_graphemes")]
     public static partial GhosttyResult GridRefGraphemes(GhosttyGridRef* gridRef, uint* buf, nuint bufLen, out nuint outLen);
 

@@ -252,6 +252,7 @@ public sealed partial class MainWindow
         Action("Increase font size", TerminalAction.FontSizeIncrease);
         Action("Decrease font size", TerminalAction.FontSizeDecrease);
         Action("Reset font size", TerminalAction.FontSizeReset);
+        Action("Find", TerminalAction.Find);
         Action("Scroll to top", TerminalAction.ScrollToTop);
         Action("Scroll to bottom", TerminalAction.ScrollToBottom);
         Action("Scroll page up", TerminalAction.ScrollPageUp);

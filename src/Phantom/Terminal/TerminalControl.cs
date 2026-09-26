@@ -23,6 +23,7 @@ public sealed partial class TerminalControl : UserControl
     private readonly string _commandLine;
     private readonly string? _workingDirectory;
     private readonly CanvasControl _canvas;
+    private readonly Grid _root; // canvas, scrollbar, find box
     private readonly TerminalRenderer _renderer;
     private readonly DispatcherTimer _blinkTimer;
 
@@ -77,7 +78,7 @@ public sealed partial class TerminalControl : UserControl
         _canvas.Draw += OnDraw;
         _canvas.SizeChanged += (_, _) => UpdateGrid();
         // The scrollbar overlays the canvas's right edge (inside the padding when idle).
-        Content = new Grid { Children = { _canvas, CreateScrollBar() } };
+        Content = _root = new Grid { Children = { _canvas, CreateScrollBar() } };
 
         _blinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
         _blinkTimer.Tick += (_, _) =>
@@ -216,6 +217,7 @@ public sealed partial class TerminalControl : UserControl
             {
                 Volatile.Write(ref _invalidatePending, 0);
                 _canvas.Invalidate();
+                ScheduleSearchRefresh();
             });
         }
     }
@@ -251,6 +253,7 @@ public sealed partial class TerminalControl : UserControl
         }
 
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, new CursorPresentation(_focused, _blinkOn));
+        DrawSearchTicks(args.DrawingSession, session);
         UpdateBlinkTimer(blinking);
         UpdateScrollBar(session);
     }

@@ -43,6 +43,9 @@ public enum TerminalAction
     MoveFocus,
     ResizePane,
     OpenCommandPalette,
+
+    /// <summary>Open the pane's find box.</summary>
+    Find,
 }
 
 /// <summary>An action plus its argument (a tab/profile index or a pane direction), as bound to a key.</summary>
@@ -206,6 +209,7 @@ public sealed class Keybindings
         b.Bind("ctrl+shift+tab", TerminalAction.PreviousTab);
         b.Bind("ctrl+shift+n", TerminalAction.NewWindow);
         b.Bind("ctrl+shift+p", TerminalAction.OpenCommandPalette);
+        b.Bind("ctrl+shift+f", TerminalAction.Find);
         b.Bind("alt+shift+plus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         b.Bind("alt+shift+minus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
         b.Bind("alt+shift+d", TerminalAction.DuplicatePane);

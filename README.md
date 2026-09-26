@@ -162,6 +162,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phantom`.
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Ctrl+Shift+P` | Command palette: every action, profile and tab, fuzzy-searchable |
+| `Ctrl+Shift+F` | Find in the pane's scrollback |
 | `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab (default profile / profile N) |
 | `Ctrl+Shift+Space`, ▾ button | Profile menu (Alt+click: open as a split; Shift+click: new window) |
 | `Ctrl+Shift+D` | Duplicate tab |
@@ -199,6 +200,13 @@ previews). Programs may send image data inline, or name a file to load
 (or a temp file under `%TEMP%`); paths from WSL or a remote host don't resolve here, so
 those programs must send data inline. Images keep their place in scrollback. Programs detect
 support with the protocol's query; Phantom answers it (and identifies as libghostty).
+
+Find (`Ctrl+Shift+F`) opens a box at the pane's top right. Matches highlight as you type, with
+their positions marked beside the scrollbar; `Enter` moves to the next older match and
+`Shift+Enter` the next newer one (both wrap), and `Esc` closes the box. `Aa` makes it
+case-sensitive and `.*` treats the text as a .NET regular expression (`^`/`$` are the start
+and end of a row's text). Matches stay within one row: text soft-wrapped onto the next row
+is searched as two rows. Results refresh as new output arrives.
 
 Right-clicking a tab offers rename, tab color, duplicate, split, export text (whole
 scrollback to a file), and closing this / other / right-hand tabs.

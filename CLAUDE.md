@@ -54,6 +54,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Ghostty's graphics_unicode.zig; the `.Diacritics.g.cs` table is copied from there). Renderer:
   z<0 images under all rows, placeholders in the text pass, z>=0 above. Images need a cell
   size in pixels (`Resize` passes it) and storage enabled (`KittyImageStorageLimit`).
+- Find: `TerminalSession.Search(regex)` formats the screen+scrollback (plain, no unwrap, trim:
+  one line per screen row, verified by SearchTests) to find candidate rows, then maps matches
+  to columns with `RowText` (cell-by-cell via grid refs; wide chars whole) on those rows only.
+  libghostty's own search API is literal + ASCII-case-insensitive only, hence our own. App side:
+  `TerminalControl.Search.cs` (find box in the pane's `_root` grid; key/char/pointer handlers
+  ignore events from it via `IsFromSearch`), renderer draws highlights, OnDraw the ticks.
 - `Terminal/Links.cs` — `UrlDetector` (plain URLs in a row), `LinkTarget.Classify` (what a
   Ctrl+click may do: open web/mail, *reveal* local files, reject the rest; tested). File
   links map per pane via `LinkContext` (app `ShellEnvironment`: WSL distro, MSYS root).
@@ -238,8 +244,9 @@ and read state after the write (see `_titleDirty`).
   list|invoke|select` drives our window via UI Automation — no mouse, no focus stealing.
   Give buttons an `AutomationProperties.Name` (also needed for screen readers).
   Keybindings with modifiers can't be posted (no modifier state). `PHANTOM_TEST_KEYS=
-  "alt+shift+plus,alt+left"` replays chords (1/s) through the real keybindings and
-  `HandleAction` in the focused pane (see `MainWindow.ReplayTestKeys`; logs to PHANTOM_LOG).
+  "alt+shift+plus,alt+left"` replays chords (1/s) through the real keybindings and the focused
+  pane's `Invoke` (pane actions, then the window's; see `MainWindow.ReplayTestKeys`; logs to
+  PHANTOM_LOG). `uia.ps1 -Action invoke` also toggles ToggleButtons.
   The chord→action map itself is unit-tested; the user confirms real key delivery.
   Entries like `menu:Split pane/Split right` run that tab context-menu item's command
   (context menus can't be opened by posted input or UIA).

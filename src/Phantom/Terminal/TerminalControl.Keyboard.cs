@@ -21,6 +21,20 @@ public sealed partial class TerminalControl
             return;
         }
 
+        if (IsFromSearch(e.OriginalSource))
+        {
+            // Typing in the find box; only our own shortcuts (reopen = refocus) apply.
+            var chord = Keyboard.State.Capture();
+            if (_keybindings.TryGet(new KeyChord(e.Key, chord.Ctrl, chord.Alt, chord.Shift), out var own) &&
+                own.Action == TerminalAction.Find)
+            {
+                OpenSearch();
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         var vk = (int)e.Key;
         if (Keyboard.IsModifierKey(vk))
         {
@@ -88,7 +102,7 @@ public sealed partial class TerminalControl
         }
 
         var session = _session;
-        if (session == null || Keyboard.IsModifierKey((int)e.Key))
+        if (session == null || Keyboard.IsModifierKey((int)e.Key) || IsFromSearch(e.OriginalSource))
         {
             return;
         }
@@ -114,7 +128,7 @@ public sealed partial class TerminalControl
     protected override void OnCharacterReceived(CharacterReceivedRoutedEventArgs e)
     {
         var session = _session;
-        if (session == null)
+        if (session == null || IsFromSearch(e.OriginalSource))
         {
             return;
         }
@@ -181,6 +195,9 @@ public sealed partial class TerminalControl
                 return true;
             case TerminalAction.Paste:
                 PasteFromClipboard();
+                return true;
+            case TerminalAction.Find:
+                OpenSearch();
                 return true;
             case TerminalAction.FontSizeIncrease:
                 SetFontSize(_renderer.FontSize + 1);

@@ -40,6 +40,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private KittyPlaceholders.Cell?[] _placeholders = [];
     private bool _rowHasPlaceholders;
     private readonly List<KittyPlaceholders.Run> _runs = [];
+    private ulong _viewportTop; // screen row at the top of the viewport, this frame
     private uint[] _codepoints = new uint[1024];
     private CanvasGlyph[] _glyphs = [];
 
@@ -142,6 +143,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
     }
 
+    /// <summary>Find results, oldest first (screen rows); highlighted where on screen.</summary>
+    public IReadOnlyList<SearchMatch>? SearchMatches { get; set; }
+
+    /// <summary>Index into <see cref="SearchMatches"/> of the selected match (drawn stronger).</summary>
+    public int CurrentMatch { get; set; } = -1;
+
+    public static readonly Color MatchColor = Color.FromArgb(0x60, 0xFF, 0xD5, 0x4A);
+    public static readonly Color CurrentMatchColor = Color.FromArgb(0xC0, 0xFF, 0x96, 0x1A);
+
     /// <summary>The link under the pointer while Ctrl is held; drawn underlined.</summary>
     public LinkMatch? HoverLink { get; set; }
 
@@ -164,6 +174,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
             // Under the same lock, so images and text come from the same terminal state.
             session.CollectImages(_images, _needsPixels);
+            GhosttyTerminalScrollbar scrollbar;
+            Native.TerminalGet(session.Handle, TerminalData.Scrollbar, &scrollbar);
+            _viewportTop = scrollbar.Offset;
         }
 
         UpdateImageCache(ds);
@@ -190,6 +203,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var count = ReadRow(defaultFg, defaultBg);
             var top = PadTop + y * m.Height;
             DrawBackgrounds(ds, count, top);
+            DrawMatches(ds, y, top);
             if (_rowHasPlaceholders)
             {
                 DrawPlaceholders(ds, count, top);
@@ -561,6 +575,33 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         _images.Sort((a, b) => a.Z.CompareTo(b.Z));
+    }
+
+    /// <summary>Highlights find results on viewport row <paramref name="y"/>, under the text.</summary>
+    private void DrawMatches(CanvasDrawingSession ds, int y, float top)
+    {
+        if (SearchMatches is not { Count: > 0 } matches)
+        {
+            return;
+        }
+
+        // Matches are sorted by row: find this row's first, then walk.
+        var row = _viewportTop + (ulong)y;
+        int lo = 0, hi = matches.Count;
+        while (lo < hi)
+        {
+            var mid = (lo + hi) / 2;
+            if (matches[mid].Row < row) lo = mid + 1;
+            else hi = mid;
+        }
+
+        var m = Metrics;
+        for (var i = lo; i < matches.Count && matches[i].Row == row; i++)
+        {
+            var match = matches[i];
+            var rect = new Rect(PadLeft + match.StartCol * m.Width, top, (match.EndCol - match.StartCol + 1) * m.Width, m.Height);
+            ds.FillRectangle(rect, i == CurrentMatch ? CurrentMatchColor : MatchColor);
+        }
     }
 
     /// <summary>Draws the image slices this row's placeholder cells stand for.</summary>
