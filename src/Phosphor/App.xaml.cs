@@ -55,6 +55,22 @@ public partial class App : Application
     /// <summary>The workspace tab being dragged, if any (windows hand it over directly).</summary>
     internal MainWindow.TabDrag? Drag { get; set; }
 
+    /// <summary>Whether a screen point is inside one of Phosphor's visible windows.</summary>
+    internal bool IsOverWindow(Windows.Graphics.PointInt32 point)
+    {
+        foreach (var window in _quick is { IsQuickShown: true } ? _windows.Append(_quick) : _windows)
+        {
+            var (pos, size) = (window.AppWindow.Position, window.AppWindow.Size);
+            if (window.AppWindow.IsVisible && point.X >= pos.X && point.X < pos.X + size.Width &&
+                point.Y >= pos.Y && point.Y < pos.Y + size.Height)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private MainWindow Track(MainWindow window)
     {
         _windows.Add(window);

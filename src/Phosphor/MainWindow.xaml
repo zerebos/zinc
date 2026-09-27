@@ -4,7 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Phosphor">
-    <Grid x:Name="Root" RequestedTheme="Dark">
+    <Grid x:Name="Root" RequestedTheme="Dark" AllowDrop="True" DragOver="OnRootDragOver" Drop="OnRootDrop">
         <!-- The tab strip doubles as the title bar (ExtendsContentIntoTitleBar).
              TabView's style defaults to VerticalAlignment=Top: without Stretch the control
              is only as tall as its strip and tab content gets 0 px. -->

@@ -23,12 +23,29 @@ public sealed partial class MainWindow
 
     private void OnTabDragCompleted(TabView sender, TabViewTabDragCompletedEventArgs args)
     {
+        Log.Write($"tab drag completed: {args.DropResult}");
+        // Nobody took the drop: tear the tab off. (Handled here as well as in TabDroppedOutside,
+        // since which of the two TabView raises first isn't something to rely on.)
+        if (args.DropResult == DataPackageOperation.None)
+        {
+            TryTearOff();
+        }
+
         App.Instance.Drag = null;
         HideDropPreview();
     }
 
-    /// <summary>Released outside every window (no target took it): the tab becomes a window there.</summary>
     private void OnTabDroppedOutside(TabView sender, TabViewTabDroppedOutsideEventArgs args)
+    {
+        Log.Write("tab dropped outside");
+        TryTearOff();
+    }
+
+    /// <summary>
+    /// A dragged tab released where no target took it: outside every Phosphor window it becomes
+    /// a window there; over one of our windows (a pane's middle, the window itself) nothing happens.
+    /// </summary>
+    private void TryTearOff()
     {
         if (App.Instance.Drag is not { } drag || drag.Window != this || drag.Tab is not WorkspaceTab tab)
         {
@@ -37,10 +54,10 @@ public sealed partial class MainWindow
 
         App.Instance.Drag = null;
         GetCursorPos(out var cursor);
-        // TabView reports any unaccepted drop as "outside", including over a pane's middle or
-        // this window's own content. Only a drop outside every Phosphor window tears the tab off.
-        if (IsOverOwnWindow(cursor))
+        var point = new PointInt32(cursor.X, cursor.Y);
+        if (App.Instance.IsOverWindow(point))
         {
+            Log.Write("tab drag: released over a Phosphor window, cancelled");
             return;
         }
 
@@ -74,6 +91,32 @@ public sealed partial class MainWindow
         AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index);
         drag.Window.CloseIfEmpty();
         Activate();
+    }
+
+    // The strip events only cover the tabs themselves; the rest of the title bar (the +/▾
+    // buttons, the empty drag area) counts too, via the window root.
+
+    private void OnRootDragOver(object sender, DragEventArgs e)
+    {
+        if (InTitleBand(e))
+        {
+            OnTabStripDragOver(sender, e);
+        }
+    }
+
+    private void OnRootDrop(object sender, DragEventArgs e)
+    {
+        if (InTitleBand(e))
+        {
+            OnTabStripDrop(sender, e);
+        }
+    }
+
+    /// <summary>Whether a drag is over the title bar: the band as tall as the tab strip.</summary>
+    private bool InTitleBand(DragEventArgs e)
+    {
+        var bottom = DragRegion.TransformToVisual(Root).TransformPoint(new Point(0, DragRegion.ActualHeight)).Y;
+        return e.GetPosition(Root).Y <= bottom;
     }
 
     /// <summary>Where a tab dropped at <paramref name="point"/> (strip coordinates) goes among the tabs.</summary>
@@ -201,16 +244,4 @@ public sealed partial class MainWindow
     }
 
     private void HideDropPreview() => DropPreview.Visibility = Visibility.Collapsed;
-
-    private static bool IsOverOwnWindow(CursorPoint cursor)
-    {
-        var hwnd = WindowFromPoint(cursor);
-        return hwnd != 0 && GetWindowThreadProcessId(hwnd, out var pid) != 0 && pid == (uint)Environment.ProcessId;
-    }
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    private static partial nint WindowFromPoint(CursorPoint point);
-
-    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
-    private static partial uint GetWindowThreadProcessId(nint hwnd, out uint processId);
 }
