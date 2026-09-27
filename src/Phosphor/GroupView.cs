@@ -66,8 +66,12 @@ internal sealed partial class GroupView : Grid
             BringShownIntoView(); // a narrower pane (e.g. after a split) can hide it
         };
         SetRow(_content, 1);
+        SetRow(_dim, 1);
+        SetRow(_focusLine, 1);
         Children.Add(_strip);
         Children.Add(_content);
+        Children.Add(_dim);
+        Children.Add(_focusLine);
 
         // Dropping a tab on the strip puts it between the tabs where it lands.
         _strip.Children.Add(_marker);
@@ -104,6 +108,18 @@ internal sealed partial class GroupView : Grid
         Visibility = Visibility.Collapsed,
         Background = (Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"],
     };
+
+    /// <summary>Marks the focused pane when it has no strip (a strip's shown tab carries the same accent line).</summary>
+    private readonly Border _focusLine = new()
+    {
+        Height = 2,
+        VerticalAlignment = VerticalAlignment.Top,
+        IsHitTestVisible = false,
+        Visibility = Visibility.Collapsed,
+    };
+
+    /// <summary>Dims an unfocused pane (unfocused-split-opacity): its fill color, partly transparent, over the terminal.</summary>
+    private readonly Border _dim = new() { IsHitTestVisible = false, Visibility = Visibility.Collapsed };
 
     public event Action<MainWindow.TerminalTab>? TabClicked;
     public event Action<MainWindow.TerminalTab>? TabCloseClicked;
@@ -165,11 +181,32 @@ internal sealed partial class GroupView : Grid
 
     /// <summary>
     /// Shows the group's current state: its tabs in order, the active one highlighted (with an
-    /// accent line when the pane has focus), and the active tab's terminal below.
+    /// accent line when the pane has focus), and the active tab's terminal below. When the
+    /// workspace is split (<paramref name="split"/>), focus shows as an accent line on top (the
+    /// shown tab's, or the pane's own without a strip), and unfocused panes can be dimmed toward
+    /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all).
     /// </summary>
-    public void Update(TabGroup<MainWindow.TerminalTab> group, bool showStrip, bool focused, Brush accent)
+    public void Update(TabGroup<MainWindow.TerminalTab> group, bool showStrip, bool focused, Brush accent,
+        bool split = false, double dim = 0, Color dimFill = default)
     {
         _strip.Visibility = showStrip ? Visibility.Visible : Visibility.Collapsed;
+        var line = split && focused && !showStrip;
+        _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
+        if (line && _focusLine.Background != accent)
+        {
+            _focusLine.Background = accent;
+        }
+
+        var dimmed = split && !focused && dim > 0;
+        _dim.Visibility = dimmed ? Visibility.Visible : Visibility.Collapsed;
+        if (dimmed)
+        {
+            var color = Color.FromArgb((byte)Math.Round(dim * 255), dimFill.R, dimFill.G, dimFill.B);
+            if (_dim.Background is not SolidColorBrush { } b || b.Color != color)
+            {
+                _dim.Background = new SolidColorBrush(color);
+            }
+        }
         if (_content.Child != group.Active.Control)
         {
             _content.Child = group.Active.Control;

@@ -80,6 +80,15 @@ public sealed record Config
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
+    /// <summary>
+    /// How visible panes without focus stay, 0.15–1 (1 = not dimmed). Config, as in Ghostty and
+    /// with its default: <c>unfocused-split-opacity = 0.7</c> (global).
+    /// </summary>
+    public double UnfocusedSplitOpacity { get; init; } = 0.7;
+
+    /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
+    public GhosttyColorRgb? UnfocusedSplitFill { get; init; }
+
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
@@ -121,6 +130,10 @@ public sealed record Config
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
             "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
                 this with { GroupTabStrip = strip },
+            "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var opacity) =>
+                this with { UnfocusedSplitOpacity = Math.Clamp(opacity, 0.15, 1.0) },
+            "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
                 this with { WorkspaceTabs = tabs },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },

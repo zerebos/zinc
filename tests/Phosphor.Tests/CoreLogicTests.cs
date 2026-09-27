@@ -75,6 +75,18 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void UnfocusedPanesAreDimmedLikeGhosttyByDefault()
+    {
+        Assert.Equal(0.7, Load("").UnfocusedSplitOpacity);
+        Assert.Equal(1.0, Load("unfocused-split-opacity = 1").UnfocusedSplitOpacity);
+        Assert.Equal(0.15, Load("unfocused-split-opacity = 0").UnfocusedSplitOpacity); // clamped, like Ghostty
+        Assert.Equal(1.0, Load("unfocused-split-opacity = 3").UnfocusedSplitOpacity);
+        Assert.Equal(0.7, Load("unfocused-split-opacity = dim").UnfocusedSplitOpacity);
+        Assert.Null(Load("").UnfocusedSplitFill);
+        Assert.Equal(new GhosttyColorRgb { R = 0, G = 0, B = 0 }, Load("unfocused-split-fill = #000000").UnfocusedSplitFill);
+    }
+
+    [Fact]
     public void WorkspaceTabsOnTopByDefault()
     {
         Assert.Equal(WorkspaceTabs.Top, Load("").WorkspaceTabs);

@@ -20,7 +20,6 @@ public sealed partial class MainWindow : Window
     private readonly Keybindings _keybindings;
     private readonly Brush _dividerBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A));
     private readonly Brush _focusBrush;
-    private readonly Brush _noFocusBrush = new SolidColorBrush(Colors.Transparent);
 
     /// <summary>One terminal tab: the profile/command it was opened with, and its control.</summary>
     internal sealed class TerminalTab(Profile profile, string command, string workingDirectory, TerminalControl control)
@@ -355,18 +354,19 @@ public sealed partial class MainWindow : Window
         panel.Children.Clear();
     }
 
-    /// <summary>Brings each group's pane up to date: focus border, tab strip, shown terminal.</summary>
+    /// <summary>Brings each group's pane up to date: focus marks, tab strip, shown terminal.</summary>
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
-        // Borders only appear once a workspace is split, so a lone group uses the full area.
+        // Focus is only marked once a workspace is split: an accent line along the focused
+        // pane's top (its shown tab's, when it has a strip), and optionally dimmed others.
         var several = tab.Workspace.Layout.Count > 1;
+        var dim = 1 - _config.Global.UnfocusedSplitOpacity;
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
-            host.BorderThickness = new Thickness(several ? 1 : 0);
-            host.BorderBrush = several && focused ? _focusBrush : _noFocusBrush;
-            ((GroupView)host.Child).Update(group, ShowsStrip(group), focused, _focusBrush);
+            var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
+            ((GroupView)host.Child).Update(group, ShowsStrip(group), focused, _focusBrush, several, dim, fill);
         }
     }
 

@@ -232,6 +232,10 @@ its current tab's profile; the title bar's + and ▾ open workspaces.
 
 - `tab-groups = false` (global) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces.
+- In a split workspace the focused pane is marked by an accent line along its top (on the shown
+  tab when the pane has a strip), and the others are dimmed. `unfocused-split-opacity` (global,
+  0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-split-fill`
+  what they fade toward (default: each pane's background).
 - `group-tab-strip = always` (global) shows the strip on every pane, even with one tab
   (default `auto`: only with two or more).
 - `workspace-tabs = left` (global) lists workspaces in a column on the left, under a plain
