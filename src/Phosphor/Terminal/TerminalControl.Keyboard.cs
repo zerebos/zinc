@@ -10,8 +10,54 @@ public sealed partial class TerminalControl
     private bool _charHandledByKeyDown;
     private char _pendingHighSurrogate;
 
+    /// <summary>
+    /// Keys already down when this pane got focus: pressed in something that then handed focus
+    /// here (Enter in the rename box or palette, Escape in the find box). Their WM_CHAR and
+    /// release still arrive, but belong to where the key went down, so neither reaches the
+    /// shell (a stray Enter would run whatever is typed at the prompt).
+    /// </summary>
+    private readonly HashSet<Windows.System.VirtualKey> _foreignKeys = [];
+
+    /// <summary>
+    /// The keys popups commit/cancel/move with, and the character each produces. Only these are
+    /// tracked, and only their own character is dropped: a stale key state can then cost at
+    /// most one such character, never ordinary typing.
+    /// </summary>
+    private static readonly Dictionary<Windows.System.VirtualKey, char> HandOffKeys = new()
+    {
+        [Windows.System.VirtualKey.Enter] = '\r',
+        [Windows.System.VirtualKey.Escape] = '\x1b',
+        [Windows.System.VirtualKey.Tab] = '\t',
+        [Windows.System.VirtualKey.Back] = '\b',
+    };
+
+    /// <summary>Notes which of <see cref="HandOffKeys"/> are held as focus arrives (see <see cref="_foreignKeys"/>).</summary>
+    private void NoteForeignKeys()
+    {
+        _foreignKeys.Clear();
+        foreach (var key in HandOffKeys.Keys)
+        {
+            if (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down))
+            {
+                _foreignKeys.Add(key);
+            }
+        }
+
+        if (_foreignKeys.Count > 0)
+        {
+            Log.Write($"pane: focused with {string.Join("+", _foreignKeys)} held; its char/release won't be sent");
+        }
+    }
+
+    /// <summary>Whether <paramref name="c"/> is the character of a key that went down elsewhere.</summary>
+    private bool IsForeignChar(char c) =>
+        _foreignKeys.Count > 0 && _foreignKeys.Any(k => HandOffKeys[k] == c || (k == Windows.System.VirtualKey.Enter && c == '\n'));
+
     protected override void OnKeyDown(KeyRoutedEventArgs e)
     {
+        // Pressed (or auto-repeating) here now: from this press on, the key is ours.
+        _foreignKeys.Remove(e.Key);
+
         // Each key's WM_CHAR arrives after its KeyDown and before the next
         // key's KeyDown, so this flag scopes suppression to a single key.
         _charHandledByKeyDown = false;
@@ -95,6 +141,10 @@ public sealed partial class TerminalControl
         // ends here; later chars without a KeyDown (on-screen keyboards, voice
         // typing, automation) must not be swallowed.
         _charHandledByKeyDown = false;
+        if (_foreignKeys.Remove(e.Key))
+        {
+            return; // released here, pressed elsewhere: not a key event of ours
+        }
 
         if (IsCtrlKey(e.Key))
         {
@@ -134,7 +184,7 @@ public sealed partial class TerminalControl
         }
 
         e.Handled = true;
-        if (_charHandledByKeyDown)
+        if (_charHandledByKeyDown || IsForeignChar(e.Character))
         {
             return;
         }

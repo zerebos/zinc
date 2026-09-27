@@ -352,6 +352,7 @@ public sealed partial class TerminalControl : UserControl
     protected override void OnGotFocus(RoutedEventArgs e)
     {
         _focused = true;
+        NoteForeignKeys();
         ResetBlink();
         SendFocusEvent(true);
         _canvas.Invalidate();

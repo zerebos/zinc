@@ -247,6 +247,11 @@ and read state after the write (see `_titleDirty`).
   flag on KeyUp — otherwise WM_CHAR-only input (on-screen keyboards, automation) is eaten.
   Forward unsuppressed control characters verbatim.
 - AltGr arrives as Ctrl+Alt; printable Ctrl+Alt text is treated as text.
+- A popup that commits on Enter's KeyDown (rename box, palette) hands focus to the terminal
+  *before* that key's WM_CHAR arrives, and the char-only path forwarded the `\r` (ran the
+  prompt's line). The terminal notes Enter/Escape/Tab/Backspace held at GotFocus
+  (`_foreignKeys`) and drops their char and release; a KeyDown here makes the key ours again.
+  Posted input doesn't set key state, so automation is unaffected.
 - ConPTY package (`Microsoft.Windows.Console.ConPTY`) decides which OpenConsole.exe to copy
   from `$(Platform)` in its .props, which runs before our csproj sets Platform — hence
   the explicit `ConptyRequires*Host` properties in Phosphor.csproj. If `x64\OpenConsole.exe`
