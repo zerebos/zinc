@@ -64,6 +64,17 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void TabGroupsOnWithAutomaticStripsByDefault()
+    {
+        Assert.True(Load("").TabGroups);
+        Assert.Equal(GroupTabStrip.Auto, Load("").GroupTabStrip);
+        Assert.False(Load("tab-groups = false").TabGroups);
+        Assert.Equal(GroupTabStrip.Always, Load("group-tab-strip = always").GroupTabStrip);
+        Assert.Equal(GroupTabStrip.Auto, Load("group-tab-strip = 1").GroupTabStrip); // not an enum index
+        Assert.Equal(GroupTabStrip.Auto, Load("group-tab-strip = sometimes").GroupTabStrip);
+    }
+
+    [Fact]
     public void QuitAfterLastWindowDefaultsToAutomatic()
     {
         Assert.Null(Load("").QuitAfterLastWindowClosed);

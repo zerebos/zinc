@@ -157,7 +157,9 @@ public sealed partial class MainWindow
     private void OnPaneDragOver(object sender, DragEventArgs e)
     {
         var host = (Border)sender;
-        if (DropTarget(host) is not { } target || EdgeUnder(host, e.GetPosition(host)) is not { } edge)
+        var edge = EdgeUnder(host, e.GetPosition(host));
+        // The middle joins the pane's tab group; without tab groups it takes nothing.
+        if (DropTarget(host) == null || (edge == null && !_config.Global.TabGroups))
         {
             e.AcceptedOperation = DataPackageOperation.None;
             HideDropPreview();
@@ -170,7 +172,8 @@ public sealed partial class MainWindow
             PaneDirection.Left => "Split left",
             PaneDirection.Right => "Split right",
             PaneDirection.Up => "Split up",
-            _ => "Split down",
+            PaneDirection.Down => "Split down",
+            _ => "Add to this pane",
         };
         ShowDropPreview(host, edge);
     }
@@ -179,7 +182,8 @@ public sealed partial class MainWindow
     {
         var host = (Border)sender;
         HideDropPreview();
-        if (DropTarget(host) is not { } target || EdgeUnder(host, e.GetPosition(host)) is not { } edge ||
+        var edge = EdgeUnder(host, e.GetPosition(host));
+        if (DropTarget(host) is not { } target || (edge == null && !_config.Global.TabGroups) ||
             App.Instance.Drag is not { Tab: WorkspaceTab dragged } drag)
         {
             return;
@@ -188,7 +192,22 @@ public sealed partial class MainWindow
         App.Instance.Drag = null;
         var (tab, group) = target;
         var transfer = drag.Window.DetachWorkspace(dragged);
-        tab.Workspace.Merge(group, edge, transfer.Workspace);
+        if (edge is { } side)
+        {
+            tab.Workspace.Merge(group, side, transfer.Workspace);
+        }
+        else
+        {
+            // Every terminal of the dragged workspace becomes a tab of this group; the one
+            // that had focus there is shown.
+            foreach (var pane in transfer.Workspace.Tabs)
+            {
+                group.Add(pane);
+            }
+
+            tab.Workspace.Activate(transfer.Workspace.Active);
+        }
+
         foreach (var pane in tab.Workspace.Tabs)
         {
             Wire(pane, tab);
@@ -232,7 +251,8 @@ public sealed partial class MainWindow
         return share < 1.0 / 3 ? edge : null;
     }
 
-    private void ShowDropPreview(FrameworkElement host, PaneDirection edge)
+    /// <summary>Highlights where a drop lands: half the pane for an edge, all of it for the middle (null).</summary>
+    private void ShowDropPreview(FrameworkElement host, PaneDirection? edge)
     {
         var origin = host.TransformToVisual(Root).TransformPoint(new Point(0, 0));
         double w = host.ActualWidth, h = host.ActualHeight;
@@ -241,7 +261,8 @@ public sealed partial class MainWindow
             PaneDirection.Left => (origin.X, origin.Y, w / 2, h),
             PaneDirection.Right => (origin.X + w / 2, origin.Y, w / 2, h),
             PaneDirection.Up => (origin.X, origin.Y, w, h / 2),
-            _ => (origin.X, origin.Y + h / 2, w, h / 2),
+            PaneDirection.Down => (origin.X, origin.Y + h / 2, w, h / 2),
+            _ => (origin.X, origin.Y, w, h),
         };
         DropPreview.Margin = new Thickness(x, y, 0, 0);
         DropPreview.Width = pw;

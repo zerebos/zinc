@@ -165,7 +165,11 @@ public sealed partial class MainWindow : Window
     {
         pane.Unwire?.Invoke();
         var control = pane.Control;
-        Action<string> title = _ => UpdateTitle(tab);
+        Action<string> title = _ =>
+        {
+            UpdateTitle(tab);
+            UpdateFocusBorders(tab); // group strips show titles too
+        };
         Action close = () => ClosePane(tab, pane);
         RoutedEventHandler focus = (_, _) =>
         {
@@ -296,19 +300,32 @@ public sealed partial class MainWindow : Window
     {
         if (group.Tag is not Border host)
         {
-            // The host knows its group, so a tab dropped on it knows where to split.
-            host = new Border { Tag = group };
+            var view = new GroupView();
+            // Groups can move between workspaces, so look the workspace up when it's needed.
+            view.TabClicked += pane => WithTabOf(group, t => ShowGroupTab(t, pane));
+            view.TabCloseClicked += pane => WithTabOf(group, t => ClosePane(t, pane));
+            view.NewTabClicked += () => WithTabOf(group, t => NewTabInGroup(t, group, group.Active.Profile));
+            view.TabMenuRequested += (pane, anchor) => WithTabOf(group, t => ShowGroupTabMenu(t, pane, anchor));
+            // The host knows its group, so a tab dropped on it knows where to go.
+            host = new Border { Tag = group, Child = view };
             EnableDrop(host);
             group.Tag = host;
         }
 
-        if (host.Child != group.Active.Control)
-        {
-            host.Child = group.Active.Control;
-        }
-
         return host;
     }
+
+    private void WithTabOf(TabGroup<TerminalTab> group, Action<WorkspaceTab> action)
+    {
+        if (AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group)) is { } tab)
+        {
+            action(tab);
+        }
+    }
+
+    /// <summary>Whether a group shows its own strip of tabs (see tab-groups, group-tab-strip).</summary>
+    private bool ShowsStrip(TabGroup<TerminalTab> group) =>
+        _config.Global.TabGroups && (group.Tabs.Count > 1 || _config.Global.GroupTabStrip == GroupTabStrip.Always);
 
     private static void Dismantle(Panel panel)
     {
@@ -320,6 +337,7 @@ public sealed partial class MainWindow : Window
         panel.Children.Clear();
     }
 
+    /// <summary>Brings each group's pane up to date: focus border, tab strip, shown terminal.</summary>
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
         // Borders only appear once a workspace is split, so a lone group uses the full area.
@@ -327,8 +345,10 @@ public sealed partial class MainWindow : Window
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
+            var focused = group == tab.Workspace.ActiveGroup;
             host.BorderThickness = new Thickness(several ? 1 : 0);
-            host.BorderBrush = several && group == tab.Workspace.ActiveGroup ? _focusBrush : _noFocusBrush;
+            host.BorderBrush = several && focused ? _focusBrush : _noFocusBrush;
+            ((GroupView)host.Child).Update(group, ShowsStrip(group), focused, _focusBrush);
         }
     }
 
@@ -454,6 +474,91 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    // ------------------------------------------------------------- tab groups
+
+    /// <summary>Opens a terminal as a new tab in <paramref name="group"/> and shows it.</summary>
+    private void NewTabInGroup(WorkspaceTab tab, TabGroup<TerminalTab> group, Profile profile,
+        string? command = null, string? workingDirectory = null)
+    {
+        var pane = CreatePane(profile, command ?? ShellResolver.ForProfile(profile.Config),
+            workingDirectory ?? profile.Config.ResolveWorkingDirectory());
+        Wire(pane, tab);
+        group.Add(pane);
+        ShowGroupTab(tab, pane);
+    }
+
+    /// <summary>Shows and focuses a tab of its group.</summary>
+    private void ShowGroupTab(WorkspaceTab tab, TerminalTab pane)
+    {
+        tab.Workspace.Activate(pane);
+        UpdateFocusBorders(tab);
+        UpdateTitle(tab);
+        FocusActive(tab);
+    }
+
+    /// <summary>Shows the next (or previous) tab of <paramref name="pane"/>'s group, wrapping.</summary>
+    private void CycleGroup(WorkspaceTab tab, TabGroup<TerminalTab> group, int step)
+    {
+        var index = (group.Tabs.ToList().IndexOf(group.Active) + step + group.Tabs.Count) % group.Tabs.Count;
+        ShowGroupTab(tab, group.Tabs[index]);
+    }
+
+    private void ShowGroupTabMenu(WorkspaceTab tab, TerminalTab pane, FrameworkElement anchor)
+    {
+        var group = tab.Workspace.GroupOf(pane);
+        var alone = tab.Workspace.Tabs.Count() == 1;
+        var menu = new MenuFlyout();
+        menu.Items.Add(Item("Close tab", "", "Ctrl+Shift+W", () => ClosePane(tab, pane)));
+        if (group is { Tabs.Count: > 1 })
+        {
+            menu.Items.Add(Item("Close other tabs", null, null, () =>
+            {
+                foreach (var other in group.Tabs.Where(t => t != pane).ToList())
+                {
+                    ClosePane(tab, other);
+                }
+            }));
+        }
+
+        menu.Items.Add(new MenuFlyoutSeparator());
+        var toWorkspace = Item("Move tab to new workspace", null, null, () => MoveTabToNewWorkspace(tab, pane));
+        toWorkspace.IsEnabled = !alone;
+        menu.Items.Add(toWorkspace);
+        menu.Items.Add(Item("Move tab to new window", "", null, () => MoveTabToNewWindow(tab, pane)));
+        menu.ShowAt(anchor);
+    }
+
+    /// <summary>Takes one terminal tab out of its workspace, running, and gives it a workspace of its own.</summary>
+    private void MoveTabToNewWorkspace(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (tab.Workspace.Tabs.Count() == 1 || !tab.Workspace.Close(pane))
+        {
+            return;
+        }
+
+        Rebuild(tab); // its group shows another tab now, letting go of this one's terminal
+        AddWorkspace(new Workspace<TerminalTab>(pane));
+    }
+
+    /// <summary>Moves one terminal tab to a new window (the only tab moves its whole workspace).</summary>
+    private void MoveTabToNewWindow(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (tab.Workspace.Tabs.Count() == 1)
+        {
+            MoveToNewWindow(tab);
+            return;
+        }
+
+        if (!tab.Workspace.Close(pane))
+        {
+            return;
+        }
+
+        Rebuild(tab);
+        pane.Unwire?.Invoke();
+        App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(pane), null, null));
+    }
+
     /// <summary>Takes <paramref name="pane"/>'s group out of a split workspace, terminals running; null if it's the only group.</summary>
     private TabGroup<TerminalTab>? TakeGroup(WorkspaceTab tab, TerminalTab pane)
     {
@@ -470,9 +575,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Drops a group's host element (it belongs to this window's tree).</summary>
     private static void ReleaseHost(TabGroup<TerminalTab> group)
     {
-        if (group.Tag is Border host)
+        if (group.Tag is Border { Child: GroupView view })
         {
-            host.Child = null;
+            view.Release();
         }
 
         group.Tag = null;
@@ -657,6 +762,15 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord.StartsWith("palette:"))
+            {
+                // "palette:Move tab to new workspace" runs the command palette entry with that title.
+                var command = BuildPaletteCommands(tab).FirstOrDefault(c => c.Title == chord["palette:".Length..]);
+                Log.Write($"test {chord}: {(command != null ? "found" : "missing")}");
+                command?.Run();
+                return;
+            }
+
             if (chord.StartsWith("menu:"))
             {
                 // "menu:Split pane/Split right" runs that tab context menu item's command.
@@ -700,20 +814,45 @@ public sealed partial class MainWindow : Window
     {
         var count = Tabs.TabItems.Count;
         var defaults = _config.DefaultProfile;
+        // With tab groups, new tabs open in the focused pane (with the focused tab's profile);
+        // without, a new tab is a new workspace, as in Windows Terminal.
+        var tabGroup = _config.Global.TabGroups ? tab.Workspace.GroupOf(origin) : null;
         switch (invocation.Action)
         {
+            case TerminalAction.NewTab when tabGroup != null:
+                NewTabInGroup(tab, tabGroup, origin.Profile);
+                return true;
             case TerminalAction.NewTab:
+            case TerminalAction.NewWorkspace:
                 OpenTab(defaults);
                 return true;
             case TerminalAction.NewTabFromProfile:
                 if (invocation.Index < _config.Profiles.Count)
                 {
-                    OpenTab(_config.Profiles[invocation.Index]);
+                    var profile = _config.Profiles[invocation.Index];
+                    if (tabGroup != null)
+                    {
+                        NewTabInGroup(tab, tabGroup, profile);
+                    }
+                    else
+                    {
+                        OpenTab(profile);
+                    }
                 }
 
                 return true;
+            case TerminalAction.DuplicateTab when tabGroup != null:
+                NewTabInGroup(tab, tabGroup, origin.Profile, origin.Command, origin.WorkingDirectory);
+                return true;
             case TerminalAction.DuplicateTab:
                 OpenTab(origin.Profile, origin.Command, origin.WorkingDirectory);
+                return true;
+            // Ctrl+Tab flips through the focused pane's tabs when it has several, else workspaces.
+            case TerminalAction.NextTab when tabGroup is { Tabs.Count: > 1 }:
+                CycleGroup(tab, tabGroup, 1);
+                return true;
+            case TerminalAction.PreviousTab when tabGroup is { Tabs.Count: > 1 }:
+                CycleGroup(tab, tabGroup, -1);
                 return true;
             case TerminalAction.OpenCommandPalette:
                 OpenCommandPalette();

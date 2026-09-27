@@ -74,7 +74,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   give shortcut labels.
 
 `src/Phosphor` (WinUI app): `MainWindow` = TabView of workspaces in the title bar (ExtendsContentIntoTitleBar,
-Mica); each `WorkspaceTab` holds a `Workspace<TerminalTab>` (Core/Panes/Workspace.cs, tested: a `PaneTree` of `TabGroup`s, each group one host `Border` via `HostOf`; one tab per group until stage 2) rendered into its persistent
+Mica); each `WorkspaceTab` holds a `Workspace<TerminalTab>` (Core/Panes/Workspace.cs, tested: a
+`PaneTree` of `TabGroup`s = panes, each holding terminal tabs). A group's host is a `Border`
+(focus border, drop target, `Tag` = group) around a `GroupView` (its strip of tabs, shown per
+`tab-groups`/`group-tab-strip`, over the active tab's terminal; strip items are built once
+and updated in place). `UpdateFocusBorders` refreshes every group view; call it after any
+group change. All rendered into its persistent
 `Container` Grid by `Rebuild` (nested Grids + `PaneDivider`); window actions arrive via
 `pane.ActionHandler`; `App.OpenWindow` for new windows. `MainWindow.CommandPalette.cs` builds the palette's command
 list fresh on open and runs actions through `TerminalControl.Invoke` (same path as keys);
@@ -85,8 +90,8 @@ fine (same UI thread; Win2D keeps its resources; the pane re-subscribes to the n
 DPI). Close the source window *after* the target has the workspace, or the app may quit with
 no windows. `MainWindow.Drag.cs`: tab drag out / onto another strip / onto a pane edge
 (`App.Drag` hands the dragged tab over in-process). Drag input can't be automated — the user
-tests it; the menu paths (`menu:Move tab to new window`, `menu:Split pane/Move pane to …`) can
-be. Quick terminal: layout/hotkey parsing in
+tests it; the menu paths (`menu:Move workspace to new window`, `menu:Split pane/Move pane to …`)
+and palette entries (`palette:Move tab to new workspace`) can be. Quick terminal: layout/hotkey parsing in
 Core `QuickTerminal.cs` (tested); `HotkeyListener` (RegisterHotKey on the `MessageWindow`),
 `App.ToggleQuickTerminal`, `MainWindow.Quick.cs` (placement, autohide on deactivate,
 hotkey-taken InfoBar). `MessageWindow` is a hidden *top-level* window (message-only windows
@@ -272,8 +277,9 @@ and read state after the write (see `_titleDirty`).
   pane's `Invoke` (pane actions, then the window's; see `MainWindow.ReplayTestKeys`; logs to
   PHOSPHOR_LOG). `uia.ps1 -Action invoke` also toggles ToggleButtons.
   The chord→action map itself is unit-tested; the user confirms real key delivery.
-  Entries like `menu:Split pane/Split right` run that tab context-menu item's command
-  (context menus can't be opened by posted input or UIA).
+  Entries like `menu:Split pane/Split right` run that workspace context-menu item's command
+  (context menus can't be opened by posted input or UIA), and `palette:<exact title>` runs a
+  command palette entry. `ctrl+f24` (unbound) works as a one-second pause.
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.

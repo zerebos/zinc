@@ -4,6 +4,15 @@ using Phosphor.Terminal;
 
 namespace Phosphor;
 
+public enum GroupTabStrip
+{
+    /// <summary>Only on panes holding two or more tabs.</summary>
+    Auto,
+
+    /// <summary>On every pane.</summary>
+    Always,
+}
+
 /// <summary>
 /// User configuration from <c>%APPDATA%\Phosphor\config</c>, in Ghostty's syntax:
 /// one <c>key = value</c> per line, <c>#</c> comments, later lines win. Keys and
@@ -50,6 +59,15 @@ public sealed record Config
     /// </summary>
     public bool? QuitAfterLastWindowClosed { get; init; }
 
+    /// <summary>
+    /// A pane can hold several tabs (true, the default); false keeps one terminal per pane, and
+    /// "new tab" opens a workspace instead. Config: <c>tab-groups = true | false</c> (global).
+    /// </summary>
+    public bool TabGroups { get; init; } = true;
+
+    /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
+    public GroupTabStrip GroupTabStrip { get; init; }
+
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
@@ -88,6 +106,9 @@ public sealed record Config
             "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
             "quit-after-last-window-closed" when bool.TryParse(value, out var quit) =>
                 this with { QuitAfterLastWindowClosed = quit },
+            "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
+            "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
+                this with { GroupTabStrip = strip },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>

@@ -219,22 +219,30 @@ public sealed partial class MainWindow
         void Custom(string title, Action run, string? keys = null) =>
             commands.Add(new PaletteCommand(title, keys, run));
 
-        // Tabs and windows.
+        // Tabs (terminals), workspaces (title-bar tabs) and windows.
         Action("New tab", TerminalAction.NewTab);
+        Action("New workspace", TerminalAction.NewWorkspace);
         Action("Duplicate tab", TerminalAction.DuplicateTab);
-        Action("Close pane", TerminalAction.ClosePane);
-        Custom("Close tab", () => CloseTab(tab));
-        Custom("Move tab to new window", () => MoveToNewWindow(tab));
+        Action("Close tab", TerminalAction.ClosePane);
+        Custom("Close workspace", () => CloseTab(tab));
+        Custom("Move workspace to new window", () => MoveToNewWindow(tab));
+        if (tab.Workspace.Tabs.Count() > 1)
+        {
+            Custom("Move tab to new workspace", () => MoveTabToNewWorkspace(tab, tab.Active));
+            Custom("Move tab to new window", () => MoveTabToNewWindow(tab, tab.Active));
+        }
+
         if (tab.Workspace.Layout.Count > 1)
         {
-            Custom("Move pane to new tab", () => MovePaneToNewTab(tab, tab.Active));
+            Custom("Move pane to new workspace", () => MovePaneToNewTab(tab, tab.Active));
             Custom("Move pane to new window", () => MovePaneToNewWindow(tab, tab.Active));
         }
-        Custom("Close other tabs", () => CloseTabs(AllTabs().Where(t => t != tab)));
-        Custom("Close tabs to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
+
+        Custom("Close other workspaces", () => CloseTabs(AllTabs().Where(t => t != tab)));
+        Custom("Close workspaces to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action("Next tab", TerminalAction.NextTab);
         Action("Previous tab", TerminalAction.PreviousTab);
-        Custom("Rename tab…", () => ShowRename(tab));
+        Custom("Rename workspace…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));
         Action("New window", TerminalAction.NewWindow);
         Custom("Quit Phosphor", App.Instance.Quit, null);
@@ -265,37 +273,53 @@ public sealed partial class MainWindow
         Action("Scroll page up", TerminalAction.ScrollPageUp);
         Action("Scroll page down", TerminalAction.ScrollPageDown);
 
-        // Profiles: open as a tab, a split either way, or a window.
+        // Profiles: open as a tab (in this pane, with tab groups), a workspace, a split either way, or a window.
+        var group = _config.Global.TabGroups ? tab.Workspace.GroupOf(tab.Active) : null;
         for (var i = 0; i < _config.Profiles.Count; i++)
         {
             var profile = _config.Profiles[i];
             var command = ShellResolver.ForProfile(profile.Config);
             var dir = profile.Config.ResolveWorkingDirectory();
-            Custom($"New tab: {profile.Name}", () => OpenTab(profile, command, dir),
-                Keys(new ActionInvocation(TerminalAction.NewTabFromProfile, i)));
+            if (group != null)
+            {
+                Custom($"New tab: {profile.Name}", () => NewTabInGroup(tab, group, profile, command, dir),
+                    Keys(new ActionInvocation(TerminalAction.NewTabFromProfile, i)));
+            }
+
+            Custom($"New workspace: {profile.Name}", () => OpenTab(profile, command, dir),
+                group == null ? Keys(new ActionInvocation(TerminalAction.NewTabFromProfile, i)) : null);
             Custom($"Split right: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Right, profile, command, dir));
             Custom($"Split down: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Down, profile, command, dir));
             Custom($"New window: {profile.Name}", () => App.Instance.OpenWindow(profile));
         }
 
-        // Open tabs.
+        // Open workspaces, and the tabs of this one.
         var index = 0;
         foreach (var t in AllTabs())
         {
             var target = t;
             var switchKeys = index < 8 ? Keys(new ActionInvocation(TerminalAction.SwitchToTab, index)) : null;
-            Custom($"Switch to tab: {t.Header.Title}", () => Tabs.SelectedItem = target.Item, switchKeys);
+            Custom($"Switch to workspace: {t.Header.Title}", () => Tabs.SelectedItem = target.Item, switchKeys);
             index++;
         }
 
-        // Tab colors.
+        if (tab.Workspace.Tabs.Count() > 1)
+        {
+            foreach (var t in tab.Workspace.Tabs)
+            {
+                var target = t;
+                Custom($"Switch to tab: {GroupView.TitleOf(t)}", () => ShowGroupTab(tab, target));
+            }
+        }
+
+        // Workspace colors.
         foreach (var (name, rgb) in TabColors)
         {
             var color = Windows.UI.Color.FromArgb(0xFF, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
-            Custom($"Tab color: {name}", () => SetTabColor(tab, color));
+            Custom($"Workspace color: {name}", () => SetTabColor(tab, color));
         }
 
-        Custom("Tab color: Reset", () => SetTabColor(tab, null));
+        Custom("Workspace color: Reset", () => SetTabColor(tab, null));
         return commands;
     }
 }

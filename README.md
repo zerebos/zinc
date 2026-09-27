@@ -173,16 +173,17 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Ctrl+Shift+P` | Command palette: every action, profile and tab, fuzzy-searchable |
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
-| `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab (default profile / profile N) |
-| `Ctrl+Shift+Space`, ▾ button | Profile menu (Alt+click: open as a split; Shift+click: new window) |
-| `Ctrl+Shift+D` | Duplicate tab |
-| `Ctrl+Shift+W` | Close pane (the tab, if it's the last one) |
+| `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab in the focused pane (its profile / profile N) |
+| `Ctrl+Alt+T` | New workspace (default profile) |
+| `Ctrl+Shift+Space`, ▾ button | Profile menu: new workspace (Alt+click: open as a split; Shift+click: new window) |
+| `Ctrl+Shift+D` | Duplicate tab (in the same pane) |
+| `Ctrl+Shift+W` | Close tab (its pane, then workspace, when it's the last) |
 | `Alt+Shift+Plus` / `Alt+Shift+Minus` | Split right / down (default profile) |
 | `Alt+Shift+D` | Duplicate pane (splits along the longer side) |
 | `Alt+Arrow` | Focus the pane in that direction |
 | `Alt+Shift+Arrow` | Move the nearest divider (or drag it) |
-| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab |
-| `Ctrl+Alt+1..8`, `Ctrl+Alt+9` | Go to tab N / last tab |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next / previous tab in the focused pane; with one tab there, next / previous workspace |
+| `Ctrl+Alt+1..8`, `Ctrl+Alt+9` | Go to workspace N / last workspace |
 | `Ctrl+Shift+N` | New window |
 | `Shift` + mouse | Bypass app mouse reporting to select text |
 | `Ctrl` + hover / click | Underline / open the link under the pointer |
@@ -221,16 +222,32 @@ and end of a line). Lines soft-wrapped across rows are searched as one line, so 
 continue onto the next row; real line breaks separate lines. Results refresh as new output
 arrives.
 
-Right-clicking a tab offers rename, tab color, duplicate, split, moving the tab to a new
-window, export text (whole scrollback to a file), and closing this / other / right-hand tabs.
-Its Split pane menu can also move the focused pane out to a new tab or a new window.
+### Workspaces, panes and tabs
 
-Tabs can be dragged, with their terminals still running:
+The title-bar tabs are **workspaces**: each has its own layout of split **panes**, and a pane
+holds one or more **tabs**, each a terminal. A pane with two or more tabs shows its own strip
+of them (click to switch, middle-click or × to close, right-click to close others or move a
+tab to a new workspace or window, + for another tab). New tabs open in the focused pane with
+its current tab's profile; the title bar's + and ▾ open workspaces.
+
+- `tab-groups = false` (global) keeps one terminal per pane, like Windows Terminal: new tabs
+  open as workspaces.
+- `group-tab-strip = always` (global) shows the strip on every pane, even with one tab
+  (default `auto`: only with two or more).
+
+Right-clicking a workspace offers rename, workspace color, duplicate, split, moving it to a new
+window, export text (whole scrollback to a file), and closing this / other / right-hand
+workspaces. Its Split pane menu can also move the focused pane out to a new workspace or window.
+
+Workspaces can be dragged, with their terminals still running:
 
 - out of the tab strip, to open in a new window where you drop them;
-- onto another Phosphor window's tab strip, to move there;
-- onto the edge of a pane (the outer third on that side), to join that tab as a split on that
-  side, keeping their own split layout. The drop area is highlighted while you drag.
+- onto another Phosphor window's tabs (or its +/▾ buttons), to move there;
+- onto the edge of a pane (the outer third on that side), to join that workspace as a split on
+  that side, keeping their own split layout;
+- onto the middle of a pane, to join that pane as tabs (with tab groups on).
+
+The drop area is highlighted while you drag.
 
 If the shell exits with a non-zero code, the window stays open showing the code
 until a key is pressed; a clean exit closes it.

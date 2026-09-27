@@ -46,6 +46,9 @@ public enum TerminalAction
 
     /// <summary>Open the pane's find box.</summary>
     Find,
+
+    /// <summary>New workspace (title-bar tab) with the default profile.</summary>
+    NewWorkspace,
 }
 
 /// <summary>An action plus its argument (a tab/profile index or a pane direction), as bound to a key.</summary>
@@ -202,6 +205,7 @@ public sealed class Keybindings
         b.Bind("ctrl+shift+end", TerminalAction.ScrollToBottom);
 
         b.Bind("ctrl+shift+t", TerminalAction.NewTab);
+        b.Bind("ctrl+alt+t", TerminalAction.NewWorkspace);
         b.Bind("ctrl+shift+d", TerminalAction.DuplicateTab);
         b.Bind("ctrl+shift+space", TerminalAction.OpenNewTabMenu);
         b.Bind("ctrl+shift+w", TerminalAction.ClosePane);

@@ -23,9 +23,9 @@ public sealed partial class MainWindow
     {
         var menu = new MenuFlyout();
 
-        menu.Items.Add(Item("Rename tab…", "", null, () => ShowRename(tab)));
+        menu.Items.Add(Item("Rename workspace…", "", null, () => ShowRename(tab)));
 
-        var colors = new MenuFlyoutSubItem { Text = "Tab color", Icon = Glyph("") };
+        var colors = new MenuFlyoutSubItem { Text = "Workspace color", Icon = Glyph("") };
         foreach (var (name, rgb) in TabColors)
         {
             var color = Windows.UI.Color.FromArgb(0xFF, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
         menu.Items.Add(colors);
 
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item("Duplicate tab", "", "Ctrl+Shift+D", () =>
+        menu.Items.Add(Item("Duplicate workspace", "", null, () =>
             OpenTab(tab.Active.Profile, tab.Active.Command, tab.Active.WorkingDirectory)));
 
         var split = new MenuFlyoutSubItem { Text = "Split pane", Icon = Glyph("") };
@@ -51,19 +51,19 @@ public sealed partial class MainWindow
         split.Items.Add(Item("Duplicate pane", null, "Alt+Shift+D", () =>
             HandleAction(new ActionInvocation(TerminalAction.DuplicatePane), tab, tab.Active)));
         split.Items.Add(new MenuFlyoutSeparator());
-        split.Items.Add(Item("Move pane to new tab", null, null, () => MovePaneToNewTab(tab, tab.Active)));
+        split.Items.Add(Item("Move pane to new workspace", null, null, () => MovePaneToNewTab(tab, tab.Active)));
         split.Items.Add(Item("Move pane to new window", null, null, () => MovePaneToNewWindow(tab, tab.Active)));
         menu.Items.Add(split);
 
         menu.Items.Add(Item("Export text…", "", null, () => _ = ExportText(tab)));
 
-        menu.Items.Add(Item("Move tab to new window", "", null, () => MoveToNewWindow(tab)));
+        menu.Items.Add(Item("Move workspace to new window", "", null, () => MoveToNewWindow(tab)));
 
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item("Close other tabs", null, null, () => CloseTabs(AllTabs().Where(t => t != tab))));
-        menu.Items.Add(Item("Close tabs to the right", null, null, () =>
+        menu.Items.Add(Item("Close other workspaces", null, null, () => CloseTabs(AllTabs().Where(t => t != tab))));
+        menu.Items.Add(Item("Close workspaces to the right", null, null, () =>
             CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1))));
-        menu.Items.Add(Item("Close tab", "", null, () => CloseTab(tab)));
+        menu.Items.Add(Item("Close workspace", "", null, () => CloseTab(tab)));
 
         return menu;
     }
