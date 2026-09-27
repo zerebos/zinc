@@ -49,6 +49,9 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>The last title the app set (OSC 0/2), or "" if none.</summary>
     public string Title { get; private set; } = "";
 
+    /// <summary>The working directory the shell last reported, as sent (see <see cref="TerminalSession.ReportedDirectory"/>).</summary>
+    public string? ReportedDirectory => _session?.ReportedDirectory;
+
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;
 

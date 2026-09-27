@@ -1,6 +1,7 @@
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Phosphor.Input;
+using Phosphor.Session;
 
 namespace Phosphor;
 
@@ -31,8 +32,17 @@ public partial class App : Application
         _config = ConfigFile.Load();
         _messageWindow = new MessageWindow();
         var profile = _config.DefaultProfile;
-        // Our own arguments / PHOSPHOR_SHELL override the first tab's command only.
-        OpenWindow(profile, ShellResolver.Resolve(profile.Config));
+        // A command given on our command line (or PHOSPHOR_SHELL) is asked for explicitly: open
+        // it rather than the saved session. Otherwise reopen what was open last time.
+        var explicitCommand = Environment.GetCommandLineArgs().Length > 1 ||
+                              Environment.GetEnvironmentVariable("PHOSPHOR_SHELL") is { Length: > 0 };
+        if (explicitCommand || !RestoreSession())
+        {
+            // Our own arguments / PHOSPHOR_SHELL override the first tab's command only.
+            OpenWindow(profile, ShellResolver.Resolve(profile.Config));
+        }
+
+        StartSavingSession();
         try
         {
             SetUpQuickTerminal();
@@ -138,6 +148,7 @@ public partial class App : Application
             return;
         }
 
+        SaveSession(); // before the windows start closing (each close would drop one)
         _quitting = true;
         foreach (var window in _windows.ToList())
         {
@@ -149,6 +160,121 @@ public partial class App : Application
         _hotkey?.Dispose();
         _messageWindow?.Dispose();
         Exit();
+    }
+
+    // --------------------------------------------------------------- session
+
+    private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
+    private string? _savedSession;
+    private static Mutex? _sessionOwner;
+
+    /// <summary>
+    /// The session file this process may restore and save: only the first Phosphor process running
+    /// gets it. Phosphor isn't single-instance yet, so a second launch would otherwise reopen
+    /// every window again and the two would overwrite each other's saves.
+    /// </summary>
+    private static string? OwnSession(string? path)
+    {
+        if (path == null)
+        {
+            return null;
+        }
+
+        var name = @"Local\Phosphor.Session." + Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path.ToLowerInvariant())))[..16];
+        _sessionOwner = new Mutex(initiallyOwned: true, name, out var first);
+        if (!first)
+        {
+            Log.Write("session: another Phosphor process owns it; not restoring or saving here");
+            _sessionOwner.Dispose();
+            _sessionOwner = null;
+            return null;
+        }
+
+        return path;
+    }
+
+    /// <summary>Reopens the windows saved last time; false if there were none (or none reopened).</summary>
+    private bool RestoreSession()
+    {
+        if (_sessionPath == null || !_config.Global.RestoreSession || SessionStore.Load(_sessionPath) is not { } session)
+        {
+            return false;
+        }
+
+        var opened = 0;
+        foreach (var saved in session.Windows)
+        {
+            try
+            {
+                var window = new MainWindow(_config, Keybindings.Default, saved);
+                if (window.HasWorkspaces)
+                {
+                    Track(window);
+                    opened++;
+                }
+                else
+                {
+                    window.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Write($"session: couldn't reopen a window: {ex}");
+            }
+        }
+
+        Log.Write($"session: reopened {opened} of {session.Windows.Count} window(s)");
+        return opened > 0;
+    }
+
+    /// <summary>
+    /// Saves the open windows every couple of seconds when they changed (cheap: a few dozen
+    /// tabs), so a crash or power loss keeps the layout too. Quit saves once more first.
+    /// </summary>
+    private void StartSavingSession()
+    {
+        if (_sessionPath == null || !_config.Global.RestoreSession)
+        {
+            return;
+        }
+
+        var timer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        timer.Interval = TimeSpan.FromSeconds(2);
+        timer.Tick += (_, _) => SaveSession();
+        timer.Start();
+    }
+
+    /// <summary>
+    /// Writes the open windows to session.json if they changed. With no windows open (the last
+    /// one was closed, the app stays in the tray) the previous save stands, so that window comes back.
+    /// </summary>
+    private void SaveSession()
+    {
+        if (_sessionPath == null || _quitting || !_config.Global.RestoreSession)
+        {
+            return;
+        }
+
+        try
+        {
+            var windows = _windows.Select(w => w.CaptureState()).OfType<WindowState>().ToList();
+            if (windows.Count == 0)
+            {
+                return;
+            }
+
+            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows));
+            if (json != _savedSession)
+            {
+                SessionStore.Save(_sessionPath, json);
+                _savedSession = json;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"session: save failed: {ex.Message}");
+        }
     }
 
     // ------------------------------------------------------------------ tray
@@ -175,12 +301,16 @@ public partial class App : Application
         };
     }
 
-    /// <summary>Tray click: bring back the most recently used window, or open one.</summary>
+    /// <summary>Tray click: bring back the most recently used window, or the saved ones, or open one.</summary>
     private void ShowWindows()
     {
         if (_windows.Count == 0)
         {
-            OpenWindow(_config.DefaultProfile);
+            if (!RestoreSession())
+            {
+                OpenWindow(_config.DefaultProfile);
+            }
+
             return;
         }
 

@@ -70,6 +70,18 @@ public sealed class PaneTree<T> where T : class
 
     public PaneTree(T content) => Root = new PaneLeaf<T>(content);
 
+    /// <summary>A tree around an already-built <paramref name="root"/> (a restored layout; parents set).</summary>
+    internal PaneTree(PaneNode root) => Root = root;
+
+    /// <summary>Builds a split node for a restored layout: <paramref name="first"/> gets <paramref name="ratio"/> of the space.</summary>
+    internal static PaneSplit Join(SplitOrientation orientation, PaneNode first, PaneNode second, double ratio)
+    {
+        var split = new PaneSplit(orientation, first, second, Math.Clamp(ratio, MinRatio, MaxRatio));
+        first.Parent = split;
+        second.Parent = split;
+        return split;
+    }
+
     /// <summary>The root node, or null once the last pane is removed.</summary>
     public PaneNode? Root { get; private set; }
 

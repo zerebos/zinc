@@ -86,6 +86,13 @@ public sealed record Config
     /// </summary>
     public double UnfocusedSplitOpacity { get; init; } = 0.7;
 
+    /// <summary>
+    /// Whether windows, workspaces and tabs reopen as they were (session.json; not their
+    /// contents). Config, as in Ghostty: <c>window-save-state = default | always | never</c>
+    /// (global; default = always).
+    /// </summary>
+    public bool RestoreSession { get; init; } = true;
+
     /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
     public GhosttyColorRgb? UnfocusedSplitFill { get; init; }
 
@@ -133,6 +140,7 @@ public sealed record Config
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var opacity) =>
                 this with { UnfocusedSplitOpacity = Math.Clamp(opacity, 0.15, 1.0) },
+            "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
                 this with { WorkspaceTabs = tabs },

@@ -87,6 +87,16 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void SessionsAreRestoredUnlessTurnedOff()
+    {
+        Assert.True(Load("").RestoreSession);
+        Assert.True(Load("window-save-state = always").RestoreSession);
+        Assert.True(Load("window-save-state = default").RestoreSession);
+        Assert.False(Load("window-save-state = never").RestoreSession);
+        Assert.True(Load("window-save-state = sometimes").RestoreSession);
+    }
+
+    [Fact]
     public void WorkspaceTabsOnTopByDefault()
     {
         Assert.Equal(WorkspaceTabs.Top, Load("").WorkspaceTabs);

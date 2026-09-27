@@ -152,6 +152,52 @@ When the last window closes, Phosphor keeps running in the tray while its quick 
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
 `quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
+### Reopening where you left off
+
+Phosphor remembers its windows: their size and place, their workspaces (titles, colors), split
+layouts and tabs, and which were shown. Next time it starts (without a command on its command
+line), they reopen with fresh shells in the same folders. What the terminals showed isn't kept.
+The state is saved as you go (`%APPDATA%\Phosphor\session.json`), so a crash keeps it too;
+closing the last window keeps that window for next time. `window-save-state = never` turns this
+off (`default` and `always` keep it on, as in Ghostty).
+
+A tab reopens in the folder its shell last *reported*, so the shell has to tell the terminal
+where it is (OSC 7, or OSC 9;9 / OSC 1337). Without that, tabs reopen where they first started.
+
+PowerShell (add to `$PROFILE`):
+
+```powershell
+function prompt {
+    $location = $executionContext.SessionState.Path.CurrentLocation
+    $report = ""
+    if ($location.Provider.Name -eq "FileSystem") {
+        $report = "$([char]27)]9;9;`"$($location.ProviderPath)`"$([char]27)\"
+    }
+
+    "${report}PS $location$('>' * ($nestedPromptLevel + 1)) "
+}
+```
+
+zsh (`.zshrc`; bash can use the same function from `PROMPT_COMMAND`):
+
+```zsh
+autoload -Uz add-zsh-hook
+_report_cwd() {
+  local LC_ALL=C url= c i
+  for (( i = 1; i <= ${#PWD}; i++ )); do
+    c=${PWD[i]}
+    case $c in
+      [-/:_.!\'\(\)~[:alnum:]]) url+=$c ;;
+      *) url+=$(printf '%%%02X' "'$c") ;;
+    esac
+  done
+  printf '\e]7;file://%s%s\e\' "$HOST" "$url"
+}
+add-zsh-hook precmd _report_cwd
+```
+
+WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive.
+
 ## Choosing a shell
 
 1. Arguments after the executable: `Phosphor.exe "C:\Program Files\Git\bin\bash.exe" --login -i`

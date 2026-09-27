@@ -28,6 +28,7 @@ public sealed unsafe class TerminalSession : IDisposable
     private ConPty? _pty;
     private GhosttySizeReportSize _size;
     private bool _titleDirty;
+    private bool _pwdDirty;
     private bool _bell;
     private bool _disposed;
 
@@ -65,6 +66,9 @@ public sealed unsafe class TerminalSession : IDisposable
             (delegate* unmanaged[Cdecl]<nint, nint, byte*, nuint, void>)&OnWritePty);
         Native.TerminalSet(_terminal, TerminalOption.TitleChanged,
             (delegate* unmanaged[Cdecl]<nint, nint, void>)&OnTitleChanged);
+        // OSC 7 / OSC 9;9 / OSC 1337 CurrentDir: where the shell says it is (see ReportedDirectory).
+        Native.TerminalSet(_terminal, TerminalOption.PwdChanged,
+            (delegate* unmanaged[Cdecl]<nint, nint, void>)&OnPwdChanged);
         Native.TerminalSet(_terminal, TerminalOption.Bell,
             (delegate* unmanaged[Cdecl]<nint, nint, void>)&OnBell);
         // Without this, libghostty suppresses XTWINOPS size replies (CSI 14/16/18 t)
@@ -183,6 +187,12 @@ public sealed unsafe class TerminalSession : IDisposable
             _trace.Flush();
         }
 
+        Feed(data);
+    }
+
+    /// <summary>Parses output, then acts on what it changed (title, directory, bell).</summary>
+    private void Feed(ReadOnlySpan<byte> data)
+    {
         string? title = null;
         bool bell;
         lock (Lock)
@@ -205,6 +215,12 @@ public sealed unsafe class TerminalSession : IDisposable
                 title = ReadTitle();
             }
 
+            if (_pwdDirty)
+            {
+                _pwdDirty = false;
+                ReportedDirectory = ReadString(TerminalData.Pwd);
+            }
+
             bell = _bell;
             _bell = false;
         }
@@ -222,10 +238,19 @@ public sealed unsafe class TerminalSession : IDisposable
         OutputProcessed?.Invoke();
     }
 
-    private string ReadTitle()
+    /// <summary>
+    /// The working directory the shell last reported (OSC 7's file:// URI, or OSC 9;9 / 1337's
+    /// bare path), as sent; null until it reports one or after it clears it. Decode with
+    /// <see cref="Phosphor.Terminal.ShellDirectory.Parse"/>.
+    /// </summary>
+    public string? ReportedDirectory { get; private set; }
+
+    private string ReadTitle() => ReadString(TerminalData.Title);
+
+    private string ReadString(TerminalData what)
     {
         GhosttyString s;
-        if (Native.TerminalGet(_terminal, TerminalData.Title, &s) != GhosttyResult.Success || s.Len == 0)
+        if (Native.TerminalGet(_terminal, what, &s) != GhosttyResult.Success || s.Len == 0)
         {
             return "";
         }
@@ -234,24 +259,7 @@ public sealed unsafe class TerminalSession : IDisposable
     }
 
     /// <summary>Writes VT data straight to the screen, as if the child had printed it.</summary>
-    public void WriteToScreen(string text)
-    {
-        var bytes = Encoding.UTF8.GetBytes(text);
-        lock (Lock)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            fixed (byte* p = bytes)
-            {
-                Native.TerminalVtWrite(_terminal, p, (nuint)bytes.Length);
-            }
-        }
-
-        OutputProcessed?.Invoke();
-    }
+    public void WriteToScreen(string text) => Feed(Encoding.UTF8.GetBytes(text));
 
     /// <summary>Sends user input to the child, snapping the viewport back to the live screen.</summary>
     public void SendInput(ReadOnlySpan<byte> data, bool scrollToBottom = true)
@@ -895,6 +903,9 @@ public sealed unsafe class TerminalSession : IDisposable
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnTitleChanged(nint terminal, nint userdata) => FromUserdata(userdata)._titleDirty = true;
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnPwdChanged(nint terminal, nint userdata) => FromUserdata(userdata)._pwdDirty = true;
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static byte OnSize(nint terminal, nint userdata, GhosttySizeReportSize* size)

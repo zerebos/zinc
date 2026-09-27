@@ -29,6 +29,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   padding are *points*; `Config.cs`).
   `PHOSPHOR_CONFIG=<file>` overrides the path — use it for tests instead of editing the
   user's real config (which sets `font-family = JetBrainsMono NF`).
+- Session (reopening windows): `%APPDATA%\Phosphor\session.json`, `PHOSPHOR_SESSION=<file>`
+  overrides. **A run with `PHOSPHOR_CONFIG` set neither restores nor saves** unless
+  `PHOSPHOR_SESSION` is also set — so test instances never touch the user's session. Only the
+  first Phosphor process owns the session (named mutex): no single-instance yet, and a second
+  process restoring too would duplicate every window. Launching with a command (args or
+  PHOSPHOR_SHELL) opens it instead of restoring.
 
 ## Architecture (where to look)
 
@@ -70,6 +76,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   a URL in its logical line (soft-wrapped rows joined, up into the scrollback; `LinkMatch` rows
   are viewport rows, negative above it; shares `LogicalLine` with find). OSC 52 goes through `ClipboardWriter`/`ClipboardReader` on the session
   (null = denied); both are called mid-parse under the lock and must reply synchronously.
+- `Session/SessionState.cs` — session.json records, `SessionLayout.Capture/Restore` (workspace ↔
+  saved layout; tabs that can't reopen drop out, emptied panes close up), `SessionStore`.
+  `Terminal/ShellDirectory.cs` decodes reported folders (OSC 7 URI / OSC 9;9 path) and
+  `LaunchIn` turns one into a start (WSL `--cd`, Windows cwd, MSYS `/c/`). App side:
+  `MainWindow.Session.cs`, `App` (restore at launch or tray click, save every 2 s when changed,
+  and first thing in `Quit`). libghostty's pwd callback (`OPT_PWD_CHANGED`) → `ReportedDirectory`.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

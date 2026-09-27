@@ -102,6 +102,13 @@ public sealed class Workspace<T> where T : class
         Layout = new PaneTree<TabGroup<T>>(group);
     }
 
+    /// <summary>A workspace around a restored layout, with <paramref name="active"/> focused.</summary>
+    internal Workspace(PaneTree<TabGroup<T>> layout, TabGroup<T> active)
+    {
+        Layout = layout;
+        ActiveGroup = active;
+    }
+
     public PaneTree<TabGroup<T>> Layout { get; }
 
     /// <summary>The group with focus.</summary>
