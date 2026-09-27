@@ -172,7 +172,6 @@ public sealed partial class MainWindow
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _springTimer;
     private TabViewItem? _springTarget;
-    private long _springSeen;
 
     /// <summary>
     /// Hovering a workspace tab while dragging a pane's tab switches to that workspace after a
@@ -180,7 +179,6 @@ public sealed partial class MainWindow
     /// </summary>
     private void SpringLoad(Point point)
     {
-        _springSeen = Environment.TickCount64;
         var item = Tabs.TabItems.Cast<TabViewItem>().FirstOrDefault(i =>
         {
             var left = i.TransformToVisual(Tabs).TransformPoint(new Point(0, 0)).X;
@@ -206,8 +204,9 @@ public sealed partial class MainWindow
             _springTimer.IsRepeating = false;
             _springTimer.Tick += (_, _) =>
             {
-                // DragOver repeats while the pointer rests; none lately means it left the strip.
-                if (App.Instance.Drag != null && _springTarget != null && Environment.TickCount64 - _springSeen < 250)
+                // DragOver only comes with movement, so a resting pointer is still where it was;
+                // leaving for anywhere else cancels (CancelSpringLoad).
+                if (App.Instance.Drag != null && _springTarget != null)
                 {
                     Tabs.SelectedItem = _springTarget;
                 }
@@ -216,6 +215,13 @@ public sealed partial class MainWindow
 
         _springTimer.Stop();
         _springTimer.Start();
+    }
+
+    /// <summary>The drag went somewhere other than a workspace tab: don't switch after all.</summary>
+    private void CancelSpringLoad()
+    {
+        _springTimer?.Stop();
+        _springTarget = null;
     }
 
     // The strip events only cover the tabs themselves; the +/▾ buttons count too, via the window
@@ -228,6 +234,20 @@ public sealed partial class MainWindow
         if (InTitleBand(e))
         {
             OnTabStripDragOver(sender, e);
+        }
+        else
+        {
+            CancelSpringLoad(); // over a pane (their DragOver bubbles up here)
+        }
+    }
+
+    private void OnRootDragLeave(object sender, DragEventArgs e)
+    {
+        // Children's DragLeave bubbles here too; only leaving the window itself counts.
+        var p = e.GetPosition(Root);
+        if (p.X < 0 || p.Y < 0 || p.X >= Root.ActualWidth || p.Y >= Root.ActualHeight)
+        {
+            CancelSpringLoad();
         }
     }
 
@@ -330,6 +350,7 @@ public sealed partial class MainWindow
     private bool AcceptStripDrop(TabGroup<TerminalTab> group, DragEventArgs e)
     {
         HideDropPreview();
+        CancelSpringLoad(); // marked handled, so the window root doesn't see it
         var accept = App.Instance.Drag switch
         {
             { Tab: TerminalTab } => true,
