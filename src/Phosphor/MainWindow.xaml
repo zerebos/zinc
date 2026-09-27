@@ -13,8 +13,13 @@
             VerticalAlignment="Stretch"
             TabWidthMode="Equal"
             CanReorderTabs="True"
-            CanDragTabs="False"
-            AllowDropTabs="False"
+            CanDragTabs="True"
+            AllowDropTabs="True"
+            TabDragStarting="OnTabDragStarting"
+            TabDragCompleted="OnTabDragCompleted"
+            TabDroppedOutside="OnTabDroppedOutside"
+            TabStripDragOver="OnTabStripDragOver"
+            TabStripDrop="OnTabStripDrop"
             AddTabButtonClick="OnAddTabButtonClick"
             TabCloseRequested="OnTabCloseRequested"
             SelectionChanged="OnSelectionChanged">
@@ -46,6 +51,16 @@
                 </Grid>
             </TabView.TabStripFooter>
         </TabView>
+
+        <!-- Where a dragged tab would land when dropped on a pane's edge (MainWindow.Drag.cs). -->
+        <Border
+            x:Name="DropPreview"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Background="{ThemeResource SystemControlHighlightAccentBrush}"
+            Opacity="0.3"
+            IsHitTestVisible="False"
+            Visibility="Collapsed" />
 
         <!-- Shown when the quick terminal's global hotkey is held by another app. -->
         <InfoBar

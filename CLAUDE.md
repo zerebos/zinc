@@ -78,7 +78,15 @@ Mica); each `WorkspaceTab` holds a `Workspace<TerminalTab>` (Core/Panes/Workspac
 `Container` Grid by `Rebuild` (nested Grids + `PaneDivider`); window actions arrive via
 `pane.ActionHandler`; `App.OpenWindow` for new windows. `MainWindow.CommandPalette.cs` builds the palette's command
 list fresh on open and runs actions through `TerminalControl.Invoke` (same path as keys);
-`MainWindow.TabMenu.cs` is the tab context menu. Quick terminal: layout/hotkey parsing in
+`MainWindow.TabMenu.cs` is the tab context menu. Moving: a workspace leaves a window via
+`DetachWorkspace` (hosts released, terminals `Unwire`d, still running) and arrives via
+`AddWorkspace` (re-`Wire`s each `TerminalTab`); live TerminalControls re-parent across windows
+fine (same UI thread; Win2D keeps its resources; the pane re-subscribes to the new XamlRoot for
+DPI). Close the source window *after* the target has the workspace, or the app may quit with
+no windows. `MainWindow.Drag.cs`: tab drag out / onto another strip / onto a pane edge
+(`App.Drag` hands the dragged tab over in-process). Drag input can't be automated — the user
+tests it; the menu paths (`menu:Move tab to new window`, `menu:Split pane/Move pane to …`) can
+be. Quick terminal: layout/hotkey parsing in
 Core `QuickTerminal.cs` (tested); `HotkeyListener` (RegisterHotKey on the `MessageWindow`),
 `App.ToggleQuickTerminal`, `MainWindow.Quick.cs` (placement, autohide on deactivate,
 hotkey-taken InfoBar). `MessageWindow` is a hidden *top-level* window (message-only windows

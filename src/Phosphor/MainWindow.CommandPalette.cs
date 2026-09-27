@@ -224,6 +224,12 @@ public sealed partial class MainWindow
         Action("Duplicate tab", TerminalAction.DuplicateTab);
         Action("Close pane", TerminalAction.ClosePane);
         Custom("Close tab", () => CloseTab(tab));
+        Custom("Move tab to new window", () => MoveToNewWindow(tab));
+        if (tab.Workspace.Layout.Count > 1)
+        {
+            Custom("Move pane to new tab", () => MovePaneToNewTab(tab, tab.Active));
+            Custom("Move pane to new window", () => MovePaneToNewWindow(tab, tab.Active));
+        }
         Custom("Close other tabs", () => CloseTabs(AllTabs().Where(t => t != tab)));
         Custom("Close tabs to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action("Next tab", TerminalAction.NextTab);

@@ -23,13 +23,22 @@ public sealed partial class MainWindow : Window
     private readonly Brush _noFocusBrush = new SolidColorBrush(Colors.Transparent);
 
     /// <summary>One terminal tab: the profile/command it was opened with, and its control.</summary>
-    private sealed class TerminalTab(Profile profile, string command, string workingDirectory, TerminalControl control)
+    internal sealed class TerminalTab(Profile profile, string command, string workingDirectory, TerminalControl control)
     {
         public Profile Profile { get; } = profile;
         public string Command { get; } = command;
         public string WorkingDirectory { get; } = workingDirectory;
         public TerminalControl Control { get; } = control;
+
+        /// <summary>Removes the owning window's event wiring (set by <see cref="Wire"/>).</summary>
+        public Action? Unwire { get; set; }
     }
+
+    /// <summary>
+    /// A workspace on its way to another window: its terminals keep running, detached from
+    /// the old window's elements and events.
+    /// </summary>
+    internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color);
 
     /// <summary>A title-bar tab and the workspace it shows.</summary>
     private sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
@@ -61,6 +70,20 @@ public sealed partial class MainWindow : Window
     }
 
     public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command, bool quick = false)
+        : this(config, keybindings, quick)
+    {
+        OpenTab(profile, command, profile.Config.ResolveWorkingDirectory());
+        ReplayTestKeys();
+    }
+
+    /// <summary>A window that takes over a workspace moved from another window.</summary>
+    internal MainWindow(ConfigFile config, Keybindings keybindings, WorkspaceTransfer adopt)
+        : this(config, keybindings, quick: false)
+    {
+        AddWorkspace(adopt.Workspace, adopt.CustomTitle, adopt.Color);
+    }
+
+    private MainWindow(ConfigFile config, Keybindings keybindings, bool quick)
     {
         _config = config;
         _keybindings = keybindings;
@@ -104,8 +127,6 @@ public sealed partial class MainWindow : Window
         };
 
         BuildNewTabMenu();
-        OpenTab(profile, command, profile.Config.ResolveWorkingDirectory());
-        ReplayTestKeys();
 
         Closed += (_, _) =>
         {
@@ -125,7 +146,7 @@ public sealed partial class MainWindow : Window
 
     // ---------------------------------------------------------------- panes
 
-    private TerminalTab CreatePane(Profile profile, string command, string workingDirectory, Func<WorkspaceTab> tab)
+    private TerminalTab CreatePane(Profile profile, string command, string workingDirectory)
     {
         var control = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
         {
@@ -133,19 +154,38 @@ public sealed partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
-        var pane = new TerminalTab(profile, command, workingDirectory, control);
+        return new TerminalTab(profile, command, workingDirectory, control);
+    }
 
-        control.ActionHandler = invocation => HandleAction(invocation, tab(), pane);
-        control.TitleChanged += _ => UpdateTitle(tab());
-        control.CloseRequested += () => ClosePane(tab(), pane);
-        control.GotFocus += (_, _) =>
+    /// <summary>
+    /// Connects a terminal's events to this window, as part of <paramref name="tab"/>.
+    /// Undone by <see cref="TerminalTab.Unwire"/> when it moves elsewhere.
+    /// </summary>
+    private void Wire(TerminalTab pane, WorkspaceTab tab)
+    {
+        pane.Unwire?.Invoke();
+        var control = pane.Control;
+        Action<string> title = _ => UpdateTitle(tab);
+        Action close = () => ClosePane(tab, pane);
+        RoutedEventHandler focus = (_, _) =>
         {
-            var t = tab();
-            t.Workspace.Activate(pane);
-            UpdateFocusBorders(t);
-            UpdateTitle(t);
+            tab.Workspace.Activate(pane);
+            UpdateFocusBorders(tab);
+            UpdateTitle(tab);
         };
-        return pane;
+
+        control.ActionHandler = invocation => HandleAction(invocation, tab, pane);
+        control.TitleChanged += title;
+        control.CloseRequested += close;
+        control.GotFocus += focus;
+        pane.Unwire = () =>
+        {
+            control.ActionHandler = null;
+            control.TitleChanged -= title;
+            control.CloseRequested -= close;
+            control.GotFocus -= focus;
+            pane.Unwire = null;
+        };
     }
 
     /// <summary>Opens a terminal in a new group beside <paramref name="origin"/>'s group.</summary>
@@ -156,7 +196,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var pane = CreatePane(profile, command, workingDirectory, () => tab);
+        var pane = CreatePane(profile, command, workingDirectory);
+        Wire(pane, tab);
         tab.Workspace.Split(group, where, pane);
         Rebuild(tab);
     }
@@ -251,9 +292,16 @@ public sealed partial class MainWindow : Window
     /// A group's element in the layout: a border (marking focus once a workspace is split)
     /// around the shown tab's terminal. Kept on the group and reused across rebuilds.
     /// </summary>
-    private static Border HostOf(TabGroup<TerminalTab> group)
+    private Border HostOf(TabGroup<TerminalTab> group)
     {
-        var host = group.Tag as Border ?? (Border)(group.Tag = new Border());
+        if (group.Tag is not Border host)
+        {
+            // The host knows its group, so a tab dropped on it knows where to split.
+            host = new Border { Tag = group };
+            EnableDrop(host);
+            group.Tag = host;
+        }
+
         if (host.Child != group.Active.Control)
         {
             host.Child = group.Active.Control;
@@ -319,22 +367,123 @@ public sealed partial class MainWindow : Window
 
     // ---------------------------------------------------------------- tabs
 
-    private void OpenTab(Profile profile, string command, string workingDirectory)
+    private void OpenTab(Profile profile, string command, string workingDirectory) =>
+        AddWorkspace(new Workspace<TerminalTab>(CreatePane(profile, command, workingDirectory)));
+
+    /// <summary>Shows a workspace (new, or moved from another window) as a new, selected tab.</summary>
+    private WorkspaceTab AddWorkspace(Workspace<TerminalTab> workspace, string? customTitle = null, Windows.UI.Color? color = null,
+        int? index = null)
     {
-        WorkspaceTab? tab = null;
-        var pane = CreatePane(profile, command, workingDirectory, () => tab!);
         // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
         // to its header, and Stretch pushed the label above the icon.
         var item = new TabViewItem();
-        tab = new WorkspaceTab(item, new Workspace<TerminalTab>(pane));
+        var tab = new WorkspaceTab(item, workspace) { CustomTitle = customTitle, Color = color };
         item.Header = tab.Header;
         item.Tag = tab;
         item.Content = tab.Container;
         item.ContextFlyout = BuildTabMenu(tab);
+        foreach (var pane in workspace.Tabs)
+        {
+            Wire(pane, tab);
+        }
 
-        Tabs.TabItems.Add(item);
+        Tabs.TabItems.Insert(Math.Clamp(index ?? Tabs.TabItems.Count, 0, Tabs.TabItems.Count), item);
         Rebuild(tab);
         Tabs.SelectedItem = item;
+        return tab;
+    }
+
+    /// <summary>
+    /// Takes a workspace out of this window without ending its terminals: its tab goes, its
+    /// layout elements are taken apart and its terminals unwired, ready for another window.
+    /// The caller closes this window if it's now empty, once the workspace has a new home
+    /// (closing first could quit the app: it would have no windows left).
+    /// </summary>
+    private WorkspaceTransfer DetachWorkspace(WorkspaceTab tab)
+    {
+        Dismantle(tab.Container);
+        foreach (var group in tab.Workspace.Groups)
+        {
+            ReleaseHost(group);
+        }
+
+        foreach (var pane in tab.Workspace.Tabs)
+        {
+            pane.Unwire?.Invoke();
+        }
+
+        var transfer = new WorkspaceTransfer(tab.Workspace, tab.CustomTitle, tab.Color);
+        RemoveTab(tab, closeWhenEmpty: false);
+        return transfer;
+    }
+
+    /// <summary>Moves a workspace, running terminals and all, to a new window.</summary>
+    private void MoveToNewWindow(WorkspaceTab tab)
+    {
+        App.Instance.OpenWindow(DetachWorkspace(tab));
+        CloseIfEmpty();
+    }
+
+    /// <summary>Moves the group showing <paramref name="pane"/> out into a new tab of this window.</summary>
+    private void MovePaneToNewTab(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (TakeGroup(tab, pane) is { } group)
+        {
+            AddWorkspace(new Workspace<TerminalTab>(group));
+        }
+    }
+
+    /// <summary>Moves the group showing <paramref name="pane"/> to a new window (a lone group moves its whole tab).</summary>
+    private void MovePaneToNewWindow(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (tab.Workspace.Layout.Count == 1)
+        {
+            MoveToNewWindow(tab);
+            return;
+        }
+
+        if (TakeGroup(tab, pane) is { } group)
+        {
+            ReleaseHost(group);
+            foreach (var t in group.Tabs)
+            {
+                t.Unwire?.Invoke();
+            }
+
+            App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(group), null, null));
+        }
+    }
+
+    /// <summary>Takes <paramref name="pane"/>'s group out of a split workspace, terminals running; null if it's the only group.</summary>
+    private TabGroup<TerminalTab>? TakeGroup(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (tab.Workspace.Layout.Count < 2 || tab.Workspace.GroupOf(pane) is not { } group)
+        {
+            return null;
+        }
+
+        tab.Workspace.Detach(group);
+        Rebuild(tab);
+        return group;
+    }
+
+    /// <summary>Drops a group's host element (it belongs to this window's tree).</summary>
+    private static void ReleaseHost(TabGroup<TerminalTab> group)
+    {
+        if (group.Tag is Border host)
+        {
+            host.Child = null;
+        }
+
+        group.Tag = null;
+    }
+
+    private void CloseIfEmpty()
+    {
+        if (Tabs.TabItems.Count == 0)
+        {
+            Close();
+        }
     }
 
     private void OpenTab(Profile profile) =>
@@ -351,7 +500,7 @@ public sealed partial class MainWindow : Window
         RemoveTab(tab);
     }
 
-    private void RemoveTab(WorkspaceTab tab)
+    private void RemoveTab(WorkspaceTab tab, bool closeWhenEmpty = true)
     {
         var index = Tabs.TabItems.IndexOf(tab.Item);
         if (index < 0)
@@ -362,7 +511,11 @@ public sealed partial class MainWindow : Window
         Tabs.TabItems.RemoveAt(index);
         if (Tabs.TabItems.Count == 0)
         {
-            Close();
+            if (closeWhenEmpty)
+            {
+                Close();
+            }
+
             return;
         }
 

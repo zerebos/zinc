@@ -97,14 +97,14 @@ public sealed partial class MainWindow
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct Point
+    private struct CursorPoint
     {
         public int X, Y;
     }
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetCursorPos(out Point point);
+    private static partial bool GetCursorPos(out CursorPoint point);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

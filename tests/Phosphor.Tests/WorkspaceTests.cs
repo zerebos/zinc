@@ -80,6 +80,45 @@ public class WorkspaceTests
     }
 
     [Fact]
+    public void DetachedGroupsKeepTheirTabs()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        var right = ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        right.Add(c);
+
+        Assert.True(ws.Detach(right));
+        Assert.Equal([a], ws.Tabs);
+        Assert.Same(a, ws.Active);
+
+        var moved = new Workspace<T>(right);
+        Assert.Equal([b, c], moved.Tabs);
+        Assert.Same(c, moved.Active);
+        Assert.False(moved.Detach(right)); // its only group: now empty
+    }
+
+    [Fact]
+    public void MergeGraftsTheOtherLayoutBesideATarget()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        var other = new Workspace<T>(b);
+        other.Split(other.ActiveGroup, PaneDirection.Down, c);
+
+        ws.Merge(ws.ActiveGroup, PaneDirection.Right, other);
+
+        Assert.Equal([a, b, c], ws.Tabs);
+        Assert.Same(c, ws.Active); // the merged workspace's focus comes along
+        Assert.Null(other.Layout.Root);
+        // b and c keep their stacking, to the right of a.
+        var layout = ws.Layout.Layout();
+        var rect = (T t) => layout.Single(kv => kv.Key.Content.Contains(t)).Value;
+        Assert.Equal(new PaneRect(0, 0, 0.5, 1), rect(a));
+        Assert.Equal(new PaneRect(0.5, 0, 0.5, 0.5), rect(b));
+        Assert.Equal(new PaneRect(0.5, 0.5, 0.5, 0.5), rect(c));
+    }
+
+    [Fact]
     public void ResizeMovesTheGroupsDivider()
     {
         T a = new("a"), b = new("b");

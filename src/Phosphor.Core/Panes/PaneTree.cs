@@ -100,6 +100,31 @@ public sealed class PaneTree<T> where T : class
     }
 
     /// <summary>
+    /// Moves all of <paramref name="other"/>'s panes into this tree beside
+    /// <paramref name="target"/> on side <paramref name="where"/>, keeping their arrangement;
+    /// <paramref name="other"/> is left empty.
+    /// </summary>
+    public void Graft(PaneLeaf<T> target, PaneDirection where, PaneTree<T> other, double newShare = 0.5)
+    {
+        if (other == this || other.Root is not { } subtree)
+        {
+            throw new ArgumentException("Can only graft another, non-empty tree.", nameof(other));
+        }
+
+        var orientation = where is PaneDirection.Left or PaneDirection.Right
+            ? SplitOrientation.Horizontal
+            : SplitOrientation.Vertical;
+        var newFirst = where is PaneDirection.Left or PaneDirection.Up;
+        var split = new PaneSplit(orientation, newFirst ? subtree : target, newFirst ? target : subtree,
+            newFirst ? newShare : 1 - newShare);
+
+        Replace(target, split);
+        target.Parent = split;
+        subtree.Parent = split;
+        other.Root = null;
+    }
+
+    /// <summary>
     /// Removes a pane; its sibling takes the freed space. Returns the pane that should
     /// get focus next (the sibling side's pane nearest the removed one), or null if the
     /// tree is now empty.

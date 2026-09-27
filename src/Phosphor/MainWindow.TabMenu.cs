@@ -50,9 +50,14 @@ public sealed partial class MainWindow
         split.Items.Add(Item("Split down", null, "Alt+Shift+Minus", () => SplitWithDefault(tab, PaneDirection.Down)));
         split.Items.Add(Item("Duplicate pane", null, "Alt+Shift+D", () =>
             HandleAction(new ActionInvocation(TerminalAction.DuplicatePane), tab, tab.Active)));
+        split.Items.Add(new MenuFlyoutSeparator());
+        split.Items.Add(Item("Move pane to new tab", null, null, () => MovePaneToNewTab(tab, tab.Active)));
+        split.Items.Add(Item("Move pane to new window", null, null, () => MovePaneToNewWindow(tab, tab.Active)));
         menu.Items.Add(split);
 
         menu.Items.Add(Item("Export text…", "", null, () => _ = ExportText(tab)));
+
+        menu.Items.Add(Item("Move tab to new window", "", null, () => MoveToNewWindow(tab)));
 
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Close other tabs", null, null, () => CloseTabs(AllTabs().Where(t => t != tab))));

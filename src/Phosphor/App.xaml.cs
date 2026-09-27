@@ -45,9 +45,18 @@ public partial class App : Application
         }
     }
 
-    internal void OpenWindow(Profile profile, string? command = null)
+    internal void OpenWindow(Profile profile, string? command = null) =>
+        Track(new MainWindow(_config, Keybindings.Default, profile, command ?? ShellResolver.ForProfile(profile.Config)));
+
+    /// <summary>Opens a window for a workspace moved out of another one.</summary>
+    internal MainWindow OpenWindow(MainWindow.WorkspaceTransfer transfer) =>
+        Track(new MainWindow(_config, Keybindings.Default, transfer));
+
+    /// <summary>The workspace tab being dragged, if any (windows hand it over directly).</summary>
+    internal MainWindow.TabDrag? Drag { get; set; }
+
+    private MainWindow Track(MainWindow window)
     {
-        var window = new MainWindow(_config, Keybindings.Default, profile, command ?? ShellResolver.ForProfile(profile.Config));
         _windows.Add(window);
         window.Closed += (_, _) =>
         {
@@ -55,6 +64,7 @@ public partial class App : Application
             OnWindowClosed();
         };
         window.Activate();
+        return window;
     }
 
     /// <summary>A normal window was activated: it's the one the tray icon brings back first.</summary>

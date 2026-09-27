@@ -75,10 +75,15 @@ public sealed class TabGroup<T> where T : class
 /// </summary>
 public sealed class Workspace<T> where T : class
 {
-    public Workspace(T first)
+    public Workspace(T first) : this(new TabGroup<T>(first))
     {
-        ActiveGroup = new TabGroup<T>(first);
-        Layout = new PaneTree<TabGroup<T>>(ActiveGroup);
+    }
+
+    /// <summary>A workspace made of one existing group (e.g. a pane moved out of another workspace).</summary>
+    public Workspace(TabGroup<T> group)
+    {
+        ActiveGroup = group;
+        Layout = new PaneTree<TabGroup<T>>(group);
     }
 
     public PaneTree<TabGroup<T>> Layout { get; }
@@ -142,6 +147,41 @@ public sealed class Workspace<T> where T : class
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Takes <paramref name="group"/> out of the layout with its tabs intact (to move it
+    /// elsewhere); focus moves as for <see cref="Close"/>. Returns false when the workspace
+    /// is now empty.
+    /// </summary>
+    public bool Detach(TabGroup<T> group)
+    {
+        var leaf = Layout.Find(group) ?? throw new ArgumentException("Not in this workspace.", nameof(group));
+        var next = Layout.Remove(leaf);
+        if (next == null)
+        {
+            return false;
+        }
+
+        if (ActiveGroup == group)
+        {
+            ActiveGroup = next.Content;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Moves <paramref name="other"/>'s whole layout beside <paramref name="target"/> on side
+    /// <paramref name="where"/>; its focused group gets focus here. <paramref name="other"/>
+    /// is left empty and should be discarded.
+    /// </summary>
+    public void Merge(TabGroup<T> target, PaneDirection where, Workspace<T> other, double newShare = 0.5)
+    {
+        var leaf = Layout.Find(target) ?? throw new ArgumentException("Not in this workspace.", nameof(target));
+        var focus = other.ActiveGroup;
+        Layout.Graft(leaf, where, other.Layout, newShare);
+        ActiveGroup = focus;
     }
 
     /// <summary>The group next to <paramref name="from"/> in <paramref name="direction"/>.</summary>

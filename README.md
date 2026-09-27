@@ -221,8 +221,16 @@ and end of a line). Lines soft-wrapped across rows are searched as one line, so 
 continue onto the next row; real line breaks separate lines. Results refresh as new output
 arrives.
 
-Right-clicking a tab offers rename, tab color, duplicate, split, export text (whole
-scrollback to a file), and closing this / other / right-hand tabs.
+Right-clicking a tab offers rename, tab color, duplicate, split, moving the tab to a new
+window, export text (whole scrollback to a file), and closing this / other / right-hand tabs.
+Its Split pane menu can also move the focused pane out to a new tab or a new window.
+
+Tabs can be dragged, with their terminals still running:
+
+- out of the tab strip, to open in a new window where you drop them;
+- onto another Phosphor window's tab strip, to move there;
+- onto the edge of a pane (the outer third on that side), to join that tab as a split on that
+  side, keeping their own split layout. The drop area is highlighted while you drag.
 
 If the shell exits with a non-zero code, the window stays open showing the code
 until a key is pressed; a clean exit closes it.

@@ -35,7 +35,8 @@ public sealed partial class TerminalControl : UserControl
     private bool _focused;
     private bool _exited;
 
-    private bool _subscribedToXamlRoot;
+    // The window root whose scale changes we follow. Panes can move to another window.
+    private XamlRoot? _xamlRoot;
 
     public event Action<string>? TitleChanged;
 
@@ -93,15 +94,25 @@ public sealed partial class TerminalControl : UserControl
         Loaded += (_, _) =>
         {
             Log.Write($"pane: Loaded ({ActualWidth}x{ActualHeight})");
-            if (!_subscribedToXamlRoot)
+            if (XamlRoot != _xamlRoot)
             {
-                _subscribedToXamlRoot = true;
-                XamlRoot.Changed += (_, _) => UpdateScale();
+                // First load, or moved to another window (which may be on a monitor with a
+                // different scale).
+                if (_xamlRoot != null)
+                {
+                    _xamlRoot.Changed -= OnXamlRootChanged;
+                }
+
+                _xamlRoot = XamlRoot;
+                _xamlRoot.Changed += OnXamlRootChanged;
+                UpdateScale();
             }
         };
     }
 
     private float DisplayScale => (float)(XamlRoot?.RasterizationScale ?? 1.0);
+
+    private void OnXamlRootChanged(XamlRoot sender, XamlRootChangedEventArgs args) => UpdateScale();
 
     // ---------------------------------------------------------------- setup
 
