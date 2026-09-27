@@ -166,6 +166,10 @@ public partial class App : Application
 
     private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
     private string? _savedSession;
+
+    // Held here: a DispatcherQueueTimer nothing references is garbage-collected and stops
+    // firing (saves silently stopped after the first GC, 2026-09-27).
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _sessionTimer;
     private static Mutex? _sessionOwner;
 
     /// <summary>
@@ -239,10 +243,10 @@ public partial class App : Application
             return;
         }
 
-        var timer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
-        timer.Interval = TimeSpan.FromSeconds(2);
-        timer.Tick += (_, _) => SaveSession();
-        timer.Start();
+        _sessionTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        _sessionTimer.Interval = TimeSpan.FromSeconds(2);
+        _sessionTimer.Tick += (_, _) => SaveSession();
+        _sessionTimer.Start();
     }
 
     /// <summary>

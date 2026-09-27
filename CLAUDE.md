@@ -254,6 +254,9 @@ and read state after the write (see `_titleDirty`).
   sizes below 256 are re-drawn snapped to whole pixels — rerun after SVG edits and look at
   `--preview`. The SVG carries a large C2PA `<metadata>` blob; the script strips it. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
   uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
+- Keep every `DispatcherQueueTimer` in a field: one only a local references is garbage-collected
+  and silently stops firing. The session save timer did this — saves stopped after the first GC,
+  which short test runs never reach (`test:gc` forces one).
 - `await` is illegal inside an `unsafe` class → async code lives in `ClipboardText`.
 - Keyboard: a key's WM_CHAR arrives after its KeyDown and before its KeyUp. Suppress the
   char only when KeyDown already encoded the key (`_charHandledByKeyDown`), and clear the

@@ -864,6 +864,8 @@ public sealed partial class MainWindow : Window
     /// through the keybindings and action handler, as if pressed in the focused pane.
     /// Automated tests can't post real modifier state to the window.
     /// </summary>
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _replayTimer;
+
     private void ReplayTestKeys()
     {
         if (Environment.GetEnvironmentVariable("PHOSPHOR_TEST_KEYS") is not { Length: > 0 } keys)
@@ -872,7 +874,8 @@ public sealed partial class MainWindow : Window
         }
 
         var queue = new Queue<string>(keys.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
-        var timer = DispatcherQueue.CreateTimer();
+        // Held in a field: an unreferenced DispatcherQueueTimer is collected and stops firing.
+        var timer = _replayTimer = DispatcherQueue.CreateTimer();
         timer.Interval = TimeSpan.FromSeconds(1);
         timer.Tick += (_, _) =>
         {
