@@ -46,8 +46,8 @@ public sealed partial class MainWindow
             OpenTab(tab.Active.Profile, tab.Active.Command, tab.Active.WorkingDirectory)));
 
         var split = new MenuFlyoutSubItem { Text = "Split pane", Icon = Glyph("") };
-        split.Items.Add(Item("Split right", null, "Alt+Shift+Plus", () => SplitWithDefault(tab, PaneDirection.Right)));
-        split.Items.Add(Item("Split down", null, "Alt+Shift+Minus", () => SplitWithDefault(tab, PaneDirection.Down)));
+        split.Items.Add(Item("Split right", null, "Alt+Shift+Plus", () => SplitFocused(tab, PaneDirection.Right)));
+        split.Items.Add(Item("Split down", null, "Alt+Shift+Minus", () => SplitFocused(tab, PaneDirection.Down)));
         split.Items.Add(Item("Duplicate pane", null, "Alt+Shift+D", () =>
             HandleAction(new ActionInvocation(TerminalAction.DuplicatePane), tab, tab.Active)));
         split.Items.Add(new MenuFlyoutSeparator());
@@ -89,7 +89,7 @@ public sealed partial class MainWindow
 
     private static RelayCommand Run(Action action) => new(action);
 
-    private void SplitWithDefault(WorkspaceTab tab, PaneDirection direction) =>
+    private void SplitFocused(WorkspaceTab tab, PaneDirection direction) =>
         HandleAction(new ActionInvocation(TerminalAction.SplitPane, Direction: direction), tab, tab.Active);
 
     private void CloseTabs(IEnumerable<WorkspaceTab> tabs)

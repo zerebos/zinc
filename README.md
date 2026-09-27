@@ -178,7 +178,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Ctrl+Shift+Space`, ▾ button | Profile menu: new workspace (Alt+click: open as a split; Shift+click: new window) |
 | `Ctrl+Shift+D` | Duplicate tab (in the same pane) |
 | `Ctrl+Shift+W` | Close tab (its pane, then workspace, when it's the last) |
-| `Alt+Shift+Plus` / `Alt+Shift+Minus` | Split right / down (default profile) |
+| `Alt+Shift+Plus` / `Alt+Shift+Minus` | Split right / down (with the focused tab's profile) |
 | `Alt+Shift+D` | Duplicate pane (splits along the longer side) |
 | `Alt+Arrow` | Focus the pane in that direction |
 | `Alt+Shift+Arrow` | Move the nearest divider (or drag it) |

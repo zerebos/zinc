@@ -280,6 +280,11 @@ and read state after the write (see `_titleDirty`).
   Entries like `menu:Split pane/Split right` run that workspace context-menu item's command
   (context menus can't be opened by posted input or UIA), and `palette:<exact title>` runs a
   command palette entry. `ctrl+f24` (unbound) works as a one-second pause.
+- To check a pane keeps updating, give it output that changes every line (a counter:
+  `bash -c 'i=0; while true; do i=$((i+1)); echo tick $i; sleep 0.25; done'` via wsl.exe).
+  `ping -t` once misled me: its lines are identical, so a full pane scrolling looks frozen in
+  a pixel diff (only the scrollbar moves). XAML may deliver a moved pane's Unloaded after its
+  Loaded; that was observed but caused no freeze.
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.

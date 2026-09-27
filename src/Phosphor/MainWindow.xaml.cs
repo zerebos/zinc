@@ -881,8 +881,9 @@ public sealed partial class MainWindow : Window
                 App.Instance.OpenWindow(defaults);
                 return true;
             case TerminalAction.SplitPane:
-                SplitPane(tab, origin, invocation.Direction, defaults, ShellResolver.ForProfile(defaults.Config),
-                    defaults.Config.ResolveWorkingDirectory());
+                // A new pane opens with the focused tab's profile (splitting a Fedora pane gives Fedora).
+                SplitPane(tab, origin, invocation.Direction, origin.Profile, ShellResolver.ForProfile(origin.Profile.Config),
+                    origin.Profile.Config.ResolveWorkingDirectory());
                 return true;
             case TerminalAction.DuplicatePane:
                 var where = PaneDirections.Auto(origin.Control.ActualWidth, origin.Control.ActualHeight);
