@@ -167,7 +167,7 @@ Windows Terminal does, and lists them after your own profiles:
 | Hosts in `~/.ssh/config` (not patterns like `*`; `Include`s are followed) | `ssh:<host>` | SSH - &lt;host&gt; |
 
 A `[profile]` section with a found profile's id changes it, starting from what was found, and
-places it where the section is; `hidden = true` hides it. A section for a found profile that
+places it where the section is (an empty section only places it); `hidden = true` hides it. A section for a found profile that
 isn't installed any more is hidden too. `[discover]` turns sources off:
 
 ```toml

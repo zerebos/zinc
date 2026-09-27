@@ -108,6 +108,22 @@ public class DiscoveryTests
     }
 
     [Fact]
+    public void EmptySectionsPlaceFoundProfiles()
+    {
+        var config = Parse("""
+            [profile."ssh:homelab"]
+
+            [profile.work]
+            command = "cmd.exe"
+
+            [profile.pwsh]
+            """);
+        Assert.Equal(["ssh:homelab", "work", "pwsh", "wsl:Fedora"], config.Profiles.Select(p => p.Id));
+        Assert.Equal("ssh.exe homelab", config.Profiles[0].Config.Command);
+        Assert.Empty(config.Warnings);
+    }
+
+    [Fact]
     public void AnExplicitCommandWinsOverTheFoundOne()
     {
         var config = Parse("[profile.\"ssh:homelab\"]\ncommand = \"ssh.exe -p 2222 homelab\"");

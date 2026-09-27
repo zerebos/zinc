@@ -127,6 +127,10 @@ public sealed class ConfigFile
         private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
         private bool _hasErrors;
 
+        // [profile.<id>] headers in order, empty ones included: a bare header places a found
+        // profile in the menu without changing it.
+        private readonly List<string> _profileSections = [];
+
         public void Read(string text, string file, int depth)
         {
             if (!_files.Add(System.IO.Path.GetFullPath(file)))
@@ -157,6 +161,11 @@ public sealed class ConfigFile
                 }
 
                 var prefix = KeyParts(name);
+                if (prefix is ["profile", var sectionId, ..] && !_profileSections.Contains(sectionId))
+                {
+                    _profileSections.Add(sectionId);
+                }
+
                 foreach (var kv in t.Items)
                 {
                     Flatten(prefix, kv, file, entries);
@@ -347,6 +356,17 @@ public sealed class ConfigFile
             }
 
             global = ApplyGroups(global, _entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: false);
+
+            // Empty sections count too, in their place among the others.
+            var sectioned = _profileSections.Concat(profileOrder).Distinct().ToList();
+            foreach (var id in sectioned.Where(id => !profileEntries.ContainsKey(id)))
+            {
+                profileEntries[id] = [];
+            }
+
+            profileOrder = _profileSections.Count > 0
+                ? sectioned.OrderBy(id => _profileSections.IndexOf(id) is var i and >= 0 ? i : int.MaxValue).ToList()
+                : profileOrder;
 
             // Profiles found on this machine: the base for a section with the same id, else listed
             // after the file's own.
