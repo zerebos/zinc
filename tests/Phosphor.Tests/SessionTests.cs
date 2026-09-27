@@ -141,13 +141,55 @@ public class SessionTests
         session.WriteToScreen("see (https://ghostty.org/docs) here");
 
         // "link text" occupies columns 3..11.
-        Assert.Equal(new LinkMatch("https://example.com/x", 0, 3, 11, Explicit: true), session.LinkAt(7, 0));
+        Assert.Equal(new LinkMatch("https://example.com/x", 0, 3, 0, 11, Explicit: true), session.LinkAt(7, 0));
         Assert.Null(session.LinkAt(1, 0));
         Assert.Null(session.LinkAt(13, 0));
 
         // "https://ghostty.org/docs" occupies columns 5..28; the parentheses stay out.
-        Assert.Equal(new LinkMatch("https://ghostty.org/docs", 1, 5, 28, Explicit: false), session.LinkAt(10, 1));
+        Assert.Equal(new LinkMatch("https://ghostty.org/docs", 1, 5, 1, 28, Explicit: false), session.LinkAt(10, 1));
         Assert.Null(session.LinkAt(29, 1));
+    }
+
+    [Fact]
+    public void UrlsSpanSoftWrappedRows()
+    {
+        // 20 columns: row 0 is "go https://example.c", row 1 "om/a/long/path ok".
+        using var session = new TerminalSession(20, 5, TerminalTheme.Default);
+        session.WriteToScreen("go https://example.com/a/long/path ok");
+
+        var expected = new LinkMatch("https://example.com/a/long/path", 0, 3, 1, 13, Explicit: false);
+        Assert.Equal(expected, session.LinkAt(5, 0));  // on the first part
+        Assert.Equal(expected, session.LinkAt(2, 1));  // on the continuation
+        Assert.Null(session.LinkAt(16, 1));             // "ok"
+    }
+
+    [Fact]
+    public void WrappedUrlsReachIntoTheScrollback()
+    {
+        // 3 rows: the URL's first row scrolls off the top, its continuation is the top visible row.
+        using var session = new TerminalSession(20, 3, TerminalTheme.Default);
+        session.WriteToScreen("go https://example.com/a/long/path ok\r\nnext\r\nlast");
+
+        var link = session.LinkAt(2, 0);
+        Assert.Equal(new LinkMatch("https://example.com/a/long/path", -1, 3, 0, 13, Explicit: false), link);
+
+        // Scrolled up a row, the whole link is visible: rows 0 and 1.
+        session.ScrollLines(-1);
+        Assert.Equal(new LinkMatch("https://example.com/a/long/path", 0, 3, 1, 13, Explicit: false), session.LinkAt(2, 1));
+    }
+
+    [Fact]
+    public void HyperlinksSpanSoftWrappedRows()
+    {
+        using var session = new TerminalSession(10, 5, TerminalTheme.Default);
+        // 10 columns: row 0 is "see click ", row 1 "here now e" — the link text "click here now"
+        // runs from column 4 of row 0 to column 7 of row 1.
+        session.WriteToScreen("see \x1b]8;;https://example.com/\x1b\\click here now\x1b]8;;\x1b\\ end");
+
+        var expected = new LinkMatch("https://example.com/", 0, 4, 1, 7, Explicit: true);
+        Assert.Equal(expected, session.LinkAt(5, 0));
+        Assert.Equal(expected, session.LinkAt(1, 1));
+        Assert.Null(session.LinkAt(9, 1)); // the "e" of "end"
     }
 
     [Fact]

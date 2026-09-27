@@ -532,30 +532,63 @@ public sealed unsafe class TerminalSession : IDisposable
     /// <summary>Matches one logical line (screen rows first..first+count-1) cell by cell.</summary>
     private void MatchLine(Regex pattern, ulong first, int count, ushort cols, List<SearchMatch> into, int limit)
     {
-        var rows = new RowText[count];
-        var offsets = new int[count + 1];
-        var text = new StringBuilder();
-        for (var i = 0; i < count; i++)
-        {
-            rows[i] = RowText.Read(_terminal, PointTag.Screen, (uint)(first + (ulong)i), cols);
-            offsets[i] = text.Length;
-            text.Append(rows[i].Text);
-        }
-
-        offsets[count] = text.Length;
-        foreach (Match m in pattern.Matches(text.ToString().TrimEnd(' ')))
+        var line = LogicalLine.Read(_terminal, first, count, cols);
+        foreach (Match m in pattern.Matches(line.Text.TrimEnd(' ')))
         {
             if (m.Length == 0 || into.Count >= limit)
             {
                 continue;
             }
 
-            // The rows holding the first and last characters, and their columns there.
-            var a = Array.FindLastIndex(offsets, count - 1, count, o => o <= m.Index);
-            var b = Array.FindLastIndex(offsets, count - 1, count, o => o <= m.Index + m.Length - 1);
-            var startCol = rows[a].Columns(m.Index - offsets[a], 1).First;
-            var endCol = rows[b].Columns(m.Index + m.Length - 1 - offsets[b], 1).Last;
+            var (a, startCol, b, endCol) = line.Cells(m.Index, m.Length);
             into.Add(new SearchMatch(first + (ulong)a, startCol, first + (ulong)b, endCol));
+        }
+    }
+
+    /// <summary>
+    /// Screen rows joined across soft wraps into one string, with the way back from string
+    /// indexes to (row, column). Hold the session lock.
+    /// </summary>
+    private sealed class LogicalLine
+    {
+        private readonly RowText[] _rows;
+        private readonly int[] _offsets; // where each row's text starts; one past the end last
+
+        private LogicalLine(RowText[] rows, int[] offsets, string text)
+        {
+            _rows = rows;
+            _offsets = offsets;
+            Text = text;
+        }
+
+        public string Text { get; }
+
+        public static LogicalLine Read(nint terminal, ulong first, int count, ushort cols)
+        {
+            var rows = new RowText[count];
+            var offsets = new int[count + 1];
+            var text = new StringBuilder();
+            for (var i = 0; i < count; i++)
+            {
+                rows[i] = RowText.Read(terminal, PointTag.Screen, (uint)(first + (ulong)i), cols);
+                offsets[i] = text.Length;
+                text.Append(rows[i].Text);
+            }
+
+            offsets[count] = text.Length;
+            return new LogicalLine(rows, offsets, text.ToString());
+        }
+
+        /// <summary>The string index of column <paramref name="col"/> on the line's row <paramref name="row"/> (0 = first).</summary>
+        public int IndexOf(int row, int col) => _offsets[row] + _rows[row].IndexOf(col);
+
+        /// <summary>The line's rows and columns holding text [<paramref name="start"/>, start + length).</summary>
+        public (int FirstRow, ushort FirstCol, int LastRow, ushort LastCol) Cells(int start, int length)
+        {
+            var count = _rows.Length;
+            var a = Array.FindLastIndex(_offsets, count - 1, count, o => o <= start);
+            var b = Array.FindLastIndex(_offsets, count - 1, count, o => o <= start + length - 1);
+            return (a, _rows[a].Columns(start - _offsets[a], 1).First, b, _rows[b].Columns(start + length - 1 - _offsets[b], 1).Last);
         }
     }
 
@@ -625,9 +658,13 @@ public sealed unsafe class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>How far a link may run across soft-wrapped rows (bounds the work per hover).</summary>
+    private const int MaxLinkRows = 32;
+
     /// <summary>
     /// The link at viewport cell (<paramref name="col"/>, <paramref name="row"/>): an OSC 8
-    /// hyperlink, else a URL in that row's text. Links are found within one row.
+    /// hyperlink, else a URL in the text. Both may continue across soft wraps, including up into
+    /// the scrollback.
     /// </summary>
     public LinkMatch? LinkAt(ushort col, uint row)
     {
@@ -645,33 +682,69 @@ public sealed unsafe class TerminalSession : IDisposable
                 return null;
             }
 
-            if (HyperlinkAt(col, row) is { Length: > 0 } uri)
+            // Screen rows (scrollback included) from here on; the viewport starts at Offset.
+            GhosttyTerminalScrollbar sb;
+            Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
+            var top = (long)sb.Offset;
+            var at = (ulong)(top + row);
+            int Viewport(ulong screenRow) => (int)((long)screenRow - top);
+
+            if (HyperlinkAt(col, at) is { Length: > 0 } uri)
             {
-                // The link's extent: neighbors carrying the same URI.
-                var start = col;
-                while (start > 0 && HyperlinkAt((ushort)(start - 1), row) == uri) start--;
-                var end = col;
-                while (end + 1 < cols && HyperlinkAt((ushort)(end + 1), row) == uri) end++;
-                return new LinkMatch(uri, row, start, end, Explicit: true);
+                // The link's extent: neighboring cells carrying the same URI, across wraps.
+                var (sr, sc) = (at, col);
+                for (var i = 0; i < cols * MaxLinkRows && PreviousCell(sr, sc, cols) is { } p && HyperlinkAt(p.Col, p.Row) == uri; i++)
+                {
+                    (sr, sc) = p;
+                }
+
+                var (er, ec) = (at, col);
+                for (var i = 0; i < cols * MaxLinkRows && NextCell(er, ec, cols, sb.Total) is { } n && HyperlinkAt(n.Col, n.Row) == uri; i++)
+                {
+                    (er, ec) = n;
+                }
+
+                return new LinkMatch(uri, Viewport(sr), sc, Viewport(er), ec, Explicit: true);
             }
 
-            // Plain text: the row's URL covering this column.
-            var rowText = RowText.Read(_terminal, PointTag.Viewport, row, cols);
-            if (UrlDetector.Find(rowText.Text, rowText.IndexOf(col)) is not { } found)
+            // Plain text: the URL covering this cell in its logical line (soft-wrapped rows joined).
+            var first = at;
+            while (first > 0 && at - first < MaxLinkRows && IsWrapped(first - 1))
+            {
+                first--;
+            }
+
+            var last = at;
+            while (last + 1 < sb.Total && last - at < MaxLinkRows && IsWrapped(last))
+            {
+                last++;
+            }
+
+            var line = LogicalLine.Read(_terminal, first, (int)(last - first + 1), cols);
+            if (UrlDetector.Find(line.Text, line.IndexOf((int)(at - first), col)) is not { } found)
             {
                 return null;
             }
 
             var (s, l) = found;
-            var (first, last) = rowText.Columns(s, l);
-            return new LinkMatch(rowText.Text.Substring(s, l), row, first, last, Explicit: false);
+            var (r1, c1, r2, c2) = line.Cells(s, l);
+            return new LinkMatch(line.Text.Substring(s, l), Viewport(first + (ulong)r1), c1, Viewport(first + (ulong)r2), c2,
+                Explicit: false);
         }
     }
 
-    private string? HyperlinkAt(ushort col, uint row)
+    /// <summary>The cell before (row, col) in reading order, continuing onto the previous row if this one is its wrap.</summary>
+    private (ulong Row, ushort Col)? PreviousCell(ulong row, ushort col, ushort cols) =>
+        col > 0 ? (row, (ushort)(col - 1)) : row > 0 && IsWrapped(row - 1) ? (row - 1, (ushort)(cols - 1)) : null;
+
+    /// <summary>The cell after (row, col) in reading order, continuing onto the next row if this one wraps.</summary>
+    private (ulong Row, ushort Col)? NextCell(ulong row, ushort col, ushort cols, ulong total) =>
+        col + 1 < cols ? (row, (ushort)(col + 1)) : row + 1 < total && IsWrapped(row) ? (row + 1, (ushort)0) : null;
+
+    private string? HyperlinkAt(ushort col, ulong row)
     {
         var gridRef = GhosttyGridRef.Init();
-        var point = new GhosttyPoint { Tag = PointTag.Viewport, X = col, Y = row };
+        var point = new GhosttyPoint { Tag = PointTag.Screen, X = col, Y = (uint)row };
         if (Native.TerminalGridRef(_terminal, point, &gridRef) != GhosttyResult.Success)
         {
             return null;

@@ -299,4 +299,5 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 - Ligatures are intentionally disabled (glyphs are placed per cell).
 - Desktop notifications are parsed by libghostty but not surfaced yet. Sixel isn't supported
   (libghostty has no sixel API); kitty graphics animation shows the current frame only.
-- Links and URLs are detected within one row; a URL wrapped onto the next line is cut there.
+- Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own
+  line break (e.g. to fit a fixed width) is cut there.

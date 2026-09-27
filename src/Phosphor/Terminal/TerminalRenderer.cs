@@ -211,9 +211,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
             DrawText(ds, count, top);
             DrawDecorations(ds, count, top);
-            if (HoverLink is { } link && link.Row == y)
+            if (HoverLink?.ColumnsOn(y, count) is { } span)
             {
-                DrawLinkUnderline(ds, link, count, top);
+                DrawLinkUnderline(ds, span.First, span.Last, count, top);
             }
 
             if (cursor.Visible != 0 && cursor.ViewportHasValue != 0 && cursor.ViewportY == y)
@@ -662,11 +662,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
     }
 
-    private void DrawLinkUnderline(CanvasDrawingSession ds, LinkMatch link, int count, float top)
+    private void DrawLinkUnderline(CanvasDrawingSession ds, ushort first, ushort last, int count, float top)
     {
         var m = Metrics;
         var thickness = MathF.Max(1, MathF.Round(_fontSize / 14 * m.Scale)) / m.Scale;
-        for (var x = link.StartCol; x <= link.EndCol && x < count; x++)
+        for (var x = first; x <= last && x < count; x++)
         {
             ds.FillRectangle(PadLeft + x * m.Width, top + m.Baseline + 2 * thickness, m.Width, thickness, _cells[x].Fg);
         }

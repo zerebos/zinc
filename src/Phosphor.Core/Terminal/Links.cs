@@ -4,10 +4,16 @@ namespace Phosphor.Terminal;
 
 /// <summary>
 /// A link under the pointer: an OSC 8 hyperlink (<see cref="Explicit"/>) or a URL found in
-/// the text. Covers viewport row <see cref="Row"/>, columns <see cref="StartCol"/> through
-/// <see cref="EndCol"/> inclusive.
+/// the text. It runs from (<see cref="Row"/>, <see cref="StartCol"/>) to (<see cref="EndRow"/>,
+/// <see cref="EndCol"/>) inclusive, in viewport rows: more than one when it continues across
+/// soft wraps, and a row above the viewport (negative) when it started in the scrollback.
 /// </summary>
-public readonly record struct LinkMatch(string Uri, uint Row, ushort StartCol, ushort EndCol, bool Explicit);
+public readonly record struct LinkMatch(string Uri, int Row, ushort StartCol, int EndRow, ushort EndCol, bool Explicit)
+{
+    /// <summary>The columns the link covers on viewport row <paramref name="row"/> of a <paramref name="cols"/>-wide screen, if any.</summary>
+    public (ushort First, ushort Last)? ColumnsOn(int row, int cols) =>
+        row < Row || row > EndRow ? null : (row == Row ? StartCol : (ushort)0, row == EndRow ? EndCol : (ushort)(cols - 1));
+}
 
 /// <summary>Finds plain-text URLs in a row of terminal text.</summary>
 public static partial class UrlDetector

@@ -67,7 +67,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Ctrl+click may do: open web/mail, *reveal* local files, reject the rest; tested). File
   links map per pane via `LinkContext` (app `ShellEnvironment`: WSL distro, MSYS root).
   `TerminalSession.LinkAt(col, row)` finds an OSC 8 hyperlink (`grid_ref_hyperlink_uri`) or
-  a URL in the row. OSC 52 goes through `ClipboardWriter`/`ClipboardReader` on the session
+  a URL in its logical line (soft-wrapped rows joined, up into the scrollback; `LinkMatch` rows
+  are viewport rows, negative above it; shares `LogicalLine` with find). OSC 52 goes through `ClipboardWriter`/`ClipboardReader` on the session
   (null = denied); both are called mid-parse under the lock and must reply synchronously.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
