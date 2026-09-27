@@ -52,8 +52,25 @@ public partial class App : Application
     internal MainWindow OpenWindow(MainWindow.WorkspaceTransfer transfer) =>
         Track(new MainWindow(_config, Keybindings.Default, transfer));
 
-    /// <summary>The workspace tab being dragged, if any (windows hand it over directly).</summary>
-    internal MainWindow.TabDrag? Drag { get; set; }
+    /// <summary>The tab being dragged, if any (windows hand it over directly).</summary>
+    internal MainWindow.TabDrag? Drag
+    {
+        get => _drag;
+        set
+        {
+            _drag = value;
+            // While a pane's tab is dragged, workspace tabs must stay put: TabView's reordering
+            // slides them apart under any drag (moving the one being rested on to switch to it)
+            // and overrides the drop's caption with its own "Move".
+            var reorder = value?.Tab is not MainWindow.TerminalTab;
+            foreach (var window in _quick != null ? _windows.Append(_quick) : _windows)
+            {
+                window.SetTabReordering(reorder);
+            }
+        }
+    }
+
+    private MainWindow.TabDrag? _drag;
 
     /// <summary>Whether a screen point is inside one of Phosphor's visible windows.</summary>
     internal bool IsOverWindow(Windows.Graphics.PointInt32 point)

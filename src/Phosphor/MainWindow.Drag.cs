@@ -161,6 +161,15 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>Lets workspace tabs be reordered by dragging (off while a pane's tab is dragged; see App.Drag).</summary>
+    internal void SetTabReordering(bool on)
+    {
+        if (Tabs.CanReorderTabs != on)
+        {
+            Tabs.CanReorderTabs = on;
+        }
+    }
+
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _springTimer;
     private TabViewItem? _springTarget;
     private long _springSeen;
