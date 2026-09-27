@@ -209,6 +209,11 @@ and read state after the write (see `_titleDirty`).
   the user's choice, matching File Explorer (short buttons, tabs on the strip's bottom edge).
   Tall (48 px) hung over the terminal; Tall + a 48 px strip was tried and reverted at the user's
   request. Don't describe other apps' UI from memory — ask for or check a screenshot.
+- The title bar's empty area (`DragRegion`, via `SetTitleBar`) is caption (non-client): Windows
+  refuses drag-and-drop there (the user saw the "not allowed" cursor). It can't be released
+  temporarily: `InputNonClientPointerSource` Clear/SetRegionRects(Caption) and
+  `SetTitleBar(0x0 element)` all left the caption rect in place (verified with GetRegionRects
+  and WM_NCHITTEST). Tab drops are accepted over the tabs and +/▾ only.
 - Alt+character chords beep unless `MenuKeySuppressor` swallows WM_SYSCOMMAND/SC_KEYMENU:
   handling KeyDown doesn't stop DefWindowProc's menu-mnemonic lookup (no menu bar → beep).
   Alt+Space (system menu) and a bare Alt tap are passed through.

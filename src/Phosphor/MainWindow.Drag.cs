@@ -93,8 +93,10 @@ public sealed partial class MainWindow
         Activate();
     }
 
-    // The strip events only cover the tabs themselves; the rest of the title bar (the +/▾
-    // buttons, the empty drag area) counts too, via the window root.
+    // The strip events only cover the tabs themselves; the +/▾ buttons count too, via the window
+    // root. The empty rest of the title bar can't: it's the window's caption (drag-to-move),
+    // which Windows owns and refuses drops on, and WinUI keeps it caption even when asked not to
+    // (InputNonClientPointerSource.Clear/SetRegionRects and SetTitleBar(empty) were all tried).
 
     private void OnRootDragOver(object sender, DragEventArgs e)
     {
@@ -112,11 +114,15 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Whether a drag is over the title bar: the band as tall as the tab strip.</summary>
+    /// <summary>
+    /// Whether a drag is over the tab strip's own part of the title bar: as tall as the strip,
+    /// and left of the caption area (so no sliver of it borders a pane's "split up" zone).
+    /// </summary>
     private bool InTitleBand(DragEventArgs e)
     {
-        var bottom = DragRegion.TransformToVisual(Root).TransformPoint(new Point(0, DragRegion.ActualHeight)).Y;
-        return e.GetPosition(Root).Y <= bottom;
+        var caption = DragRegion.TransformToVisual(Root).TransformPoint(new Point(0, 0));
+        var p = e.GetPosition(Root);
+        return p.Y <= caption.Y + DragRegion.ActualHeight && p.X < caption.X;
     }
 
     /// <summary>Where a tab dropped at <paramref name="point"/> (strip coordinates) goes among the tabs.</summary>
