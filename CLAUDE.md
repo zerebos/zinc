@@ -304,6 +304,14 @@ and read state after the write (see `_titleDirty`).
   `UpdateFocusBorders` first; `DetachWorkspace` releases hosts before `Dismantle`), and
   `TerminalControl` mirrors the count and swaps in a fresh canvas if a Loaded leaves it ≤ 0.
   Out-of-order pairs (a moved pane's Unloaded after its new Loaded) are harmless.
+- **Never let a CanvasControl be freed while Win2D has it registered with a window.** Win2D
+  registers for XamlRoot.Changed on *every* Loaded and unregisters only when an Unloaded brings
+  its count to exactly 0 — not on destruction. Unbalanced events are common here (tab/pane moves),
+  so a replaced or closed canvas freed by the GC left a dangling handler: the next minimize/restore
+  hung the app (user's dump) or crashed in Microsoft.Graphics.Canvas.dll (reproduced).
+  `Terminal/CanvasLifetime.cs` creates every canvas, mirrors Win2D's count/registration, and holds
+  retired canvases until they're unregistered (logs unbalanced counts with PHOSPHOR_LOG). Repro:
+  `.scratch/tools/canvas-stress.ps1` (uses `test:gc`; `-Exe` to run another build).
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.

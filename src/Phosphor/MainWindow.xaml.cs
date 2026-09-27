@@ -896,6 +896,16 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord == "test:gc")
+            {
+                // Frees whatever is unreferenced (e.g. a retired canvas), as a later GC would.
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                Log.Write($"test {chord}: done");
+                return;
+            }
+
             if (chord.StartsWith("test:workspace-at:"))
             {
                 // "test:workspace-at:0" moves the shown workspace to drop position 0, as a drag
