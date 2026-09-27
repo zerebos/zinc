@@ -9,6 +9,9 @@ public partial class App : Application
 {
     private readonly List<MainWindow> _windows = []; // normal windows, most recently active last
     private ConfigFile _config = null!;
+
+    // One instance shared by every window and pane; a reload copies the new bindings into it.
+    private Keybindings _keybindings = null!;
     private MessageWindow? _messageWindow;
     private HotkeyListener? _hotkey;
     private GlobalHotkey? _hotkeyChord;
@@ -30,6 +33,7 @@ public partial class App : Application
         // leave it running in the tray for the quick terminal.
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
         _config = ConfigFile.Load();
+        _keybindings = _config.Keybindings;
         foreach (var warning in _config.Warnings)
         {
             Log.Write($"config: {warning}"); // shown in the window once settings reload on save
@@ -62,11 +66,11 @@ public partial class App : Application
     }
 
     internal void OpenWindow(Profile profile, string? command = null) =>
-        Track(new MainWindow(_config, Keybindings.Default, profile, command ?? ShellResolver.ForProfile(profile.Config)));
+        Track(new MainWindow(_config, _keybindings, profile, command ?? ShellResolver.ForProfile(profile.Config)));
 
     /// <summary>Opens a window for a workspace moved out of another one.</summary>
     internal MainWindow OpenWindow(MainWindow.WorkspaceTransfer transfer) =>
-        Track(new MainWindow(_config, Keybindings.Default, transfer));
+        Track(new MainWindow(_config, _keybindings, transfer));
 
     /// <summary>The tab being dragged, if any (windows hand it over directly).</summary>
     internal MainWindow.TabDrag? Drag
@@ -356,6 +360,7 @@ public partial class App : Application
 
         var hotkeyChanged = fresh.Global.QuickTerminal.Hotkey != _config.Global.QuickTerminal.Hotkey;
         _config = fresh;
+        _keybindings.CopyFrom(fresh.Keybindings);
         windows.ForEach(w => w.ApplyConfig(fresh));
         if (hotkeyChanged)
         {
@@ -413,7 +418,7 @@ public partial class App : Application
         {
             try
             {
-                var window = new MainWindow(_config, Keybindings.Default, saved);
+                var window = new MainWindow(_config, _keybindings, saved);
                 if (window.HasWorkspaces)
                 {
                     Track(window);
@@ -581,7 +586,7 @@ public partial class App : Application
         if (_quick == null)
         {
             var profile = _config.DefaultProfile;
-            _quick = new MainWindow(_config, Keybindings.Default, profile, ShellResolver.ForProfile(profile.Config), quick: true);
+            _quick = new MainWindow(_config, _keybindings, profile, ShellResolver.ForProfile(profile.Config), quick: true);
             var quick = _quick;
             _quick.Closed += (_, _) =>
             {

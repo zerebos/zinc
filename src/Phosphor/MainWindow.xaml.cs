@@ -542,7 +542,7 @@ public sealed partial class MainWindow : Window
         var group = tab.Workspace.GroupOf(pane);
         var alone = tab.Workspace.Tabs.Count() == 1;
         var menu = new MenuFlyout();
-        menu.Items.Add(Item("Close tab", "", "Ctrl+Shift+W", () => ClosePane(tab, pane)));
+        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.ClosePane), () => ClosePane(tab, pane)));
         if (group is { Tabs.Count: > 1 })
         {
             menu.Items.Add(Item("Close other tabs", null, null, () =>
@@ -828,8 +828,8 @@ public sealed partial class MainWindow : Window
             var item = new MenuFlyoutItem { Text = profile.Name, Icon = new ImageIconElement(ProfileIcons.For(profile)) };
             if (index < 9)
             {
-                // Mirrors the Ctrl+Shift+N (profile N) bindings.
-                item.KeyboardAcceleratorTextOverride = $"Ctrl+Shift+{index + 1}";
+                // Mirrors the profile bindings (Ctrl+Shift+N by default).
+                item.KeyboardAcceleratorTextOverride = ShortcutForProfile(profile, index) ?? "";
             }
 
             item.Click += (_, _) => OpenProfile(profile);
@@ -997,6 +997,14 @@ public sealed partial class MainWindow : Window
 
     // ------------------------------------------------------------- actions
 
+    /// <summary>The shortcut shown for an action in menus, from the current bindings.</summary>
+    private string? Shortcut(ActionInvocation action) => _keybindings.ChordFor(action)?.ToString();
+
+    /// <summary>A profile's shortcut: bound by id, or by its position in the menu (0-based).</summary>
+    private string? ShortcutForProfile(Profile profile, int index) =>
+        Shortcut(new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: profile.Id)) ??
+        Shortcut(new ActionInvocation(TerminalAction.NewTabFromProfile, index));
+
     private bool HandleAction(ActionInvocation invocation, WorkspaceTab tab, TerminalTab origin)
     {
         var count = Tabs.TabItems.Count;
@@ -1015,9 +1023,12 @@ public sealed partial class MainWindow : Window
                 return true;
             case TerminalAction.NewTabFromProfile:
                 var visible = _config.VisibleProfiles.ToList();
-                if (invocation.Index < visible.Count)
+                // By id ("new-tab wsl:Fedora"), or by position in the menu ("new-tab 2", Ctrl+Shift+2).
+                var chosen = invocation.Profile != null
+                    ? _config.FindProfile(invocation.Profile)
+                    : invocation.Index < visible.Count ? visible[invocation.Index] : null;
+                if (chosen is { } profile)
                 {
-                    var profile = visible[invocation.Index];
                     if (tabGroup != null)
                     {
                         NewTabInGroup(tab, tabGroup, profile);
@@ -1084,6 +1095,12 @@ public sealed partial class MainWindow : Window
                     FocusActive(tab);
                 }
 
+                return true;
+            case TerminalAction.ReloadConfig:
+                App.Instance.ReloadConfig();
+                return true;
+            case TerminalAction.Quit:
+                App.Instance.Quit();
                 return true;
             case TerminalAction.ResizePane:
                 if (tab.Workspace.GroupOf(origin) is { } group &&

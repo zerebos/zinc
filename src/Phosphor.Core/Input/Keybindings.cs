@@ -49,10 +49,19 @@ public enum TerminalAction
 
     /// <summary>New workspace (title-bar tab) with the default profile.</summary>
     NewWorkspace,
+
+    /// <summary>Read config.toml again.</summary>
+    ReloadConfig,
+
+    /// <summary>Close every window and exit.</summary>
+    Quit,
 }
 
-/// <summary>An action plus its argument (a tab/profile index or a pane direction), as bound to a key.</summary>
-public readonly record struct ActionInvocation(TerminalAction Action, int Index = 0, PaneDirection Direction = default)
+/// <summary>
+/// An action plus its argument (a tab/profile index, a pane direction, or a profile id), as bound
+/// to a key. <see cref="Actions"/> reads and writes it as text ("split right").
+/// </summary>
+public readonly record struct ActionInvocation(TerminalAction Action, int Index = 0, PaneDirection Direction = default, string? Profile = null)
 {
     public static implicit operator ActionInvocation(TerminalAction action) => new(action);
 }
@@ -164,15 +173,101 @@ public sealed class Keybindings
 
     public static Keybindings Default { get; } = CreateDefault();
 
-    public void Bind(string chord, ActionInvocation action)
+    public void Bind(string chord, ActionInvocation action) => Bind(KeyChord.Parse(chord), action);
+
+    public void Bind(KeyChord chord, ActionInvocation action)
     {
-        var parsed = KeyChord.Parse(chord);
-        if (!_map.ContainsKey(parsed))
+        if (!_map.ContainsKey(chord))
         {
-            _order.Add(parsed);
+            _order.Add(chord);
         }
 
-        _map[parsed] = action;
+        _map[chord] = action;
+    }
+
+    public void Unbind(KeyChord chord)
+    {
+        if (_map.Remove(chord))
+        {
+            _order.Remove(chord);
+        }
+    }
+
+    /// <summary>Every binding, in binding order.</summary>
+    public IEnumerable<(KeyChord Chord, ActionInvocation Action)> All => _order.Select(c => (c, _map[c]));
+
+    public Keybindings Clone()
+    {
+        var copy = new Keybindings();
+        copy.CopyFrom(this);
+        return copy;
+    }
+
+    /// <summary>
+    /// Takes <paramref name="other"/>'s bindings in place (a config reload): every window and
+    /// pane holds this same instance, so they all see the change.
+    /// </summary>
+    public void CopyFrom(Keybindings other)
+    {
+        _map.Clear();
+        _order.Clear();
+        foreach (var (chord, action) in other.All)
+        {
+            Bind(chord, action);
+        }
+    }
+
+    /// <summary>
+    /// The defaults with a <c>[keys]</c> table on top: each entry binds a chord to an action
+    /// string (<see cref="Actions.Parse"/>), or unbinds it with "none". Problems go to
+    /// <paramref name="warnings"/> prefixed with the entry's location; the entry is skipped.
+    /// </summary>
+    public static Keybindings Configure(IEnumerable<(string Chord, string Action, string Where)> entries, List<string> warnings)
+    {
+        var bindings = Default.Clone();
+        var seen = new Dictionary<KeyChord, string>();
+        foreach (var (chordText, actionText, where) in entries)
+        {
+            if (chordText.Contains('>'))
+            {
+                warnings.Add($"{where}: key sequences like '{chordText}' aren't supported yet");
+                continue;
+            }
+
+            KeyChord chord;
+            try
+            {
+                chord = KeyChord.Parse(chordText);
+            }
+            catch (FormatException ex)
+            {
+                warnings.Add($"{where}: {ex.Message}");
+                continue;
+            }
+
+            // "ctrl+shift+c" and "shift+ctrl+c" are different TOML keys but one chord.
+            if (seen.TryGetValue(chord, out var first))
+            {
+                warnings.Add($"{where}: {chord} is already bound ({first})");
+                continue;
+            }
+
+            seen[chord] = where;
+            if (actionText.Trim().Equals(Actions.None, StringComparison.OrdinalIgnoreCase))
+            {
+                bindings.Unbind(chord);
+            }
+            else if (Actions.Parse(actionText, out var error) is { } action)
+            {
+                bindings.Bind(chord, action);
+            }
+            else
+            {
+                warnings.Add($"{where}: {error}");
+            }
+        }
+
+        return bindings;
     }
 
     public bool TryGet(KeyChord chord, out ActionInvocation action) => _map.TryGetValue(chord, out action);

@@ -63,12 +63,17 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Ghostty-style key — the TOML reader maps each `[section] key` onto it, and scheme files are
   read through it), `ConfigFile.cs` (Tomlyn syntax tree → flat entries with file:line →
   global settings, `Profile(Id, Name, Config, Hidden)`s, warnings; includes; themes;
-  `[keys]`/`[discover]` reserved for keybindings and discovery),
+  `[keys]` → Keybindings.Configure; `[discover]` reserved for profile discovery),
   `ShellResolver.cs` (`Resolve` for the first tab: args > PHOSPHOR_SHELL > profile;
   `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
 - `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
-  defaults follow Windows Terminal. New actions go here, handled by whoever owns them.
+  defaults follow Windows Terminal; `Configure` applies config's `[keys]` on top; `CopyFrom`
+  updates the one instance App shares with every window and pane (live reload).
+  `Input/Actions.cs` — the action registry: names/args as text ("split right", "new-tab
+  wsl:Fedora"), palette titles. **A new action needs an entry there (and the README table:
+  a test checks it), plus a handler** in TerminalControl.RunAction (pane) or
+  MainWindow.HandleAction (window).
 - `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
 - Kitty graphics: `Terminal/KittyImages.cs` (the process-wide PNG decoder libghostty calls —
   WIC via WinRT, blocking is fine on the MTA reader thread; premultiplied RGBA conversion),

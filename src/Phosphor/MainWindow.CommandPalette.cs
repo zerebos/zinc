@@ -213,17 +213,18 @@ public sealed partial class MainWindow
 
         string? Keys(ActionInvocation action) => _keybindings.ChordFor(action)?.ToString();
 
-        void Action(string title, ActionInvocation action) =>
-            commands.Add(new PaletteCommand(title, Keys(action), () => pane.Invoke(action)));
+        // Titles come from the action registry, shortcuts from the current bindings.
+        void Action(ActionInvocation action) =>
+            commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => pane.Invoke(action)));
 
         void Custom(string title, Action run, string? keys = null) =>
             commands.Add(new PaletteCommand(title, keys, run));
 
         // Tabs (terminals), workspaces (title-bar tabs) and windows.
-        Action("New tab", TerminalAction.NewTab);
-        Action("New workspace", TerminalAction.NewWorkspace);
-        Action("Duplicate tab", TerminalAction.DuplicateTab);
-        Action("Close tab", TerminalAction.ClosePane);
+        Action(TerminalAction.NewTab);
+        Action(TerminalAction.NewWorkspace);
+        Action(TerminalAction.DuplicateTab);
+        Action(TerminalAction.ClosePane);
         Custom("Close workspace", () => CloseTab(tab));
         Custom("Move workspace to new window", () => MoveToNewWindow(tab));
         if (tab.Workspace.Tabs.Count() > 1)
@@ -240,39 +241,39 @@ public sealed partial class MainWindow
 
         Custom("Close other workspaces", () => CloseTabs(AllTabs().Where(t => t != tab)));
         Custom("Close workspaces to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
-        Action("Next tab", TerminalAction.NextTab);
-        Action("Previous tab", TerminalAction.PreviousTab);
+        Action(TerminalAction.NextTab);
+        Action(TerminalAction.PreviousTab);
         Custom("Rename workspace…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));
-        Action("New window", TerminalAction.NewWindow);
-        Custom("Quit Phosphor", App.Instance.Quit, null);
-        Custom("Reload config", App.Instance.ReloadConfig, null);
+        Action(TerminalAction.NewWindow);
+        Action(TerminalAction.Quit);
+        Action(TerminalAction.ReloadConfig);
 
         // Panes.
-        Action("Split right", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
-        Action("Split down", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
-        Action("Duplicate pane", TerminalAction.DuplicatePane);
+        Action(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
+        Action(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
+        Action(TerminalAction.DuplicatePane);
         foreach (var (name, direction) in new[]
                  {
                      ("left", PaneDirection.Left), ("right", PaneDirection.Right),
                      ("up", PaneDirection.Up), ("down", PaneDirection.Down),
                  })
         {
-            Action($"Focus pane {name}", new ActionInvocation(TerminalAction.MoveFocus, Direction: direction));
-            Action($"Resize pane {name}", new ActionInvocation(TerminalAction.ResizePane, Direction: direction));
+            Action(new ActionInvocation(TerminalAction.MoveFocus, Direction: direction));
+            Action(new ActionInvocation(TerminalAction.ResizePane, Direction: direction));
         }
 
         // The terminal.
-        Action("Copy", TerminalAction.Copy);
-        Action("Paste", TerminalAction.Paste);
-        Action("Increase font size", TerminalAction.FontSizeIncrease);
-        Action("Decrease font size", TerminalAction.FontSizeDecrease);
-        Action("Reset font size", TerminalAction.FontSizeReset);
-        Action("Find", TerminalAction.Find);
-        Action("Scroll to top", TerminalAction.ScrollToTop);
-        Action("Scroll to bottom", TerminalAction.ScrollToBottom);
-        Action("Scroll page up", TerminalAction.ScrollPageUp);
-        Action("Scroll page down", TerminalAction.ScrollPageDown);
+        Action(TerminalAction.Copy);
+        Action(TerminalAction.Paste);
+        Action(TerminalAction.FontSizeIncrease);
+        Action(TerminalAction.FontSizeDecrease);
+        Action(TerminalAction.FontSizeReset);
+        Action(TerminalAction.Find);
+        Action(TerminalAction.ScrollToTop);
+        Action(TerminalAction.ScrollToBottom);
+        Action(TerminalAction.ScrollPageUp);
+        Action(TerminalAction.ScrollPageDown);
 
         // Profiles: open as a tab (in this pane, with tab groups), a workspace, a split either way, or a window.
         var group = _config.Global.TabGroups ? tab.Workspace.GroupOf(tab.Active) : null;
@@ -285,11 +286,11 @@ public sealed partial class MainWindow
             if (group != null)
             {
                 Custom($"New tab: {profile.Name}", () => NewTabInGroup(tab, group, profile, command, dir),
-                    Keys(new ActionInvocation(TerminalAction.NewTabFromProfile, i)));
+                    ShortcutForProfile(profile, i));
             }
 
             Custom($"New workspace: {profile.Name}", () => OpenTab(profile, command, dir),
-                group == null ? Keys(new ActionInvocation(TerminalAction.NewTabFromProfile, i)) : null);
+                group == null ? ShortcutForProfile(profile, i) : null);
             Custom($"Split right: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Right, profile, command, dir));
             Custom($"Split down: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Down, profile, command, dir));
             Custom($"New window: {profile.Name}", () => App.Instance.OpenWindow(profile));

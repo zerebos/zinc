@@ -46,9 +46,9 @@ public sealed partial class MainWindow
             OpenTab(tab.Active.Profile, tab.Active.Command, tab.Active.WorkingDirectory)));
 
         var split = new MenuFlyoutSubItem { Text = "Split pane", Icon = Glyph("") };
-        split.Items.Add(Item("Split right", null, "Alt+Shift+Plus", () => SplitFocused(tab, PaneDirection.Right)));
-        split.Items.Add(Item("Split down", null, "Alt+Shift+Minus", () => SplitFocused(tab, PaneDirection.Down)));
-        split.Items.Add(Item("Duplicate pane", null, "Alt+Shift+D", () =>
+        split.Items.Add(Item("Split right", null, Shortcut(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)), () => SplitFocused(tab, PaneDirection.Right)));
+        split.Items.Add(Item("Split down", null, Shortcut(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down)), () => SplitFocused(tab, PaneDirection.Down)));
+        split.Items.Add(Item("Duplicate pane", null, Shortcut(TerminalAction.DuplicatePane), () =>
             HandleAction(new ActionInvocation(TerminalAction.DuplicatePane), tab, tab.Active)));
         split.Items.Add(new MenuFlyoutSeparator());
         split.Items.Add(Item("Move pane to new workspace", null, null, () => MovePaneToNewTab(tab, tab.Active)));

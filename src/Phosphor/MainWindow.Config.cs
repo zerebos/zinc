@@ -48,6 +48,13 @@ public sealed partial class MainWindow
             UpdateFocusBorders(tab);
             UpdateTitle(tab);
             ApplyTabBackground(tab, force: true);
+
+            // Its menu shows shortcuts, which may have changed.
+            tab.Item.ContextFlyout = BuildTabMenu(tab);
+            if (_workspaceList?.ElementFor(tab) is { } listItem)
+            {
+                listItem.ContextFlyout = tab.Item.ContextFlyout;
+            }
         }
 
         RefreshWorkspaceList();

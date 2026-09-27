@@ -268,6 +268,51 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Shift` + mouse | Bypass app mouse reporting to select text |
 | `Ctrl` + hover / click | Underline / open the link under the pointer |
 
+### Changing keys
+
+The table above is the default set (Windows Terminal's). A `[keys]` table in the config changes
+it: each line binds a key to an action, and `"none"` removes a default. Changes apply when the
+file is saved, and the command palette and menus show your keys.
+
+```toml
+[keys]
+"ctrl+shift+w" = "none"               # free it for something else
+"ctrl+w" = "close-tab"
+"alt+shift+plus" = "split down"
+"ctrl+shift+1" = "new-tab wsl:Fedora" # a profile by id (or by menu position: "new-tab 1")
+"ctrl+alt+r" = "reload-config"
+```
+
+Keys are modifiers (`ctrl`, `alt`, `shift`) plus one key: a letter or digit, `f1`–`f24`,
+`plus`, `minus`, `grave`, `tab`, `enter`, `space`, `esc`, `backspace`, `insert`, `delete`,
+`home`, `end`, `pgup`, `pgdn`, arrows (`up` …), `numpad0`–`numpad9`, `numpad_plus`,
+`numpad_minus`. Sequences like tmux's (`"ctrl+a>c"`) are reserved for later. A key bound twice
+(e.g. `ctrl+shift+c` and `shift+ctrl+c`), an unknown key or an unknown action is reported with
+its line, and the rest still applies.
+
+| Action | What it does |
+| --- | --- |
+| `copy` | Copy the selection. `copy if-selection` lets the key through to the app when nothing is selected (the default `Ctrl+C`). |
+| `paste` | Paste the clipboard. |
+| `find` | Open the find box. |
+| `increase-font-size`, `decrease-font-size`, `reset-font-size` | Zoom in, out, or back to the configured size. |
+| `scroll-page-up`, `scroll-page-down`, `scroll-to-top`, `scroll-to-bottom` | Scroll the scrollback. |
+| `new-tab` | A new tab (in the focused pane, with tab groups). `new-tab <profile>`: that profile, by id or menu position. |
+| `new-workspace` | A new workspace with the default profile. |
+| `new-window` | A new window with the default profile. |
+| `duplicate-tab` | The focused tab's command again, next to it. |
+| `close-tab` | Close the focused tab (its pane goes with its last tab). |
+| `next-tab`, `previous-tab` | The pane's next or previous tab; with one tab there, the next or previous workspace. |
+| `go-to-workspace <n>` | Show workspace n (from 1), or `go-to-workspace last`. |
+| `split <direction>` | Split the focused pane: `right`, `down`, `left` or `up`. |
+| `duplicate-pane` | Split, running the focused tab's command again. |
+| `focus <direction>` | Focus the neighboring pane. |
+| `resize <direction>` | Move the focused pane's divider. |
+| `profile-menu` | Open the ▾ menu of profiles. |
+| `command-palette` | Open the command palette. |
+| `reload-config` | Read the config again. |
+| `quit` | Close every window and exit. |
+
 Links are OSC 8 hyperlinks (e.g. `ls --hyperlink`) and plain `http(s)`,
 `ftp`, `mailto` and `file` URLs in the text. Hovering a hyperlink with Ctrl shows its
 target in a tooltip. Web and mail links open in their default app. `file:` links are

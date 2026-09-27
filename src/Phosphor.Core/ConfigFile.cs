@@ -1,4 +1,5 @@
 using System.Globalization;
+using Phosphor.Input;
 using Tomlyn.Parsing;
 using Tomlyn.Syntax;
 
@@ -34,8 +35,9 @@ public sealed record Profile(string Id, string Name, Config Config, bool Hidden 
 public sealed class ConfigFile
 {
     private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings,
-        bool hasErrors, string path)
+        bool hasErrors, string path, Keybindings keybindings)
     {
+        Keybindings = keybindings;
         Global = global;
         Profiles = profiles;
         DefaultProfile = defaultProfile;
@@ -49,6 +51,9 @@ public sealed class ConfigFile
     /// keeps the settings in force rather than apply a half-read file (a save mid-edit).
     /// </summary>
     public bool HasErrors { get; }
+
+    /// <summary>The Windows Terminal defaults with the <c>[keys]</c> table applied.</summary>
+    public Keybindings Keybindings { get; }
 
     /// <summary>The file these settings came from.</summary>
     public string Path { get; }
@@ -112,7 +117,7 @@ public sealed class ConfigFile
     private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "quick-terminal"];
 
     /// <summary>Sections for later stages: accepted without warnings.</summary>
-    private static readonly HashSet<string> Reserved = ["keys", "discover"];
+    private static readonly HashSet<string> Reserved = ["discover"];
 
     private sealed class Reader(string mainPath, string bundledThemes)
     {
@@ -275,6 +280,7 @@ public sealed class ConfigFile
             var global = new Config();
             var profileEntries = new Dictionary<string, List<Entry>>();
             var profileOrder = new List<string>();
+            var keys = new List<(string Chord, string Action, string Where)>();
 
             foreach (var e in _entries)
             {
@@ -299,6 +305,20 @@ public sealed class ConfigFile
                         }
 
                         list.Add(e with { Path = e.Path.Skip(2).ToList() });
+                        break;
+                    case ["keys", var chord]:
+                        if (e.Value is string action)
+                        {
+                            keys.Add((chord, action, e.Where));
+                        }
+                        else
+                        {
+                            _warnings.Add($"{e.Where}: a key's action is text, like \"split right\" or \"none\"");
+                        }
+
+                        break;
+                    case ["keys", ..]:
+                        _warnings.Add($"{e.Where}: put a chord in quotes: \"{string.Join('.', e.Path.Skip(1))}\" = ...");
                         break;
                     case [var section, ..] when Reserved.Contains(section):
                         break;
@@ -351,7 +371,8 @@ public sealed class ConfigFile
                 _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn't a profile; using '{defaultProfile.Id}'");
             }
 
-            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath);
+            var keybindings = Keybindings.Configure(keys, _warnings);
+            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings);
         }
 
         /// <summary>Applies grouped settings: a color theme first, so the colors written next to it override it.</summary>
