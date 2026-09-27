@@ -37,6 +37,13 @@ public sealed partial class MainWindow
 
         App.Instance.Drag = null;
         GetCursorPos(out var cursor);
+        // TabView reports any unaccepted drop as "outside", including over a pane's middle or
+        // this window's own content. Only a drop outside every Phosphor window tears the tab off.
+        if (IsOverOwnWindow(cursor))
+        {
+            return;
+        }
+
         var window = App.Instance.OpenWindow(DetachWorkspace(tab));
         // Put the window under the pointer, roughly where its tab would be.
         window.AppWindow.Move(new PointInt32(cursor.X - 120, cursor.Y - 20));
@@ -194,4 +201,16 @@ public sealed partial class MainWindow
     }
 
     private void HideDropPreview() => DropPreview.Visibility = Visibility.Collapsed;
+
+    private static bool IsOverOwnWindow(CursorPoint cursor)
+    {
+        var hwnd = WindowFromPoint(cursor);
+        return hwnd != 0 && GetWindowThreadProcessId(hwnd, out var pid) != 0 && pid == (uint)Environment.ProcessId;
+    }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint WindowFromPoint(CursorPoint point);
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial uint GetWindowThreadProcessId(nint hwnd, out uint processId);
 }
