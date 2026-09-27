@@ -1,25 +1,37 @@
-using System.Text.RegularExpressions;
+using System.Globalization;
+using Tomlyn.Parsing;
+using Tomlyn.Syntax;
 
 namespace Phosphor;
 
-/// <summary>A named set of settings: the global settings with the section's lines applied on top.</summary>
-public sealed record Profile(string Name, Config Config);
+/// <summary>
+/// A named set of settings: the global settings with the profile's own on top. <see cref="Id"/>
+/// is what keys, the default profile and saved sessions refer to; <see cref="Name"/> is shown.
+/// </summary>
+public sealed record Profile(string Id, string Name, Config Config, bool Hidden = false);
 
 /// <summary>
-/// The config file: global <c>key = value</c> lines, then optional profile sections.
+/// The config file, <c>%APPDATA%\Phosphor\config.toml</c>: settings grouped into sections,
+/// profiles that override some of them, and named color schemes from the themes folders.
 /// <code>
-/// font-family = JetBrainsMono NF
-/// default-profile = Fedora
+/// default-profile = "fedora"
 ///
-/// [profile "Fedora"]
-/// command = wsl.exe -d Fedora
-/// font-size = 11
+/// [font]
+/// family = "JetBrainsMono NF"
+/// size = 11
+///
+/// [colors]
+/// theme = "Alacritty"
+///
+/// [profile.fedora]
+/// name = "Fedora"
+/// command = 'wsl.exe -d Fedora'
+/// colors.theme = "0x96f"
 /// </code>
-/// Global lines may appear anywhere outside a section and apply to every profile;
-/// section lines override them for that profile only. Interim format: a Phosphor-specific
-/// format (possibly with profiles in separate files) is planned.
+/// Problems (unknown keys, bad values, TOML errors) become <see cref="Warnings"/> naming the
+/// file and line; everything else still applies.
 /// </summary>
-public sealed partial class ConfigFile
+public sealed class ConfigFile
 {
     private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings)
     {
@@ -29,134 +41,480 @@ public sealed partial class ConfigFile
         Warnings = warnings;
     }
 
-    /// <summary>Settings outside any profile section.</summary>
+    /// <summary>Settings outside any profile.</summary>
     public Config Global { get; }
 
-    /// <summary>Profiles in file order; never empty (an implicit "Default" profile if none are defined).</summary>
+    /// <summary>Profiles in file order, hidden ones included; never empty (a "Default" profile if none are defined).</summary>
     public IReadOnlyList<Profile> Profiles { get; }
+
+    /// <summary>Profiles offered in menus: <see cref="Profiles"/> without the hidden ones.</summary>
+    public IEnumerable<Profile> VisibleProfiles => Profiles.Where(p => !p.Hidden);
 
     public Profile DefaultProfile { get; }
 
-    /// <summary>Problems found while parsing, as "config:LINE: message".</summary>
+    /// <summary>Problems found while reading, as "FILE:LINE: message".</summary>
     public IReadOnlyList<string> Warnings { get; }
 
+    /// <summary>The profile with id <paramref name="id"/>, or (for older saved sessions) with that display name.</summary>
+    public Profile? FindProfile(string id) =>
+        Profiles.FirstOrDefault(p => p.Id == id) ?? Profiles.FirstOrDefault(p => p.Name == id);
+
+    public static string DefaultPath { get; } =
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phosphor", "config.toml");
+
+    /// <summary>The color schemes that ship with Phosphor (Themes\ next to the executable).</summary>
+    public static string BundledThemesDirectory => System.IO.Path.Combine(AppContext.BaseDirectory, "Themes");
+
+    /// <summary>Reads the config at <paramref name="path"/> (default: PHOSPHOR_CONFIG, else <see cref="DefaultPath"/>).</summary>
     public static ConfigFile Load(string? path = null)
     {
-        path ??= Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : Config.DefaultPath;
-        return Parse(File.Exists(path) ? File.ReadAllLines(path) : []);
+        path ??= Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
+        path = System.IO.Path.GetFullPath(path);
+        var text = File.Exists(path) ? File.ReadAllText(path) : "";
+        return Parse(text, path);
     }
 
-    public static ConfigFile Parse(IReadOnlyList<string> lines)
+    /// <summary>
+    /// Reads config text. <paramref name="path"/> names it in warnings and anchors <c>include</c>
+    /// and the user's themes folder (next to it); <paramref name="bundledThemes"/> is searched after.
+    /// </summary>
+    public static ConfigFile Parse(string text, string path = "config.toml", string? bundledThemes = null)
     {
-        var warnings = new List<string>();
-        var globalLines = new List<(int Number, string Key, string Value)>();
-        var sections = new List<(string Name, List<(int Number, string Key, string Value)> Lines)>();
-        string? defaultName = null;
+        var reader = new Reader(path, bundledThemes ?? BundledThemesDirectory);
+        reader.Read(text, path, depth: 0);
+        return reader.Build();
+    }
 
-        for (var i = 0; i < lines.Count; i++)
+    // ------------------------------------------------------------------ reading
+
+    /// <summary>One setting as written: its full key path, its value, and where it is.</summary>
+    private sealed record Entry(IReadOnlyList<string> Path, object Value, string File, int Line)
+    {
+        public string Where => $"{System.IO.Path.GetFileName(File)}:{Line}";
+        public string Key => string.Join('.', Path);
+    }
+
+    /// <summary>The sections a profile may override; the rest belong to the app.</summary>
+    private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal"];
+
+    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "quick-terminal"];
+
+    /// <summary>Sections for later stages: accepted without warnings.</summary>
+    private static readonly HashSet<string> Reserved = ["keys", "discover"];
+
+    private sealed class Reader(string mainPath, string bundledThemes)
+    {
+        private readonly List<Entry> _entries = [];
+        private readonly List<string> _warnings = [];
+        private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
+
+        public void Read(string text, string file, int depth)
         {
-            var number = i + 1;
-            var line = lines[i].Trim();
-            if (line.Length == 0 || line.StartsWith('#'))
+            if (!_files.Add(System.IO.Path.GetFullPath(file)))
             {
-                continue;
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}: included more than once; skipped");
+                return;
             }
 
-            if (line.StartsWith('['))
+            var doc = SyntaxParser.Parse(text, file);
+            foreach (var d in doc.Diagnostics)
             {
-                var header = SectionHeader().Match(line);
-                if (!header.Success)
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{d.Span.Start.Line + 1}: {d.Message}");
+            }
+
+            var entries = new List<Entry>();
+            foreach (var kv in doc.KeyValues)
+            {
+                Flatten([], kv, file, entries);
+            }
+
+            foreach (var table in doc.Tables)
+            {
+                if (table is not TableSyntax { Name: { } name } t)
                 {
-                    warnings.Add($"config:{number}: expected [profile \"Name\"]");
-                    // Skip the malformed section's lines rather than applying them globally.
-                    sections.Add(("", []));
+                    _warnings.Add($"{System.IO.Path.GetFileName(file)}:{table.Span.Start.Line + 1}: arrays of tables ([[...]]) aren't used by Phosphor");
                     continue;
                 }
 
-                var name = header.Groups["quoted"].Success ? header.Groups["quoted"].Value : header.Groups["bare"].Value;
-                if (sections.Any(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                var prefix = KeyParts(name);
+                foreach (var kv in t.Items)
                 {
-                    warnings.Add($"config:{number}: duplicate profile \"{name}\"; later sections are ignored");
-                    sections.Add(("", []));
+                    Flatten(prefix, kv, file, entries);
+                }
+            }
+
+            // Included files first: what includes them wins.
+            foreach (var include in entries.Where(e => e.Path is ["include"]))
+            {
+                foreach (var pattern in include.Value is List<object> list ? list : [include.Value])
+                {
+                    if (pattern is not string p)
+                    {
+                        _warnings.Add($"{include.Where}: include takes file paths");
+                        continue;
+                    }
+
+                    foreach (var included in Expand(p, file, include))
+                    {
+                        if (depth >= 8)
+                        {
+                            _warnings.Add($"{include.Where}: includes nested too deeply");
+                            break;
+                        }
+
+                        Read(File.ReadAllText(included), included, depth + 1);
+                    }
+                }
+            }
+
+            _entries.AddRange(entries.Where(e => e.Path is not ["include"]));
+        }
+
+        /// <summary>Files an include pattern names, relative to the including file; <c>*</c> matches within a folder.</summary>
+        private IEnumerable<string> Expand(string pattern, string from, Entry at)
+        {
+            var baseDir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(from)) ?? ".";
+            var full = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, Environment.ExpandEnvironmentVariables(pattern)));
+            var dir = System.IO.Path.GetDirectoryName(full)!;
+            var name = System.IO.Path.GetFileName(full);
+            if (name.Contains('*') || name.Contains('?'))
+            {
+                return Directory.Exists(dir) ? Directory.GetFiles(dir, name).Order(StringComparer.OrdinalIgnoreCase) : [];
+            }
+
+            if (!File.Exists(full))
+            {
+                _warnings.Add($"{at.Where}: can't find included file {pattern}");
+                return [];
+            }
+
+            return [full];
+        }
+
+        private void Flatten(IReadOnlyList<string> prefix, KeyValueSyntax kv, string file, List<Entry> into)
+        {
+            if (kv.Key is not { } key || kv.Value is not { } value)
+            {
+                return;
+            }
+
+            var path = prefix.Concat(KeyParts(key)).ToList();
+            var line = kv.Span.Start.Line + 1;
+            if (value is InlineTableSyntax inline)
+            {
+                foreach (var item in inline.Items)
+                {
+                    if (item.KeyValue is { } inner)
+                    {
+                        Flatten(path, inner, file, into);
+                    }
+                }
+
+                return;
+            }
+
+            if (ToValue(value) is { } v)
+            {
+                into.Add(new Entry(path, v, file, line));
+            }
+            else
+            {
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{line}: unsupported value for {string.Join('.', path)}");
+            }
+        }
+
+        private static List<string> KeyParts(KeySyntax key)
+        {
+            var parts = new List<string> { KeyText(key.Key) };
+            foreach (var dot in key.DotKeys)
+            {
+                parts.Add(KeyText(dot.Key));
+            }
+
+            return parts;
+        }
+
+        private static string KeyText(BareKeyOrStringValueSyntax? key) => key switch
+        {
+            BareKeySyntax bare => bare.Key?.Text ?? "",
+            StringValueSyntax s => s.Value ?? "",
+            _ => "",
+        };
+
+        private static object? ToValue(ValueSyntax value) => value switch
+        {
+            StringValueSyntax s => s.Value,
+            IntegerValueSyntax i => i.Value,
+            FloatValueSyntax f => f.Value,
+            BooleanValueSyntax b => b.Value,
+            ArraySyntax a => a.Items.Select(item => item.Value is { } v ? ToValue(v) : null).ToList() is var items && items.All(x => x != null)
+                ? items.Cast<object>().ToList()
+                : null,
+            _ => null,
+        };
+
+        // --------------------------------------------------------- interpreting
+
+        public ConfigFile Build()
+        {
+            string? defaultId = null;
+            var global = new Config();
+            var profileEntries = new Dictionary<string, List<Entry>>();
+            var profileOrder = new List<string>();
+
+            foreach (var e in _entries)
+            {
+                switch (e.Path)
+                {
+                    case ["default-profile"]:
+                        if (e.Value is string chosen)
+                        {
+                            defaultId = chosen;
+                        }
+                        else
+                        {
+                            _warnings.Add($"{e.Where}: default-profile takes a profile id");
+                        }
+
+                        break;
+                    case ["profile", var profileId, _, ..]:
+                        if (!profileEntries.TryGetValue(profileId, out var list))
+                        {
+                            profileEntries[profileId] = list = [];
+                            profileOrder.Add(profileId);
+                        }
+
+                        list.Add(e with { Path = e.Path.Skip(2).ToList() });
+                        break;
+                    case [var section, ..] when Reserved.Contains(section):
+                        break;
+                    case [var group, _, ..] when Groups.Contains(group):
+                        break; // applied below, themes first
+                    default:
+                        _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
+                        break;
+                }
+            }
+
+            global = ApplyGroups(global, _entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: false);
+
+            var profiles = new List<Profile>();
+            foreach (var id in profileOrder)
+            {
+                var entries = profileEntries[id];
+                string name = id;
+                var hidden = false;
+                var config = global;
+                foreach (var e in entries)
+                {
+                    switch (e.Path)
+                    {
+                        case ["name"] when e.Value is string n && n.Length > 0: name = n; break;
+                        case ["hidden"] when e.Value is bool h: hidden = h; break;
+                        case ["command" or "working-directory" or "icon"] when e.Value is string s && s.Length > 0:
+                            config = config.Apply(e.Path[0], s)!;
+                            break;
+                        case [var group, _, ..] when Groups.Contains(group):
+                            break;
+                        default:
+                            _warnings.Add($"{e.Where}: unknown or invalid profile setting '{e.Key}'");
+                            break;
+                    }
+                }
+
+                config = ApplyGroups(config, entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: true);
+                profiles.Add(new Profile(id, name, config, hidden));
+            }
+
+            if (profiles.Count == 0)
+            {
+                profiles.Add(new Profile("default", "Default", global));
+            }
+
+            var defaultProfile = profiles.FirstOrDefault(p => p.Id == defaultId) ?? profiles.FirstOrDefault(p => !p.Hidden) ?? profiles[0];
+            if (defaultId != null && defaultProfile.Id != defaultId)
+            {
+                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn't a profile; using '{defaultProfile.Id}'");
+            }
+
+            return new ConfigFile(global, profiles, defaultProfile, _warnings);
+        }
+
+        /// <summary>Applies grouped settings: a color theme first, so the colors written next to it override it.</summary>
+        private Config ApplyGroups(Config config, List<Entry> entries, bool inProfile)
+        {
+            foreach (var e in entries.Where(e => e.Path is ["colors", "theme"]))
+            {
+                config = e.Value is string theme ? ApplyTheme(config, theme, e) : Warn(config, e, "a theme name");
+            }
+
+            foreach (var e in entries.Where(e => e.Path is not ["colors", "theme"]))
+            {
+                if (inProfile && !ProfileGroups.Contains(e.Path[0]))
+                {
+                    _warnings.Add($"{e.Where}: [{e.Path[0]}] applies to the whole app, not to one profile");
                     continue;
                 }
 
-                sections.Add((name, []));
-                continue;
+                config = ApplySetting(config, e);
             }
 
-            var eq = line.IndexOf('=');
-            if (eq < 0)
-            {
-                warnings.Add($"config:{number}: expected 'key = value'");
-                continue;
-            }
+            return config;
+        }
 
-            var key = line[..eq].Trim();
-            var value = Config.Unquote(line[(eq + 1)..].Trim());
-            if (key == "default-profile")
+        private Config ApplySetting(Config config, Entry e)
+        {
+            // Each setting maps onto the (tested) value parsing of Config.Apply.
+            (string Key, string? Value)? legacy = e.Path switch
             {
-                if (sections.Count > 0)
+                ["font", "family"] => ("font-family", e.Value as string),
+                ["font", "size"] => ("font-size", Number(e.Value)),
+                ["colors", "background"] => ("background", e.Value as string),
+                ["colors", "foreground"] => ("foreground", e.Value as string),
+                ["colors", "cursor"] => ("cursor-color", e.Value as string),
+                ["colors", "palette", var index] => ("palette", e.Value is string c ? $"{index}={c}" : null),
+                ["terminal", "padding-x"] => ("window-padding-x", Pair(e.Value)),
+                ["terminal", "padding-y"] => ("window-padding-y", Pair(e.Value)),
+                ["terminal", "mouse-pointer"] => ("mouse-pointer", e.Value as string),
+                ["terminal", "clipboard-read"] => ("clipboard-read", Permission(e.Value)),
+                ["terminal", "clipboard-write"] => ("clipboard-write", Permission(e.Value)),
+                ["window", "workspace-tabs"] => ("workspace-tabs", e.Value as string),
+                ["window", "tab-groups"] => ("tab-groups", Bool(e.Value)),
+                ["window", "group-tab-strip"] => ("group-tab-strip", e.Value as string),
+                ["window", "unfocused-split-opacity"] => ("unfocused-split-opacity", Number(e.Value)),
+                ["window", "unfocused-split-fill"] => ("unfocused-split-fill", e.Value as string),
+                ["window", "save-state"] => ("window-save-state", e.Value is bool b ? (b ? "always" : "never") : e.Value as string),
+                ["window", "quit-after-last-window-closed"] => ("quit-after-last-window-closed", Bool(e.Value)),
+                ["quick-terminal", "position"] => ("quick-terminal-position", e.Value as string),
+                ["quick-terminal", "screen"] => ("quick-terminal-screen", e.Value as string),
+                ["quick-terminal", "size"] => ("quick-terminal-size", Pair(e.Value)),
+                ["quick-terminal", "autohide"] => ("quick-terminal-autohide", Bool(e.Value)),
+                ["quick-terminal", "hotkey"] => ("quick-terminal-hotkey", e.Value as string),
+                _ => null,
+            };
+
+            // The whole palette as an array: palette = ["#000000", "#aa0000", ...].
+            if (e.Path is ["colors", "palette"] && e.Value is List<object> colors)
+            {
+                for (var i = 0; i < colors.Count; i++)
                 {
-                    warnings.Add($"config:{number}: default-profile belongs outside profile sections");
+                    config = colors[i] is string c && config.Apply("palette", $"{i}={c}") is { } next ? next : Warn(config, e, "colors like \"#rrggbb\"");
                 }
-                else
+
+                return config;
+            }
+
+            if (legacy is not { } l)
+            {
+                _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
+                return config;
+            }
+
+            return l.Value != null && config.Apply(l.Key, l.Value) is { } applied ? applied : Warn(config, e, null);
+        }
+
+        /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
+        private Config ApplyTheme(Config config, string name, Entry at)
+        {
+            var file = FindTheme(name);
+            if (file == null)
+            {
+                _warnings.Add($"{at.Where}: no color scheme named '{name}' (looked in {ThemeFolders().Select(f => f.Folder).First()} and the bundled ones)");
+                return config;
+            }
+
+            // Ghostty's theme format (as iTerm2-Color-Schemes publishes it): key = value lines.
+            // Only colors apply; the rest (selection, cursor text...) isn't used yet.
+            foreach (var raw in File.ReadLines(file))
+            {
+                var line = raw.Trim();
+                var eq = line.IndexOf('=');
+                if (line.StartsWith('#') || eq < 1)
                 {
-                    defaultName = value;
+                    continue;
                 }
 
-                continue;
+                var key = line[..eq].Trim();
+                if (key is "background" or "foreground" or "cursor-color" or "palette" &&
+                    config.Apply(key, line[(eq + 1)..].Trim()) is { } next)
+                {
+                    config = next;
+                }
             }
 
-            (sections.Count == 0 ? globalLines : sections[^1].Lines).Add((number, key, value));
+            return config;
         }
 
-        var global = ApplyAll(new Config(), globalLines, warnings);
-        var profiles = sections
-            .Where(s => s.Name.Length > 0)
-            .Select(s => new Profile(s.Name, ApplyAll(global, s.Lines, warnings)))
-            .ToList();
-
-        if (profiles.Count == 0)
+        private string? FindTheme(string name)
         {
-            profiles.Add(new Profile("Default", global));
+            if (name.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0)
+            {
+                return null;
+            }
+
+            foreach (var (folder, _) in ThemeFolders())
+            {
+                var candidate = System.IO.Path.Combine(folder, name);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+
+                // Case-insensitive fallback (the collection's names are mixed case).
+                if (Directory.Exists(folder) &&
+                    Directory.EnumerateFiles(folder).FirstOrDefault(f => System.IO.Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase)) is { } match)
+                {
+                    return match;
+                }
+            }
+
+            return null;
         }
 
-        var defaultProfile = profiles[0];
-        if (defaultName != null)
+        private IEnumerable<(string Folder, bool User)> ThemeFolders()
         {
-            var match = profiles.FirstOrDefault(p => p.Name.Equals(defaultName, StringComparison.OrdinalIgnoreCase));
-            if (match == null)
-            {
-                warnings.Add($"config: default-profile \"{defaultName}\" does not exist; using \"{defaultProfile.Name}\"");
-            }
-            else
-            {
-                defaultProfile = match;
-            }
+            var configDir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath)) ?? ".";
+            yield return (System.IO.Path.Combine(configDir, "themes"), true);
+            yield return (bundledThemes, false);
         }
 
-        return new ConfigFile(global, profiles, defaultProfile, warnings);
+        private Config Warn(Config config, Entry e, string? expected)
+        {
+            _warnings.Add($"{e.Where}: ignored {e.Key} = {Show(e.Value)}{(expected != null ? $" (expected {expected})" : "")}");
+            return config;
+        }
+
+        private static string Show(object value) => value switch
+        {
+            string s => $"\"{s}\"",
+            bool b => b ? "true" : "false",
+            List<object> l => $"[{string.Join(", ", l.Select(Show))}]",
+            IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+            _ => value.ToString() ?? "",
+        };
+
+        private static string? Number(object value) => value is long or double
+            ? Convert.ToString(value, CultureInfo.InvariantCulture)
+            : null;
+
+        private static string? Bool(object value) => value is bool b ? (b ? "true" : "false") : null;
+
+        /// <summary>true/false or "allow"/"deny".</summary>
+        private static string? Permission(object value) => value switch
+        {
+            bool b => b ? "allow" : "deny",
+            string s => s,
+            _ => null,
+        };
+
+        /// <summary>One value or two (<c>[a, b]</c>), as Config.Apply's "a,b" form.</summary>
+        private static string? Pair(object value) => value switch
+        {
+            List<object> { Count: 1 or 2 } l when l.All(x => x is long or double or string) =>
+                string.Join(",", l.Select(x => Convert.ToString(x, CultureInfo.InvariantCulture))),
+            long or double => Convert.ToString(value, CultureInfo.InvariantCulture),
+            string s => s,
+            _ => null,
+        };
     }
-
-    private static Config ApplyAll(Config start, List<(int Number, string Key, string Value)> lines, List<string> warnings)
-    {
-        var config = start;
-        foreach (var (number, key, value) in lines)
-        {
-            if (config.Apply(key, value) is { } next)
-            {
-                config = next;
-            }
-            else
-            {
-                warnings.Add($"config:{number}: ignored '{key} = {value}'");
-            }
-        }
-
-        return config;
-    }
-
-    [GeneratedRegex("""^\[\s*profile\s+(?:"(?<quoted>[^"]+)"|(?<bare>[^\s"\]]+))\s*\]$""")]
-    private static partial Regex SectionHeader();
 }

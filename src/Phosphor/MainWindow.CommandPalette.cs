@@ -275,9 +275,10 @@ public sealed partial class MainWindow
 
         // Profiles: open as a tab (in this pane, with tab groups), a workspace, a split either way, or a window.
         var group = _config.Global.TabGroups ? tab.Workspace.GroupOf(tab.Active) : null;
-        for (var i = 0; i < _config.Profiles.Count; i++)
+        var profiles = _config.VisibleProfiles.ToList();
+        for (var i = 0; i < profiles.Count; i++)
         {
-            var profile = _config.Profiles[i];
+            var profile = profiles[i];
             var command = ShellResolver.ForProfile(profile.Config);
             var dir = profile.Config.ResolveWorkingDirectory();
             if (group != null)

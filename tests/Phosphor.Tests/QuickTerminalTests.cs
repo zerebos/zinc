@@ -90,16 +90,16 @@ public class QuickTerminalTests
     }
 
     [Fact]
-    public void ConfigKeysFollowGhostty()
+    public void ReadsTheQuickTerminalSection()
     {
         var file = ConfigFile.Parse("""
-            quick-terminal-position = center
-            quick-terminal-screen = mouse
-            quick-terminal-size = 60%,50%
-            quick-terminal-autohide = false
-            quick-terminal-hotkey = ctrl+alt+t
-            quick-terminal-position = sideways
-            """.Split('\n'));
+            [quick-terminal]
+            position = "center"
+            screen = "mouse"
+            size = ["60%", "50%"]
+            autohide = false
+            hotkey = "ctrl+alt+t"
+            """);
 
         var q = file.Global.QuickTerminal;
         Assert.Equal(QuickTerminalPosition.Center, q.Position);
@@ -108,6 +108,7 @@ public class QuickTerminalTests
         Assert.Equal(new QuickTerminalLength(50, true), q.Secondary);
         Assert.False(q.Autohide);
         Assert.Equal("ctrl+alt+t", q.Hotkey);
-        Assert.Contains(file.Warnings, w => w.Contains("sideways"));
+        Assert.Empty(file.Warnings);
+        Assert.Contains(ConfigFile.Parse("[quick-terminal]\nposition = \"sideways\"").Warnings, w => w.Contains("sideways"));
     }
 }

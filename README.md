@@ -61,82 +61,105 @@ newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundle
 
 ## Configuration
 
-`%APPDATA%\Phosphor\config` (override the path with `PHOSPHOR_CONFIG`), in Ghostty's
-syntax: one `key = value` per line, `#` comments, later lines win.
+`%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
+[TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,
+bad values, TOML mistakes) are collected as warnings naming the file and line; everything
+else still applies.
 
-```
-font-family = JetBrainsMono NF
-font-size = 11
-command = wsl.exe --cd ~
-background = #181818
-foreground = #d8d8d8
-cursor-color = #d8d8d8
-palette = 1=#AC4242
-window-padding-x = 15
-window-padding-y = 10
+```toml
+default-profile = "wsl:Fedora"
+
+[font]
+family = "JetBrainsMono NF"
+size = 11                    # points, like Ghostty and Windows Terminal
+
+[colors]
+theme = "Dracula"            # a bundled scheme, or one of yours (below)
+background = "#181818"       # individual colors override the theme
+
+[window]
+workspace-tabs = "left"
+
+[profile."wsl:Fedora"]
+name = "Fedora"
+command = 'wsl.exe -d Fedora --cd ~'
+colors.theme = "0x96f"
 ```
 
-- `font-family`: any installed monospace family; Nerd Fonts work. If it isn't
-  installed, Phosphor falls back to Cascadia Mono, then Consolas.
-- `font-size`: in points, like Ghostty and Windows Terminal; `Ctrl+0` resets to this.
-- `command`: the default command line (see below for precedence).
-- `background`, `foreground`, `cursor-color`: `#rrggbb`.
-- `palette = N=#rrggbb`: override palette entry N (0-255), one line per entry.
-- `window-padding-x`, `window-padding-y`: points; `N` or `left,right` / `top,bottom`.
-- `mouse-pointer`: `arrow` (default, like Windows Terminal) or `text` (an I-beam over text,
+Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys64\ucrt64.ico'`.
+
+**`[font]`**
+- `family`: any installed monospace family; Nerd Fonts work. If it isn't installed, Phosphor
+  falls back to Cascadia Mono, then Consolas.
+- `size`: in points; `Ctrl+0` resets to this.
+
+**`[colors]`**
+- `theme`: a color scheme by name. About 650 come with Phosphor (the
+  [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) collection);
+  your own go in `%APPDATA%\Phosphor\themes\`, one file per scheme in Ghostty's theme format
+  (`background = #181818`, `palette = 1=#AC4242`, ...), named as `theme` refers to them. Yours
+  win over bundled ones with the same name.
+- `background`, `foreground`, `cursor`: `"#rrggbb"`.
+- `palette`: an array of up to 256 colors from index 0, or single entries: `palette.1 = "#AC4242"`.
+
+**`[terminal]`**
+- `padding-x`, `padding-y`: points; one number, or `[left, right]` / `[top, bottom]`.
+- `mouse-pointer`: `"arrow"` (default, like Windows Terminal) or `"text"` (an I-beam over text,
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
-- `clipboard-write`: `allow` (default) or `deny`, for programs copying with OSC 52
-  (tmux, neovim, remote shells over ssh).
-- `clipboard-read`: `deny` (default) or `allow`, for programs reading the clipboard with
-  OSC 52. Off by default because anything running in the terminal, including a remote
-  host, could read it. Ghostty's `ask` isn't supported yet.
+- `clipboard-write`: `true` (default) or `false`, for programs copying with OSC 52 (tmux,
+  neovim, remote shells over ssh).
+- `clipboard-read`: `false` (default) or `true`, for programs reading the clipboard with
+  OSC 52. Off by default because anything running in the terminal, including a remote host,
+  could read it.
 
-These are Ghostty's key names and units, so color and font lines can be copied
-straight from a Ghostty config.
+**`[window]`**: `workspace-tabs`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
+`unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
+features they control below.
+
+**`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
+relative to this one. Settings in the including file win.
 
 ### Profiles
 
-Lines before the first section are global; each `[profile "Name"]` section inherits
-them and overrides what it sets. Profiles appear in file order.
+Each `[profile.<id>]` section is a profile, starting from the settings above and overriding
+`[font]`, `[colors]` and `[terminal]` for itself (as subsections, or dotted keys like
+`font.size = 12`). Profiles appear in the new-tab menu in file order. The id is what
+`default-profile` and saved sessions refer to, so renaming a profile (`name`) breaks nothing;
+quote ids with spaces or colons: `[profile."ssh:homelab"]`.
 
+```toml
+[profile.git-bash]
+name = "Git Bash"
+command = '"C:\Program Files\Git\bin\bash.exe" --login -i'
+working-directory = "~/dev"
+
+[profile.git-bash.font]
+size = 12
 ```
-font-family = JetBrainsMono NF
-default-profile = Fedora
 
-[profile "Fedora"]
-command = wsl.exe -d Fedora --cd ~
-icon = C:\Users\me\Pictures\fedora.png
-background = #181818
-
-[profile "Git Bash"]
-command = "C:\Program Files\Git\bin\bash.exe" --login -i
-working-directory = ~/dev
-```
-
-- `default-profile` (global only): the profile Phosphor starts with; defaults to the first.
+- `default-profile` (at the top): the profile Phosphor starts with; defaults to the first.
+- `name`: shown in menus and tabs; defaults to the id.
+- `command`: the command line; without one, PowerShell 7, else Windows PowerShell, else cmd.
 - `icon`: image shown for the profile in tabs. Without one, Phosphor picks one like Windows
   Terminal: the WSL distro's registered icon, Git for Windows' icon for Git Bash, a network
   glyph for `ssh`, else the command's executable icon.
-- `working-directory`: `~`/`home` (the default) or a path; `~/sub` and `%VARS%` expand.
-- Without any sections, the global settings act as a single "Default" profile.
-- Problems (unknown keys, bad values, duplicate profiles) are collected as warnings
-  instead of stopping Phosphor.
-
-This section syntax is an interim step; a Phosphor-specific config format is planned.
+- `working-directory`: `"~"` (the default) or a path; `~/sub` and `%VARS%` expand.
+- `hidden = true`: keeps a profile out of menus.
+- Without any profiles, the settings above act as a single "Default" profile.
 
 ### Quick terminal
 
 A global hotkey (default ``Win+` ``) summons a terminal window above other windows and
 dismisses it again, like Ghostty's quick terminal. It stays out of the taskbar
-and Alt+Tab, and it keeps its tabs while hidden. Global settings:
+and Alt+Tab, and it keeps its tabs while hidden. In `[quick-terminal]`:
 
-- `quick-terminal-hotkey`: e.g. `win+grave`, `ctrl+alt+t` (needs a modifier).
-- `quick-terminal-position`: `top` (default), `bottom`, `left`, `right`, `center`.
-- `quick-terminal-screen`: `mouse` (default; the monitor under the pointer) or `main`.
-- `quick-terminal-size`: `primary[,secondary]`, each `N%` or `Npx`. Primary is the height for
-  top/bottom and the width for left/right/center; secondary is the other side. Defaults:
-  50% for the edges, 70%,60% for center.
-- `quick-terminal-autohide`: `true` (default) hides it when it loses focus.
+- `hotkey`: e.g. `"win+grave"`, `"ctrl+alt+t"` (needs a modifier).
+- `position`: `"top"` (default), `"bottom"`, `"left"`, `"right"`, `"center"`.
+- `screen`: `"mouse"` (default; the monitor under the pointer) or `"main"`.
+- `size`: `"N%"` / `"Npx"`, or `[primary, secondary]`. Primary is the height for top/bottom and
+  the width for left/right/center; secondary is the other side. Defaults: 50% for the edges,
+  `["70%", "60%"]` for center.
+- `autohide`: `true` (default) hides it when it loses focus.
 
 If another app holds the hotkey (Windows Terminal's quake mode uses ``Win+` ``), windows
 show a notice, and Phosphor retries whenever one of its windows is activated.
@@ -154,7 +177,7 @@ Quit Phosphor is also in the command palette.
 
 When the last window closes, Phosphor keeps running in the tray while its quick terminal hotkey
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
-`quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
+In `[window]`, `quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
 ### Reopening where you left off
 
@@ -162,8 +185,8 @@ Phosphor remembers its windows: their size and place, their workspaces (titles, 
 layouts and tabs, and which were shown. Next time it starts (without a command on its command
 line), they reopen with fresh shells in the same folders. What the terminals showed isn't kept.
 The state is saved as you go (`%APPDATA%\Phosphor\session.json`), so a crash keeps it too;
-closing the last window keeps that window for next time. `window-save-state = never` turns this
-off (`default` and `always` keep it on, as in Ghostty).
+closing the last window keeps that window for next time. `save-state = "never"` in `[window]` turns this
+off (`"always"`, the default, keeps it on).
 
 A tab reopens in the folder its shell last *reported*, so the shell has to tell the terminal
 where it is (OSC 7, or OSC 9;9 / OSC 1337). Without that, tabs reopen where they first started.
@@ -280,16 +303,16 @@ of them (click to switch, middle-click or × to close, right-click to close othe
 tab to a new workspace or window, + for another tab). New tabs open in the focused pane with
 its current tab's profile; the title bar's + and ▾ open workspaces.
 
-- `tab-groups = false` (global) keeps one terminal per pane, like Windows Terminal: new tabs
+- `tab-groups = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces.
 - In a split workspace the focused pane is marked by an accent line along its top (on the shown
-  tab when the pane has a strip), and the others are dimmed. `unfocused-split-opacity` (global,
+  tab when the pane has a strip), and the others are dimmed. `unfocused-split-opacity` (in `[window]`,
   0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-split-fill`
   what they fade toward (default: each pane's background).
-- `group-tab-strip = always` (global) shows the strip on every pane, even with one tab
-  (default `auto`: only with two or more).
-- `workspace-tabs = left` (global) lists workspaces in a column on the left, under a plain
-  title bar, instead of as title-bar tabs (default `top`). The list works like the tabs: click,
+- `group-tab-strip = "always"` (in `[window]`) shows the strip on every pane, even with one tab
+  (default `"auto"`: only with two or more).
+- `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
+  title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
   close, right-click, drag to reorder or anywhere a title-bar tab can go.
 
 Right-clicking a workspace offers rename, workspace color, duplicate, split, moving it to a new

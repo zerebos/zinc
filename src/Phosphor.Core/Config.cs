@@ -23,9 +23,9 @@ public enum WorkspaceTabs
 }
 
 /// <summary>
-/// User configuration from <c>%APPDATA%\Phosphor\config</c>, in Ghostty's syntax:
-/// one <c>key = value</c> per line, <c>#</c> comments, later lines win. Keys and
-/// units follow Ghostty so lines can be copied from a Ghostty config.
+/// One resolved set of settings (the global ones, or a profile's). <see cref="ConfigFile"/>
+/// reads config.toml into it; <see cref="Apply"/> parses one value by its Ghostty-style key,
+/// which is also how color scheme files (Ghostty's theme format) are read.
 /// </summary>
 public sealed record Config
 {
@@ -105,8 +105,7 @@ public sealed record Config
     public float PaddingTop { get; init; } = 8;
     public float PaddingBottom { get; init; } = 8;
 
-    public static string DefaultPath { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phosphor", "config");
+    public static string DefaultPath => ConfigFile.DefaultPath;
 
     /// <summary>Loads the global settings (see <see cref="ConfigFile"/> for profiles).</summary>
     public static Config Load(string? path = null) => ConfigFile.Load(path).Global;
@@ -219,9 +218,6 @@ public sealed record Config
             return false;
         }
     }
-
-    internal static string Unquote(string value) =>
-        value.Length >= 2 && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
 
     private static bool TryFloat(string s, out float value) =>
         float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value);

@@ -25,10 +25,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `PHOSPHOR_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
 - `PHOSPHOR_LOG=<file>` appends diagnostics from `Log.Write` (Core). Cheap to add a line
   when something "doesn't happen" (e.g. pane lifecycle: Loaded / CreateResources / sizes).
-- Config: `%APPDATA%\Phosphor\config` (Ghostty `key = value` syntax and units — font-size and
-  padding are *points*; `Config.cs`).
-  `PHOSPHOR_CONFIG=<file>` overrides the path — use it for tests instead of editing the
-  user's real config (which sets `font-family = JetBrainsMono NF`).
+- Config: `%APPDATA%\Phosphor\config.toml` (TOML, grouped sections, `[profile.<id>]`; font
+  size and padding are *points*; README has the reference). User schemes in `themes\` next to
+  it, bundled ones (assets/themes, iTerm2-Color-Schemes' Ghostty-format files) in `Themes\`
+  next to the exe. `PHOSPHOR_CONFIG=<file>` overrides the path — use it for tests instead of
+  editing the user's real config (which sets `family = "JetBrainsMono NF"`). Schemes are
+  looked up next to *that* file, so a test config copied elsewhere needs its `themes\` too;
+  test scripts append their own `[window]` section (a TOML table can't be opened twice).
+  The old key = value `config` is no longer read (the user's was converted once, by hand).
 - Session (reopening windows): `%APPDATA%\Phosphor\session.json`, `PHOSPHOR_SESSION=<file>`
   overrides. **A run with `PHOSPHOR_CONFIG` set neither restores nor saves** unless
   `PHOSPHOR_SESSION` is also set — so test instances never touch the user's session. Launching
@@ -48,8 +52,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Terminal/TerminalSession.cs` — owns the GhosttyTerminal + encoders + ConPty; libghostty
   callbacks; `ReadScreenText()` (formatter) for tests; internal `PtyReplyObserver` test hook.
 - `Input/` — scan code → GhosttyKey map; Win32 `ToUnicodeEx` layout translation.
-- `Config.cs` (one resolved settings set; `Apply(key, value)` parses a line),
-  `ConfigFile.cs` (globals + `[profile "Name"]` sections → `Profile`s, warnings),
+- `Config.cs` (one resolved settings set; `Apply(key, value)` parses one value by its
+  Ghostty-style key — the TOML reader maps each `[section] key` onto it, and scheme files are
+  read through it), `ConfigFile.cs` (Tomlyn syntax tree → flat entries with file:line →
+  global settings, `Profile(Id, Name, Config, Hidden)`s, warnings; includes; themes;
+  `[keys]`/`[discover]` reserved for keybindings and discovery),
   `ShellResolver.cs` (`Resolve` for the first tab: args > PHOSPHOR_SHELL > profile;
   `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).

@@ -8,7 +8,7 @@ namespace Phosphor.Tests;
 
 public class ConfigTests : IDisposable
 {
-    private readonly string _path = Path.GetTempFileName();
+    private readonly string _path = Path.Combine(Path.GetTempPath(), $"phosphor-{Guid.NewGuid():N}.toml");
 
     public void Dispose() => File.Delete(_path);
 
@@ -26,41 +26,32 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void ParsesGhosttyStyleKeys()
+    public void ReadsGroupedSettings()
     {
         var config = Load("""
             # comment
-            font-family = JetBrainsMono NF
-            font-size = 13.5
-
-            command = "C:\Program Files\Git\bin\bash.exe" --login
+            [font]
+            family = "JetBrainsMono NF"
+            size = 13.5
             """);
         Assert.Equal("JetBrainsMono NF", config.FontFamily);
         Assert.Equal(13.5f, config.FontSize);
-        Assert.Equal("""C:\Program Files\Git\bin\bash.exe" --login""", config.Command![1..]);
     }
 
     [Fact]
-    public void LaterLinesWinAndBadValuesAreIgnored()
+    public void BadValuesAreIgnored()
     {
-        var config = Load("""
-            font-size = 12
-            font-size = 16
-            font-size = huge
-            font-size = -3
-            no-equals-sign
-            unknown-key = 1
-            """);
-        Assert.Equal(16f, config.FontSize);
+        Assert.Equal(Config.DefaultFontSize, Load("[font]\nsize = \"huge\"").FontSize);
+        Assert.Equal(Config.DefaultFontSize, Load("[font]\nsize = -3").FontSize);
+        Assert.Equal(12f, Load("[font]\nsize = 12\nunknown = 1").FontSize);
     }
 
     [Fact]
     public void MousePointerDefaultsToArrow()
     {
         Assert.False(Load("").TextPointer);
-        Assert.True(Load("mouse-pointer = text").TextPointer);
-        Assert.False(Load("mouse-pointer = text\nmouse-pointer = arrow").TextPointer);
-        Assert.False(Load("mouse-pointer = sparkly").TextPointer);
+        Assert.True(Load("[terminal]\nmouse-pointer = \"text\"").TextPointer);
+        Assert.False(Load("[terminal]\nmouse-pointer = \"sparkly\"").TextPointer);
     }
 
     [Fact]
@@ -68,83 +59,83 @@ public class ConfigTests : IDisposable
     {
         Assert.True(Load("").TabGroups);
         Assert.Equal(GroupTabStrip.Auto, Load("").GroupTabStrip);
-        Assert.False(Load("tab-groups = false").TabGroups);
-        Assert.Equal(GroupTabStrip.Always, Load("group-tab-strip = always").GroupTabStrip);
-        Assert.Equal(GroupTabStrip.Auto, Load("group-tab-strip = 1").GroupTabStrip); // not an enum index
-        Assert.Equal(GroupTabStrip.Auto, Load("group-tab-strip = sometimes").GroupTabStrip);
+        Assert.False(Load("[window]\ntab-groups = false").TabGroups);
+        Assert.Equal(GroupTabStrip.Always, Load("[window]\ngroup-tab-strip = \"always\"").GroupTabStrip);
+        Assert.Equal(GroupTabStrip.Auto, Load("[window]\ngroup-tab-strip = \"1\"").GroupTabStrip); // not an enum index
+        Assert.Equal(GroupTabStrip.Auto, Load("[window]\ngroup-tab-strip = \"sometimes\"").GroupTabStrip);
     }
 
     [Fact]
     public void UnfocusedPanesAreDimmedLikeGhosttyByDefault()
     {
         Assert.Equal(0.7, Load("").UnfocusedSplitOpacity);
-        Assert.Equal(1.0, Load("unfocused-split-opacity = 1").UnfocusedSplitOpacity);
-        Assert.Equal(0.15, Load("unfocused-split-opacity = 0").UnfocusedSplitOpacity); // clamped, like Ghostty
-        Assert.Equal(1.0, Load("unfocused-split-opacity = 3").UnfocusedSplitOpacity);
-        Assert.Equal(0.7, Load("unfocused-split-opacity = dim").UnfocusedSplitOpacity);
+        Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 1").UnfocusedSplitOpacity);
+        Assert.Equal(0.15, Load("[window]\nunfocused-split-opacity = 0").UnfocusedSplitOpacity); // clamped, like Ghostty
+        Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 3.0").UnfocusedSplitOpacity);
+        Assert.Equal(0.7, Load("[window]\nunfocused-split-opacity = \"dim\"").UnfocusedSplitOpacity);
         Assert.Null(Load("").UnfocusedSplitFill);
-        Assert.Equal(new GhosttyColorRgb { R = 0, G = 0, B = 0 }, Load("unfocused-split-fill = #000000").UnfocusedSplitFill);
+        Assert.Equal(new GhosttyColorRgb { R = 0, G = 0, B = 0 }, Load("[window]\nunfocused-split-fill = \"#000000\"").UnfocusedSplitFill);
     }
 
     [Fact]
     public void SessionsAreRestoredUnlessTurnedOff()
     {
         Assert.True(Load("").RestoreSession);
-        Assert.True(Load("window-save-state = always").RestoreSession);
-        Assert.True(Load("window-save-state = default").RestoreSession);
-        Assert.False(Load("window-save-state = never").RestoreSession);
-        Assert.True(Load("window-save-state = sometimes").RestoreSession);
+        Assert.True(Load("[window]\nsave-state = \"always\"").RestoreSession);
+        Assert.False(Load("[window]\nsave-state = \"never\"").RestoreSession);
+        Assert.False(Load("[window]\nsave-state = false").RestoreSession);
+        Assert.True(Load("[window]\nsave-state = \"sometimes\"").RestoreSession);
     }
 
     [Fact]
     public void WorkspaceTabsOnTopByDefault()
     {
         Assert.Equal(WorkspaceTabs.Top, Load("").WorkspaceTabs);
-        Assert.Equal(WorkspaceTabs.Left, Load("workspace-tabs = left").WorkspaceTabs);
-        Assert.Equal(WorkspaceTabs.Left, Load("workspace-tabs = Left").WorkspaceTabs);
-        Assert.Equal(WorkspaceTabs.Top, Load("workspace-tabs = 1").WorkspaceTabs);
-        Assert.Equal(WorkspaceTabs.Top, Load("workspace-tabs = bottom").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"left\"").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"Left\"").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Top, Load("[window]\nworkspace-tabs = \"bottom\"").WorkspaceTabs);
     }
 
     [Fact]
     public void QuitAfterLastWindowDefaultsToAutomatic()
     {
         Assert.Null(Load("").QuitAfterLastWindowClosed);
-        Assert.True(Load("quit-after-last-window-closed = true").QuitAfterLastWindowClosed);
-        Assert.False(Load("quit-after-last-window-closed = false").QuitAfterLastWindowClosed);
-        Assert.Null(Load("quit-after-last-window-closed = sometimes").QuitAfterLastWindowClosed);
+        Assert.True(Load("[window]\nquit-after-last-window-closed = true").QuitAfterLastWindowClosed);
+        Assert.False(Load("[window]\nquit-after-last-window-closed = false").QuitAfterLastWindowClosed);
+        Assert.Null(Load("[window]\nquit-after-last-window-closed = \"sometimes\"").QuitAfterLastWindowClosed);
     }
 
     [Fact]
-    public void ClipboardWritesAllowedReadsDeniedByDefault()
+    public void ClipboardWriteAllowedReadDenied()
     {
         Assert.True(Load("").ClipboardWrite);
         Assert.False(Load("").ClipboardRead);
-        Assert.False(Load("clipboard-write = deny").ClipboardWrite);
-        Assert.True(Load("clipboard-read = allow").ClipboardRead);
-        Assert.False(Load("clipboard-read = ask").ClipboardRead); // Ghostty's "ask" isn't supported (yet)
+        Assert.False(Load("[terminal]\nclipboard-write = \"deny\"").ClipboardWrite);
+        Assert.True(Load("[terminal]\nclipboard-read = \"allow\"").ClipboardRead);
+        Assert.True(Load("[terminal]\nclipboard-read = true").ClipboardRead);
+        Assert.False(Load("[terminal]\nclipboard-read = \"ask\"").ClipboardRead); // Ghostty's "ask" isn't supported (yet)
     }
 
     [Fact]
     public void FontSizeIsInPoints()
     {
-        var config = Load("font-size = 12");
+        var config = Load("[font]\nsize = 12");
         Assert.Equal(12f, config.FontSize);
         Assert.Equal(16f, config.FontSizeDip);
     }
 
     [Fact]
-    public void ParsesGhosttyColors()
+    public void ReadsColors()
     {
         var config = Load("""
-            background = #181818
-            foreground = d8d8d8
-            cursor-color = #FCFCFA
-            palette = 1=#AC4242
-            palette = 15 = #f8f8f8
-            palette = 256=#000000
-            palette = 3=nothex
-            background = #12345
+            [colors]
+            background = "#181818"
+            foreground = "d8d8d8"
+            cursor = "#FCFCFA"
+            palette.1 = "#AC4242"
+            palette.15 = "#f8f8f8"
+            palette.256 = "#000000"
+            palette.3 = "nothex"
             """);
         Assert.Equal(new GhosttyColorRgb(0x18, 0x18, 0x18), config.Theme.Background);
         Assert.Equal(new GhosttyColorRgb(0xD8, 0xD8, 0xD8), config.Theme.Foreground);
@@ -155,11 +146,23 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void ParsesGhosttyPaddingInPoints()
+    public void PaletteCanBeAnArray()
     {
         var config = Load("""
-            window-padding-x = 15
-            window-padding-y = 6,12
+            [colors]
+            palette = ["#000000", "#aa0000", "#00aa00"]
+            """);
+        Assert.Equal(3, config.Theme.Palette.Count);
+        Assert.Equal(new GhosttyColorRgb(0xAA, 0, 0), config.Theme.Palette[1]);
+    }
+
+    [Fact]
+    public void ReadsPaddingInPoints()
+    {
+        var config = Load("""
+            [terminal]
+            padding-x = 15
+            padding-y = [6, 12]
             """);
         Assert.Equal(20f, config.PaddingLeft);
         Assert.Equal(20f, config.PaddingRight);
@@ -207,13 +210,13 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void FontSizeParsingIgnoresCulture()
+    public void NumbersIgnoreCulture()
     {
         var previous = Thread.CurrentThread.CurrentCulture;
         Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("de-DE");
         try
         {
-            Assert.Equal(13.5f, Load("font-size = 13.5").FontSize);
+            Assert.Equal(13.5f, Load("[font]\nsize = 13.5").FontSize);
         }
         finally
         {

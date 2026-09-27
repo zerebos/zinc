@@ -59,7 +59,7 @@ public sealed partial class MainWindow
     }
 
     private static TabState DescribeTab(TerminalTab pane) =>
-        new(pane.Profile.Name, pane.Command, pane.WorkingDirectory, ShellDirectory.Parse(pane.Control.ReportedDirectory));
+        new(pane.Profile.Id, pane.Command, pane.WorkingDirectory, ShellDirectory.Parse(pane.Control.ReportedDirectory));
 
     /// <summary>
     /// Reopens a saved tab: its profile (the default one if that's gone), its command, in the folder
@@ -67,7 +67,7 @@ public sealed partial class MainWindow
     /// </summary>
     private TerminalTab? OpenSaved(TabState saved)
     {
-        var profile = _config.Profiles.FirstOrDefault(p => p.Name == saved.Profile) ?? _config.DefaultProfile;
+        var profile = _config.FindProfile(saved.Profile) ?? _config.DefaultProfile;
         var command = string.IsNullOrWhiteSpace(saved.Command) ? ShellResolver.ForProfile(profile.Config) : saved.Command;
         string? directory = saved.StartDirectory;
         if (saved.Directory is { } reported && ShellDirectory.LaunchIn(command, reported) is { } launch)

@@ -819,7 +819,7 @@ public sealed partial class MainWindow : Window
     private void BuildNewTabMenu()
     {
         var index = 0;
-        foreach (var profile in _config.Profiles)
+        foreach (var profile in _config.VisibleProfiles)
         {
             var item = new MenuFlyoutItem { Text = profile.Name, Icon = new ImageIconElement(ProfileIcons.For(profile)) };
             if (index < 9)
@@ -1010,9 +1010,10 @@ public sealed partial class MainWindow : Window
                 OpenTab(defaults);
                 return true;
             case TerminalAction.NewTabFromProfile:
-                if (invocation.Index < _config.Profiles.Count)
+                var visible = _config.VisibleProfiles.ToList();
+                if (invocation.Index < visible.Count)
                 {
-                    var profile = _config.Profiles[invocation.Index];
+                    var profile = visible[invocation.Index];
                     if (tabGroup != null)
                     {
                         NewTabInGroup(tab, tabGroup, profile);

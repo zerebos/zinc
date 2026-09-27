@@ -30,6 +30,10 @@ public partial class App : Application
         // leave it running in the tray for the quick terminal.
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
         _config = ConfigFile.Load();
+        foreach (var warning in _config.Warnings)
+        {
+            Log.Write($"config: {warning}"); // shown in the window once settings reload on save
+        }
         _messageWindow = new MessageWindow();
         var profile = _config.DefaultProfile;
         // A command given on our command line (or PHOSPHOR_SHELL) is asked for explicitly: open

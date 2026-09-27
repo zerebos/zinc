@@ -31,6 +31,9 @@
   <ItemGroup>
     <!-- Loose copy for AppWindow.SetIcon (title bar, taskbar, Alt+Tab). -->
     <Content Include="Assets\Phosphor.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Bundled color schemes (theme = "Name"), with their license. assets/themes/README.md says where they come from. -->
+    <Content Include="..\..\assets\themes\*" Exclude="..\..\assets\themes\README.md" Link="Themes\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
