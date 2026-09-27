@@ -141,6 +141,12 @@ public static class SessionLayout
 /// <summary>Reads and writes session.json.</summary>
 public static class SessionStore
 {
+    // Readable when opened by hand: quotes and non-ASCII as themselves, not "-style escapes.
+    private static readonly SessionJson Json = new(new JsonSerializerOptions(SessionJson.Default.Options)
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    });
+
     /// <summary>
     /// Where the session lives: <c>PHOSPHOR_SESSION</c> if set; otherwise next to the config in
     /// %APPDATA%\Phosphor — unless <c>PHOSPHOR_CONFIG</c> points elsewhere (a test run), where
@@ -162,14 +168,14 @@ public static class SessionStore
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phosphor", "session.json");
     }
 
-    public static string Serialize(SessionState state) => JsonSerializer.Serialize(state, SessionJson.Default.SessionState);
+    public static string Serialize(SessionState state) => JsonSerializer.Serialize(state, Json.SessionState);
 
     /// <summary>The session in <paramref name="json"/>; null if it's unreadable or from a newer version.</summary>
     public static SessionState? Deserialize(string json)
     {
         try
         {
-            var state = JsonSerializer.Deserialize(json, SessionJson.Default.SessionState);
+            var state = JsonSerializer.Deserialize(json, Json.SessionState);
             return state is { Version: <= SessionState.CurrentVersion, Windows: not null } ? state : null;
         }
         catch (JsonException ex)

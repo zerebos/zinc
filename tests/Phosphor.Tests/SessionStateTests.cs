@@ -66,14 +66,15 @@ public class SessionStateTests
         var state = new SessionState(SessionState.CurrentVersion,
         [
             new WindowState(10, 20, 1100, 700, Maximized: false, Selected: 0,
-                [new WorkspaceState("Build", "#FF8800", SessionLayout.Capture(ws, t => new TabState("WSL", t.Name, @"C:\x", "/home/zack")))]),
+                [new WorkspaceState("Build", "#FF8800", SessionLayout.Capture(ws, t => new TabState("WSL", $"wsl.exe --cd \"/home/zack/café\" {t.Name}", @"C:\x", "/home/zack/café")))]),
         ]);
 
         var json = SessionStore.Serialize(state);
         Assert.Contains("\"orientation\": \"Vertical\"", json);
+        Assert.Contains("--cd \\\"/home/zack/café\\\"", json); // readable: no " / é escapes
         var back = SessionStore.Deserialize(json)!;
         Assert.Equal(json, SessionStore.Serialize(back));
-        Assert.Equal("/home/zack", back.Windows[0].Workspaces[0].Layout.First!.Pane!.Tabs[0].Directory);
+        Assert.Equal("/home/zack/café", back.Windows[0].Workspaces[0].Layout.First!.Pane!.Tabs[0].Directory);
     }
 
     [Theory]
