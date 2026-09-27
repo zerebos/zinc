@@ -17,6 +17,13 @@ public enum SplitOrientation
     Vertical,
 }
 
+public static class PaneDirections
+{
+    /// <summary>Windows Terminal's "auto" split: along the pane's longer side.</summary>
+    public static PaneDirection Auto(double width, double height) =>
+        width >= height ? PaneDirection.Right : PaneDirection.Down;
+}
+
 /// <summary>A rectangle in layout space, where the whole tab is (0, 0, 1, 1).</summary>
 public readonly record struct PaneRect(double X, double Y, double Width, double Height)
 {
@@ -205,10 +212,6 @@ public sealed class PaneTree<T> where T : class
 
     /// <summary>Sets a split's ratio directly (divider drag), clamped to the allowed range.</summary>
     public static void SetRatio(PaneSplit split, double ratio) => split.Ratio = Math.Clamp(ratio, MinRatio, MaxRatio);
-
-    /// <summary>Windows Terminal's "auto" split: along the pane's longer side.</summary>
-    public static PaneDirection AutoDirection(double width, double height) =>
-        width >= height ? PaneDirection.Right : PaneDirection.Down;
 
     private void Replace(PaneNode old, PaneNode replacement)
     {

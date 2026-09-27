@@ -19,7 +19,7 @@ public sealed partial class MainWindow
         ("Teal", 0x148F77), ("Blue", 0x2471A3), ("Purple", 0x7D3C98), ("Pink", 0xB03A78),
     ];
 
-    private MenuFlyout BuildTabMenu(Tab tab)
+    private MenuFlyout BuildTabMenu(WorkspaceTab tab)
     {
         var menu = new MenuFlyout();
 
@@ -84,10 +84,10 @@ public sealed partial class MainWindow
 
     private static RelayCommand Run(Action action) => new(action);
 
-    private void SplitWithDefault(Tab tab, PaneDirection direction) =>
+    private void SplitWithDefault(WorkspaceTab tab, PaneDirection direction) =>
         HandleAction(new ActionInvocation(TerminalAction.SplitPane, Direction: direction), tab, tab.Active);
 
-    private void CloseTabs(IEnumerable<Tab> tabs)
+    private void CloseTabs(IEnumerable<WorkspaceTab> tabs)
     {
         foreach (var t in tabs.ToList())
         {
@@ -97,7 +97,7 @@ public sealed partial class MainWindow
 
     // ---- rename ----
 
-    private void ShowRename(Tab tab)
+    private void ShowRename(WorkspaceTab tab)
     {
         var box = new TextBox
         {
@@ -144,7 +144,7 @@ public sealed partial class MainWindow
         "TabViewItemHeaderBackgroundPointerOver", "TabViewItemHeaderBackgroundPressed",
     ];
 
-    private void SetTabColor(Tab tab, Windows.UI.Color? color)
+    private void SetTabColor(WorkspaceTab tab, Windows.UI.Color? color)
     {
         tab.Color = color;
         ApplyTabBackground(tab, force: true);
@@ -155,7 +155,7 @@ public sealed partial class MainWindow
     /// focused pane's terminal background, so it flows into the terminal below it.
     /// Only touches the item when the colors change (re-applying flickers).
     /// </summary>
-    private void ApplyTabBackground(Tab tab, bool force = false)
+    private void ApplyTabBackground(WorkspaceTab tab, bool force = false)
     {
         var paneBackground = TerminalRenderer.ToColor(tab.Active.Profile.Config.Theme.Background);
         var key = (tab.Color, paneBackground);
@@ -193,7 +193,7 @@ public sealed partial class MainWindow
 
     // ---- export ----
 
-    private async Task ExportText(Tab tab)
+    private async Task ExportText(WorkspaceTab tab)
     {
         var picker = new FileSavePicker { SuggestedFileName = "terminal", DefaultFileExtension = ".txt" };
         picker.FileTypeChoices.Add("Text", [".txt"]);

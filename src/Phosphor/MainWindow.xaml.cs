@@ -9,7 +9,11 @@ using Phosphor.Terminal;
 
 namespace Phosphor;
 
-/// <summary>A window of tabs; each tab holds a tree of terminal panes.</summary>
+/// <summary>
+/// A window of workspaces (the title-bar tabs). Each workspace is a split layout of tab
+/// groups, and each tab in a group is one terminal. (Groups hold one tab until tab groups
+/// arrive, so a group is what the UI still calls a pane.)
+/// </summary>
 public sealed partial class MainWindow : Window
 {
     private readonly ConfigFile _config;
@@ -18,19 +22,17 @@ public sealed partial class MainWindow : Window
     private readonly Brush _focusBrush;
     private readonly Brush _noFocusBrush = new SolidColorBrush(Colors.Transparent);
 
-    /// <summary>One terminal: the profile/command it was opened with, and its control.</summary>
-    private sealed class Pane(Profile profile, string command, string workingDirectory, TerminalControl control)
+    /// <summary>One terminal tab: the profile/command it was opened with, and its control.</summary>
+    private sealed class TerminalTab(Profile profile, string command, string workingDirectory, TerminalControl control)
     {
         public Profile Profile { get; } = profile;
         public string Command { get; } = command;
         public string WorkingDirectory { get; } = workingDirectory;
         public TerminalControl Control { get; } = control;
-
-        /// <summary>Wraps the control; its border marks the focused pane when a tab has several.</summary>
-        public Border Host { get; } = new() { Child = control };
     }
 
-    private sealed class Tab(TabViewItem item, PaneTree<Pane> panes, Pane active)
+    /// <summary>A title-bar tab and the workspace it shows.</summary>
+    private sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
     {
         public TabViewItem Item { get; } = item;
 
@@ -40,8 +42,10 @@ public sealed partial class MainWindow : Window
         /// ContentControl's content lets go only on its next layout pass).
         /// </summary>
         public Grid Container { get; } = new();
-        public PaneTree<Pane> Panes { get; } = panes;
-        public Pane Active { get; set; } = active;
+        public Workspace<TerminalTab> Workspace { get; } = workspace;
+
+        /// <summary>The focused terminal tab.</summary>
+        public TerminalTab Active => Workspace.Active;
 
         /// <summary>Icon + title, updated in place.</summary>
         public TabHeader Header { get; } = new(item);
@@ -107,21 +111,21 @@ public sealed partial class MainWindow : Window
         {
             foreach (var tab in AllTabs().ToList())
             {
-                foreach (var leaf in tab.Panes.Leaves)
+                foreach (var pane in tab.Workspace.Tabs)
                 {
-                    leaf.Content.Control.Close();
+                    pane.Control.Close();
                 }
             }
         };
     }
 
-    private IEnumerable<Tab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => (Tab)i.Tag);
+    private IEnumerable<WorkspaceTab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => (WorkspaceTab)i.Tag);
 
-    private Tab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as Tab;
+    private WorkspaceTab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as WorkspaceTab;
 
     // ---------------------------------------------------------------- panes
 
-    private Pane CreatePane(Profile profile, string command, string workingDirectory, Func<Tab> tab)
+    private TerminalTab CreatePane(Profile profile, string command, string workingDirectory, Func<WorkspaceTab> tab)
     {
         var control = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
         {
@@ -129,7 +133,7 @@ public sealed partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
         };
-        var pane = new Pane(profile, command, workingDirectory, control);
+        var pane = new TerminalTab(profile, command, workingDirectory, control);
 
         control.ActionHandler = invocation => HandleAction(invocation, tab(), pane);
         control.TitleChanged += _ => UpdateTitle(tab());
@@ -137,53 +141,52 @@ public sealed partial class MainWindow : Window
         control.GotFocus += (_, _) =>
         {
             var t = tab();
-            t.Active = pane;
+            t.Workspace.Activate(pane);
             UpdateFocusBorders(t);
             UpdateTitle(t);
         };
         return pane;
     }
 
-    private void SplitPane(Tab tab, Pane origin, PaneDirection where, Profile profile, string command, string workingDirectory)
+    /// <summary>Opens a terminal in a new group beside <paramref name="origin"/>'s group.</summary>
+    private void SplitPane(WorkspaceTab tab, TerminalTab origin, PaneDirection where, Profile profile, string command, string workingDirectory)
     {
-        if (tab.Panes.Find(origin) is not { } leaf)
+        if (tab.Workspace.GroupOf(origin) is not { } group)
         {
             return;
         }
 
         var pane = CreatePane(profile, command, workingDirectory, () => tab);
-        tab.Panes.Split(leaf, where, pane);
-        tab.Active = pane;
+        tab.Workspace.Split(group, where, pane);
         Rebuild(tab);
     }
 
-    private void ClosePane(Tab tab, Pane pane)
+    /// <summary>Closes one terminal tab; an emptied group, then workspace, goes with it.</summary>
+    private void ClosePane(WorkspaceTab tab, TerminalTab pane)
     {
-        if (tab.Panes.Find(pane) is not { } leaf)
+        if (tab.Workspace.GroupOf(pane) == null)
         {
             return;
         }
 
         pane.Control.Close();
-        var next = tab.Panes.Remove(leaf);
-        if (next == null)
+        if (!tab.Workspace.Close(pane))
         {
             RemoveTab(tab);
             return;
         }
 
-        tab.Active = next.Content;
         Rebuild(tab);
     }
 
-    /// <summary>Rebuilds a tab's content from its pane tree and focuses the active pane.</summary>
-    private void Rebuild(Tab tab)
+    /// <summary>Rebuilds a workspace's content from its layout and focuses the active tab.</summary>
+    private void Rebuild(WorkspaceTab tab)
     {
         // Take the old layout apart first: pane hosts are reused and XAML elements can't
         // have two parents (0x800F1000). FrameworkElement.Parent is null for children
         // added to a Panel in code, so detaching by asking each host for its parent fails.
         Dismantle(tab.Container);
-        if (tab.Panes.Root is { } root)
+        if (tab.Workspace.Layout.Root is { } root)
         {
             tab.Container.Children.Add(Build(root));
         }
@@ -195,10 +198,9 @@ public sealed partial class MainWindow : Window
 
     private UIElement Build(PaneNode node)
     {
-        if (node is PaneLeaf<Pane> leaf)
+        if (node is PaneLeaf<TabGroup<TerminalTab>> leaf)
         {
-            // The host may still sit in the previous layout's Grid; detach it first.
-            return leaf.Content.Host;
+            return HostOf(leaf.Content);
         }
 
         var split = (PaneSplit)node;
@@ -245,6 +247,21 @@ public sealed partial class MainWindow : Window
         return grid;
     }
 
+    /// <summary>
+    /// A group's element in the layout: a border (marking focus once a workspace is split)
+    /// around the shown tab's terminal. Kept on the group and reused across rebuilds.
+    /// </summary>
+    private static Border HostOf(TabGroup<TerminalTab> group)
+    {
+        var host = group.Tag as Border ?? (Border)(group.Tag = new Border());
+        if (host.Child != group.Active.Control)
+        {
+            host.Child = group.Active.Control;
+        }
+
+        return host;
+    }
+
     private static void Dismantle(Panel panel)
     {
         foreach (var child in panel.Children.OfType<Panel>().ToList())
@@ -255,18 +272,19 @@ public sealed partial class MainWindow : Window
         panel.Children.Clear();
     }
 
-    private void UpdateFocusBorders(Tab tab)
+    private void UpdateFocusBorders(WorkspaceTab tab)
     {
-        // Borders only appear once a tab is split, so a lone pane uses the full area.
-        var several = tab.Panes.Count > 1;
-        foreach (var leaf in tab.Panes.Leaves)
+        // Borders only appear once a workspace is split, so a lone group uses the full area.
+        var several = tab.Workspace.Layout.Count > 1;
+        foreach (var group in tab.Workspace.Groups)
         {
-            leaf.Content.Host.BorderThickness = new Thickness(several ? 1 : 0);
-            leaf.Content.Host.BorderBrush = several && leaf.Content == tab.Active ? _focusBrush : _noFocusBrush;
+            var host = HostOf(group);
+            host.BorderThickness = new Thickness(several ? 1 : 0);
+            host.BorderBrush = several && group == tab.Workspace.ActiveGroup ? _focusBrush : _noFocusBrush;
         }
     }
 
-    private void FocusActive(Tab tab)
+    private void FocusActive(WorkspaceTab tab)
     {
         // After a rebuild the panes are re-parented and not loaded yet; focus once
         // layout has run.
@@ -276,7 +294,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Finds the Grid built for a split in a tab's current content.</summary>
-    private static Grid? GridFor(Tab tab, PaneSplit split) =>
+    private static Grid? GridFor(WorkspaceTab tab, PaneSplit split) =>
         Descendants(tab.Container).OfType<Grid>().FirstOrDefault(g => g.Tag == split);
 
     private static IEnumerable<UIElement> Descendants(UIElement? element)
@@ -303,12 +321,12 @@ public sealed partial class MainWindow : Window
 
     private void OpenTab(Profile profile, string command, string workingDirectory)
     {
-        Tab? tab = null;
+        WorkspaceTab? tab = null;
         var pane = CreatePane(profile, command, workingDirectory, () => tab!);
         // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
         // to its header, and Stretch pushed the label above the icon.
         var item = new TabViewItem();
-        tab = new Tab(item, new PaneTree<Pane>(pane), pane);
+        tab = new WorkspaceTab(item, new Workspace<TerminalTab>(pane));
         item.Header = tab.Header;
         item.Tag = tab;
         item.Content = tab.Container;
@@ -322,18 +340,18 @@ public sealed partial class MainWindow : Window
     private void OpenTab(Profile profile) =>
         OpenTab(profile, ShellResolver.ForProfile(profile.Config), profile.Config.ResolveWorkingDirectory());
 
-    /// <summary>Closes every pane in a tab and removes it.</summary>
-    private void CloseTab(Tab tab)
+    /// <summary>Closes every terminal in a workspace and removes its tab.</summary>
+    private void CloseTab(WorkspaceTab tab)
     {
-        foreach (var leaf in tab.Panes.Leaves.ToList())
+        foreach (var pane in tab.Workspace.Tabs.ToList())
         {
-            leaf.Content.Control.Close();
+            pane.Control.Close();
         }
 
         RemoveTab(tab);
     }
 
-    private void RemoveTab(Tab tab)
+    private void RemoveTab(WorkspaceTab tab)
     {
         var index = Tabs.TabItems.IndexOf(tab.Item);
         if (index < 0)
@@ -351,7 +369,7 @@ public sealed partial class MainWindow : Window
         Tabs.SelectedIndex = Math.Min(index, Tabs.TabItems.Count - 1);
     }
 
-    private void UpdateTitle(Tab tab)
+    private void UpdateTitle(WorkspaceTab tab)
     {
         var pane = tab.Active;
         var title = tab.CustomTitle ??
@@ -418,7 +436,7 @@ public sealed partial class MainWindow : Window
     private void OnAddTabButtonClick(TabView sender, object args) => OpenTab(_config.DefaultProfile);
 
     private void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args) =>
-        CloseTab((Tab)args.Tab.Tag);
+        CloseTab((WorkspaceTab)args.Tab.Tag);
 
     private void BuildNewTabMenu()
     {
@@ -449,7 +467,7 @@ public sealed partial class MainWindow : Window
         if (keys.Alt && SelectedTab is { } tab)
         {
             var pane = tab.Active;
-            var where = PaneTree<Pane>.AutoDirection(pane.Control.ActualWidth, pane.Control.ActualHeight);
+            var where = PaneDirections.Auto(pane.Control.ActualWidth, pane.Control.ActualHeight);
             SplitPane(tab, pane, where, profile, ShellResolver.ForProfile(profile.Config),
                 profile.Config.ResolveWorkingDirectory());
         }
@@ -525,7 +543,7 @@ public sealed partial class MainWindow : Window
 
     // ------------------------------------------------------------- actions
 
-    private bool HandleAction(ActionInvocation invocation, Tab tab, Pane origin)
+    private bool HandleAction(ActionInvocation invocation, WorkspaceTab tab, TerminalTab origin)
     {
         var count = Tabs.TabItems.Count;
         var defaults = _config.DefaultProfile;
@@ -575,20 +593,20 @@ public sealed partial class MainWindow : Window
                     defaults.Config.ResolveWorkingDirectory());
                 return true;
             case TerminalAction.DuplicatePane:
-                var where = PaneTree<Pane>.AutoDirection(origin.Control.ActualWidth, origin.Control.ActualHeight);
+                var where = PaneDirections.Auto(origin.Control.ActualWidth, origin.Control.ActualHeight);
                 SplitPane(tab, origin, where, origin.Profile, origin.Command, origin.WorkingDirectory);
                 return true;
             case TerminalAction.MoveFocus:
-                if (tab.Panes.Find(origin) is { } from && tab.Panes.Neighbor(from, invocation.Direction) is { } to)
+                if (tab.Workspace.GroupOf(origin) is { } from && tab.Workspace.Neighbor(from, invocation.Direction) is { } to)
                 {
-                    tab.Active = to.Content;
+                    tab.Workspace.Activate(to.Active);
                     FocusActive(tab);
                 }
 
                 return true;
             case TerminalAction.ResizePane:
-                if (tab.Panes.Find(origin) is { } leaf &&
-                    tab.Panes.Resize(leaf, invocation.Direction, 0.05) is { } split &&
+                if (tab.Workspace.GroupOf(origin) is { } group &&
+                    tab.Workspace.Resize(group, invocation.Direction, 0.05) is { } split &&
                     GridFor(tab, split) is { } grid)
                 {
                     PaneDivider.ApplyRatio(grid, split);

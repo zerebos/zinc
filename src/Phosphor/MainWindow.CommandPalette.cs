@@ -206,7 +206,7 @@ public sealed partial class MainWindow
     // ---------------------------------------------------------------- commands
 
     /// <summary>Every command, in the order shown for an empty query.</summary>
-    private List<PaletteCommand> BuildPaletteCommands(Tab tab)
+    private List<PaletteCommand> BuildPaletteCommands(WorkspaceTab tab)
     {
         var commands = new List<PaletteCommand>();
         var pane = tab.Active.Control;

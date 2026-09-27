@@ -73,8 +73,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.
 
-`src/Phosphor` (WinUI app): `MainWindow` = TabView in the title bar (ExtendsContentIntoTitleBar,
-Mica); each tab = `PaneTree<Pane>` (Core/Panes, tested) rendered into the tab's persistent
+`src/Phosphor` (WinUI app): `MainWindow` = TabView of workspaces in the title bar (ExtendsContentIntoTitleBar,
+Mica); each `WorkspaceTab` holds a `Workspace<TerminalTab>` (Core/Panes/Workspace.cs, tested: a `PaneTree` of `TabGroup`s, each group one host `Border` via `HostOf`; one tab per group until stage 2) rendered into its persistent
 `Container` Grid by `Rebuild` (nested Grids + `PaneDivider`); window actions arrive via
 `pane.ActionHandler`; `App.OpenWindow` for new windows. `MainWindow.CommandPalette.cs` builds the palette's command
 list fresh on open and runs actions through `TerminalControl.Invoke` (same path as keys);
@@ -278,3 +278,7 @@ and read state after the write (see `_titleDirty`).
   characters — this has bitten three times (C# "Newline in constant" errors), and Python
   replace scripts also fail to *match* lines containing backslashes. Python edit scripts are
   fine for plain code; anything with a backslash goes through the Edit tool.
+- The repo mixes LF and CRLF files (`git ls-files --eol`). Python's `read_text`/`write_text`
+  (or `open` without `newline=""`) rewrites every line ending to CRLF, turning a small edit
+  into a whole-file diff; Git Bash's `sed -i` does the opposite (CRLF → LF). Pass
+  `newline=""` in Python, prefer the Edit tool for CRLF files, and check `git diff --stat`.

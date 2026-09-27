@@ -161,6 +161,6 @@ public class PaneTreeTests
     [InlineData(500, 500, PaneDirection.Right)]
     public void AutoSplitsAlongLongerSide(double w, double h, PaneDirection expected)
     {
-        Assert.Equal(expected, PaneTree<string>.AutoDirection(w, h));
+        Assert.Equal(expected, PaneDirections.Auto(w, h));
     }
 }
