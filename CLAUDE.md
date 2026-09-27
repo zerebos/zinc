@@ -68,6 +68,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   helpers `SshHosts`/`WslProfiles`/`VisualStudioProfiles` are tested). Found profiles are the
   base for a `[profile]` with the same id, else listed after the file's. Only `Load` discovers;
   `Parse` takes the discoverer as a parameter, so tests never read the machine),
+  `ConfigEditor.cs` (the app's writes to config.toml: `Set`/`Remove` a key path; locates via
+  the Tomlyn syntax tree, *splices the text* so everything else stays byte-identical. Careful:
+  a KeyValueSyntax span includes its line break — anchor on the value span. New profile
+  sections go after the last `[profile.*]`; other new tables at the end),
   `ShellResolver.cs` (`Resolve` for the first tab: args > PHOSPHOR_SHELL > profile;
   `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).

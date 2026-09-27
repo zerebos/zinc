@@ -160,7 +160,7 @@ public sealed class ConfigFile
                     continue;
                 }
 
-                var prefix = KeyParts(name);
+                var prefix = ConfigEditor.KeyParts(name);
                 if (prefix is ["profile", var sectionId, ..] && !_profileSections.Contains(sectionId))
                 {
                     _profileSections.Add(sectionId);
@@ -227,7 +227,7 @@ public sealed class ConfigFile
                 return;
             }
 
-            var path = prefix.Concat(KeyParts(key)).ToList();
+            var path = prefix.Concat(ConfigEditor.KeyParts(key)).ToList();
             var line = kv.Span.Start.Line + 1;
             if (value is InlineTableSyntax inline)
             {
@@ -251,24 +251,6 @@ public sealed class ConfigFile
                 _warnings.Add($"{System.IO.Path.GetFileName(file)}:{line}: unsupported value for {string.Join('.', path)}");
             }
         }
-
-        private static List<string> KeyParts(KeySyntax key)
-        {
-            var parts = new List<string> { KeyText(key.Key) };
-            foreach (var dot in key.DotKeys)
-            {
-                parts.Add(KeyText(dot.Key));
-            }
-
-            return parts;
-        }
-
-        private static string KeyText(BareKeyOrStringValueSyntax? key) => key switch
-        {
-            BareKeySyntax bare => bare.Key?.Text ?? "",
-            StringValueSyntax s => s.Value ?? "",
-            _ => "",
-        };
 
         private static object? ToValue(ValueSyntax value) => value switch
         {
