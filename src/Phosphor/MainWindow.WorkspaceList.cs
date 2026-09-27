@@ -69,7 +69,7 @@ public sealed partial class MainWindow
         Grid.SetColumnSpan(DragRegion, 2);
         Root.Children.Insert(0, DragRegion);
 
-        var list = new WorkspaceList(BuildWorkspaceListHeader());
+        var list = new WorkspaceList(BuildWorkspaceListFooter());
         Grid.SetRow(list, 1);
         Root.Children.Insert(0, list);
         _workspaceList = list;
@@ -104,8 +104,8 @@ public sealed partial class MainWindow
         list.ListDrop += (_, index) => DropOnWorkspaces(index);
     }
 
-    /// <summary>"New workspace" and the profile menu, above the list.</summary>
-    private FrameworkElement BuildWorkspaceListHeader()
+    /// <summary>"New workspace" and the profile menu, below the list (where the pointer tends to rest).</summary>
+    private FrameworkElement BuildWorkspaceListFooter()
     {
         var add = new Button
         {
@@ -135,12 +135,15 @@ public sealed partial class MainWindow
         NewTabMenuButton.VerticalAlignment = VerticalAlignment.Center;
         Grid.SetColumn(NewTabMenuButton, 1);
 
-        var header = new Grid { Margin = new Thickness(6, 4, 6, 4) };
-        header.ColumnDefinitions.Add(new ColumnDefinition());
-        header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Children.Add(add);
-        header.Children.Add(NewTabMenuButton);
-        return header;
+        // From the bottom of the window, the profile menu opens upward.
+        NewTabMenu.Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.TopEdgeAlignedLeft;
+
+        var footer = new Grid { Margin = new Thickness(6, 4, 6, 6) };
+        footer.ColumnDefinitions.Add(new ColumnDefinition());
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        footer.Children.Add(add);
+        footer.Children.Add(NewTabMenuButton);
+        return footer;
     }
 
     /// <summary>Brings the list (if shown) up to date with the TabView's workspaces.</summary>

@@ -18,7 +18,7 @@ internal sealed partial class WorkspaceList : Grid
 {
     public const double DefaultWidth = 220;
 
-    private readonly StackPanel _items = new() { Spacing = 2, Padding = new Thickness(6, 2, 6, 6) };
+    private readonly StackPanel _items = new() { Spacing = 2, Padding = new Thickness(6, 6, 6, 6) };
     private readonly Dictionary<MainWindow.WorkspaceTab, Item> _byTab = new();
 
     private readonly Border _marker = new()
@@ -31,13 +31,14 @@ internal sealed partial class WorkspaceList : Grid
         Background = (Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"],
     };
 
-    /// <param name="header">What sits above the list (new-workspace buttons).</param>
-    public WorkspaceList(UIElement header)
+    /// <param name="footer">What sits below the list (new-workspace buttons).</param>
+    public WorkspaceList(UIElement footer)
     {
         Width = DefaultWidth;
-        RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         RowDefinitions.Add(new RowDefinition());
-        Children.Add(header);
+        RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        SetRow((FrameworkElement)footer, 1);
+        Children.Add(footer);
 
         var scroll = new ScrollViewer
         {
@@ -46,8 +47,6 @@ internal sealed partial class WorkspaceList : Grid
             HorizontalScrollMode = ScrollMode.Disabled,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
-        SetRow(scroll, 1);
-        SetRow(_marker, 1);
         Children.Add(scroll);
         Children.Add(_marker);
 
@@ -210,9 +209,7 @@ internal sealed partial class WorkspaceList : Grid
             y = last.TransformToVisual(this).TransformPoint(new Point(0, last.ActualHeight)).Y;
         }
 
-        // The marker's row starts below the header.
-        var rowTop = RowDefinitions[0].ActualHeight;
-        _marker.Margin = new Thickness(8, Math.Max(0, y - rowTop), 8, 0);
+        _marker.Margin = new Thickness(8, Math.Max(0, y), 8, 0);
         _marker.Visibility = Visibility.Visible;
     }
 
