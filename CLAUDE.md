@@ -63,7 +63,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Ghostty-style key — the TOML reader maps each `[section] key` onto it, and scheme files are
   read through it), `ConfigFile.cs` (Tomlyn syntax tree → flat entries with file:line →
   global settings, `Profile(Id, Name, Config, Hidden)`s, warnings; includes; themes;
-  `[keys]` → Keybindings.Configure; `[discover]` reserved for profile discovery),
+  `[keys]` → Keybindings.Configure; `[discover]` → `ProfileDiscovery` (WSL registry, pwsh/
+  powershell/cmd, Git Bash, MSYS2 UCRT64, vswhere (cached per run), ~/.ssh/config hosts; pure
+  helpers `SshHosts`/`WslProfiles`/`VisualStudioProfiles` are tested). Found profiles are the
+  base for a `[profile]` with the same id, else listed after the file's. Only `Load` discovers;
+  `Parse` takes the discoverer as a parameter, so tests never read the machine),
   `ShellResolver.cs` (`Resolve` for the first tab: args > PHOSPHOR_SHELL > profile;
   `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).

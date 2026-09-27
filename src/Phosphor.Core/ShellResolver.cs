@@ -46,7 +46,7 @@ public static class ShellResolver
         return FindOnPath(path, "pwsh.exe") ?? FindOnPath(path, "powershell.exe") ?? "cmd.exe";
     }
 
-    private static string? FindOnPath(string path, string exe)
+    internal static string? FindOnPath(string path, string exe)
     {
         foreach (var dir in path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
         {

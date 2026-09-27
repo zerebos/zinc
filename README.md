@@ -152,7 +152,34 @@ size = 12
   glyph for `ssh`, else the command's executable icon.
 - `working-directory`: `"~"` (the default) or a path; `~/sub` and `%VARS%` expand.
 - `hidden = true`: keeps a profile out of menus.
-- Without any profiles, the settings above act as a single "Default" profile.
+- Without any profiles, of your own or found, the settings above act as a single "Default" profile.
+
+Phosphor also finds the shells installed on this machine every time it reads the config, as
+Windows Terminal does, and lists them after your own profiles:
+
+| Found | Id | Name |
+| --- | --- | --- |
+| WSL distros (the default one first; Docker Desktop's are skipped) | `wsl:<distro>` | the distro's name |
+| PowerShell 7, Windows PowerShell, cmd | `pwsh`, `powershell`, `cmd` | PowerShell, Windows PowerShell, Command Prompt |
+| Git for Windows | `git-bash` | Git Bash |
+| MSYS2 (its UCRT64 environment) | `msys2:ucrt64` | MSYS2 UCRT64 |
+| Visual Studio installs | `vs:<instance>:pwsh`, `vs:<instance>:cmd` | Developer PowerShell / Command Prompt for … |
+| Hosts in `~/.ssh/config` (not patterns like `*`; `Include`s are followed) | `ssh:<host>` | SSH - &lt;host&gt; |
+
+A `[profile]` section with a found profile's id changes it, starting from what was found, and
+places it where the section is; `hidden = true` hides it. A section for a found profile that
+isn't installed any more is hidden too. `[discover]` turns sources off:
+
+```toml
+[discover]
+ssh = false            # also: wsl, powershell, cmd, git-bash, msys2, visual-studio
+
+[profile."wsl:Ubuntu"]
+colors.theme = "Ubuntu"
+
+[profile."msys2:ucrt64"]
+hidden = true
+```
 
 ### Quick terminal
 

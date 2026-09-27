@@ -88,16 +88,19 @@ public sealed class ConfigFile
         path ??= Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
         path = System.IO.Path.GetFullPath(path);
         var text = File.Exists(path) ? File.ReadAllText(path) : "";
-        return Parse(text, path);
+        return Parse(text, path, discover: ProfileDiscovery.Discover);
     }
 
     /// <summary>
     /// Reads config text. <paramref name="path"/> names it in warnings and anchors <c>include</c>
     /// and the user's themes folder (next to it); <paramref name="bundledThemes"/> is searched after.
+    /// <paramref name="discover"/> finds installed profiles (none if null: tests, and anything
+    /// that shouldn't look at the machine).
     /// </summary>
-    public static ConfigFile Parse(string text, string path = "config.toml", string? bundledThemes = null)
+    public static ConfigFile Parse(string text, string path = "config.toml", string? bundledThemes = null,
+        Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover = null)
     {
-        var reader = new Reader(path, bundledThemes ?? BundledThemesDirectory);
+        var reader = new Reader(path, bundledThemes ?? BundledThemesDirectory, discover);
         reader.Read(text, path, depth: 0);
         return reader.Build();
     }
@@ -116,10 +119,8 @@ public sealed class ConfigFile
 
     private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "quick-terminal"];
 
-    /// <summary>Sections for later stages: accepted without warnings.</summary>
-    private static readonly HashSet<string> Reserved = ["discover"];
 
-    private sealed class Reader(string mainPath, string bundledThemes)
+    private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover)
     {
         private readonly List<Entry> _entries = [];
         private readonly List<string> _warnings = [];
@@ -281,6 +282,7 @@ public sealed class ConfigFile
             var profileEntries = new Dictionary<string, List<Entry>>();
             var profileOrder = new List<string>();
             var keys = new List<(string Chord, string Action, string Where)>();
+            var discovery = new DiscoverySettings();
 
             foreach (var e in _entries)
             {
@@ -320,7 +322,21 @@ public sealed class ConfigFile
                     case ["keys", ..]:
                         _warnings.Add($"{e.Where}: put a chord in quotes: \"{string.Join('.', e.Path.Skip(1))}\" = ...");
                         break;
-                    case [var section, ..] when Reserved.Contains(section):
+                    case ["discover", var source] when e.Value is bool on:
+                        discovery = source switch
+                        {
+                            "wsl" => discovery with { Wsl = on },
+                            "powershell" => discovery with { PowerShell = on },
+                            "cmd" => discovery with { Cmd = on },
+                            "git-bash" => discovery with { GitBash = on },
+                            "msys2" => discovery with { Msys2 = on },
+                            "ssh" => discovery with { Ssh = on },
+                            "visual-studio" => discovery with { VisualStudio = on },
+                            _ => Unknown(discovery, e),
+                        };
+                        break;
+                    case ["discover", ..]:
+                        _warnings.Add($"{e.Where}: [discover] takes wsl, powershell, cmd, git-bash, msys2, ssh or visual-studio = true or false");
                         break;
                     case [var group, _, ..] when Groups.Contains(group):
                         break; // applied below, themes first
@@ -332,6 +348,11 @@ public sealed class ConfigFile
 
             global = ApplyGroups(global, _entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: false);
 
+            // Profiles found on this machine: the base for a section with the same id, else listed
+            // after the file's own.
+            var discovered = (discover?.Invoke(discovery) ?? []).GroupBy(d => d.Id).Select(g => g.First()).ToList();
+            var found = discovered.ToDictionary(d => d.Id);
+
             var profiles = new List<Profile>();
             foreach (var id in profileOrder)
             {
@@ -339,6 +360,18 @@ public sealed class ConfigFile
                 string name = id;
                 var hidden = false;
                 var config = global;
+                if (found.Remove(id, out var basis))
+                {
+                    name = basis.Name;
+                    config = FromDiscovery(config, basis);
+                }
+                else if (id.Contains(':') && !entries.Any(e => e.Path is ["command"]))
+                {
+                    // Changes to a found profile that isn't installed (any more): nothing to run.
+                    Log.Write($"config: profile '{id}' wasn't found on this machine; hiding it");
+                    hidden = true;
+                }
+
                 foreach (var e in entries)
                 {
                     switch (e.Path)
@@ -360,6 +393,11 @@ public sealed class ConfigFile
                 profiles.Add(new Profile(id, name, config, hidden));
             }
 
+            foreach (var d in discovered.Where(d => found.ContainsKey(d.Id)))
+            {
+                profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d)));
+            }
+
             if (profiles.Count == 0)
             {
                 profiles.Add(new Profile("default", "Default", global));
@@ -373,6 +411,15 @@ public sealed class ConfigFile
 
             var keybindings = Keybindings.Configure(keys, _warnings);
             return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings);
+        }
+
+        private static Config FromDiscovery(Config config, DiscoveredProfile found) =>
+            config with { Command = found.Command, Icon = found.Icon ?? config.Icon };
+
+        private DiscoverySettings Unknown(DiscoverySettings settings, Entry e)
+        {
+            _warnings.Add($"{e.Where}: unknown [discover] source '{e.Path[1]}'");
+            return settings;
         }
 
         /// <summary>Applies grouped settings: a color theme first, so the colors written next to it override it.</summary>
