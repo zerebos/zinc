@@ -88,7 +88,12 @@ list fresh on open and runs actions through `TerminalControl.Invoke` (same path 
 `AddWorkspace` (re-`Wire`s each `TerminalTab`); live TerminalControls re-parent across windows
 fine (same UI thread; Win2D keeps its resources; the pane re-subscribes to the new XamlRoot for
 DPI). Close the source window *after* the target has the workspace, or the app may quit with
-no windows. `MainWindow.Drag.cs`: dragging workspaces (TabView events) and pane tabs
+no windows. `workspace-tabs = left`: `MainWindow.WorkspaceList.cs` + `WorkspaceList.cs` — the
+TabView stays (holds workspaces, shows the selected one) with its strip (`TabContainerGrid`)
+collapsed; the list mirrors `Tabs.TabItems` via `RefreshWorkspaceList` (call it after item,
+selection or color changes). Never remove + re-insert the *selected* TabViewItem: its content is
+still attached until the next layout pass → 0x800F1000 (`MoveWorkspace` moves the others around
+it). `MainWindow.Drag.cs`: dragging workspaces (TabView events or list items) and pane tabs
 (`GroupView` items with `CanDrag`; their strip is its own drop target and marks `Handled` so the
 pane host below doesn't also take it). `App.Drag` hands the dragged `WorkspaceTab` or
 `TerminalTab` over in-process; a drop target clears it, so a completion handler still holding it
