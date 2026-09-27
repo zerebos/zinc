@@ -75,6 +75,16 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void WorkspaceTabsOnTopByDefault()
+    {
+        Assert.Equal(WorkspaceTabs.Top, Load("").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Left, Load("workspace-tabs = left").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Left, Load("workspace-tabs = Left").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Top, Load("workspace-tabs = 1").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Top, Load("workspace-tabs = bottom").WorkspaceTabs);
+    }
+
+    [Fact]
     public void QuitAfterLastWindowDefaultsToAutomatic()
     {
         Assert.Null(Load("").QuitAfterLastWindowClosed);

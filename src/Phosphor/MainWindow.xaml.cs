@@ -41,7 +41,7 @@ public sealed partial class MainWindow : Window
     internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color);
 
     /// <summary>A title-bar tab and the workspace it shows.</summary>
-    private sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
+    internal sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
     {
         public TabViewItem Item { get; } = item;
 
@@ -120,6 +120,11 @@ public sealed partial class MainWindow : Window
         MenuKeySuppressor.Attach(this);
 
         Tabs.Loaded += (_, _) => DisableTabAnimations();
+        if (config.Global.WorkspaceTabs == WorkspaceTabs.Left)
+        {
+            UseWorkspaceList();
+        }
+
         Root.Loaded += (_, _) =>
         {
             UpdateCaptionInset();
@@ -411,7 +416,11 @@ public sealed partial class MainWindow : Window
         // to its header, and Stretch pushed the label above the icon.
         var item = new TabViewItem();
         var tab = new WorkspaceTab(item, workspace) { CustomTitle = customTitle, Color = color };
-        item.Header = tab.Header;
+        if (_workspaceList == null)
+        {
+            item.Header = tab.Header; // with the list, the header is shown there instead
+        }
+
         item.Tag = tab;
         item.Content = tab.Container;
         item.ContextFlyout = BuildTabMenu(tab);
@@ -423,6 +432,7 @@ public sealed partial class MainWindow : Window
         Tabs.TabItems.Insert(Math.Clamp(index ?? Tabs.TabItems.Count, 0, Tabs.TabItems.Count), item);
         Rebuild(tab);
         Tabs.SelectedItem = item;
+        RefreshWorkspaceList();
         return tab;
     }
 
@@ -728,6 +738,7 @@ public sealed partial class MainWindow : Window
         // The selection moves only if the removed workspace was the one shown: removing another
         // (e.g. one dragged into the shown workspace) must not switch away from it.
         Tabs.SelectedItem = wasSelected ? Tabs.TabItems[Math.Min(index, Tabs.TabItems.Count - 1)] : selected;
+        RefreshWorkspaceList();
     }
 
     private void UpdateTitle(WorkspaceTab tab)
@@ -744,6 +755,10 @@ public sealed partial class MainWindow : Window
         if (SelectedTab == tab && Title != title)
         {
             Title = title;
+            if (_windowTitle != null)
+            {
+                _windowTitle.Text = title;
+            }
         }
     }
 
@@ -792,6 +807,8 @@ public sealed partial class MainWindow : Window
             UpdateTitle(tab);
             FocusActive(tab);
         }
+
+        RefreshWorkspaceList();
     }
 
     private void OnAddTabButtonClick(TabView sender, object args) => OpenTab(_config.DefaultProfile);
@@ -876,6 +893,24 @@ public sealed partial class MainWindow : Window
                     DropWorkspace(this, from, tab, target, chord.Contains("middle") ? null : PaneDirection.Right);
                 }
 
+                return;
+            }
+
+            if (chord.StartsWith("test:workspace-at:"))
+            {
+                // "test:workspace-at:0" moves the shown workspace to drop position 0, as a drag
+                // in the workspace list would.
+                Log.Write($"test {chord}");
+                MoveWorkspace(tab, int.Parse(chord["test:workspace-at:".Length..]));
+                return;
+            }
+
+            if (chord.StartsWith("test:workspace-move:"))
+            {
+                // "test:workspace-move:2:0" moves workspace 2 (shown or not) to drop position 0.
+                var parts = chord["test:workspace-move:".Length..].Split(':');
+                Log.Write($"test {chord}");
+                MoveWorkspace(AllTabs().ElementAt(int.Parse(parts[0])), int.Parse(parts[1]));
                 return;
             }
 

@@ -105,37 +105,69 @@ public sealed partial class MainWindow
 
     // ------------------------------------------------------ the title bar
 
-    private void OnTabStripDragOver(object sender, DragEventArgs e)
+    private void OnTabStripDragOver(object sender, DragEventArgs e) =>
+        AcceptWorkspaceDrop(e, TabUnder(e.GetPosition(Tabs)), reorder: false);
+
+    private void OnTabStripDrop(object sender, DragEventArgs e) =>
+        DropOnWorkspaces(DropIndex(e.GetPosition(Tabs)));
+
+    /// <summary>The workspace whose title-bar tab is at <paramref name="point"/> (strip coordinates).</summary>
+    private WorkspaceTab? TabUnder(Point point) =>
+        Tabs.TabItems.Cast<TabViewItem>().FirstOrDefault(i =>
+        {
+            var left = i.TransformToVisual(Tabs).TransformPoint(new Point(0, 0)).X;
+            return point.X >= left && point.X < left + i.ActualWidth;
+        })?.Tag as WorkspaceTab;
+
+    /// <summary>
+    /// Whether the workspace tabs (title bar or list) take the dragged tab, which is over
+    /// <paramref name="under"/>'s tab if any: another window's workspace moves here, this
+    /// window's own is reordered (<paramref name="reorder"/>: the list; the title bar's
+    /// TabView reorders its own), and a pane's tab becomes a workspace of its own, unless it
+    /// already is one of ours. Resting a pane's tab on a workspace switches to it.
+    /// </summary>
+    private bool AcceptWorkspaceDrop(DragEventArgs e, WorkspaceTab? under, bool reorder)
     {
+        var accept = false;
         switch (App.Instance.Drag)
         {
-            // Another window's workspace moves here (this window's own reorder is TabView's).
             case { Tab: WorkspaceTab } drag when drag.Window != this:
-                e.AcceptedOperation = DataPackageOperation.Move;
+                accept = true;
                 e.DragUIOverride.Caption = "Move to this window";
                 break;
-            // A pane's tab becomes its own workspace here, unless it already is one of ours.
+            case { Tab: WorkspaceTab } when reorder:
+                accept = true;
+                e.DragUIOverride.IsCaptionVisible = false;
+                break;
             case { Tab: TerminalTab pane } drag:
-                SpringLoad(e.GetPosition(Tabs));
-                if (!(drag.Window == this && WorkspaceOf(pane)?.Workspace.Tabs.Count() == 1))
+                SpringLoad(under);
+                accept = !(drag.Window == this && WorkspaceOf(pane)?.Workspace.Tabs.Count() == 1);
+                if (accept)
                 {
-                    e.AcceptedOperation = DataPackageOperation.Move;
                     e.DragUIOverride.Caption = "New workspace";
                 }
 
                 break;
         }
+
+        // Only ever raise it: the title bar's own reorder goes through this event too.
+        if (accept)
+        {
+            e.AcceptedOperation = DataPackageOperation.Move;
+        }
+
+        return accept;
     }
 
-    private void OnTabStripDrop(object sender, DragEventArgs e)
+    /// <summary>Drops the dragged tab among the workspace tabs at position <paramref name="index"/> (see <see cref="AcceptWorkspaceDrop"/>).</summary>
+    private void DropOnWorkspaces(int index)
     {
-        _springTimer?.Stop();
+        CancelSpringLoad();
         switch (App.Instance.Drag)
         {
             case { Tab: WorkspaceTab tab } drag when drag.Window != this:
             {
                 App.Instance.Drag = null;
-                var index = DropIndex(e.GetPosition(Tabs));
                 var transfer = drag.Window.DetachWorkspace(tab);
                 AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index);
                 drag.Window.CloseIfEmpty();
@@ -143,11 +175,15 @@ public sealed partial class MainWindow
                 break;
             }
 
+            case { Tab: WorkspaceTab tab } when _workspaceList != null:
+                App.Instance.Drag = null;
+                MoveWorkspace(tab, index);
+                break;
+
             case { Tab: TerminalTab pane } drag when drag.Window.WorkspaceOf(pane) is { } from &&
                                                    !(drag.Window == this && from.Workspace.Tabs.Count() == 1):
             {
                 App.Instance.Drag = null;
-                var index = DropIndex(e.GetPosition(Tabs));
                 drag.Window.TakeTab(from, pane);
                 AddWorkspace(new Workspace<TerminalTab>(pane), index: index);
                 if (drag.Window != this)
@@ -171,32 +207,26 @@ public sealed partial class MainWindow
     }
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _springTimer;
-    private TabViewItem? _springTarget;
+    private WorkspaceTab? _springTarget;
 
     /// <summary>
-    /// Hovering a workspace tab while dragging a pane's tab switches to that workspace after a
+    /// Hovering a workspace's tab while dragging a pane's tab switches to that workspace after a
     /// moment, so the tab can be carried into one of its panes.
     /// </summary>
-    private void SpringLoad(Point point)
+    private void SpringLoad(WorkspaceTab? under)
     {
-        var item = Tabs.TabItems.Cast<TabViewItem>().FirstOrDefault(i =>
+        if (under == null || under == SelectedTab)
         {
-            var left = i.TransformToVisual(Tabs).TransformPoint(new Point(0, 0)).X;
-            return point.X >= left && point.X < left + i.ActualWidth;
-        });
-        if (item == null || ReferenceEquals(item, Tabs.SelectedItem))
-        {
-            _springTimer?.Stop();
-            _springTarget = null;
+            CancelSpringLoad();
             return;
         }
 
-        if (item == _springTarget && _springTimer is { IsRunning: true })
+        if (under == _springTarget && _springTimer is { IsRunning: true })
         {
             return;
         }
 
-        _springTarget = item;
+        _springTarget = under;
         if (_springTimer == null)
         {
             _springTimer = DispatcherQueue.CreateTimer();
@@ -206,9 +236,9 @@ public sealed partial class MainWindow
             {
                 // DragOver only comes with movement, so a resting pointer is still where it was;
                 // leaving for anywhere else cancels (CancelSpringLoad).
-                if (App.Instance.Drag != null && _springTarget != null)
+                if (App.Instance.Drag != null && _springTarget != null && AllTabs().Contains(_springTarget))
                 {
-                    Tabs.SelectedItem = _springTarget;
+                    Tabs.SelectedItem = _springTarget.Item;
                 }
             };
         }
@@ -265,6 +295,11 @@ public sealed partial class MainWindow
     /// </summary>
     private bool InTitleBand(DragEventArgs e)
     {
+        if (_workspaceList != null)
+        {
+            return false; // the title bar is all caption; the list takes drops itself
+        }
+
         var caption = DragRegion.TransformToVisual(Root).TransformPoint(new Point(0, 0));
         var p = e.GetPosition(Root);
         return p.Y <= caption.Y + DragRegion.ActualHeight && p.X < caption.X;

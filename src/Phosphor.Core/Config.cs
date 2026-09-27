@@ -13,6 +13,15 @@ public enum GroupTabStrip
     Always,
 }
 
+public enum WorkspaceTabs
+{
+    /// <summary>In the title bar.</summary>
+    Top,
+
+    /// <summary>In a column on the window's left, under a plain title bar.</summary>
+    Left,
+}
+
 /// <summary>
 /// User configuration from <c>%APPDATA%\Phosphor\config</c>, in Ghostty's syntax:
 /// one <c>key = value</c> per line, <c>#</c> comments, later lines win. Keys and
@@ -68,6 +77,9 @@ public sealed record Config
     /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
     public GroupTabStrip GroupTabStrip { get; init; }
 
+    /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
+    public WorkspaceTabs WorkspaceTabs { get; init; }
+
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
@@ -109,6 +121,8 @@ public sealed record Config
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
             "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
                 this with { GroupTabStrip = strip },
+            "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
+                this with { WorkspaceTabs = tabs },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>

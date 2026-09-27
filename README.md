@@ -234,6 +234,9 @@ its current tab's profile; the title bar's + and ▾ open workspaces.
   open as workspaces.
 - `group-tab-strip = always` (global) shows the strip on every pane, even with one tab
   (default `auto`: only with two or more).
+- `workspace-tabs = left` (global) lists workspaces in a column on the left, under a plain
+  title bar, instead of as title-bar tabs (default `top`). The list works like the tabs: click,
+  close, right-click, drag to reorder or anywhere a title-bar tab can go.
 
 Right-clicking a workspace offers rename, workspace color, duplicate, split, moving it to a new
 window, export text (whole scrollback to a file), and closing this / other / right-hand

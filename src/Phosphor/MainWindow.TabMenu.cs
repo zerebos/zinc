@@ -138,7 +138,7 @@ public sealed partial class MainWindow
             box.SelectAll();
         };
         flyout.Closed += (_, _) => FocusActive(tab);
-        flyout.ShowAt(tab.Item);
+        flyout.ShowAt(AnchorOf(tab));
     }
 
     // ---- color ----
@@ -194,6 +194,7 @@ public sealed partial class MainWindow
         // makes the item re-resolve them now.
         tab.Item.RequestedTheme = ElementTheme.Light;
         tab.Item.RequestedTheme = ElementTheme.Dark;
+        RefreshWorkspaceList();
     }
 
     // ---- export ----
