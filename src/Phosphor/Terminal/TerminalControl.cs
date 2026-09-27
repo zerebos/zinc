@@ -252,7 +252,9 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        var blinking = _renderer.Draw(args.DrawingSession, session, _rows, new CursorPresentation(_focused, _blinkOn));
+        // Test captures draw every cursor as focused: whether a new window gets focus varies.
+        var presentation = new CursorPresentation(_focused || TestHooks.Deterministic, _blinkOn);
+        var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
         DrawSearchTicks(args.DrawingSession, session);
         UpdateBlinkTimer(blinking);
         UpdateScrollBar(session);
@@ -260,7 +262,7 @@ public sealed partial class TerminalControl : UserControl
 
     private void UpdateBlinkTimer(bool blinking)
     {
-        if (blinking && _focused)
+        if (blinking && _focused && !TestHooks.Deterministic)
         {
             if (!_blinkTimer.IsEnabled)
             {

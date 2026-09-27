@@ -241,7 +241,10 @@ and read state after the write (see `_titleDirty`).
   scripts under a pinned config (`.scratch/visual-config`); `.scratch/venv/Scripts/python
   .scratch/tools/visual-diff.py <before> <after>` compares pixel by pixel (title bar ignored:
   its active/inactive look is noise). Capture a baseline *before* touching rendering code.
-  Runs are deterministic (verified: two captures of one build are identical).
+  It also captures `splits` and `tabs` layouts (driven by PHOSPHOR_TEST_KEYS) for layout work.
+  Runs are deterministic because visual.ps1 sets `PHOSPHOR_TEST_DETERMINISTIC=1` (`TestHooks`:
+  no cursor blink, cursor drawn as focused, no Mica — each of those once made two captures of
+  the same build differ). Verify determinism by capturing twice when adding scenarios.
 
 - Screenshot ONLY our window with `PrintWindow(PW_RENDERFULLCONTENT)` (`shot.ps1`).
   **Never** `CopyFromScreen` — it captured another app's private window once.
