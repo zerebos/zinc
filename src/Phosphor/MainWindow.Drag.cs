@@ -190,8 +190,18 @@ public sealed partial class MainWindow
         }
 
         App.Instance.Drag = null;
-        var (tab, group) = target;
-        var transfer = drag.Window.DetachWorkspace(dragged);
+        DropWorkspace(drag.Window, dragged, target.Tab, target.Group, edge);
+    }
+
+    /// <summary>
+    /// Moves workspace <paramref name="dragged"/> (from <paramref name="source"/>, maybe this
+    /// window) into <paramref name="tab"/>: beside <paramref name="group"/> on side
+    /// <paramref name="edge"/>, or into the group as tabs when <paramref name="edge"/> is null.
+    /// </summary>
+    private void DropWorkspace(MainWindow source, WorkspaceTab dragged, WorkspaceTab tab, TabGroup<TerminalTab> group,
+        PaneDirection? edge)
+    {
+        var transfer = source.DetachWorkspace(dragged);
         if (edge is { } side)
         {
             tab.Workspace.Merge(group, side, transfer.Workspace);
@@ -214,7 +224,7 @@ public sealed partial class MainWindow
         }
 
         Rebuild(tab);
-        drag.Window.CloseIfEmpty();
+        source.CloseIfEmpty();
         Activate();
     }
 

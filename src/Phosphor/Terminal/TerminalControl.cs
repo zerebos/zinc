@@ -22,7 +22,10 @@ public sealed partial class TerminalControl : UserControl
     private readonly Keybindings _keybindings;
     private readonly string _commandLine;
     private readonly string? _workingDirectory;
-    private readonly CanvasControl _canvas;
+    private CanvasControl _canvas;
+
+    // Mirrors the canvas's Loaded/Unloaded count, which Win2D keeps to decide whether to draw.
+    private int _canvasLoads;
     private readonly Grid _root; // canvas, scrollbar, find box
     private readonly TerminalRenderer _renderer;
     private readonly DispatcherTimer _blinkTimer;
@@ -74,10 +77,7 @@ public sealed partial class TerminalControl : UserControl
         // The scrollbar handles its own pointer events; proximity tracking must see them too.
         AddHandler(PointerMovedEvent, new PointerEventHandler(TrackScrollBarProximity), handledEventsToo: true);
 
-        _canvas = new CanvasControl { ClearColor = TerminalRenderer.ToColor(config.Theme.Background) };
-        _canvas.CreateResources += OnCreateResources;
-        _canvas.Draw += OnDraw;
-        _canvas.SizeChanged += (_, _) => UpdateGrid();
+        _canvas = CreateCanvas();
         // The scrollbar overlays the canvas's right edge (inside the padding when idle).
         Content = _root = new Grid { Children = { _canvas, CreateScrollBar() } };
 
@@ -111,6 +111,56 @@ public sealed partial class TerminalControl : UserControl
     }
 
     private float DisplayScale => (float)(XamlRoot?.RasterizationScale ?? 1.0);
+
+    private CanvasControl CreateCanvas()
+    {
+        var canvas = new CanvasControl { ClearColor = TerminalRenderer.ToColor(_config.Theme.Background) };
+        canvas.CreateResources += OnCreateResources;
+        canvas.Draw += OnDraw;
+        canvas.SizeChanged += OnCanvasSizeChanged;
+        canvas.Loaded += OnCanvasLoaded;
+        canvas.Unloaded += OnCanvasUnloaded;
+        return canvas;
+    }
+
+    private void OnCanvasSizeChanged(object sender, SizeChangedEventArgs e) => UpdateGrid();
+
+    private void OnCanvasUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (ReferenceEquals(sender, _canvas))
+        {
+            _canvasLoads--;
+        }
+    }
+
+    /// <summary>
+    /// Win2D draws a canvas only while its Loaded count exceeds its Unloaded count. XAML can
+    /// report one removal twice (e.g. a terminal taken out of a pane that was itself just
+    /// detached), after which the canvas never draws again — the pane looks frozen, even
+    /// through resizes. If a Loaded leaves the count at zero or below, swap in a fresh canvas.
+    /// The session, scrollback and everything else stay; only the drawing surface is replaced.
+    /// </summary>
+    private void OnCanvasLoaded(object sender, RoutedEventArgs e)
+    {
+        if (!ReferenceEquals(sender, _canvas) || ++_canvasLoads > 0)
+        {
+            return;
+        }
+
+        Log.Write($"pane: canvas unloaded more often than loaded ({_canvasLoads}); replacing it");
+        var old = _canvas;
+        old.CreateResources -= OnCreateResources;
+        old.Draw -= OnDraw;
+        old.SizeChanged -= OnCanvasSizeChanged;
+        old.Loaded -= OnCanvasLoaded;
+        old.Unloaded -= OnCanvasUnloaded;
+        _canvas = CreateCanvas();
+        _canvasLoads = 0;
+        var index = _root.Children.IndexOf(old);
+        _root.Children.RemoveAt(index);
+        _root.Children.Insert(index, _canvas);
+        old.RemoveFromVisualTree(); // releases its device resources
+    }
 
     private void OnXamlRootChanged(XamlRoot sender, XamlRootChangedEventArgs args) => UpdateScale();
 

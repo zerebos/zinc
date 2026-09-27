@@ -227,6 +227,11 @@ public sealed partial class MainWindow : Window
     /// <summary>Rebuilds a workspace's content from its layout and focuses the active tab.</summary>
     private void Rebuild(WorkspaceTab tab)
     {
+        // Swap each pane's shown terminal while its host is still in the tree: removing a
+        // terminal from a subtree that was just detached makes XAML report its Unloaded
+        // twice, and Win2D's canvas (which counts Loaded/Unloaded) then never draws again.
+        UpdateFocusBorders(tab);
+
         // Take the old layout apart first: pane hosts are reused and XAML elements can't
         // have two parents (0x800F1000). FrameworkElement.Parent is null for children
         // added to a Panel in code, so detaching by asking each host for its parent fails.
@@ -421,11 +426,14 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private WorkspaceTransfer DetachWorkspace(WorkspaceTab tab)
     {
-        Dismantle(tab.Container);
+        // Terminals leave their panes before the panes leave the layout (see Rebuild: the
+        // other order unloads each terminal twice, which stops Win2D drawing it).
         foreach (var group in tab.Workspace.Groups)
         {
             ReleaseHost(group);
         }
+
+        Dismantle(tab.Container);
 
         foreach (var pane in tab.Workspace.Tabs)
         {
@@ -462,9 +470,14 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        // Release the pane's terminal while the pane is still in the layout (see Rebuild).
+        if (tab.Workspace.GroupOf(pane) is { } moving)
+        {
+            ReleaseHost(moving);
+        }
+
         if (TakeGroup(tab, pane) is { } group)
         {
-            ReleaseHost(group);
             foreach (var t in group.Tabs)
             {
                 t.Unwire?.Invoke();
@@ -613,6 +626,8 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var wasSelected = ReferenceEquals(Tabs.SelectedItem, tab.Item);
+        var selected = Tabs.SelectedItem;
         Tabs.TabItems.RemoveAt(index);
         if (Tabs.TabItems.Count == 0)
         {
@@ -624,7 +639,9 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        Tabs.SelectedIndex = Math.Min(index, Tabs.TabItems.Count - 1);
+        // The selection moves only if the removed workspace was the one shown: removing another
+        // (e.g. one dragged into the shown workspace) must not switch away from it.
+        Tabs.SelectedItem = wasSelected ? Tabs.TabItems[Math.Min(index, Tabs.TabItems.Count - 1)] : selected;
     }
 
     private void UpdateTitle(WorkspaceTab tab)
@@ -759,6 +776,20 @@ public sealed partial class MainWindow : Window
             if (!queue.TryDequeue(out var chord) || SelectedTab is not { } tab)
             {
                 timer.Stop();
+                return;
+            }
+
+            if (chord.StartsWith("test:drop-middle:") || chord.StartsWith("test:drop-right:"))
+            {
+                // "test:drop-middle:1" drops workspace 1 into the focused pane, as a drag onto
+                // its middle would ("drop-right": onto its right edge). Drags can't be posted.
+                var from = AllTabs().ElementAtOrDefault(int.Parse(chord[(chord.LastIndexOf(':') + 1)..]));
+                Log.Write($"test {chord}: {(from != null && from != tab ? "dropping" : "no such workspace")}");
+                if (from != null && from != tab && tab.Workspace.GroupOf(tab.Active) is { } target)
+                {
+                    DropWorkspace(this, from, tab, target, chord.Contains("middle") ? null : PaneDirection.Right);
+                }
+
                 return;
             }
 

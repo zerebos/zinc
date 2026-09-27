@@ -283,8 +283,16 @@ and read state after the write (see `_titleDirty`).
 - To check a pane keeps updating, give it output that changes every line (a counter:
   `bash -c 'i=0; while true; do i=$((i+1)); echo tick $i; sleep 0.25; done'` via wsl.exe).
   `ping -t` once misled me: its lines are identical, so a full pane scrolling looks frozen in
-  a pixel diff (only the scrollbar moves). XAML may deliver a moved pane's Unloaded after its
-  Loaded; that was observed but caused no freeze.
+  a pixel diff (only the scrollbar moves). `.scratch/tools/freeze-repro.ps1` replays the one
+  real freeze (below).
+- **Win2D's CanvasControl counts Loaded/Unloaded and draws only while loads exceed unloads.**
+  XAML reports an element's removal *twice* if it's taken out of a subtree that was itself
+  just detached (e.g. `Dismantle` removes a pane host, then the pane's shown terminal is
+  swapped) — the canvas then never draws again, even on resize (user-visible "frozen pane").
+  So: change what a pane shows *before* detaching layouts (`Rebuild` calls
+  `UpdateFocusBorders` first; `DetachWorkspace` releases hosts before `Dismantle`), and
+  `TerminalControl` mirrors the count and swaps in a fresh canvas if a Loaded leaves it ≤ 0.
+  Out-of-order pairs (a moved pane's Unloaded after its new Loaded) are harmless.
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in
   box drawing once turned out to be anti-aliasing seen at low resolution.
