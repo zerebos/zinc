@@ -16,7 +16,7 @@ namespace Phosphor;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
-    private readonly ConfigFile _config;
+    private ConfigFile _config; // replaced on a config reload (ApplyConfig)
     private readonly Keybindings _keybindings;
     private readonly Brush _dividerBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A));
     private readonly Brush _focusBrush;
@@ -24,7 +24,8 @@ public sealed partial class MainWindow : Window
     /// <summary>One terminal tab: the profile/command it was opened with, and its control.</summary>
     internal sealed class TerminalTab(Profile profile, string command, string workingDirectory, TerminalControl control)
     {
-        public Profile Profile { get; } = profile;
+        /// <summary>Its profile; replaced by the same id's on a config reload.</summary>
+        public Profile Profile { get; set; } = profile;
         public string Command { get; } = command;
         public string WorkingDirectory { get; } = workingDirectory;
         public TerminalControl Control { get; } = control;
@@ -132,6 +133,7 @@ public sealed partial class MainWindow : Window
         };
 
         BuildNewTabMenu();
+        SetUpConfigNotice();
 
         Closed += (_, _) =>
         {
@@ -819,6 +821,7 @@ public sealed partial class MainWindow : Window
 
     private void BuildNewTabMenu()
     {
+        NewTabMenu.Items.Clear(); // rebuilt when the config reloads
         var index = 0;
         foreach (var profile in _config.VisibleProfiles)
         {

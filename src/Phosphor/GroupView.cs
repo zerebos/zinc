@@ -309,13 +309,15 @@ internal sealed partial class GroupView : Grid
         };
 
         private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
-        private readonly Brush _background;
+        private readonly MainWindow.TerminalTab _tab;
+        private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private bool _active;
 
         public TabItem(MainWindow.TerminalTab tab)
         {
             // The shown tab takes its terminal's background, so it flows into the pane below.
+            _tab = tab;
             _background = new SolidColorBrush(TerminalRenderer.ToColor(tab.Profile.Config.Theme.Background));
             CornerRadius = new CornerRadius(6, 6, 0, 0);
             Background = _clear;
@@ -375,6 +377,13 @@ internal sealed partial class GroupView : Grid
                 _title.Text = title;
                 AutomationProperties.SetName(this, title);
                 ToolTipService.SetToolTip(this, title);
+            }
+
+            // The profile's background can change (a config reload).
+            var background = TerminalRenderer.ToColor(_tab.Profile.Config.Theme.Background);
+            if (_background.Color != background)
+            {
+                _background = new SolidColorBrush(background);
             }
 
             _active = active;

@@ -18,7 +18,7 @@ public sealed partial class TerminalControl : UserControl
 {
     private const float MinFontSize = 6, MaxFontSize = 72;
 
-    private readonly Config _config;
+    private Config _config;
     private readonly Keybindings _keybindings;
     private readonly string _commandLine;
     private readonly string? _workingDirectory;
@@ -234,19 +234,49 @@ public sealed partial class TerminalControl : UserControl
             TitleChanged?.Invoke(title);
         });
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
-        // OSC 52. Writes arrive mid-parse on the reader thread: set the clipboard on the UI thread.
-        if (_config.ClipboardWrite)
-        {
-            session.ClipboardWriter = text => dq.TryEnqueue(() => ClipboardText.Set(text));
-        }
-
-        if (_config.ClipboardRead)
-        {
-            session.ClipboardReader = ClipboardText.ReadNow;
-        }
-
+        ApplyClipboardPermissions(session);
         _session = session;
         session.Start(_commandLine, _workingDirectory, cols, rows);
+    }
+
+    /// <summary>OSC 52 access per the settings (null = denied).</summary>
+    private void ApplyClipboardPermissions(TerminalSession session)
+    {
+        // Writes arrive mid-parse on the reader thread: set the clipboard on the UI thread.
+        var dq = DispatcherQueue;
+        session.ClipboardWriter = _config.ClipboardWrite ? text => dq.TryEnqueue(() => ClipboardText.Set(text)) : null;
+        session.ClipboardReader = _config.ClipboardRead ? ClipboardText.ReadNow : null;
+    }
+
+    /// <summary>
+    /// Takes new settings (a config reload) without restarting the shell: colors, font,
+    /// padding, pointer and clipboard permissions. A font size changed in the config replaces
+    /// the current zoom; otherwise the zoom (Ctrl+plus/minus) stays.
+    /// </summary>
+    public void ApplyConfig(Config config)
+    {
+        var old = _config;
+        _config = config;
+        _renderer.Config = config;
+        _canvas.ClearColor = TerminalRenderer.ToColor(config.Theme.Background);
+        if (_session is { } session)
+        {
+            session.SetTheme(config.Theme);
+            ApplyClipboardPermissions(session);
+        }
+
+        if (_renderer.HasResources)
+        {
+            if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize)
+            {
+                var size = old.FontSize != config.FontSize ? Math.Clamp(config.FontSizeDip, MinFontSize, MaxFontSize) : _renderer.FontSize;
+                _renderer.SetFont(_canvas, size, DisplayScale);
+            }
+
+            UpdateGrid(); // padding may have changed
+        }
+
+        _canvas.Invalidate();
     }
 
     private void OnProcessExited(uint code)

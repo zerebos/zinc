@@ -170,6 +170,14 @@ public class ConfigFileTests : IDisposable
     }
 
     [Fact]
+    public void OnlyInvalidTomlCountsAsAnError()
+    {
+        Assert.False(Parse("[font]\nsize = \"huge\"\nnope = 1").HasErrors); // warnings, but valid TOML
+        Assert.True(Parse("[font]\nsize = ").HasErrors);                     // a save mid-edit
+        Assert.True(Parse("[font\nsize = 12").HasErrors);
+    }
+
+    [Fact]
     public void ThemesComeFromTheUserFolderThenBundled()
     {
         File.WriteAllText(Path.Combine(_bundled, "Alacritty"), "background = #181818\npalette = 1=#AC4242\nselection-background = #444444\n");

@@ -33,6 +33,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   looked up next to *that* file, so a test config copied elsewhere needs its `themes\` too;
   test scripts append their own `[window]` section (a TOML table can't be opened twice).
   The old key = value `config` is no longer read (the user's was converted once, by hand).
+  Live reload: `App.WatchConfig` (FileSystemWatcher on the config folder: *.toml and themes\,
+  not session.json; 300 ms settle) → `ReloadConfig` → `MainWindow.ApplyConfig`
+  (MainWindow.Config.cs: re-resolve each tab's profile by id → `TerminalControl.ApplyConfig`,
+  which calls `TerminalSession.SetTheme`; strips, dims, menus) and the ConfigNotice InfoBar.
+  `ConfigFile.HasErrors` (invalid TOML) = report only, keep the settings in force.
+  libghostty's "default palette" getter returns the last palette *set*, so the session keeps
+  its built-in palette from creation to restore entries a new theme doesn't define.
 - Session (reopening windows): `%APPDATA%\Phosphor\session.json`, `PHOSPHOR_SESSION=<file>`
   overrides. **A run with `PHOSPHOR_CONFIG` set neither restores nor saves** unless
   `PHOSPHOR_SESSION` is also set — so test instances never touch the user's session. Launching

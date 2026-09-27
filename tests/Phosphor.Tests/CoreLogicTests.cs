@@ -181,6 +181,21 @@ public class ConfigTests : IDisposable
         Assert.Equal(new GhosttyColorRgb(1, 2, 3), FirstCellForeground(session));
     }
 
+    [Fact]
+    public void ThemeChangesReachTextAlreadyOnScreen()
+    {
+        var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(1, 2, 3) } };
+        using var session = new TerminalSession(20, 2, theme);
+        session.WriteToScreen("\x1b[31mX");
+
+        session.SetTheme(TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(4, 5, 6) } });
+        Assert.Equal(new GhosttyColorRgb(4, 5, 6), FirstCellForeground(session));
+
+        // An entry the new theme doesn't set goes back to libghostty's default.
+        session.SetTheme(TerminalTheme.Default);
+        Assert.NotEqual(new GhosttyColorRgb(4, 5, 6), FirstCellForeground(session));
+    }
+
     private static unsafe GhosttyColorRgb FirstCellForeground(TerminalSession session)
     {
         Native.RenderStateNew(0, out var state);

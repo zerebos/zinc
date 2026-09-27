@@ -33,13 +33,25 @@ public sealed record Profile(string Id, string Name, Config Config, bool Hidden 
 /// </summary>
 public sealed class ConfigFile
 {
-    private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings)
+    private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings,
+        bool hasErrors, string path)
     {
         Global = global;
         Profiles = profiles;
         DefaultProfile = defaultProfile;
         Warnings = warnings;
+        HasErrors = hasErrors;
+        Path = path;
     }
+
+    /// <summary>
+    /// Whether a file isn't valid TOML. Its valid parts still load at startup, but a reload
+    /// keeps the settings in force rather than apply a half-read file (a save mid-edit).
+    /// </summary>
+    public bool HasErrors { get; }
+
+    /// <summary>The file these settings came from.</summary>
+    public string Path { get; }
 
     /// <summary>Settings outside any profile.</summary>
     public Config Global { get; }
@@ -107,6 +119,7 @@ public sealed class ConfigFile
         private readonly List<Entry> _entries = [];
         private readonly List<string> _warnings = [];
         private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
+        private bool _hasErrors;
 
         public void Read(string text, string file, int depth)
         {
@@ -117,6 +130,7 @@ public sealed class ConfigFile
             }
 
             var doc = SyntaxParser.Parse(text, file);
+            _hasErrors |= doc.HasErrors;
             foreach (var d in doc.Diagnostics)
             {
                 _warnings.Add($"{System.IO.Path.GetFileName(file)}:{d.Span.Start.Line + 1}: {d.Message}");
@@ -337,7 +351,7 @@ public sealed class ConfigFile
                 _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn't a profile; using '{defaultProfile.Id}'");
             }
 
-            return new ConfigFile(global, profiles, defaultProfile, _warnings);
+            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath);
         }
 
         /// <summary>Applies grouped settings: a color theme first, so the colors written next to it override it.</summary>

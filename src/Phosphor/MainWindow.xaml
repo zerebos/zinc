@@ -62,16 +62,26 @@
             IsHitTestVisible="False"
             Visibility="Collapsed" />
 
-        <!-- Shown when the quick terminal's global hotkey is held by another app. -->
-        <InfoBar
-            x:Name="HotkeyNotice"
+        <!-- Notices, stacked at the bottom right. -->
+        <StackPanel
             MaxWidth="520"
             Margin="12"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
-            IsOpen="False"
-            Severity="Warning"
-            Title="Quick terminal hotkey unavailable" />
+            Spacing="8">
+            <!-- Problems in config.toml, after loading or a reload (MainWindow.Config.cs). -->
+            <InfoBar x:Name="ConfigNotice" IsOpen="False" Severity="Warning">
+                <InfoBar.ActionButton>
+                    <Button x:Name="OpenConfigButton" Content="Open config" />
+                </InfoBar.ActionButton>
+            </InfoBar>
+            <!-- Shown when the quick terminal's global hotkey is held by another app. -->
+            <InfoBar
+                x:Name="HotkeyNotice"
+                IsOpen="False"
+                Severity="Warning"
+                Title="Quick terminal hotkey unavailable" />
+        </StackPanel>
 
         <!-- Command palette (Ctrl+Shift+P). The transparent layer catches clicks outside
              the panel to close it. -->

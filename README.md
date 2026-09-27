@@ -63,8 +63,15 @@ newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundle
 
 `%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
 [TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,
-bad values, TOML mistakes) are collected as warnings naming the file and line; everything
-else still applies.
+bad values, TOML mistakes) are shown in a bar naming the file and line; everything else
+still applies.
+
+Changes apply as soon as the file is saved (also after editing an included file or a scheme in
+`themes\`), to every open window: colors, fonts, padding and profiles update in running tabs,
+and a profile's command applies to tabs opened afterwards. Where workspace tabs sit (`top` /
+`left`) applies to new windows. A save that isn't valid TOML, such as one in the middle of an
+edit, is reported and ignored until the file is valid again. **Reload config** in the command
+palette re-reads it on demand.
 
 ```toml
 default-profile = "wsl:Fedora"

@@ -48,6 +48,7 @@ public partial class App : Application
 
         StartSavingSession();
         AcceptRedirectedLaunches();
+        WatchConfig();
         try
         {
             SetUpQuickTerminal();
@@ -274,6 +275,95 @@ public partial class App : Application
 
     [System.Runtime.InteropServices.LibraryImport("kernel32.dll")]
     private static partial IntPtr LocalFree(IntPtr memory);
+
+    // ---------------------------------------------------------------- config
+
+    private FileSystemWatcher? _configWatcher;
+
+    // In a field: an unreferenced DispatcherQueueTimer is collected and stops firing.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _reloadTimer;
+
+    /// <summary>
+    /// Reloads the config shortly after it (an included file in its folder, or a scheme in its
+    /// themes folder) is saved. Editors often write a file several times per save, and the
+    /// watcher reports each one, so changes settle for a moment first.
+    /// </summary>
+    private void WatchConfig()
+    {
+        var folder = Path.GetDirectoryName(_config.Path);
+        if (folder == null || !Directory.Exists(folder))
+        {
+            return; // no config folder yet: nothing to watch until Phosphor is restarted
+        }
+
+        var queue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        _reloadTimer = queue.CreateTimer();
+        _reloadTimer.Interval = TimeSpan.FromMilliseconds(300);
+        _reloadTimer.IsRepeating = false;
+        _reloadTimer.Tick += (_, _) => ReloadConfig();
+
+        var themes = Path.Combine(folder, "themes") + Path.DirectorySeparatorChar;
+        void OnChange(object sender, FileSystemEventArgs e)
+        {
+            // The folder also holds session.json, rewritten as windows change: ignore it.
+            var path = e.FullPath;
+            if (path.EndsWith(".toml", StringComparison.OrdinalIgnoreCase) || path.StartsWith(themes, StringComparison.OrdinalIgnoreCase))
+            {
+                queue.TryEnqueue(() =>
+                {
+                    _reloadTimer.Stop();
+                    _reloadTimer.Start();
+                });
+            }
+        }
+
+        _configWatcher = new FileSystemWatcher(folder)
+        {
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+        };
+        _configWatcher.Changed += OnChange;
+        _configWatcher.Created += OnChange;
+        _configWatcher.Deleted += OnChange;
+        _configWatcher.Renamed += (s, e) => OnChange(s, e);
+        _configWatcher.EnableRaisingEvents = true;
+    }
+
+    /// <summary>
+    /// Reads the config again and applies it to every window. A file that isn't valid TOML (a
+    /// save mid-edit) is only reported: the settings in force stay.
+    /// </summary>
+    internal void ReloadConfig()
+    {
+        if (_quitting)
+        {
+            return;
+        }
+
+        var fresh = ConfigFile.Load(_config.Path);
+        Log.Write($"config: reloaded ({fresh.Warnings.Count} warning(s){(fresh.HasErrors ? ", not valid TOML: not applied" : "")})");
+        foreach (var warning in fresh.Warnings)
+        {
+            Log.Write($"config: {warning}");
+        }
+
+        var windows = _quick != null ? _windows.Append(_quick).ToList() : _windows.ToList();
+        if (fresh.HasErrors)
+        {
+            windows.ForEach(w => w.ShowConfigProblems(fresh, applied: false));
+            return;
+        }
+
+        var hotkeyChanged = fresh.Global.QuickTerminal.Hotkey != _config.Global.QuickTerminal.Hotkey;
+        _config = fresh;
+        windows.ForEach(w => w.ApplyConfig(fresh));
+        if (hotkeyChanged)
+        {
+            _hotkey?.Dispose();
+            _hotkey = null;
+            SetUpQuickTerminal();
+        }
+    }
 
     // --------------------------------------------------------------- session
 

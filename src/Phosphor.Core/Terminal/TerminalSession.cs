@@ -82,12 +82,14 @@ public sealed unsafe class TerminalSession : IDisposable
         Native.TerminalSet(_terminal, TerminalOption.ClipboardRead,
             (delegate* unmanaged[Cdecl]<nint, nint, GhosttyClipboardRead*, void>)&OnClipboardRead);
 
-        var fg = theme.Foreground;
-        var bg = theme.Background;
-        var cursor = theme.Cursor;
-        Native.TerminalSet(_terminal, TerminalOption.ColorForeground, &fg);
-        Native.TerminalSet(_terminal, TerminalOption.ColorBackground, &bg);
-        Native.TerminalSet(_terminal, TerminalOption.ColorCursor, &cursor);
+        // libghostty's own palette, before a theme changes it: reading its "default" palette
+        // later returns whatever was last set, so a theme change couldn't restore entries.
+        fixed (GhosttyColorRgb* p = _builtinPalette)
+        {
+            Native.TerminalGet(_terminal, TerminalData.ColorPaletteDefault, p);
+        }
+
+        ApplyTheme(theme);
 
         if (ConPty.UsesBundledConpty)
         {
@@ -95,22 +97,6 @@ public sealed unsafe class TerminalSession : IDisposable
             // so emoji sequences (ZWJ, flags, skin tones) occupy matching cells.
             var grapheme = new GhosttyTerminalModeConfig { Mode = GhosttyMode.GraphemeCluster, Value = 1 };
             Native.TerminalSet(_terminal, TerminalOption.ModeDefault, &grapheme);
-        }
-
-        if (theme.Palette.Count > 0)
-        {
-            // libghostty takes the whole 256-color table: start from its defaults.
-            var palette = new GhosttyColorRgb[256];
-            fixed (GhosttyColorRgb* p = palette)
-            {
-                Native.TerminalGet(_terminal, TerminalData.ColorPaletteDefault, p);
-                foreach (var (index, color) in theme.Palette)
-                {
-                    p[index] = color;
-                }
-
-                Native.TerminalSet(_terminal, TerminalOption.ColorPalette, p);
-            }
         }
 
         nuint scrollback = 10_000;
@@ -236,6 +222,48 @@ public sealed unsafe class TerminalSession : IDisposable
         }
 
         OutputProcessed?.Invoke();
+    }
+
+    /// <summary>
+    /// Changes the terminal's colors while it runs (a config reload): the default foreground,
+    /// background, cursor and palette. Colors a program set itself (OSC 4/10/11) stay.
+    /// </summary>
+    public void SetTheme(TerminalTheme theme)
+    {
+        lock (Lock)
+        {
+            if (!_disposed)
+            {
+                ApplyTheme(theme);
+            }
+        }
+
+        OutputProcessed?.Invoke(); // redraw
+    }
+
+    private readonly GhosttyColorRgb[] _builtinPalette = new GhosttyColorRgb[256];
+
+    private void ApplyTheme(TerminalTheme theme)
+    {
+        var fg = theme.Foreground;
+        var bg = theme.Background;
+        var cursor = theme.Cursor;
+        Native.TerminalSet(_terminal, TerminalOption.ColorForeground, &fg);
+        Native.TerminalSet(_terminal, TerminalOption.ColorBackground, &bg);
+        Native.TerminalSet(_terminal, TerminalOption.ColorCursor, &cursor);
+
+        // libghostty takes the whole 256-color table: its built-in one, then the theme's entries.
+        // Always set, so entries a new theme doesn't define go back to the built-in colors.
+        var palette = (GhosttyColorRgb[])_builtinPalette.Clone();
+        fixed (GhosttyColorRgb* p = palette)
+        {
+            foreach (var (index, color) in theme.Palette)
+            {
+                p[index] = color;
+            }
+
+            Native.TerminalSet(_terminal, TerminalOption.ColorPalette, p);
+        }
     }
 
     /// <summary>

@@ -26,7 +26,14 @@ public readonly record struct CursorPresentation(bool Focused, bool BlinkOn);
 /// </summary>
 public sealed unsafe class TerminalRenderer : IDisposable
 {
-    private readonly Config _config;
+    private Config _config;
+
+    /// <summary>The settings drawn with (font family, padding); replaced on a config reload.</summary>
+    public Config Config
+    {
+        get => _config;
+        set => _config = value;
+    }
     private readonly nint _renderState, _rowIterator, _rowCells;
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];

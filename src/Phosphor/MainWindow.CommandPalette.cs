@@ -246,6 +246,7 @@ public sealed partial class MainWindow
         Custom("Export text…", () => _ = ExportText(tab));
         Action("New window", TerminalAction.NewWindow);
         Custom("Quit Phosphor", App.Instance.Quit, null);
+        Custom("Reload config", App.Instance.ReloadConfig, null);
 
         // Panes.
         Action("Split right", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
