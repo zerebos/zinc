@@ -317,7 +317,6 @@ internal sealed partial class GroupView : Grid
         {
             // The shown tab takes its terminal's background, so it flows into the pane below.
             _background = new SolidColorBrush(TerminalRenderer.ToColor(tab.Profile.Config.Theme.Background));
-            Padding = new Thickness(10, 0, 4, 0);
             CornerRadius = new CornerRadius(6, 6, 0, 0);
             Background = _clear;
 
@@ -341,8 +340,11 @@ internal sealed partial class GroupView : Grid
                 Margin = new Thickness(0, 0, 8, 0),
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            // The padding goes on the content, not the tab, so the accent line spans the whole tab
+            // (like the line across a strip-less focused pane).
             Children.Add(new StackPanel
             {
+                Padding = new Thickness(10, 0, 4, 0),
                 Orientation = Orientation.Horizontal,
                 Children = { icon, _title, close },
             });
