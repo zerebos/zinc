@@ -143,8 +143,12 @@ show a notice, and Phosphor retries whenever one of its windows is activated.
 
 ### Tray icon and background
 
+Only one Phosphor runs at a time: launching it again (Start menu, a launcher, the command line)
+opens a new window in the running one — with the command given, if any — or, when it's in the
+tray with no window open, reopens the saved windows.
+
 Phosphor shows a notification-area icon while it runs. Clicking it brings back the most
-recently used window (or opens one); right-clicking offers New window, Show/Hide quick
+recently used window (or the saved windows); right-clicking offers New window, Show/Hide quick
 terminal, and Quit Phosphor, which closes every window, the hidden quick terminal included.
 Quit Phosphor is also in the command palette.
 

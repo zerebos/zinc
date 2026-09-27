@@ -168,6 +168,14 @@ public static class SessionStore
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phosphor", "session.json");
     }
 
+    /// <summary>
+    /// The name that one running Phosphor per session file goes by: its single-instance key,
+    /// and the name of the lock guarding the file. Same file, same key, however the path is cased.
+    /// </summary>
+    public static string InstanceKey(string path) =>
+        "Phosphor." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())))[..16];
+
     public static string Serialize(SessionState state) => JsonSerializer.Serialize(state, Json.SessionState);
 
     /// <summary>The session in <paramref name="json"/>; null if it's unreadable or from a newer version.</summary>

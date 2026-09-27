@@ -43,6 +43,7 @@ public partial class App : Application
         }
 
         StartSavingSession();
+        AcceptRedirectedLaunches();
         try
         {
             SetUpQuickTerminal();
@@ -162,6 +163,114 @@ public partial class App : Application
         Exit();
     }
 
+    // ------------------------------------------------------- single instance
+
+    private static readonly List<string[]> PendingLaunches = [];
+    private static Microsoft.UI.Dispatching.DispatcherQueue? _launchQueue;
+
+    /// <summary>
+    /// Another launch of Phosphor was handed to this process (Program): open what it asked
+    /// for. Called on a background thread, possibly before startup has finished.
+    /// </summary>
+    internal static void OnRedirectedLaunch(Microsoft.Windows.AppLifecycle.AppActivationArguments args)
+    {
+        var commandLine = (args.Data as Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs)?.Arguments ?? "";
+        Log.Write($"single instance: {args.Kind} redirected here: [{commandLine}]");
+        var argv = LaunchArguments(commandLine);
+        lock (PendingLaunches)
+        {
+            if (_launchQueue == null)
+            {
+                PendingLaunches.Add(argv);
+                return;
+            }
+        }
+
+        _launchQueue.TryEnqueue(() => Instance.OpenForLaunch(argv));
+    }
+
+    /// <summary>Starts handling redirected launches on the UI thread, including any that came during startup.</summary>
+    private void AcceptRedirectedLaunches()
+    {
+        lock (PendingLaunches)
+        {
+            _launchQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            foreach (var argv in PendingLaunches)
+            {
+                _launchQueue.TryEnqueue(() => OpenForLaunch(argv));
+            }
+
+            PendingLaunches.Clear();
+        }
+    }
+
+    /// <summary>
+    /// What a later launch opens: its command, if it gave one; otherwise the saved windows when
+    /// none is open (Phosphor was in the tray), else a new window.
+    /// </summary>
+    private void OpenForLaunch(string[] argv)
+    {
+        if (_quitting)
+        {
+            return;
+        }
+
+        var profile = _config.DefaultProfile;
+        if (argv.Length > 0)
+        {
+            // Its PHOSPHOR_SHELL stayed with the other process; only its arguments came over.
+            OpenWindow(profile, ShellResolver.Resolve(profile.Config, argv,
+                name => name == "PHOSPHOR_SHELL" ? null : Environment.GetEnvironmentVariable(name)));
+        }
+        else if (_windows.Count > 0 || !RestoreSession())
+        {
+            OpenWindow(profile);
+        }
+    }
+
+    /// <summary>A launch's arguments, without the executable (which unpackaged activations may include).</summary>
+    private static string[] LaunchArguments(string commandLine)
+    {
+        if (string.IsNullOrWhiteSpace(commandLine))
+        {
+            return [];
+        }
+
+        var argv = SplitCommandLine(commandLine);
+        var self = Path.GetFileName(Environment.ProcessPath ?? "Phosphor.exe");
+        return argv.Length > 0 && Path.GetFileName(argv[0]).Equals(self, StringComparison.OrdinalIgnoreCase) ? argv[1..] : argv;
+    }
+
+    private static string[] SplitCommandLine(string commandLine)
+    {
+        var ptr = CommandLineToArgvW(commandLine, out var count);
+        if (ptr == IntPtr.Zero)
+        {
+            return [];
+        }
+
+        try
+        {
+            var result = new string[count];
+            for (var i = 0; i < count; i++)
+            {
+                result[i] = System.Runtime.InteropServices.Marshal.PtrToStringUni(System.Runtime.InteropServices.Marshal.ReadIntPtr(ptr, i * IntPtr.Size))!;
+            }
+
+            return result;
+        }
+        finally
+        {
+            LocalFree(ptr);
+        }
+    }
+
+    [System.Runtime.InteropServices.LibraryImport("shell32.dll", StringMarshalling = System.Runtime.InteropServices.StringMarshalling.Utf16)]
+    private static partial IntPtr CommandLineToArgvW(string commandLine, out int count);
+
+    [System.Runtime.InteropServices.LibraryImport("kernel32.dll")]
+    private static partial IntPtr LocalFree(IntPtr memory);
+
     // --------------------------------------------------------------- session
 
     private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
@@ -174,8 +283,9 @@ public partial class App : Application
 
     /// <summary>
     /// The session file this process may restore and save: only the first Phosphor process running
-    /// gets it. Phosphor isn't single-instance yet, so a second launch would otherwise reopen
-    /// every window again and the two would overwrite each other's saves.
+    /// gets it. Normally a second launch never gets this far (Program redirects it to the running
+    /// one); this is the backstop if that fails, so two processes can't both reopen every window
+    /// and overwrite each other's saves.
     /// </summary>
     private static string? OwnSession(string? path)
     {
@@ -184,9 +294,7 @@ public partial class App : Application
             return null;
         }
 
-        var name = @"Local\Phosphor.Session." + Convert.ToHexString(
-            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(path.ToLowerInvariant())))[..16];
-        _sessionOwner = new Mutex(initiallyOwned: true, name, out var first);
+        _sessionOwner = new Mutex(initiallyOwned: true, @"Local\" + SessionStore.InstanceKey(path) + ".Session", out var first);
         if (!first)
         {
             Log.Write("session: another Phosphor process owns it; not restoring or saving here");

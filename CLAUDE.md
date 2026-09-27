@@ -31,10 +31,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   user's real config (which sets `font-family = JetBrainsMono NF`).
 - Session (reopening windows): `%APPDATA%\Phosphor\session.json`, `PHOSPHOR_SESSION=<file>`
   overrides. **A run with `PHOSPHOR_CONFIG` set neither restores nor saves** unless
-  `PHOSPHOR_SESSION` is also set — so test instances never touch the user's session. Only the
-  first Phosphor process owns the session (named mutex): no single-instance yet, and a second
-  process restoring too would duplicate every window. Launching with a command (args or
-  PHOSPHOR_SHELL) opens it instead of restoring.
+  `PHOSPHOR_SESSION` is also set — so test instances never touch the user's session. Launching
+  with a command (args or PHOSPHOR_SHELL) opens it instead of restoring.
+- **Single instance per session file** (`Program.cs`, `DISABLE_XAML_GENERATED_MAIN`): a later
+  launch redirects its activation (args, exe path included) to the running process
+  (`App.OnRedirectedLaunch`) and exits. So **a dev build started without `PHOSPHOR_CONFIG`
+  would open a window inside the user's installed Phosphor** instead of running — always set
+  PHOSPHOR_CONFIG (or PHOSPHOR_SESSION to a scratch file, which also exercises redirection:
+  `.scratch/tools/single-instance.ps1`). App's session mutex is the backstop if redirection fails.
 
 ## Architecture (where to look)
 
