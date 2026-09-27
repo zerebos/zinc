@@ -28,9 +28,13 @@ public sealed partial class MainWindow
         }
 
         Tabs.SelectedIndex = Math.Clamp(saved.Selected, 0, Tabs.TabItems.Count - 1);
-        if (saved.Width > 0 && saved.Height > 0)
+        if (Plausible(saved))
         {
             AppWindow.MoveAndResize(new RectInt32(saved.X, saved.Y, saved.Width, saved.Height));
+        }
+        else
+        {
+            Log.Write($"session: ignoring saved bounds {saved.X},{saved.Y} {saved.Width}x{saved.Height} (off-screen or too small)");
         }
 
         if (saved.Maximized && AppWindow.Presenter is OverlappedPresenter presenter)
@@ -53,9 +57,56 @@ public sealed partial class MainWindow
             return null;
         }
 
-        var (pos, size) = (AppWindow.Position, AppWindow.Size);
+        // The normal bounds, not the current ones: minimized, Windows parks a window at
+        // (-32000, -32000) and 160 x 39, and a window restored there is invisible and too small
+        // for its terminals to start (2026-09-27). Minimized windows come back restored.
+        var b = _normalBounds;
         var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
-        return new WindowState(pos.X, pos.Y, size.Width, size.Height, maximized, Math.Max(0, Tabs.SelectedIndex), workspaces);
+        return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, Tabs.SelectedIndex), workspaces);
+    }
+
+    /// <summary>Where the window is when neither minimized nor maximized (what a session saves).</summary>
+    private RectInt32 _normalBounds;
+
+    private void TrackNormalBounds()
+    {
+        void Note()
+        {
+            if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized or OverlappedPresenterState.Maximized })
+            {
+                return; // keep the bounds from before
+            }
+
+            _normalBounds = new RectInt32(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height);
+        }
+
+        Note();
+        AppWindow.Changed += (_, args) =>
+        {
+            if (args.DidPositionChange || args.DidSizeChange || args.DidPresenterChange)
+            {
+                Note();
+            }
+        };
+    }
+
+    /// <summary>
+    /// Whether saved bounds are usable: a sensible size, on a screen that exists now. Anything
+    /// else (a monitor since unplugged, a bad save) is ignored and Windows places the window.
+    /// </summary>
+    private static bool Plausible(WindowState saved)
+    {
+        if (saved.Width < 200 || saved.Height < 150)
+        {
+            return false;
+        }
+
+        var rect = new RectInt32(saved.X, saved.Y, saved.Width, saved.Height);
+        return DisplayArea.GetFromRect(rect, DisplayAreaFallback.None) is { } area &&
+               saved.X < area.OuterBounds.X + area.OuterBounds.Width - 40 &&
+               saved.Y < area.OuterBounds.Y + area.OuterBounds.Height - 40 &&
+               saved.X + saved.Width > area.OuterBounds.X + 40 &&
+               saved.Y >= area.OuterBounds.Y - 8;
     }
 
     private static TabState DescribeTab(TerminalTab pane) =>

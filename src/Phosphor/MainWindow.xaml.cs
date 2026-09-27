@@ -101,6 +101,7 @@ public sealed partial class MainWindow : Window
         }
 
         Activated += OnActivated;
+        TrackNormalBounds();
         HotkeyNotice.Closed += (_, _) => _hotkeyNoticeDismissed = true;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(DragRegion);
