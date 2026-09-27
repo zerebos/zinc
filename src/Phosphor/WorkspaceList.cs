@@ -243,6 +243,8 @@ internal sealed partial class WorkspaceList : Grid
             ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             tab.Header.Owner = this;
+            // The same menu as the (hidden) title-bar tab: rename, color, split, move, close…
+            ContextFlyout = tab.Item.ContextFlyout;
             tab.Header.Margin = new Thickness(12, 0, 0, 0);
             Children.Add(tab.Header);
 
