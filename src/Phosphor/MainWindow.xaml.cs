@@ -311,6 +311,14 @@ public sealed partial class MainWindow : Window
             view.TabCloseClicked += pane => WithTabOf(group, t => ClosePane(t, pane));
             view.NewTabClicked += () => WithTabOf(group, t => NewTabInGroup(t, group, group.Active.Profile));
             view.TabMenuRequested += (pane, anchor) => WithTabOf(group, t => ShowGroupTabMenu(t, pane, anchor));
+            view.TabDragStarting += (pane, e) =>
+            {
+                e.AllowedOperations = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+                App.Instance.Drag = new TabDrag(this, pane);
+            };
+            view.TabDragCompleted += OnTerminalTabDragCompleted;
+            view.StripDragOver += (e, _) => AcceptStripDrop(group, e);
+            view.StripDrop += (e, index) => OnStripDrop(group, index);
             // The host knows its group, so a tab dropped on it knows where to go.
             host = new Border { Tag = group, Child = view };
             EnableDrop(host);
@@ -544,13 +552,11 @@ public sealed partial class MainWindow : Window
     /// <summary>Takes one terminal tab out of its workspace, running, and gives it a workspace of its own.</summary>
     private void MoveTabToNewWorkspace(WorkspaceTab tab, TerminalTab pane)
     {
-        if (tab.Workspace.Tabs.Count() == 1 || !tab.Workspace.Close(pane))
+        if (tab.Workspace.Tabs.Count() > 1)
         {
-            return;
+            TakeTab(tab, pane);
+            AddWorkspace(new Workspace<TerminalTab>(pane));
         }
-
-        Rebuild(tab); // its group shows another tab now, letting go of this one's terminal
-        AddWorkspace(new Workspace<TerminalTab>(pane));
     }
 
     /// <summary>Moves one terminal tab to a new window (the only tab moves its whole workspace).</summary>
@@ -562,15 +568,95 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (!tab.Workspace.Close(pane))
+        TakeTab(tab, pane);
+        App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(pane), null, null));
+    }
+
+    /// <summary>
+    /// Takes one terminal tab out of its workspace, still running and free to be added anywhere
+    /// (another pane, workspace or window): its terminal leaves the pane showing it, its window
+    /// wiring comes off, and an emptied pane (then workspace) goes. The caller closes this
+    /// window if it's now empty, once the tab has its new home.
+    /// </summary>
+    private void TakeTab(WorkspaceTab tab, TerminalTab pane)
+    {
+        // Let go of the terminal while its pane is still in the layout: if the pane empties it
+        // leaves the layout without being updated again, and the terminal would stay attached
+        // to it (and releasing it from a detached pane unloads it twice; see Rebuild).
+        if (tab.Workspace.GroupOf(pane) is { Tag: Border { Child: GroupView view } } group && group.Active == pane)
+        {
+            view.Release();
+        }
+
+        pane.Unwire?.Invoke();
+        if (tab.Workspace.Close(pane))
+        {
+            Rebuild(tab);
+        }
+        else
+        {
+            DetachEmptyWorkspace(tab);
+        }
+    }
+
+    /// <summary>Removes a workspace whose last tab just left, without closing this window.</summary>
+    private void DetachEmptyWorkspace(WorkspaceTab tab)
+    {
+        Dismantle(tab.Container);
+        RemoveTab(tab, closeWhenEmpty: false);
+    }
+
+    /// <summary>
+    /// Moves terminal tab <paramref name="pane"/> (from <paramref name="source"/>, maybe this
+    /// window) into <paramref name="tab"/>: as a new pane beside <paramref name="group"/> on side
+    /// <paramref name="edge"/>, or into <paramref name="group"/> at <paramref name="index"/>.
+    /// </summary>
+    private void MoveTerminalTab(MainWindow source, TerminalTab pane, WorkspaceTab tab, TabGroup<TerminalTab> group,
+        PaneDirection? edge, int? index = null)
+    {
+        // Within its own pane without an edge: just a new position.
+        if (edge == null && group.Contains(pane))
+        {
+            group.Move(pane, index ?? group.Tabs.Count);
+            ShowGroupTab(tab, pane);
+            return;
+        }
+
+        if (source.WorkspaceOf(pane) is not { } from)
         {
             return;
         }
 
+        source.TakeTab(from, pane);
+        if (edge is { } side && tab.Workspace.Groups.Contains(group))
+        {
+            tab.Workspace.Split(group, side, pane);
+        }
+        else if (tab.Workspace.Groups.Contains(group))
+        {
+            group.Add(pane, index);
+            tab.Workspace.Activate(pane);
+        }
+        else
+        {
+            // The target pane went away with the tab (it was the tab's only pane): nothing to
+            // attach to, so the tab gets a workspace of its own.
+            AddWorkspace(new Workspace<TerminalTab>(pane));
+            source.CloseIfEmpty();
+            return;
+        }
+
+        Wire(pane, tab);
         Rebuild(tab);
-        pane.Unwire?.Invoke();
-        App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(pane), null, null));
+        if (source != this)
+        {
+            source.CloseIfEmpty();
+            Activate();
+        }
     }
+
+    /// <summary>The workspace holding a terminal tab, in this window.</summary>
+    private WorkspaceTab? WorkspaceOf(TerminalTab pane) => AllTabs().FirstOrDefault(t => t.Workspace.Tabs.Contains(pane));
 
     /// <summary>Takes <paramref name="pane"/>'s group out of a split workspace, terminals running; null if it's the only group.</summary>
     private TabGroup<TerminalTab>? TakeGroup(WorkspaceTab tab, TerminalTab pane)
@@ -788,6 +874,24 @@ public sealed partial class MainWindow : Window
                 if (from != null && from != tab && tab.Workspace.GroupOf(tab.Active) is { } target)
                 {
                     DropWorkspace(this, from, tab, target, chord.Contains("middle") ? null : PaneDirection.Right);
+                }
+
+                return;
+            }
+
+            if (chord.StartsWith("test:tab-"))
+            {
+                // What dragging the focused pane's shown tab would do: "test:tab-to:1" drops it
+                // into the pane 1 (layout order) of this workspace ("tab-right:1" onto its right
+                // edge), "test:tab-at:0" at position 0 of its own strip. Drags can't be posted.
+                var arg = int.Parse(chord[(chord.LastIndexOf(':') + 1)..]);
+                var pane = tab.Active;
+                var target = chord.StartsWith("test:tab-at:") ? tab.Workspace.ActiveGroup : tab.Workspace.Groups.ElementAtOrDefault(arg);
+                Log.Write($"test {chord}: {(target != null ? "moving" : "no such pane")}");
+                if (target != null)
+                {
+                    MoveTerminalTab(this, pane, tab, target, chord.StartsWith("test:tab-right:") ? PaneDirection.Right : null,
+                        chord.StartsWith("test:tab-at:") ? arg : null);
                 }
 
                 return;

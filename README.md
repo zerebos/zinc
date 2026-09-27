@@ -247,6 +247,16 @@ Workspaces can be dragged, with their terminals still running:
   that side, keeping their own split layout;
 - onto the middle of a pane, to join that pane as tabs (with tab groups on).
 
+A pane's own tabs can be dragged too:
+
+- along their strip, to reorder them;
+- onto another pane's strip or middle, to join it; onto a pane's edge, to become a new pane
+  there (also beside its own pane, when that pane has other tabs);
+- onto the title bar's tabs, to become a workspace of their own; resting on a workspace's tab
+  for a moment switches to it, so a tab can be carried into another workspace's panes;
+- outside every Phosphor window, to open in a new window;
+- into panes and title bars of other Phosphor windows.
+
 The drop area is highlighted while you drag.
 
 If the shell exits with a non-zero code, the window stays open showing the code

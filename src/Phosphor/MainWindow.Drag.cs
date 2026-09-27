@@ -7,12 +7,15 @@ using Windows.Graphics;
 
 namespace Phosphor;
 
-// Dragging workspace tabs: out of the strip (new window), onto another window's strip (moves
-// there), or onto a pane's edge (its whole layout becomes a split there). Windows are in one
-// process, so the dragged tab is handed over directly via App.TabDrag.
+// Dragging tabs. A workspace (title-bar tab) can go out of the strip (new window), onto another
+// window's strip, onto a pane's edge (its layout becomes a split) or middle (its terminals join
+// the pane). A pane's own tab (a terminal) can be reordered in its strip, go into another pane
+// (middle or strip) or beside it (edge), onto the title bar (its own workspace; hovering a
+// workspace switches to it), or out of every window (new window). Windows are in one process,
+// so the dragged tab is handed over directly via App.Drag.
 public sealed partial class MainWindow
 {
-    /// <summary>A workspace tab being dragged: its window, and the tab.</summary>
+    /// <summary>A tab being dragged: its window, and a <see cref="WorkspaceTab"/> or a <see cref="TerminalTab"/>.</summary>
     internal sealed record TabDrag(MainWindow Window, object Tab);
 
     private void OnTabDragStarting(TabView sender, TabViewTabDragStartingEventArgs args)
@@ -67,30 +70,143 @@ public sealed partial class MainWindow
         CloseIfEmpty();
     }
 
-    // ------------------------------------------------ another window's strip
+    /// <summary>A pane's tab was dragged and released: outside every Phosphor window, it becomes a window.</summary>
+    private void OnTerminalTabDragCompleted(TerminalTab pane, DataPackageOperation result)
+    {
+        _springTimer?.Stop();
+        HideDropPreview();
+        if (App.Instance.Drag is not { Tab: TerminalTab dragged } drag || dragged != pane)
+        {
+            return; // taken by a drop target
+        }
+
+        App.Instance.Drag = null;
+        GetCursorPos(out var cursor);
+        if (result != DataPackageOperation.None || App.Instance.IsOverWindow(new PointInt32(cursor.X, cursor.Y)) ||
+            drag.Window.WorkspaceOf(pane) is not { } from)
+        {
+            return;
+        }
+
+        MainWindow window;
+        if (from.Workspace.Tabs.Count() == 1)
+        {
+            window = App.Instance.OpenWindow(drag.Window.DetachWorkspace(from)); // its only tab: the workspace goes
+        }
+        else
+        {
+            drag.Window.TakeTab(from, pane);
+            window = App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(pane), null, null));
+        }
+
+        window.AppWindow.Move(new PointInt32(cursor.X - 120, cursor.Y - 20));
+        drag.Window.CloseIfEmpty();
+    }
+
+    // ------------------------------------------------------ the title bar
 
     private void OnTabStripDragOver(object sender, DragEventArgs e)
     {
-        if (App.Instance.Drag is { } drag && drag.Window != this)
+        switch (App.Instance.Drag)
         {
-            e.AcceptedOperation = DataPackageOperation.Move;
-            e.DragUIOverride.Caption = "Move to this window";
+            // Another window's workspace moves here (this window's own reorder is TabView's).
+            case { Tab: WorkspaceTab } drag when drag.Window != this:
+                e.AcceptedOperation = DataPackageOperation.Move;
+                e.DragUIOverride.Caption = "Move to this window";
+                break;
+            // A pane's tab becomes its own workspace here, unless it already is one of ours.
+            case { Tab: TerminalTab pane } drag:
+                SpringLoad(e.GetPosition(Tabs));
+                if (!(drag.Window == this && WorkspaceOf(pane)?.Workspace.Tabs.Count() == 1))
+                {
+                    e.AcceptedOperation = DataPackageOperation.Move;
+                    e.DragUIOverride.Caption = "New workspace";
+                }
+
+                break;
         }
     }
 
     private void OnTabStripDrop(object sender, DragEventArgs e)
     {
-        if (App.Instance.Drag is not { } drag || drag.Window == this || drag.Tab is not WorkspaceTab tab)
+        _springTimer?.Stop();
+        switch (App.Instance.Drag)
+        {
+            case { Tab: WorkspaceTab tab } drag when drag.Window != this:
+            {
+                App.Instance.Drag = null;
+                var index = DropIndex(e.GetPosition(Tabs));
+                var transfer = drag.Window.DetachWorkspace(tab);
+                AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index);
+                drag.Window.CloseIfEmpty();
+                Activate();
+                break;
+            }
+
+            case { Tab: TerminalTab pane } drag when drag.Window.WorkspaceOf(pane) is { } from &&
+                                                   !(drag.Window == this && from.Workspace.Tabs.Count() == 1):
+            {
+                App.Instance.Drag = null;
+                var index = DropIndex(e.GetPosition(Tabs));
+                drag.Window.TakeTab(from, pane);
+                AddWorkspace(new Workspace<TerminalTab>(pane), index: index);
+                if (drag.Window != this)
+                {
+                    drag.Window.CloseIfEmpty();
+                }
+
+                Activate();
+                break;
+            }
+        }
+    }
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _springTimer;
+    private TabViewItem? _springTarget;
+    private long _springSeen;
+
+    /// <summary>
+    /// Hovering a workspace tab while dragging a pane's tab switches to that workspace after a
+    /// moment, so the tab can be carried into one of its panes.
+    /// </summary>
+    private void SpringLoad(Point point)
+    {
+        _springSeen = Environment.TickCount64;
+        var item = Tabs.TabItems.Cast<TabViewItem>().FirstOrDefault(i =>
+        {
+            var left = i.TransformToVisual(Tabs).TransformPoint(new Point(0, 0)).X;
+            return point.X >= left && point.X < left + i.ActualWidth;
+        });
+        if (item == null || ReferenceEquals(item, Tabs.SelectedItem))
+        {
+            _springTimer?.Stop();
+            _springTarget = null;
+            return;
+        }
+
+        if (item == _springTarget && _springTimer is { IsRunning: true })
         {
             return;
         }
 
-        App.Instance.Drag = null;
-        var index = DropIndex(e.GetPosition(Tabs));
-        var transfer = drag.Window.DetachWorkspace(tab);
-        AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index);
-        drag.Window.CloseIfEmpty();
-        Activate();
+        _springTarget = item;
+        if (_springTimer == null)
+        {
+            _springTimer = DispatcherQueue.CreateTimer();
+            _springTimer.Interval = TimeSpan.FromMilliseconds(500);
+            _springTimer.IsRepeating = false;
+            _springTimer.Tick += (_, _) =>
+            {
+                // DragOver repeats while the pointer rests; none lately means it left the strip.
+                if (App.Instance.Drag != null && _springTarget != null && Environment.TickCount64 - _springSeen < 250)
+                {
+                    Tabs.SelectedItem = _springTarget;
+                }
+            };
+        }
+
+        _springTimer.Stop();
+        _springTimer.Start();
     }
 
     // The strip events only cover the tabs themselves; the +/▾ buttons count too, via the window
@@ -158,8 +274,7 @@ public sealed partial class MainWindow
     {
         var host = (Border)sender;
         var edge = EdgeUnder(host, e.GetPosition(host));
-        // The middle joins the pane's tab group; without tab groups it takes nothing.
-        if (DropTarget(host) == null || (edge == null && !_config.Global.TabGroups))
+        if (DropTarget(host, edge) == null)
         {
             e.AcceptedOperation = DataPackageOperation.None;
             HideDropPreview();
@@ -183,14 +298,62 @@ public sealed partial class MainWindow
         var host = (Border)sender;
         HideDropPreview();
         var edge = EdgeUnder(host, e.GetPosition(host));
-        if (DropTarget(host) is not { } target || (edge == null && !_config.Global.TabGroups) ||
-            App.Instance.Drag is not { Tab: WorkspaceTab dragged } drag)
+        if (DropTarget(host, edge) is not { } target || App.Instance.Drag is not { } drag)
         {
             return;
         }
 
         App.Instance.Drag = null;
-        DropWorkspace(drag.Window, dragged, target.Tab, target.Group, edge);
+        switch (drag.Tab)
+        {
+            case WorkspaceTab dragged:
+                DropWorkspace(drag.Window, dragged, target.Tab, target.Group, edge);
+                break;
+            case TerminalTab pane:
+                MoveTerminalTab(drag.Window, pane, target.Tab, target.Group, edge);
+                break;
+        }
+    }
+
+    // ------------------------------------------------------- a pane's strip
+
+    /// <summary>Whether a pane's strip takes the dragged tab (at the marker): any terminal tab, or another workspace.</summary>
+    private bool AcceptStripDrop(TabGroup<TerminalTab> group, DragEventArgs e)
+    {
+        HideDropPreview();
+        var accept = App.Instance.Drag switch
+        {
+            { Tab: TerminalTab } => true,
+            { Tab: WorkspaceTab dragged } => !dragged.Workspace.Groups.Contains(group),
+            _ => false,
+        };
+        e.AcceptedOperation = accept ? DataPackageOperation.Move : DataPackageOperation.None;
+        if (accept)
+        {
+            e.DragUIOverride.Caption = App.Instance.Drag?.Tab is TerminalTab pane && group.Contains(pane) ? "Move here" : "Add to this pane";
+        }
+
+        return accept;
+    }
+
+    private void OnStripDrop(TabGroup<TerminalTab> group, int index)
+    {
+        if (App.Instance.Drag is not { } drag || AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group)) is not { } tab)
+        {
+            return;
+        }
+
+        switch (drag.Tab)
+        {
+            case TerminalTab pane:
+                App.Instance.Drag = null;
+                MoveTerminalTab(drag.Window, pane, tab, group, null, index);
+                break;
+            case WorkspaceTab dragged when dragged != tab:
+                App.Instance.Drag = null;
+                DropWorkspace(drag.Window, dragged, tab, group, null);
+                break;
+        }
     }
 
     /// <summary>
@@ -229,18 +392,25 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// The workspace and group under a host, when a tab from elsewhere is being dragged
-    /// (a tab can't be dropped onto its own panes).
+    /// The workspace and group under a host, if the dragged tab can be dropped there on
+    /// <paramref name="edge"/> (null: the middle, which joins the pane's tabs; only with tab
+    /// groups). A workspace can't be dropped onto its own panes; a terminal tab not into its
+    /// own pane, nor beside it when it's the pane's only tab.
     /// </summary>
-    private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? DropTarget(Border host)
+    private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? DropTarget(Border host, PaneDirection? edge)
     {
-        if (App.Instance.Drag is not { Tab: WorkspaceTab dragged } || host.Tag is not TabGroup<TerminalTab> group)
+        if (host.Tag is not TabGroup<TerminalTab> group || (edge == null && !_config.Global.TabGroups) ||
+            AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group)) is not { } tab)
         {
             return null;
         }
 
-        var tab = AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group));
-        return tab == null || tab == dragged ? null : (tab, group);
+        return App.Instance.Drag?.Tab switch
+        {
+            WorkspaceTab dragged when dragged != tab => (tab, group),
+            TerminalTab pane when !group.Contains(pane) || (edge != null && group.Tabs.Count > 1) => (tab, group),
+            _ => null,
+        };
     }
 
     /// <summary>The edge whose band (the outer third, like VS Code) holds <paramref name="p"/>; null in the middle.</summary>

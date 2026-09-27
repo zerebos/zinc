@@ -88,10 +88,16 @@ list fresh on open and runs actions through `TerminalControl.Invoke` (same path 
 `AddWorkspace` (re-`Wire`s each `TerminalTab`); live TerminalControls re-parent across windows
 fine (same UI thread; Win2D keeps its resources; the pane re-subscribes to the new XamlRoot for
 DPI). Close the source window *after* the target has the workspace, or the app may quit with
-no windows. `MainWindow.Drag.cs`: tab drag out / onto another strip / onto a pane edge
-(`App.Drag` hands the dragged tab over in-process). Drag input can't be automated — the user
-tests it; the menu paths (`menu:Move workspace to new window`, `menu:Split pane/Move pane to …`)
-and palette entries (`palette:Move tab to new workspace`) can be. Quick terminal: layout/hotkey parsing in
+no windows. `MainWindow.Drag.cs`: dragging workspaces (TabView events) and pane tabs
+(`GroupView` items with `CanDrag`; their strip is its own drop target and marks `Handled` so the
+pane host below doesn't also take it). `App.Drag` hands the dragged `WorkspaceTab` or
+`TerminalTab` over in-process; a drop target clears it, so a completion handler still holding it
+knows nobody took the drop (tear-off if the pointer is outside every window). Terminal tabs move
+via `TakeTab` + `MoveTerminalTab`. Drag input can't be automated — the user tests it; the logic
+behind the drops can be, through `test:drop-middle:N`/`test:drop-right:N` (workspaces) and
+`test:tab-to:N`/`test:tab-right:N`/`test:tab-at:I` (the focused tab), plus the menu paths
+(`menu:Move workspace to new window`, `menu:Split pane/Move pane to …`) and palette entries
+(`palette:Move tab to new workspace`). Quick terminal: layout/hotkey parsing in
 Core `QuickTerminal.cs` (tested); `HotkeyListener` (RegisterHotKey on the `MessageWindow`),
 `App.ToggleQuickTerminal`, `MainWindow.Quick.cs` (placement, autohide on deactivate,
 hotkey-taken InfoBar). `MessageWindow` is a hidden *top-level* window (message-only windows

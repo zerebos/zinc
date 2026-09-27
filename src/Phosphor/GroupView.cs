@@ -68,12 +68,100 @@ internal sealed partial class GroupView : Grid
         SetRow(_content, 1);
         Children.Add(_strip);
         Children.Add(_content);
+
+        // Dropping a tab on the strip puts it between the tabs where it lands.
+        _strip.Children.Add(_marker);
+        _strip.AllowDrop = true;
+        _strip.DragOver += (_, e) =>
+        {
+            e.Handled = true; // not also an edge/middle drop on the pane below
+            var index = IndexAt(e);
+            if (StripDragOver?.Invoke(e, index) == true)
+            {
+                ShowMarker(index);
+            }
+            else
+            {
+                _marker.Visibility = Visibility.Collapsed;
+            }
+        };
+        _strip.DragLeave += (_, _) => _marker.Visibility = Visibility.Collapsed;
+        _strip.Drop += (_, e) =>
+        {
+            e.Handled = true;
+            _marker.Visibility = Visibility.Collapsed;
+            StripDrop?.Invoke(e, IndexAt(e));
+        };
     }
+
+    private readonly Border _marker = new()
+    {
+        Width = 2,
+        Height = StripHeight - 8,
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Center,
+        IsHitTestVisible = false,
+        Visibility = Visibility.Collapsed,
+        Background = (Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"],
+    };
 
     public event Action<MainWindow.TerminalTab>? TabClicked;
     public event Action<MainWindow.TerminalTab>? TabCloseClicked;
     public event Action<MainWindow.TerminalTab, FrameworkElement>? TabMenuRequested;
     public event Action? NewTabClicked;
+
+    /// <summary>A strip tab starts being dragged (the handler fills in the drag's data).</summary>
+    public event Action<MainWindow.TerminalTab, DragStartingEventArgs>? TabDragStarting;
+
+    /// <summary>A strip tab's drag ended, with what the drop target did.</summary>
+    public event Action<MainWindow.TerminalTab, Windows.ApplicationModel.DataTransfer.DataPackageOperation>? TabDragCompleted;
+
+    /// <summary>A drag is over the strip at a drop position; the handler says whether it would be accepted.</summary>
+    public event Func<DragEventArgs, int, bool>? StripDragOver;
+
+    /// <summary>Something was dropped on the strip at a position (0 = before the first tab).</summary>
+    public event Action<DragEventArgs, int>? StripDrop;
+
+    /// <summary>The drop position under the pointer: how many tabs lie left of it.</summary>
+    private int IndexAt(DragEventArgs e)
+    {
+        var x = e.GetPosition(_tabs).X;
+        var index = 0;
+        foreach (var child in _tabs.Children.OfType<FrameworkElement>())
+        {
+            var left = child.TransformToVisual(_tabs).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
+            if (x < left + child.ActualWidth / 2)
+            {
+                break;
+            }
+
+            index++;
+        }
+
+        return index;
+    }
+
+    private void ShowMarker(int index)
+    {
+        var items = _tabs.Children.OfType<FrameworkElement>().ToList();
+        double x;
+        if (items.Count == 0)
+        {
+            x = 0;
+        }
+        else if (index < items.Count)
+        {
+            x = items[index].TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
+        }
+        else
+        {
+            var last = items[^1];
+            x = last.TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(last.ActualWidth, 0)).X;
+        }
+
+        _marker.Margin = new Thickness(Math.Max(0, x - 1), 0, 0, 0);
+        _marker.Visibility = Visibility.Visible;
+    }
 
     /// <summary>
     /// Shows the group's current state: its tabs in order, the active one highlighted (with an
@@ -87,14 +175,15 @@ internal sealed partial class GroupView : Grid
             _content.Child = group.Active.Control;
         }
 
+        foreach (var gone in _items.Keys.Where(t => !group.Contains(t)).ToList())
+        {
+            _tabs.Children.Remove(_items[gone]);
+            _items.Remove(gone);
+        }
+
         if (!showStrip)
         {
             return;
-        }
-
-        foreach (var gone in _items.Keys.Where(t => !group.Contains(t)).ToList())
-        {
-            _items.Remove(gone);
         }
 
         // Re-order children only when the tabs changed, so the common case touches nothing.
@@ -153,6 +242,9 @@ internal sealed partial class GroupView : Grid
                 e.Handled = true;
                 TabMenuRequested?.Invoke(tab, item);
             };
+            item.CanDrag = true;
+            item.DragStarting += (_, e) => TabDragStarting?.Invoke(tab, e);
+            item.DropCompleted += (_, e) => TabDragCompleted?.Invoke(tab, e.DropResult);
             item.PointerReleased += (_, e) =>
             {
                 // Middle click closes, like browser and editor tabs.

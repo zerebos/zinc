@@ -43,6 +43,22 @@ public sealed class TabGroup<T> where T : class
     }
 
     /// <summary>
+    /// Moves <paramref name="tab"/> so it sits before the tab now at <paramref name="index"/>
+    /// (an index counted with the tab still in place, as a drop position is; past the end = last).
+    /// </summary>
+    public void Move(T tab, int index)
+    {
+        var from = _tabs.IndexOf(tab);
+        if (from < 0)
+        {
+            throw new ArgumentException("Not in this group.", nameof(tab));
+        }
+
+        _tabs.RemoveAt(from);
+        _tabs.Insert(Math.Clamp(index > from ? index - 1 : index, 0, _tabs.Count), tab);
+    }
+
+    /// <summary>
     /// Removes <paramref name="tab"/>. If it was shown, its right neighbor (else its left one)
     /// is shown next. Returns false when the group is now empty.
     /// </summary>

@@ -118,6 +118,27 @@ public class WorkspaceTests
         Assert.Equal(new PaneRect(0.5, 0.5, 0.5, 0.5), rect(c));
     }
 
+    [Theory]
+    [InlineData("a", 0, "abcd")] // before itself: no change
+    [InlineData("a", 1, "abcd")] // just after itself: no change
+    [InlineData("a", 2, "bacd")]
+    [InlineData("a", 4, "bcda")] // past the end
+    [InlineData("d", 0, "dabc")]
+    [InlineData("c", 1, "acbd")]
+    [InlineData("b", 9, "acdb")]
+    public void MoveUsesDropPositions(string tab, int index, string expected)
+    {
+        var tabs = "abcd".Select(c => new T(c.ToString())).ToList();
+        var ws = new Workspace<T>(tabs[0]);
+        foreach (var t in tabs.Skip(1))
+        {
+            ws.ActiveGroup.Add(t, ws.ActiveGroup.Tabs.Count);
+        }
+
+        ws.ActiveGroup.Move(tabs.Single(t => t.Name == tab), index);
+        Assert.Equal(expected, string.Concat(ws.ActiveGroup.Tabs.Select(t => t.Name)));
+    }
+
     [Fact]
     public void ResizeMovesTheGroupsDivider()
     {
