@@ -287,6 +287,8 @@ public sealed partial class MainWindow
         Custom("Close workspaces to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action(TerminalAction.NextTab);
         Action(TerminalAction.PreviousTab);
+        Action(TerminalAction.TabSwitcher);
+        Action(TerminalAction.NextAttention);
         Custom("Rename workspace…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));
         Action(TerminalAction.NewWindow);
