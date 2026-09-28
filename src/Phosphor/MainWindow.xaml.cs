@@ -164,6 +164,9 @@ public sealed partial class MainWindow : Window
 
     // ---------------------------------------------------------------- panes
 
+    /// <summary>What the next pane created types into its shell once it's ready ("New tab running…").</summary>
+    private string? _startupInput;
+
     private TerminalTab CreatePane(Profile profile, string command, string workingDirectory)
     {
         var control = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
@@ -171,6 +174,7 @@ public sealed partial class MainWindow : Window
             // A canvas has no desired size of its own; make sure it fills its slot.
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
+            StartupInput = _startupInput,
         };
         return new TerminalTab(profile, command, workingDirectory, control);
     }

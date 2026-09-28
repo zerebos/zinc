@@ -39,6 +39,55 @@ public sealed partial class TerminalControl
         session.ProgressChanged += progress => dq.TryEnqueue(() => ProgressChanged?.Invoke());
     }
 
+    /// <summary>
+    /// A command line typed into the shell once it's ready ("New tab running…"), as if by hand:
+    /// builtins, aliases and WSL programs all work, and the tab stays at the shell afterwards.
+    /// Set before the pane starts.
+    /// </summary>
+    public string? StartupInput { get; set; }
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _startupInputTimer;
+    private long _lastOutputTicks, _startedTicks;
+
+    /// <summary>
+    /// Types <see cref="StartupInput"/> when the shell is ready: at its first prompt when it marks
+    /// prompts (shell integration), else once its startup output has been quiet for a moment, or
+    /// after a few seconds regardless. Shells keep what's typed early for when they read input.
+    /// </summary>
+    private void TypeStartupInputWhenReady(TerminalSession session)
+    {
+        if (StartupInput is not { Length: > 0 } line)
+        {
+            return;
+        }
+
+        StartupInput = null;
+        _startedTicks = Environment.TickCount64;
+        session.OutputProcessed += () => Interlocked.Exchange(ref _lastOutputTicks, Environment.TickCount64);
+        _startupInputTimer = DispatcherQueue.CreateTimer();
+        _startupInputTimer.Interval = TimeSpan.FromMilliseconds(150);
+        _startupInputTimer.Tick += (timer, _) =>
+        {
+            var now = Environment.TickCount64;
+            var lastOutput = Interlocked.Read(ref _lastOutputTicks);
+            var prompted = session.Commands().Count > 0;
+            var quiet = lastOutput > 0 && now - lastOutput > 600;
+            if (!prompted && !quiet && now - _startedTicks < 6000)
+            {
+                return;
+            }
+
+            timer.Stop();
+            _startupInputTimer = null;
+            if (_session == session && !session.HasExited)
+            {
+                Log.Write($"pane: typing the startup command ({(prompted ? "at the prompt" : quiet ? "output went quiet" : "timed out")})");
+                session.SendInput(line + "\r");
+            }
+        };
+        _startupInputTimer.Start();
+    }
+
     /// <summary>The command running in this pane, if the shell says one is.</summary>
     public ShellCommand? RunningCommand => _session?.Commands() is { Count: > 0 } commands && commands[^1].Running ? commands[^1] : null;
 

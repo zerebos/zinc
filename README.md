@@ -384,8 +384,9 @@ tab only; the list previews each scheme on the tab as you move through it, Esc p
 back; the tab keeps it across restarts; the scheme's colors replace all of that tab's, including
 ones your config sets), **Set default color scheme…** (writes `colors.theme` in your config,
 keeping the rest of the file as it was; colors the config sets itself, like `background`, keep
-winning over the scheme, and the preview shows them that way), **New tab running…** (a program
-and its arguments, e.g. `ssh myserver`; shell commands like `dir` need a shell) and **New tab in folder…** (`~/src`, `D:\work`, or relative to where the
+winning over the scheme, and the preview shows them that way), **New tab running…** (opens the focused
+tab's shell in the same folder and types the command there, as if by hand: `htop` in a WSL tab,
+`dir` in cmd, your aliases; the tab stays at the shell afterwards) and **New tab in folder…** (`~/src`, `D:\work`, or relative to where the
 focused shell is; WSL tabs take Linux paths and `C:\...`).
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | Previous / next prompt ([shell integration](#shell-integration)); a line without it |

@@ -14,8 +14,8 @@ public sealed partial class MainWindow
         yield return Asks("Change color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: false));
         yield return Asks("Set default color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: true));
         yield return Asks("New tab running…", () => AskPaletteArgument(new PaletteArgument(
-            "A program to run in a new tab, with its arguments, e.g. ssh myserver (shell commands like dir need a shell)",
-            Submit: line => NewTabWith(tab, line, WorkingFolderOf(tab.Active, line)))));
+            $"A command to run in a new {ShellName(tab.Active)} tab here, e.g. htop or npm test",
+            Submit: line => NewShellTabRunning(tab, line))));
         yield return Asks("New tab in folder…", () => AskFolder(tab, "A folder to open a new tab in, e.g. ~/src"));
     }
 
@@ -135,12 +135,36 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Where a program started from <paramref name="pane"/> should run: the Windows folder its shell is in, if any.</summary>
-    private static string? WorkingFolderOf(TerminalTab pane, string command) =>
-        ShellDirectory.Parse(pane.Control.ReportedDirectory) is { } reported &&
-        ShellDirectory.LaunchIn(command, reported) is { WorkingDirectory: { } folder } && Directory.Exists(folder)
-            ? folder
-            : null;
+    /// <summary>The focused tab's profile name, for prompts ("a new Fedora tab").</summary>
+    private string ShellName(TerminalTab pane) => (_config.FindProfile(pane.Profile.Id) ?? pane.Profile).Name;
+
+    /// <summary>
+    /// A new tab of the focused tab's shell, in the folder that shell is in, which then types
+    /// <paramref name="line"/> as if by hand: builtins (dir), aliases and WSL programs all work,
+    /// and the tab stays at the shell afterwards, the command in its history.
+    /// </summary>
+    private void NewShellTabRunning(WorkspaceTab tab, string line)
+    {
+        // The same shell as the focused tab (its command, not necessarily its profile's).
+        var command = tab.Active.Command;
+        string? folder = null;
+        if (ShellDirectory.Parse(tab.Active.Control.ReportedDirectory) is { } reported &&
+            ShellDirectory.LaunchIn(command, reported) is { } launch &&
+            (launch.WorkingDirectory is not { } windows || Directory.Exists(windows)))
+        {
+            (command, folder) = (launch.Command, launch.WorkingDirectory);
+        }
+
+        _startupInput = line;
+        try
+        {
+            NewTabWith(tab, command, folder);
+        }
+        finally
+        {
+            _startupInput = null;
+        }
+    }
 
     private void AskFolder(WorkspaceTab tab, string prompt) =>
         AskPaletteArgument(new PaletteArgument(prompt, Submit: typed => OpenInFolder(tab, typed)));
@@ -153,7 +177,7 @@ public sealed partial class MainWindow
     private void OpenInFolder(WorkspaceTab tab, string typed)
     {
         var profile = _config.FindProfile(tab.Active.Profile.Id) ?? tab.Active.Profile;
-        var command = ShellResolver.ForProfile(profile.Config);
+        var command = tab.Active.Command; // the focused tab's shell
         var folder = ShellDirectory.ResolveTyped(typed, command,
             ShellDirectory.Parse(tab.Active.Control.ReportedDirectory) ?? profile.Config.ResolveWorkingDirectory());
         if (folder != null && ShellDirectory.LaunchIn(command, folder) is { } launch &&

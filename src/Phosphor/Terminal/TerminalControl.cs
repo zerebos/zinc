@@ -245,6 +245,7 @@ public sealed partial class TerminalControl : UserControl
         try
         {
             session.Start(_commandLine, _workingDirectory, cols, rows);
+            TypeStartupInputWhenReady(session);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
         {

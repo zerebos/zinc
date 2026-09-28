@@ -149,7 +149,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   answer runs *before* the palette closes, so it can ask again. Color schemes: `ThemeLibrary`
   (Core; the config reader uses it too); a tab's own scheme = `TerminalTab.ColorScheme` + a
   themed copy of its Profile, re-applied on reload and restored from session.json.
-  `ShellDirectory.ResolveTyped` turns a typed folder into what `LaunchIn` takes.
+  `ShellDirectory.ResolveTyped` turns a typed folder into what `LaunchIn` takes. "New tab
+  running…" starts the focused tab's *command* (not its profile's) and types the line via
+  `TerminalControl.StartupInput` once the shell is ready (first prompt mark, else 600 ms of
+  quiet output, else 6 s). A program that can't start shows why in its tab (no crash).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.
