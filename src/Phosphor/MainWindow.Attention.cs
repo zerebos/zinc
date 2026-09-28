@@ -57,21 +57,17 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Past the dot: with the window in the background, a Windows notification ("toast"), else a
-    /// taskbar flash. Clicking the notification brings you to the pane.
+    /// Past the dot: a Windows notification ("toast": while the window is in the background;
+    /// "toast-always": whenever you weren't looking), else a taskbar flash while in the background.
+    /// Clicking the notification brings you to the pane.
     /// </summary>
     private void Alert(NotifyMode mode, WorkspaceTab tab, TerminalTab pane, string title, string body)
     {
-        if (_active)
-        {
-            return;
-        }
-
-        if (mode == NotifyMode.Toast)
+        if (mode == NotifyMode.ToastAlways || (mode == NotifyMode.Toast && !_active))
         {
             App.Instance.Notify(title, body, () => BringToPane(tab, pane));
         }
-        else
+        else if (!_active)
         {
             FlashTaskbarButton();
         }

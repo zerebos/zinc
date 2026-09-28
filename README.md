@@ -129,7 +129,8 @@ features they control below.
 [Shell integration](#shell-integration)), and `programs`: notifications that programs send
 (OSC 9 and OSC 777, e.g. a build script's `printf '\e]9;Build done\a'`). Out of view they put a
 blue dot on the tab, like a finished command; `"toast"` also shows a Windows notification while
-Phosphor is in the background, `"never"` ignores them. Programs that report progress (OSC 9;4)
+Phosphor is in the background (`"toast-always"`: whenever that pane is out of view), `"never"`
+ignores them. Programs that report progress (OSC 9;4)
 get a small ring on their tab and a progress bar on Phosphor's taskbar button.
 Windows notifications come from Phosphor's tray icon and respect Do Not Disturb.
 
@@ -289,7 +290,8 @@ output starts, and how it ended. With those marks, Phosphor can:
   or more puts a pulsing dot after its tab's title (on the icon in the rail): green, or red if it
   failed, until you focus it. The taskbar button flashes if Phosphor is in the background. In
   `[notify]`: `command-finished = "toast"` shows a Windows notification instead of the flash
-  (click it to go to the pane), `"never"` turns this off, and `command-finished-after` sets what
+  (click it to go to the pane), `"toast-always"` shows one even while you're in Phosphor (just
+  not looking at that pane), `"never"` turns this off, and `command-finished-after` sets what
   counts as long (`30`, `"45s"`, `"2m"`);
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
   quitting, asks first while a command is running there (never at an idle prompt).

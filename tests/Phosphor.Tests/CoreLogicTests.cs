@@ -115,6 +115,7 @@ public class ConfigTests : IDisposable
         Assert.Equal(NotifyMode.Badge, defaults.NotifyCommandFinished);
         Assert.Equal(NotifyMode.Badge, defaults.NotifyPrograms);
         Assert.Equal(NotifyMode.Toast, Load("[notify]\ncommand-finished = \"toast\"").NotifyCommandFinished);
+        Assert.Equal(NotifyMode.ToastAlways, Load("[notify]\nprograms = \"toast-always\"").NotifyPrograms);
         Assert.Equal(NotifyMode.Never, Load("[notify]\nprograms = \"never\"").NotifyPrograms);
         Assert.Equal(TimeSpan.FromSeconds(10), defaults.NotifyCommandFinishedAfter);
         Assert.Equal(NotifyMode.Never, Load("[notify]\ncommand-finished = \"never\"").NotifyCommandFinished);

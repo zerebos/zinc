@@ -46,6 +46,9 @@ public enum NotifyMode
 
     /// <summary>The dot, plus a Windows notification when Phosphor is in the background.</summary>
     Toast,
+
+    /// <summary>The dot, plus a Windows notification whenever it's out of view, Phosphor in front or not.</summary>
+    ToastAlways,
     Never,
 }
 
@@ -128,10 +131,10 @@ public sealed record Config
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
-    /// <summary>Config: <c>[notify] command-finished = badge | toast | never</c> (global).</summary>
+    /// <summary>Config: <c>[notify] command-finished = badge | toast | toast-always | never</c> (global).</summary>
     public NotifyMode NotifyCommandFinished { get; init; }
 
-    /// <summary>Notifications programs send (OSC 9, OSC 777). Config: <c>[notify] programs = badge | toast | never</c> (global).</summary>
+    /// <summary>Notifications programs send (OSC 9, OSC 777). Config: <c>[notify] programs = badge | toast | toast-always | never</c> (global).</summary>
     public NotifyMode NotifyPrograms { get; init; }
 
     /// <summary>How long a command must run to count as long. Config: <c>[notify] command-finished-after = 10</c> (seconds, or "30s", "2m"; global).</summary>
