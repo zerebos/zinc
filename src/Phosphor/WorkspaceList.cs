@@ -247,6 +247,11 @@ internal sealed partial class WorkspaceList : Grid
         };
 
         private readonly Button _close;
+
+        // The close button and the attention dot share one slot: hovering swaps them, so nothing
+        // beside them moves (VS Code's unsaved-file dot does the same).
+        private readonly Grid _slot = new() { Width = 26, Margin = new Thickness(0, 0, 4, 0), Visibility = Visibility.Collapsed };
+        private readonly AttentionDot _slotDot = new() { Corner = false };
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private readonly TabHeader _header;
         private bool _selected, _hovered, _compact;
@@ -271,7 +276,7 @@ internal sealed partial class WorkspaceList : Grid
             {
                 Content = new FontIcon { Glyph = "", FontSize = 10 },
                 Padding = new Thickness(6),
-                Margin = new Thickness(0, 0, 4, 0),
+                HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Background = _clear,
                 BorderThickness = new Thickness(0),
@@ -280,9 +285,16 @@ internal sealed partial class WorkspaceList : Grid
             };
             AutomationProperties.SetName(_close, "Close workspace");
             _close.Click += (_, _) => CloseClicked?.Invoke();
-            SetColumn(_close, 1);
-            Children.Add(_close);
+            _slotDot.Margin = new Thickness(0);
+            _slotDot.HorizontalAlignment = HorizontalAlignment.Center;
+            _slot.Children.Add(_close);
+            _slot.Children.Add(_slotDot);
+            SetColumn(_slot, 1);
+            Children.Add(_slot);
             Children.Add(_pill);
+            tab.Header.DotElsewhere = true;
+            tab.Header.AttentionChanged += Restyle;
+            tab.Header.PulseRequested += _slotDot.PulseIfShown;
 
             // Title room: the item less its left margin, icon (16 + 10), close button and pill.
             SizeChanged += (_, e) => tab.Header.TitleMaxWidth = e.NewSize.Width - 12 - 26 - 32;
@@ -338,8 +350,15 @@ internal sealed partial class WorkspaceList : Grid
                     ? new SolidColorBrush(Color.FromArgb(0x80, c.R, c.G, c.B))
                     : _hovered ? (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"] : _clear;
             _pill.Visibility = _selected ? Visibility.Visible : Visibility.Collapsed;
-            // The rail has no room for it: middle click and the context menu still close.
-            _close.Visibility = !_compact && (_selected || _hovered) ? Visibility.Visible : Visibility.Collapsed;
+            // The rail has no room for either (its dot sits on the icon): middle click and the
+            // context menu still close.
+            var attention = _compact ? Attention.None : _header.Attention;
+            var dot = attention != Attention.None && !_hovered;
+            var close = !_compact && (_hovered || (_selected && attention == Attention.None));
+            _slotDot.Show(attention);
+            _slotDot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
+            _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
+            _slot.Visibility = dot || close ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 }

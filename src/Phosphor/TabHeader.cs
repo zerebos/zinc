@@ -25,7 +25,8 @@ internal sealed partial class TabHeader : Grid
     private readonly Dictionary<Profile, UIElement> _iconByProfile = new();
     private readonly AttentionDot _dot = new();
     private FrameworkElement _owner;
-    private bool _compact;
+    private bool _compact, _dotElsewhere;
+    private Attention _attention;
 
     public TabHeader(FrameworkElement owner)
     {
@@ -42,10 +43,48 @@ internal sealed partial class TabHeader : Grid
     }
 
     /// <summary>A command finished (or failed) here while you weren't looking.</summary>
-    public void SetAttention(Attention attention) => _dot.Show(attention);
+    public void SetAttention(Attention attention)
+    {
+        _attention = attention;
+        ShowDot();
+        AttentionChanged?.Invoke();
+    }
+
+    public Attention Attention => _attention;
+
+    /// <summary>The attention changed (for a host showing the dot itself, <see cref="DotElsewhere"/>).</summary>
+    public event Action? AttentionChanged;
+
+    /// <summary>The host wants the dot to pulse (it shows the dot itself).</summary>
+    public event Action? PulseRequested;
+
+    /// <summary>
+    /// The host shows the dot in a place of its own (the sidebar: in the close button's slot, so
+    /// hovering swaps them without moving anything); the header keeps it only on the rail.
+    /// </summary>
+    public bool DotElsewhere
+    {
+        set
+        {
+            _dotElsewhere = value;
+            ShowDot();
+        }
+    }
+
+    private void ShowDot() => _dot.Show(_dotElsewhere && !_compact ? Attention.None : _attention);
 
     /// <summary>Pulses the dot again, if it's showing (you're back from another app).</summary>
-    public void PulseAttention() => _dot.PulseIfShown();
+    public void PulseAttention()
+    {
+        if (_dotElsewhere && !_compact)
+        {
+            PulseRequested?.Invoke();
+        }
+        else
+        {
+            _dot.PulseIfShown();
+        }
+    }
 
     public string Title => _title.Text;
 
@@ -59,6 +98,7 @@ internal sealed partial class TabHeader : Grid
             _icons.Margin = new Thickness(0, 0, value ? 0 : 10, 0);
             HorizontalAlignment = value ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
             PlaceDot();
+            ShowDot();
         }
     }
 
