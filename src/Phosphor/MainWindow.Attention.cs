@@ -86,6 +86,7 @@ public sealed partial class MainWindow
         }
 
         Activate();
+        ForceForeground();
         if (!AllTabs().Contains(tab) || tab.Workspace.GroupOf(pane) == null)
         {
             return; // moved or closed since
@@ -93,6 +94,39 @@ public sealed partial class MainWindow
 
         Tabs.SelectedItem = tab.Item;
         ShowGroupTab(tab, pane);
+    }
+
+    /// <summary>
+    /// Brings the window to the front although another app has it. A notification's click doesn't
+    /// hand Phosphor the right to take the foreground (Activate alone left the window behind), so
+    /// its input is briefly attached to the foreground app's thread, which may.
+    /// </summary>
+    private void ForceForeground()
+    {
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        var foreground = GetForegroundWindow();
+        if (foreground == hwnd)
+        {
+            return;
+        }
+
+        var theirs = GetWindowThreadProcessId(foreground, out _);
+        var ours = GetCurrentThreadId();
+        var attached = theirs != 0 && theirs != ours && AttachThreadInput(theirs, ours, true);
+        try
+        {
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
+        }
+        finally
+        {
+            if (attached)
+            {
+                AttachThreadInput(theirs, ours, false);
+            }
+        }
+
+        Log.Write($"foreground: {(GetForegroundWindow() == hwnd ? "taken" : "refused")} (attached {attached})");
     }
 
     /// <summary>A program's progress changed in a pane: its tab's ring, and the taskbar's bar.</summary>
@@ -276,4 +310,21 @@ public sealed partial class MainWindow
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool FlashWindowEx(ref FlashInfo info);
+
+    [LibraryImport("user32.dll")]
+    private static partial nint GetForegroundWindow();
+
+    [LibraryImport("user32.dll")]
+    private static partial uint GetWindowThreadProcessId(nint hwnd, out uint processId);
+
+    [LibraryImport("kernel32.dll")]
+    private static partial uint GetCurrentThreadId();
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool AttachThreadInput(uint attach, uint attachTo, [MarshalAs(UnmanagedType.Bool)] bool doAttach);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool BringWindowToTop(nint hwnd);
 }
