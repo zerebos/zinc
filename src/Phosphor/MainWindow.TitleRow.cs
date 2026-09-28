@@ -18,6 +18,7 @@ public sealed partial class MainWindow
 {
     private TextBlock? _commandContext;
     private TextBlock? _commandShortcut;
+    private bool _windowClosed;
     private ColumnDefinition? _markColumn;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _commandClock;
 
@@ -177,7 +178,8 @@ public sealed partial class MainWindow
         RectInt32? set = null;
         void Update()
         {
-            if (element.XamlRoot is not { } root || element.ActualWidth <= 0)
+            // Layout still runs as a closed window tears down; its AppWindow is gone by then.
+            if (_windowClosed || element.XamlRoot is not { } root || element.ActualWidth <= 0)
             {
                 return;
             }

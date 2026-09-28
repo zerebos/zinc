@@ -61,7 +61,26 @@ public sealed unsafe partial class ConPty : IDisposable
             throw Marshal.GetExceptionForHR(hr)!;
         }
 
-        (_process, ProcessId) = StartProcess(commandLine, workingDirectory, _hpc);
+        try
+        {
+            (_process, ProcessId) = StartProcess(commandLine, workingDirectory, _hpc);
+        }
+        catch
+        {
+            // Nothing to run: let go of the pseudoconsole and our pipe ends before the caller hears why.
+            if (UsesBundledConpty)
+            {
+                ConptyClosePseudoConsole(_hpc);
+            }
+            else
+            {
+                ClosePseudoConsole(_hpc);
+            }
+
+            _inputWrite.Dispose();
+            _outputRead.Dispose();
+            throw;
+        }
         _input = new FileStream(_inputWrite, FileAccess.Write, 1);
 
         _reader = new Thread(ReadLoop) { IsBackground = true, Name = "ConPty reader" };

@@ -147,6 +147,7 @@ public sealed partial class MainWindow : Window
 
         Closed += (_, _) =>
         {
+            _windowClosed = true;
             foreach (var tab in AllTabs().ToList())
             {
                 foreach (var pane in tab.Workspace.Tabs)

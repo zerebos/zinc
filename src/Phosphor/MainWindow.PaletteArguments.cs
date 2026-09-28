@@ -14,7 +14,7 @@ public sealed partial class MainWindow
         yield return Asks("Change color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: false));
         yield return Asks("Set default color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: true));
         yield return Asks("New tab running…", () => AskPaletteArgument(new PaletteArgument(
-            "A command line to run in a new tab, e.g. ssh myserver",
+            "A program to run in a new tab, with its arguments, e.g. ssh myserver (shell commands like dir need a shell)",
             Submit: line => NewTabWith(tab, line, WorkingFolderOf(tab.Active, line)))));
         yield return Asks("New tab in folder…", () => AskFolder(tab, "A folder to open a new tab in, e.g. ~/src"));
     }
@@ -47,10 +47,34 @@ public sealed partial class MainWindow
             choices,
             Highlight: choice =>
             {
-                var preview = themes.Apply(profile.Config, choice.Title) ?? profile.Config;
+                var preview = asDefault
+                    ? DefaultSchemePreview(pane, choice.Title)
+                    : themes.Apply(profile.Config, choice.Title) ?? profile.Config;
                 pane.Control.ApplyConfig(preview);
             },
             Cancel: () => pane.Control.ApplyConfig(pane.Profile.Config)));
+    }
+
+    /// <summary>
+    /// What the pane would look like with <paramref name="name"/> as config.toml's colors.theme:
+    /// the file read again with just that changed, so colors it sets explicitly (background,
+    /// foreground, palette entries, a profile's own scheme) still win, as they will after saving.
+    /// </summary>
+    private Config DefaultSchemePreview(TerminalTab pane, string name)
+    {
+        try
+        {
+            var text = File.Exists(_config.Path) ? File.ReadAllText(_config.Path) : "";
+            var edited = ConfigFile.Parse(ConfigEditor.Set(text, ["colors", "theme"], name), _config.Path);
+            // A profile without its own section (a discovered one) has the global colors.
+            var colors = (edited.FindProfile(pane.Profile.Id)?.Config ?? edited.Global).Theme;
+            return pane.Profile.Config with { Theme = colors };
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Log.Write($"palette: preview of {name} as default: {ex.Message}");
+            return _config.Themes.Apply(pane.Profile.Config, name) ?? pane.Profile.Config;
+        }
     }
 
     private void ChooseScheme(WorkspaceTab tab, TerminalTab pane, Profile profile, string name, bool asDefault)

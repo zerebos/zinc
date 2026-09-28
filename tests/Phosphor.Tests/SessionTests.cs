@@ -23,6 +23,17 @@ public class SessionTests
     }
 
     [Fact]
+    public void AProgramThatDoesNotExistFailsToStartAndLeavesTheSessionUsable()
+    {
+        // The pane catches this and shows it (a typo, or a shell builtin like `dir` run on its own).
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        Assert.Throws<System.ComponentModel.Win32Exception>(() =>
+            session.Start("phosphor-no-such-program-4af1", null, 80, 24));
+        session.WriteToScreen("still here");
+        Assert.Contains("still here", session.ReadScreenText());
+    }
+
+    [Fact]
     public async Task ChildOutputReachesScreen()
     {
         using var s = new TestSession("cmd.exe /d /c echo phosphor-hello");

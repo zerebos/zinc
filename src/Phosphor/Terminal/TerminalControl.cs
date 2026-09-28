@@ -242,7 +242,20 @@ public sealed partial class TerminalControl : UserControl
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
         ApplyClipboardPermissions(session);
         _session = session;
-        session.Start(_commandLine, _workingDirectory, cols, rows);
+        try
+        {
+            session.Start(_commandLine, _workingDirectory, cols, rows);
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)
+        {
+            // Nothing to run (a shell builtin like `dir`, a typo, a missing program): say so in the
+            // tab, which then closes on a key like a failed session, rather than take the app down.
+            Log.Write($"pane: couldn't start {_commandLine}: {ex.Message}");
+            _exited = true;
+            session.WriteToScreen($"\x1b[0;31mCouldn't start {_commandLine}\x1b[0m\r\n{ex.Message}\r\n\r\n" +
+                "\x1b[0;2mShell commands (dir, ls, cd) need a shell: run the shell and type them there. " +
+                "Press any key to close.\x1b[0m");
+        }
     }
 
     /// <summary>OSC 52 access per the settings (null = denied).</summary>

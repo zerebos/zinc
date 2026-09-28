@@ -381,9 +381,11 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 
 Some palette commands ask for one more thing in the same box: **Change color scheme…** (this
 tab only; the list previews each scheme on the tab as you move through it, Esc puts the old one
-back; the tab keeps it across restarts), **Set default color scheme…** (writes `colors.theme` in
-your config, keeping the rest of the file as it was), **New tab running…** (any command line,
-e.g. `ssh myserver`) and **New tab in folder…** (`~/src`, `D:\work`, or relative to where the
+back; the tab keeps it across restarts; the scheme's colors replace all of that tab's, including
+ones your config sets), **Set default color scheme…** (writes `colors.theme` in your config,
+keeping the rest of the file as it was; colors the config sets itself, like `background`, keep
+winning over the scheme, and the preview shows them that way), **New tab running…** (a program
+and its arguments, e.g. `ssh myserver`; shell commands like `dir` need a shell) and **New tab in folder…** (`~/src`, `D:\work`, or relative to where the
 focused shell is; WSL tabs take Linux paths and `C:\...`).
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | Previous / next prompt ([shell integration](#shell-integration)); a line without it |
