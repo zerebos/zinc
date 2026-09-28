@@ -238,6 +238,7 @@ public sealed partial class TerminalControl : UserControl
         });
         session.DirectoryChanged += () => dq.TryEnqueue(() => DirectoryChanged?.Invoke());
         session.CommandsChanged += () => dq.TryEnqueue(OnCommandsChanged);
+        ForwardProgramNotifications(session);
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
         ApplyClipboardPermissions(session);
         _session = session;

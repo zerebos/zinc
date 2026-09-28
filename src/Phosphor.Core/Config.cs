@@ -35,11 +35,17 @@ public enum CommandMarks
     None,
 }
 
-/// <summary>What happens when a long command finishes where you weren't looking. Config: <c>[notify] command-finished</c>.</summary>
-public enum NotifyCommandFinished
+/// <summary>
+/// How Phosphor tells you about something that happened out of view (a long command finishing, a
+/// program's notification). Config: <c>[notify] command-finished</c> and <c>programs</c>.
+/// </summary>
+public enum NotifyMode
 {
-    /// <summary>A dot on its tab (red if it failed), and the taskbar button flashes if the window is in the background.</summary>
+    /// <summary>A dot on its tab; the taskbar button flashes if the window is in the background.</summary>
     Badge,
+
+    /// <summary>The dot, plus a Windows notification when Phosphor is in the background.</summary>
+    Toast,
     Never,
 }
 
@@ -122,8 +128,11 @@ public sealed record Config
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
-    /// <summary>Config: <c>[notify] command-finished = badge | never</c> (global).</summary>
-    public NotifyCommandFinished NotifyCommandFinished { get; init; }
+    /// <summary>Config: <c>[notify] command-finished = badge | toast | never</c> (global).</summary>
+    public NotifyMode NotifyCommandFinished { get; init; }
+
+    /// <summary>Notifications programs send (OSC 9, OSC 777). Config: <c>[notify] programs = badge | toast | never</c> (global).</summary>
+    public NotifyMode NotifyPrograms { get; init; }
 
     /// <summary>How long a command must run to count as long. Config: <c>[notify] command-finished-after = 10</c> (seconds, or "30s", "2m"; global).</summary>
     public TimeSpan NotifyCommandFinishedAfter { get; init; } = TimeSpan.FromSeconds(10);
@@ -203,7 +212,8 @@ public sealed record Config
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
             "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
             "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
-            "notify-command-finished" when TryMode<NotifyCommandFinished>(value, out var notify) => this with { NotifyCommandFinished = notify },
+            "notify-command-finished" when TryMode<NotifyMode>(value, out var notify) => this with { NotifyCommandFinished = notify },
+            "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },

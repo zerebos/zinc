@@ -126,7 +126,12 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 features they control below.
 
 **`[notify]`**: `command-finished`, `command-finished-after` (see
-[Shell integration](#shell-integration)).
+[Shell integration](#shell-integration)), and `programs`: notifications that programs send
+(OSC 9 and OSC 777, e.g. a build script's `printf '\e]9;Build done\a'`). Out of view they put a
+blue dot on the tab, like a finished command; `"toast"` also shows a Windows notification while
+Phosphor is in the background, `"never"` ignores them. Programs that report progress (OSC 9;4)
+get a small ring on their tab and a progress bar on Phosphor's taskbar button.
+Windows notifications come from Phosphor's tray icon and respect Do Not Disturb.
 
 **`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
 relative to this one. Settings in the including file win.
@@ -282,8 +287,10 @@ output starts, and how it ended. With those marks, Phosphor can:
 - **tell you when a long command finishes out of view**: in another workspace, tab or pane
   (anywhere but the focused one), or while you're in another app, a command that ran 10 seconds
   or more puts a pulsing dot after its tab's title (on the icon in the rail): green, or red if it
-  failed, until you focus it. The taskbar button flashes if Phosphor is in the background. In `[notify]`: `command-finished = "never"` turns this off, and
-  `command-finished-after` sets what counts as long (`30`, `"45s"`, `"2m"`);
+  failed, until you focus it. The taskbar button flashes if Phosphor is in the background. In
+  `[notify]`: `command-finished = "toast"` shows a Windows notification instead of the flash
+  (click it to go to the pane), `"never"` turns this off, and `command-finished-after` sets what
+  counts as long (`30`, `"45s"`, `"2m"`);
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
   quitting, asks first while a command is running there (never at an idle prompt).
 

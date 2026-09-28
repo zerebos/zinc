@@ -27,6 +27,7 @@ internal sealed partial class TabHeader : Grid
     private FrameworkElement _owner;
     private bool _compact, _dotElsewhere;
     private Attention _attention;
+    private Phosphor.Terminal.TerminalProgress _progress = Phosphor.Terminal.TerminalProgress.None;
 
     public TabHeader(FrameworkElement owner)
     {
@@ -52,6 +53,21 @@ internal sealed partial class TabHeader : Grid
 
     public Attention Attention => _attention;
 
+    /// <summary>A program's progress in this workspace: a ring where the dot goes, while there's no dot.</summary>
+    public void SetProgress(Phosphor.Terminal.TerminalProgress progress)
+    {
+        if (progress == _progress)
+        {
+            return;
+        }
+
+        _progress = progress;
+        ShowDot();
+        AttentionChanged?.Invoke();
+    }
+
+    public Phosphor.Terminal.TerminalProgress Progress => _progress;
+
     /// <summary>The attention changed (for a host showing the dot itself, <see cref="DotElsewhere"/>).</summary>
     public event Action? AttentionChanged;
 
@@ -71,7 +87,12 @@ internal sealed partial class TabHeader : Grid
         }
     }
 
-    private void ShowDot() => _dot.Show(_dotElsewhere && !_compact ? Attention.None : _attention);
+    private void ShowDot()
+    {
+        var here = !_dotElsewhere || _compact;
+        _dot.Show(here ? _attention : Attention.None);
+        _dot.ShowProgress(here ? _progress : Phosphor.Terminal.TerminalProgress.None);
+    }
 
     /// <summary>Pulses the dot again, if it's showing (you're back from another app).</summary>
     public void PulseAttention()

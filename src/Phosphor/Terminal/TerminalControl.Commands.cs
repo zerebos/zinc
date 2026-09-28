@@ -19,6 +19,26 @@ public sealed partial class TerminalControl
     /// <summary>A command that was typed and run has finished (once per command). Raised on the UI thread.</summary>
     public event Action<ShellCommand>? CommandFinished;
 
+    /// <summary>A program asked for a desktop notification (OSC 9 / 777): title (maybe empty), body. UI thread.</summary>
+    public event Action<string, string>? Notified;
+
+    /// <summary>A program's progress (OSC 9;4) changed; see <see cref="Progress"/>. UI thread.</summary>
+    public event Action? ProgressChanged;
+
+    /// <summary>What a program last reported as its progress.</summary>
+    public TerminalProgress Progress => _session?.Progress ?? TerminalProgress.None;
+
+    private void ForwardProgramNotifications(TerminalSession session)
+    {
+        var dq = DispatcherQueue;
+        session.Notified += (title, body) => dq.TryEnqueue(() =>
+        {
+            Log.Write($"program notification: '{title}' '{body}'");
+            Notified?.Invoke(title, body);
+        });
+        session.ProgressChanged += progress => dq.TryEnqueue(() => ProgressChanged?.Invoke());
+    }
+
     /// <summary>The command running in this pane, if the shell says one is.</summary>
     public ShellCommand? RunningCommand => _session?.Commands() is { Count: > 0 } commands && commands[^1].Running ? commands[^1] : null;
 

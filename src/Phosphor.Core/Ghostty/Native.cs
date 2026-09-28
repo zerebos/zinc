@@ -52,6 +52,35 @@ public struct GhosttyString
     public nuint Len;
 }
 
+/// <summary>OSC 9 / OSC 777: a program asks for a desktop notification. Strings are borrowed for the callback.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 40)]
+public struct GhosttyTerminalDesktopNotification
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public GhosttyString Title;
+    [FieldOffset(24)] public GhosttyString Body;
+}
+
+public enum TerminalProgressState : int
+{
+    Remove = 0,
+    Set = 1,
+    Error = 2,
+    Indeterminate = 3,
+    Pause = 4,
+}
+
+/// <summary>OSC 9;4: a program's progress.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 16)]
+public struct GhosttyTerminalProgressReport
+{
+    [FieldOffset(0)] public nuint Size;
+    [FieldOffset(8)] public TerminalProgressState State;
+
+    /// <summary>0 to 100, or -1 when omitted.</summary>
+    [FieldOffset(12)] public sbyte Progress;
+}
+
 public enum ClipboardLocation : int
 {
     Standard = 0,
@@ -443,6 +472,8 @@ public enum TerminalOption : int
     ClipboardWrite = 26,
     ScrollbackMaxBytes = 27,
     ScrollbackMaxLines = 28,
+    DesktopNotification = 29,
+    ProgressReport = 30,
     ModeDefault = 33,
     ClipboardRead = 38,
 }

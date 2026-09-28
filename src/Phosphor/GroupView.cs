@@ -236,7 +236,7 @@ internal sealed partial class GroupView : Grid
 
         foreach (var tab in group.Tabs)
         {
-            _items[tab].Show(TitleOf(tab), tab == group.Active, focused, accent, tab.Attention);
+            _items[tab].Show(TitleOf(tab), tab == group.Active, focused, accent, tab.Attention, tab.Control.Progress);
         }
 
         if (_shown != group.Active)
@@ -316,6 +316,7 @@ internal sealed partial class GroupView : Grid
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private bool _active, _hovered;
         private Attention _attention;
+        private TerminalProgress _progress = TerminalProgress.None;
 
         public TabItem(MainWindow.TerminalTab tab)
         {
@@ -386,14 +387,16 @@ internal sealed partial class GroupView : Grid
         private void ShowSlot()
         {
             _dot.Show(_attention);
-            var dot = _attention != Attention.None && !_hovered;
+            _dot.ShowProgress(_progress);
+            var dot = _dot.HasContent && !_hovered;
             _dot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
             _close.Visibility = dot ? Visibility.Collapsed : Visibility.Visible;
         }
 
-        public void Show(string title, bool active, bool focused, Brush accent, Attention attention)
+        public void Show(string title, bool active, bool focused, Brush accent, Attention attention, TerminalProgress progress)
         {
             _attention = attention;
+            _progress = progress;
             ShowSlot();
             if (_title.Text != title)
             {

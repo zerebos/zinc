@@ -6,8 +6,10 @@ using Phosphor.Terminal;
 namespace Phosphor;
 
 // Shell integration, the attention part: a long command that finishes where you weren't looking
-// (another workspace or tab, or another app) puts a dot on its tab, red if it failed, and flashes
-// the taskbar button while the window is in the background; the dot clears once you look.
+// (another workspace, tab or pane, or another app) puts a dot on its tab, red if it failed, and
+// flashes the taskbar button while the window is in the background (or, with "toast", shows a
+// Windows notification); the dot clears once you look. Programs' own notifications (OSC 9 / 777)
+// get a blue dot the same way, and their progress (OSC 9;4) a ring and the taskbar's progress bar.
 // Closing something while the shell says a command is running asks first.
 public sealed partial class MainWindow
 {
@@ -17,7 +19,7 @@ public sealed partial class MainWindow
     private void OnCommandFinished(WorkspaceTab tab, TerminalTab pane, ShellCommand command)
     {
         var global = _config.Global;
-        if (global.NotifyCommandFinished == NotifyCommandFinished.Never ||
+        if (global.NotifyCommandFinished == NotifyMode.Never ||
             command.Duration is not { } took || took < global.NotifyCommandFinishedAfter || IsLookingAt(tab, pane))
         {
             return;
@@ -31,10 +33,83 @@ public sealed partial class MainWindow
 
         Log.Write($"attention: '{command.Text}' {attention} after {took.TotalSeconds:0}s");
         UpdateFocusBorders(tab);
-        if (!_active)
+        var result = command.Failed ? $"failed (exit {command.ExitCode})" : "finished";
+        Alert(global.NotifyCommandFinished, tab, pane,
+            $"{command.Text ?? "A command"}", $"{char.ToUpperInvariant(result[0])}{result[1..]} after {Elapsed(took)} · {tab.Header.Title}");
+    }
+
+    /// <summary>A program asked for a notification (OSC 9 / OSC 777).</summary>
+    private void OnProgramNotified(WorkspaceTab tab, TerminalTab pane, string title, string body)
+    {
+        var mode = _config.Global.NotifyPrograms;
+        if (mode == NotifyMode.Never || IsLookingAt(tab, pane))
+        {
+            return;
+        }
+
+        if (Attention.Notified > pane.Attention)
+        {
+            pane.Attention = Attention.Notified;
+        }
+
+        UpdateFocusBorders(tab);
+        Alert(mode, tab, pane, title.Length > 0 ? title : tab.Header.Title, body);
+    }
+
+    /// <summary>
+    /// Past the dot: with the window in the background, a Windows notification ("toast"), else a
+    /// taskbar flash. Clicking the notification brings you to the pane.
+    /// </summary>
+    private void Alert(NotifyMode mode, WorkspaceTab tab, TerminalTab pane, string title, string body)
+    {
+        if (_active)
+        {
+            return;
+        }
+
+        if (mode == NotifyMode.Toast)
+        {
+            App.Instance.Notify(title, body, () => BringToPane(tab, pane));
+        }
+        else
         {
             FlashTaskbarButton();
         }
+    }
+
+    /// <summary>Brings this window forward with <paramref name="pane"/> shown and focused (if it's still here).</summary>
+    private void BringToPane(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized } presenter)
+        {
+            presenter.Restore();
+        }
+
+        Activate();
+        if (!AllTabs().Contains(tab) || tab.Workspace.GroupOf(pane) == null)
+        {
+            return; // moved or closed since
+        }
+
+        Tabs.SelectedItem = tab.Item;
+        ShowGroupTab(tab, pane);
+    }
+
+    /// <summary>A program's progress changed in a pane: its tab's ring, and the taskbar's bar.</summary>
+    private void OnProgress(WorkspaceTab tab) => UpdateFocusBorders(tab); // which updates the taskbar too
+
+    /// <summary>
+    /// The window's taskbar button shows one progress: an error if any pane has one, else the
+    /// shown workspace's, else any.
+    /// </summary>
+    private void UpdateTaskbarProgress()
+    {
+        var shown = SelectedTab?.Workspace.Tabs ?? [];
+        var all = AllTabs().SelectMany(t => t.Workspace.Tabs).Select(p => p.Control.Progress).Where(p => p.Active).ToList();
+        var progress = all.FirstOrDefault(p => p.State == Ghostty.TerminalProgressState.Error) is { Active: true } error ? error
+            : shown.Select(p => p.Control.Progress).FirstOrDefault(p => p.Active) is { Active: true } here ? here
+            : all.FirstOrDefault();
+        TaskbarProgress.Show(WinRT.Interop.WindowNative.GetWindowHandle(this), progress);
     }
 
     /// <summary>
@@ -53,9 +128,14 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A workspace's dot: the most urgent of its terminals'.</summary>
-    private static void ShowWorkspaceAttention(WorkspaceTab tab) =>
+    /// <summary>A workspace's dot: the most urgent of its terminals'; else a ring for a program's progress (an error first).</summary>
+    private static void ShowWorkspaceAttention(WorkspaceTab tab)
+    {
         tab.Header.SetAttention(tab.Workspace.Tabs.Select(t => t.Attention).DefaultIfEmpty().Max());
+        var progress = tab.Workspace.Tabs.Select(t => t.Control.Progress).Where(p => p.Active)
+            .OrderByDescending(p => p.State == Ghostty.TerminalProgressState.Error).FirstOrDefault();
+        tab.Header.SetProgress(progress.Active ? progress : TerminalProgress.None);
+    }
 
     private void FlashTaskbarButton()
     {

@@ -184,6 +184,8 @@ public sealed partial class MainWindow : Window
         Action close = () => ClosePane(tab, pane);
         Action directory = () => UpdateTitle(tab); // the command center shows the folder
         Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
+        Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
+        Action progress = () => OnProgress(tab);
         RoutedEventHandler focus = (_, _) =>
         {
             tab.Workspace.Activate(pane);
@@ -196,6 +198,8 @@ public sealed partial class MainWindow : Window
         control.DirectoryChanged += directory;
         control.CommandsChanged += directory; // and the running command
         control.CommandFinished += finished;
+        control.Notified += notified;
+        control.ProgressChanged += progress;
         control.CloseRequested += close;
         control.GotFocus += focus;
         pane.Unwire = () =>
@@ -205,6 +209,8 @@ public sealed partial class MainWindow : Window
             control.DirectoryChanged -= directory;
             control.CommandsChanged -= directory;
             control.CommandFinished -= finished;
+            control.Notified -= notified;
+            control.ProgressChanged -= progress;
             control.CloseRequested -= close;
             control.GotFocus -= focus;
             pane.Unwire = null;
@@ -386,6 +392,7 @@ public sealed partial class MainWindow : Window
         }
 
         ShowWorkspaceAttention(tab);
+        UpdateTaskbarProgress(); // the shown workspace's progress wins; closed panes drop theirs
     }
 
     private void FocusActive(WorkspaceTab tab)

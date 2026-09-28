@@ -352,10 +352,10 @@ internal sealed partial class WorkspaceList : Grid
             _pill.Visibility = _selected ? Visibility.Visible : Visibility.Collapsed;
             // The rail has no room for either (its dot sits on the icon): middle click and the
             // context menu still close.
-            var attention = _compact ? Attention.None : _header.Attention;
-            var dot = attention != Attention.None && !_hovered;
-            var close = !_compact && (_hovered || (_selected && attention == Attention.None));
-            _slotDot.Show(attention);
+            _slotDot.Show(_compact ? Attention.None : _header.Attention);
+            _slotDot.ShowProgress(_compact ? Phosphor.Terminal.TerminalProgress.None : _header.Progress);
+            var dot = _slotDot.HasContent && !_hovered;
+            var close = !_compact && (_hovered || (_selected && !_slotDot.HasContent));
             _slotDot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
             _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
             _slot.Visibility = dot || close ? Visibility.Visible : Visibility.Collapsed;

@@ -15,7 +15,7 @@ internal sealed unsafe partial class TrayIcon : IDisposable
     private const uint IconId = 1;
 
     private readonly MessageWindow _window;
-    private readonly nint _icon;
+    private readonly nint _icon, _largeIcon;
     private bool _added;
 
     public TrayIcon(MessageWindow window, string icoPath)
@@ -23,6 +23,8 @@ internal sealed unsafe partial class TrayIcon : IDisposable
         _window = window;
         var size = GetSystemMetricsForDpi(49 /* SM_CXSMICON */, GetDpiForSystem());
         _icon = LoadImageW(0, icoPath, 1 /* IMAGE_ICON */, size, size, 0x10 /* LR_LOADFROMFILE */);
+        var large = GetSystemMetricsForDpi(11 /* SM_CXICON */, GetDpiForSystem());
+        _largeIcon = LoadImageW(0, icoPath, 1, large, large, 0x10); // the notification's picture
         window.Message += OnMessage;
         Add();
     }
@@ -72,6 +74,9 @@ internal sealed unsafe partial class TrayIcon : IDisposable
 
         switch ((uint)(lParam & 0xFFFF))
         {
+            case NinBalloonUserClick:
+                NotificationClicked?.Invoke();
+                break;
             case NinSelect:
             case NinKeySelect:
                 Activated?.Invoke();
@@ -135,11 +140,56 @@ internal sealed unsafe partial class TrayIcon : IDisposable
         {
             DestroyIcon(_icon);
         }
+
+        if (_largeIcon != 0)
+        {
+            DestroyIcon(_largeIcon);
+        }
     }
 
-    private const uint NimAdd = 0, NimDelete = 2, NimSetVersion = 4;
-    private const uint NifMessage = 1, NifIcon = 2, NifTip = 4, NifShowTip = 0x80;
-    private const uint NinSelect = 0x400, NinKeySelect = 0x401, WmContextMenu = 0x7B;
+    /// <summary>
+    /// Shows a Windows notification from the tray icon (no app registration needed, unlike app
+    /// notifications, whose identity would follow each install's versioned path). It respects
+    /// Do Not Disturb; clicking it raises <see cref="NotificationClicked"/>.
+    /// </summary>
+    public void ShowNotification(string title, string body)
+    {
+        if (!_added)
+        {
+            return;
+        }
+
+        var data = Data(NifInfo);
+        Copy(title, data.szInfoTitle, 64);
+        Copy(body.Length == 0 ? " " : body, data.szInfo, 256); // an empty text removes it instead
+        data.dwInfoFlags = NiifUser | NiifLargeIcon | NiifRespectQuietTime;
+        data.hBalloonIcon = _largeIcon != 0 ? _largeIcon : _icon;
+        ShellNotifyIconW(NimModify, &data);
+    }
+
+    /// <summary>A notification from <see cref="ShowNotification"/> was clicked.</summary>
+    public event Action? NotificationClicked;
+
+    private static void Copy(string text, char* into, int capacity)
+    {
+        var span = new Span<char>(into, capacity);
+        span.Clear();
+        var length = Math.Min(text.Length, capacity - 1);
+        if (length < text.Length && length > 0)
+        {
+            length--; // room for the ellipsis
+            text[..length].AsSpan().CopyTo(span);
+            span[length] = '…';
+            return;
+        }
+
+        text.AsSpan(0, length).CopyTo(span);
+    }
+
+    private const uint NimAdd = 0, NimModify = 1, NimDelete = 2, NimSetVersion = 4;
+    private const uint NifMessage = 1, NifIcon = 2, NifTip = 4, NifInfo = 0x10, NifShowTip = 0x80;
+    private const uint NiifUser = 0x4, NiifLargeIcon = 0x20, NiifRespectQuietTime = 0x80;
+    private const uint NinSelect = 0x400, NinKeySelect = 0x401, NinBalloonUserClick = 0x405, WmContextMenu = 0x7B;
     private const uint MfString = 0, MfGrayed = 1, MfSeparator = 0x800;
     private const uint TpmReturnCmd = 0x100, TpmRightButton = 2, TpmBottomAlign = 0x20;
 

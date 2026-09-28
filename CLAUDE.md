@@ -129,6 +129,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   workspace in the active window, cleared in `UpdateFocusBorders`), `FlashWindowEx`, and close confirmation: user closes go
   through `AskClosePane`/`CloseTab`/`CloseTabs`/`AppWindow.Closing`/`App.AskQuit`; `ClosePane`,
   `CloseTabNow`, `Quit` never ask (a shell exiting must not). `[notify]` is a config group.
+  Phase 3: OSC 9/777 notifications and OSC 9;4 progress come from libghostty callbacks
+  (`TerminalSession.Notifications.cs`; OSC 9;9 stays a folder report) → blue `Attention.Notified`
+  and a `ProgressRing` in `AttentionDot`; `TaskbarProgress` (ITaskbarList3 via ComImport).
+  "toast" = `TrayIcon.ShowNotification` (NIF_INFO balloon, shown as a Windows notification;
+  click = NIN_BALLOONUSERCLICK → `App.Notify`'s callback → `BringToPane`). Not AppNotificationManager:
+  an unpackaged app's identity follows its exe path, and installs are versioned folders.
   PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
   string broke PSReadLine's prompt redraw after a failed command (text overwrote `> `).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and

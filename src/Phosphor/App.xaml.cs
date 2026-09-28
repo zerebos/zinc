@@ -509,6 +509,7 @@ public partial class App : Application
     {
         _tray = new TrayIcon(_messageWindow!, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
         _tray.Activated += ShowWindows;
+        _tray.NotificationClicked += () => _notificationClicked?.Invoke();
         _tray.BuildMenu = () =>
         {
             var quickLabel = _quick?.IsQuickShown == true ? "Hide quick terminal" : "Show quick terminal";
@@ -528,6 +529,24 @@ public partial class App : Application
     }
 
     /// <summary>Tray click: bring back the most recently used window, or the saved ones, or open one.</summary>
+    private Action? _notificationClicked;
+
+    /// <summary>
+    /// A Windows notification (through the tray icon); clicking it runs <paramref name="clicked"/>
+    /// (the newest notification's, as Windows shows one at a time).
+    /// </summary>
+    internal void Notify(string title, string body, Action clicked)
+    {
+        if (_tray == null)
+        {
+            return;
+        }
+
+        _notificationClicked = clicked;
+        _tray.ShowNotification(title, body);
+        Log.Write($"notify: {title} / {body}");
+    }
+
     private void ShowWindows()
     {
         if (_windows.Count == 0)

@@ -84,6 +84,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             (delegate* unmanaged[Cdecl]<nint, nint, GhosttyClipboardWrite*, void>)&OnClipboardWrite);
         Native.TerminalSet(_terminal, TerminalOption.ClipboardRead,
             (delegate* unmanaged[Cdecl]<nint, nint, GhosttyClipboardRead*, void>)&OnClipboardRead);
+        InstallNotificationCallbacks(); // OSC 9 / 777 notifications, OSC 9;4 progress
 
         // libghostty's own palette, before a theme changes it: reading its "default" palette
         // later returns whatever was last set, so a theme change couldn't restore entries.
@@ -227,6 +228,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
 
         AnnounceCommands(commandsChanged);
+        AnnounceNotifications();
 
         if (bell)
         {

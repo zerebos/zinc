@@ -473,6 +473,7 @@ public sealed class ConfigFile
                 ["window", "save-state"] => ("window-save-state", e.Value is bool b ? (b ? "always" : "never") : e.Value as string),
                 ["window", "quit-after-last-window-closed"] => ("quit-after-last-window-closed", Bool(e.Value)),
                 ["notify", "command-finished"] => ("notify-command-finished", e.Value as string),
+                ["notify", "programs"] => ("notify-programs", e.Value as string),
                 ["notify", "command-finished-after"] => ("notify-command-finished-after", e.Value is string d ? d : Number(e.Value)),
                 ["quick-terminal", "position"] => ("quick-terminal-position", e.Value as string),
                 ["quick-terminal", "screen"] => ("quick-terminal-screen", e.Value as string),

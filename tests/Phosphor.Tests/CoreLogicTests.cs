@@ -112,9 +112,12 @@ public class ConfigTests : IDisposable
     public void CommandFinishedNotifications()
     {
         var defaults = Load("");
-        Assert.Equal(NotifyCommandFinished.Badge, defaults.NotifyCommandFinished);
+        Assert.Equal(NotifyMode.Badge, defaults.NotifyCommandFinished);
+        Assert.Equal(NotifyMode.Badge, defaults.NotifyPrograms);
+        Assert.Equal(NotifyMode.Toast, Load("[notify]\ncommand-finished = \"toast\"").NotifyCommandFinished);
+        Assert.Equal(NotifyMode.Never, Load("[notify]\nprograms = \"never\"").NotifyPrograms);
         Assert.Equal(TimeSpan.FromSeconds(10), defaults.NotifyCommandFinishedAfter);
-        Assert.Equal(NotifyCommandFinished.Never, Load("[notify]\ncommand-finished = \"never\"").NotifyCommandFinished);
+        Assert.Equal(NotifyMode.Never, Load("[notify]\ncommand-finished = \"never\"").NotifyCommandFinished);
         Assert.Equal(TimeSpan.FromSeconds(30), Load("[notify]\ncommand-finished-after = 30").NotifyCommandFinishedAfter);
         Assert.Equal(TimeSpan.FromSeconds(90), Load("[notify]\ncommand-finished-after = \"1m30s\"").NotifyCommandFinishedAfter);
     }
