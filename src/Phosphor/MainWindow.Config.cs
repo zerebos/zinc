@@ -42,6 +42,12 @@ public sealed partial class MainWindow
                     pane.Profile = profile;
                 }
 
+                // Its own color scheme, if it has one, over the profile's.
+                if (pane.ColorScheme is { } scheme && config.Themes.Apply(pane.Profile.Config, scheme) is { } themed)
+                {
+                    pane.Profile = pane.Profile with { Config = themed };
+                }
+
                 pane.Control.ApplyConfig(pane.Profile.Config);
             }
 

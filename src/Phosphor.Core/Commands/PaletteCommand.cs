@@ -7,7 +7,9 @@ namespace Phosphor.Commands;
 /// <param name="Remember">Whether choosing it makes it a recent command (not for entries that come and go, like tabs).</param>
 /// <param name="Icon">What the palette shows before the title (the app's own type; e.g. a profile).</param>
 /// <param name="IsTab">A tab in the tab switcher ("@").</param>
-public sealed record PaletteCommand(string Title, string? Shortcut, Action Run, bool Remember = true, object? Icon = null, bool IsTab = false);
+/// <param name="AsksArgument">Choosing it keeps the palette open to ask for its argument (its title ends in "…").</param>
+public sealed record PaletteCommand(string Title, string? Shortcut, Action Run, bool Remember = true, object? Icon = null,
+    bool IsTab = false, bool AsksArgument = false);
 
 /// <summary>A command that matched a query, with the matched character positions.</summary>
 public sealed record PaletteMatch(PaletteCommand Command, int Score, int[] Positions, bool Recent = false);

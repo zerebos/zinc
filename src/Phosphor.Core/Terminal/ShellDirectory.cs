@@ -52,7 +52,8 @@ public static class ShellDirectory
     {
         if (IsWsl(command))
         {
-            if (!directory.StartsWith('/'))
+            // POSIX, or home-relative: wsl --cd understands "~" and "~/sub" (checked).
+            if (!directory.StartsWith('/') && directory != "~" && !directory.StartsWith("~/", StringComparison.Ordinal))
             {
                 return null; // a Windows path: the tab's usual start works
             }
@@ -72,6 +73,91 @@ public static class ShellDirectory
         return msys.Success
             ? (command, $"{char.ToUpperInvariant(msys.Groups[1].Value[0])}:{(msys.Groups[2].Value is { Length: > 0 } p ? p : "/")}".Replace('/', '\\'))
             : null;
+    }
+
+    /// <summary>
+    /// A folder someone typed, in the form <see cref="LaunchIn"/> takes for <paramref name="command"/>:
+    /// for WSL a Linux path (<c>~</c> kept for WSL to expand, <c>C:\x</c> becoming <c>/mnt/c/x</c>);
+    /// otherwise a Windows path (<c>~</c> is the user's home, environment variables expand) or an
+    /// MSYS one (<c>/c/src</c>). A relative path starts from <paramref name="current"/> (where the
+    /// shell is, as reported). Null if it can't be one.
+    /// </summary>
+    public static string? ResolveTyped(string typed, string command, string current, string? home = null)
+    {
+        var s = typed.Trim().Trim('"');
+        if (s.Length == 0)
+        {
+            return null;
+        }
+
+        if (IsWsl(command))
+        {
+            if (s.StartsWith('/') || s == "~" || s.StartsWith("~/", StringComparison.Ordinal))
+            {
+                return s;
+            }
+
+            var drive = System.Text.RegularExpressions.Regex.Match(s, @"^([a-zA-Z]):[\\/]?(.*)$");
+            if (drive.Success)
+            {
+                return JoinPosix($"/mnt/{char.ToLowerInvariant(drive.Groups[1].Value[0])}", drive.Groups[2].Value.Replace('\\', '/'));
+            }
+
+            return current.StartsWith('/') ? JoinPosix(current, s) : null;
+        }
+
+        s = Environment.ExpandEnvironmentVariables(s);
+        home ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (s == "~")
+        {
+            return home;
+        }
+
+        if (s.StartsWith("~/", StringComparison.Ordinal) || s.StartsWith(@"~\", StringComparison.Ordinal))
+        {
+            return Path.GetFullPath(Path.Combine(home, s[2..]));
+        }
+
+        if (s.StartsWith('/'))
+        {
+            return s; // MSYS: LaunchIn maps /c/... to its drive
+        }
+
+        if (Path.IsPathFullyQualified(s))
+        {
+            return Path.GetFullPath(s);
+        }
+
+        return current.StartsWith('/') ? JoinPosix(current, s)
+            : current.Length > 0 ? Path.GetFullPath(Path.Combine(current, s))
+            : null;
+    }
+
+    /// <summary>A POSIX path joined and normalized ("." and ".." resolved).</summary>
+    private static string JoinPosix(string start, string relative)
+    {
+        var parts = new List<string>();
+        foreach (var part in $"{start}/{relative}".Replace('\\', '/').Split('/'))
+        {
+            if (part is "" or ".")
+            {
+                continue;
+            }
+
+            if (part == "..")
+            {
+                if (parts.Count > 0)
+                {
+                    parts.RemoveAt(parts.Count - 1);
+                }
+
+                continue;
+            }
+
+            parts.Add(part);
+        }
+
+        return "/" + string.Join('/', parts);
     }
 
     private static bool IsWsl(string command) =>

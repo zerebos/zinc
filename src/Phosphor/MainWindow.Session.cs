@@ -111,7 +111,7 @@ public sealed partial class MainWindow
     }
 
     private static TabState DescribeTab(TerminalTab pane) =>
-        new(pane.Profile.Id, pane.Command, pane.WorkingDirectory, ShellDirectory.Parse(pane.Control.ReportedDirectory));
+        new(pane.Profile.Id, pane.Command, pane.WorkingDirectory, ShellDirectory.Parse(pane.Control.ReportedDirectory), pane.ColorScheme);
 
     /// <summary>
     /// Reopens a saved tab: its profile (the default one if that's gone), its command, in the folder
@@ -134,6 +134,13 @@ public sealed partial class MainWindow
         }
 
         Log.Write($"session: reopening {profile.Name}: {command} in {directory}");
+        if (saved.ColorScheme is { } scheme && _config.Themes.Apply(profile.Config, scheme) is { } themed)
+        {
+            var pane = CreatePane(profile with { Config = themed }, command, directory);
+            pane.ColorScheme = scheme;
+            return pane;
+        }
+
         return CreatePane(profile, command, directory);
     }
 

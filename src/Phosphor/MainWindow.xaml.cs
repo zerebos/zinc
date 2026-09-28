@@ -35,6 +35,12 @@ public sealed partial class MainWindow : Window
 
         /// <summary>A long command finished (or failed) here out of view; cleared once seen.</summary>
         public Attention Attention { get; set; }
+
+        /// <summary>
+        /// A color scheme chosen for this tab alone (the palette's "Change color scheme…"); its
+        /// <see cref="Profile"/> then carries that scheme. Re-applied on reload and restore.
+        /// </summary>
+        public string? ColorScheme { get; set; }
     }
 
     /// <summary>

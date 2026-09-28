@@ -143,6 +143,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   tabs) are `Remember: false`. "@" = tab switcher (`MainWindow.TabSwitcher.cs`, `IsTab` entries);
   `test:palette-open:<query>` opens it for captures; `palette:<title>` runs through
   `RunPaletteCommand`, so it counts as recent.
+- Palette questions (`PaletteArgument` in MainWindow.CommandPalette.cs; commands in
+  `MainWindow.PaletteArguments.cs`): an `AsksArgument` command keeps the palette open and asks,
+  with choices (`Highlight` = live preview, `Cancel` on Esc/close) or typed text (`Submit`). An
+  answer runs *before* the palette closes, so it can ask again. Color schemes: `ThemeLibrary`
+  (Core; the config reader uses it too); a tab's own scheme = `TerminalTab.ColorScheme` + a
+  themed copy of its Profile, re-applied on reload and restored from session.json.
+  `ShellDirectory.ResolveTyped` turns a typed folder into what `LaunchIn` takes.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

@@ -26,6 +26,37 @@ public class ShellDirectoryTests
     [InlineData("~")]
     public void IgnoresWhatIsNotAPath(string? reported) => Assert.Null(ShellDirectory.Parse(reported));
 
+    private const string Wsl = "wsl.exe -d Fedora";
+    private const string Pwsh = "pwsh.exe";
+    private const string Home = @"C:\Users\Zack";
+
+    [Theory]
+    [InlineData("~/src", Wsl, "/home/zack", "~/src")]                     // WSL expands ~ itself
+    [InlineData("~", Wsl, "/home/zack", "~")]
+    [InlineData("/etc", Wsl, "/home/zack", "/etc")]
+    [InlineData("src/../docs", Wsl, "/home/zack", "/home/zack/docs")]     // relative to where the shell is
+    [InlineData(@"C:\Users\Zack\src", Wsl, "/home/zack", "/mnt/c/Users/Zack/src")]
+    [InlineData("~", Pwsh, @"C:\x", Home)]
+    [InlineData("~/src", Pwsh, @"C:\x", @"C:\Users\Zack\src")]
+    [InlineData(@"D:\work", Pwsh, @"C:\x", @"D:\work")]
+    [InlineData("sub", Pwsh, @"C:\x", @"C:\x\sub")]
+    [InlineData("..", Pwsh, @"C:\x\y", @"C:\x")]
+    [InlineData("/c/src", "bash.exe", "/c/Users", "/c/src")]               // MSYS: LaunchIn maps it
+    [InlineData("\"C:\\Program Files\"", Pwsh, @"C:\x", @"C:\Program Files")]
+    public void ResolvesTypedFolders(string typed, string command, string current, string expected) =>
+        Assert.Equal(expected, ShellDirectory.ResolveTyped(typed, command, current, Home));
+
+    [Theory]
+    [InlineData("", Pwsh, @"C:\x")]
+    [InlineData("   ", Pwsh, @"C:\x")]
+    [InlineData("sub", Wsl, @"C:\x")] // relative, but WSL's folder is unknown
+    public void RejectsWhatCannotBeAFolder(string typed, string command, string current) =>
+        Assert.Null(ShellDirectory.ResolveTyped(typed, command, current, Home));
+
+    [Fact]
+    public void WslStartsInAHomeRelativeFolder() =>
+        Assert.Equal("wsl.exe --cd \"~/src\" -d Fedora", ShellDirectory.LaunchIn(Wsl, "~/src")?.Command);
+
     [Fact]
     public void SessionKeepsWhatTheShellLastReported()
     {

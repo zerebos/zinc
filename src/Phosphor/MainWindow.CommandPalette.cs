@@ -24,6 +24,30 @@ public sealed partial class MainWindow
     private List<PaletteCommand> _paletteCommands = [];
     private bool _paletteWired;
 
+    /// <summary>
+    /// A command's second step: the palette asks for its argument, from a list of
+    /// <see cref="Choices"/> (each one's Run applies it) or typed and handed to <see cref="Submit"/>.
+    /// <see cref="Highlight"/> follows the selected choice (a live preview); <see cref="Cancel"/>
+    /// runs if the palette closes without a choice.
+    /// </summary>
+    private sealed record PaletteArgument(string Prompt, IReadOnlyList<PaletteCommand>? Choices = null,
+        Action<string>? Submit = null, Action<PaletteCommand>? Highlight = null, Action? Cancel = null);
+
+    private PaletteArgument? _argument;
+    private const string DefaultPalettePrompt = "Type a command, or @ to find a tab";
+
+    /// <summary>Turns the open palette into <paramref name="argument"/>'s question.</summary>
+    private void AskPaletteArgument(PaletteArgument argument)
+    {
+        WirePalette(); // asked without the palette having been opened (a test key, or a binding)
+        _argument = argument;
+        PaletteQuery.PlaceholderText = argument.Prompt;
+        PaletteQuery.Text = "";
+        RefreshPalette();
+        PaletteLayer.Visibility = Visibility.Visible;
+        PaletteQuery.Focus(FocusState.Programmatic);
+    }
+
     private void OpenCommandPalette(string prefix = "")
     {
         if (SelectedTab is not { } tab)
@@ -32,6 +56,13 @@ public sealed partial class MainWindow
         }
 
         WirePalette();
+        if (_argument is { } pending)
+        {
+            _argument = null;
+            pending.Cancel?.Invoke();
+            PaletteQuery.PlaceholderText = DefaultPalettePrompt;
+        }
+
         _paletteCommands = BuildPaletteCommands(tab);
         PaletteQuery.Text = prefix;
         PaletteQuery.SelectionStart = prefix.Length;
@@ -48,6 +79,13 @@ public sealed partial class MainWindow
         }
 
         PaletteLayer.Visibility = Visibility.Collapsed;
+        if (_argument is { } unanswered)
+        {
+            _argument = null;
+            unanswered.Cancel?.Invoke(); // e.g. put back the color scheme being previewed
+        }
+
+        PaletteQuery.PlaceholderText = DefaultPalettePrompt;
         if (SelectedTab is { } tab)
         {
             FocusActive(tab);
@@ -56,13 +94,34 @@ public sealed partial class MainWindow
 
     private void RunPaletteCommand(PaletteCommand command)
     {
-        // Close first so commands that open UI or move focus (rename, splits) start clean.
-        ClosePalette();
-        if (command.Remember && !command.IsTab)
+        if (command.Remember && !command.IsTab && _argument == null)
         {
             App.Instance.RecentCommands.Note(command.Title);
         }
 
+        if (command.AsksArgument)
+        {
+            command.Run(); // asks its question in the palette
+            return;
+        }
+
+        if (_argument != null)
+        {
+            // An answer: not a cancel. It may ask again (a folder that doesn't exist), so it runs
+            // before the palette closes; closing first would hand focus back to the terminal and
+            // shut the new question.
+            _argument = null;
+            command.Run();
+            if (_argument == null)
+            {
+                ClosePalette();
+            }
+
+            return;
+        }
+
+        // Close first so commands that open UI or move focus (rename, splits) start clean.
+        ClosePalette();
         command.Run();
     }
 
@@ -75,6 +134,13 @@ public sealed partial class MainWindow
 
         _paletteWired = true;
         PaletteQuery.TextChanged += (_, _) => RefreshPalette();
+        PaletteList.SelectionChanged += (_, _) =>
+        {
+            if (_argument?.Highlight is { } highlight && (PaletteList.SelectedItem as FrameworkElement)?.Tag is PaletteCommand choice)
+            {
+                highlight(choice);
+            }
+        };
         PaletteQuery.PreviewKeyDown += OnPaletteKey;
         PaletteList.ItemClick += (_, e) =>
         {
@@ -149,9 +215,23 @@ public sealed partial class MainWindow
     {
         PaletteList.Items.Clear();
         var query = PaletteQuery.Text;
-        var tabs = query.StartsWith(TabPrefix, StringComparison.Ordinal);
-        var matches = CommandFilter.Filter(_paletteCommands.Where(c => c.IsTab == tabs),
-            tabs ? query[TabPrefix.Length..] : query, tabs ? null : App.Instance.RecentCommands);
+        IReadOnlyList<PaletteMatch> matches;
+        if (_argument is { } argument)
+        {
+            // A question: its choices, or the typed value as the one thing Enter runs.
+            matches = argument.Choices is { } choices
+                ? CommandFilter.Filter(choices, query)
+                : query.Trim().Length == 0
+                    ? []
+                    : [new PaletteMatch(new PaletteCommand(query.Trim(), "Enter", () => argument.Submit?.Invoke(query.Trim())), 0, [])];
+        }
+        else
+        {
+            var tabs = query.StartsWith(TabPrefix, StringComparison.Ordinal);
+            matches = CommandFilter.Filter(_paletteCommands.Where(c => c.IsTab == tabs),
+                tabs ? query[TabPrefix.Length..] : query, tabs ? null : App.Instance.RecentCommands);
+        }
+
         foreach (var match in matches.Take(MaxPaletteRows))
         {
             PaletteList.Items.Add(PaletteRow(match));
@@ -291,6 +371,7 @@ public sealed partial class MainWindow
         Action(TerminalAction.NextAttention);
         Custom("Rename workspace…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));
+        commands.AddRange(ArgumentCommands(tab));
         Action(TerminalAction.NewWindow);
         if (_workspaceList != null)
         {

@@ -378,6 +378,13 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Ctrl+Shift+P` | Command palette: every action, profile and workspace, fuzzy-searchable; recently used first. Type `@` to search this window's tabs instead |
 | `Ctrl+Shift+O` | Go to tab: the palette's `@` (title, running command, folder, workspace; tabs with a dot first) |
+
+Some palette commands ask for one more thing in the same box: **Change color scheme…** (this
+tab only; the list previews each scheme on the tab as you move through it, Esc puts the old one
+back; the tab keeps it across restarts), **Set default color scheme…** (writes `colors.theme` in
+your config, keeping the rest of the file as it was), **New tab running…** (any command line,
+e.g. `ssh myserver`) and **New tab in folder…** (`~/src`, `D:\work`, or relative to where the
+focused shell is; WSL tabs take Linux paths and `C:\...`).
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | Previous / next prompt ([shell integration](#shell-integration)); a line without it |
 | `Ctrl+Shift+B` | With workspaces on the left: sidebar full → rail → auto-hide |

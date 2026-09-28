@@ -35,8 +35,9 @@ public sealed record Profile(string Id, string Name, Config Config, bool Hidden 
 public sealed class ConfigFile
 {
     private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings,
-        bool hasErrors, string path, Keybindings keybindings)
+        bool hasErrors, string path, Keybindings keybindings, ThemeLibrary themes)
     {
+        Themes = themes;
         Keybindings = keybindings;
         Global = global;
         Profiles = profiles;
@@ -51,6 +52,9 @@ public sealed class ConfigFile
     /// keeps the settings in force rather than apply a half-read file (a save mid-edit).
     /// </summary>
     public bool HasErrors { get; }
+
+    /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
+    public ThemeLibrary Themes { get; }
 
     /// <summary>The Windows Terminal defaults with the <c>[keys]</c> table applied.</summary>
     public Keybindings Keybindings { get; }
@@ -123,6 +127,7 @@ public sealed class ConfigFile
     private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover)
     {
         private readonly List<Entry> _entries = [];
+        private readonly ThemeLibrary _themes = ThemeLibrary.For(mainPath, bundledThemes);
         private readonly List<string> _warnings = [];
         private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
         private bool _hasErrors;
@@ -412,7 +417,7 @@ public sealed class ConfigFile
             }
 
             var keybindings = Keybindings.Configure(keys, _warnings);
-            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings);
+            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes);
         }
 
         private static Config FromDiscovery(Config config, DiscoveredProfile found) =>
@@ -506,66 +511,13 @@ public sealed class ConfigFile
         /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
         private Config ApplyTheme(Config config, string name, Entry at)
         {
-            var file = FindTheme(name);
-            if (file == null)
+            if (_themes.Apply(config, name) is { } themed)
             {
-                _warnings.Add($"{at.Where}: no color scheme named '{name}' (looked in {ThemeFolders().Select(f => f.Folder).First()} and the bundled ones)");
-                return config;
+                return themed;
             }
 
-            // Ghostty's theme format (as iTerm2-Color-Schemes publishes it): key = value lines.
-            // Only colors apply; the rest (selection, cursor text...) isn't used yet.
-            foreach (var raw in File.ReadLines(file))
-            {
-                var line = raw.Trim();
-                var eq = line.IndexOf('=');
-                if (line.StartsWith('#') || eq < 1)
-                {
-                    continue;
-                }
-
-                var key = line[..eq].Trim();
-                if (key is "background" or "foreground" or "cursor-color" or "palette" &&
-                    config.Apply(key, line[(eq + 1)..].Trim()) is { } next)
-                {
-                    config = next;
-                }
-            }
-
+            _warnings.Add($"{at.Where}: no color scheme named '{name}' (looked in {_themes.UserFolder} and the bundled ones)");
             return config;
-        }
-
-        private string? FindTheme(string name)
-        {
-            if (name.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0)
-            {
-                return null;
-            }
-
-            foreach (var (folder, _) in ThemeFolders())
-            {
-                var candidate = System.IO.Path.Combine(folder, name);
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-
-                // Case-insensitive fallback (the collection's names are mixed case).
-                if (Directory.Exists(folder) &&
-                    Directory.EnumerateFiles(folder).FirstOrDefault(f => System.IO.Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase)) is { } match)
-                {
-                    return match;
-                }
-            }
-
-            return null;
-        }
-
-        private IEnumerable<(string Folder, bool User)> ThemeFolders()
-        {
-            var configDir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(mainPath)) ?? ".";
-            yield return (System.IO.Path.Combine(configDir, "themes"), true);
-            yield return (bundledThemes, false);
         }
 
         private Config Warn(Config config, Entry e, string? expected)
