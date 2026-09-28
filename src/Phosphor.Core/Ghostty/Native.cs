@@ -240,6 +240,13 @@ public enum PointTag : int
     History = 3,
 }
 
+[StructLayout(LayoutKind.Explicit, Size = 8)]
+public struct GhosttyPointCoordinate
+{
+    [FieldOffset(0)] public ushort X;
+    [FieldOffset(4)] public uint Y;
+}
+
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct GhosttyPoint
 {
@@ -530,17 +537,21 @@ public enum TerminalData : int
 {
     Cols = 1,
     Rows = 2,
+    CursorX = 3,
+    CursorY = 4,
     ActiveScreen = 6,
     KittyKeyboardFlags = 8,
     Scrollbar = 9,
     MouseTracking = 11,
     Title = 12,
     Pwd = 13,
+    ScrollbackRows = 15,
     ColorPaletteDefault = 25,
     Selection = 31,
     ViewportActive = 32,
     KittyGraphics = 30,
     Mode = 37,
+    CursorAtPrompt = 39,
 }
 
 public enum RenderStateData : int
@@ -580,6 +591,15 @@ public enum RowData : int
 public enum CellData : int
 {
     Wide = 3,
+    SemanticContent = 9,
+}
+
+/// <summary>What OSC 133 says a cell is (GhosttyCellSemanticContent).</summary>
+public enum CellSemanticContent : int
+{
+    Output = 0,
+    Input = 1,
+    Prompt = 2,
 }
 
 public enum CellWide : int
@@ -653,6 +673,15 @@ public static unsafe partial class Native
 
     [LibraryImport(Lib, EntryPoint = "ghostty_terminal_grid_ref")]
     public static partial GhosttyResult TerminalGridRef(nint terminal, GhosttyPoint point, GhosttyGridRef* outRef);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_terminal_grid_ref_track")]
+    public static partial GhosttyResult TerminalGridRefTrack(nint terminal, GhosttyPoint point, out nint trackedRef);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_tracked_grid_ref_point")]
+    public static partial GhosttyResult TrackedGridRefPoint(nint trackedRef, PointTag tag, out GhosttyPointCoordinate point);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_tracked_grid_ref_free")]
+    public static partial void TrackedGridRefFree(nint trackedRef);
 
     [LibraryImport(Lib, EntryPoint = "ghostty_grid_ref_row")]
     public static partial GhosttyResult GridRefRow(GhosttyGridRef* gridRef, out ulong row);

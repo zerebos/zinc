@@ -118,6 +118,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `clipboard-read`: `false` (default) or `true`, for programs reading the clipboard with
   OSC 52. Off by default because anything running in the terminal, including a remote host,
   could read it.
+- `command-marks`: `"failures"` (default), `"all"` or `"none"`: which commands get a bar beside
+  them ([shell integration](#shell-integration)).
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
@@ -259,6 +261,83 @@ add-zsh-hook precmd _report_cwd
 
 WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive.
 
+### Shell integration
+
+A shell can mark its prompts and commands (OSC 133): where each prompt starts, where a command's
+output starts, and how it ended. With those marks, Phosphor can:
+
+- **jump between prompts**: `Ctrl+Shift+↑` / `Ctrl+Shift+↓` scroll the previous or next prompt to
+  the top of the pane (without marks they scroll a line);
+- **copy a command's output**: *Copy command output* and *Select command output* in the command
+  palette (`copy-output`, `select-output` in `[keys]`) take the command at the top of the pane
+  when you've scrolled back, otherwise the last one;
+- **show what failed**: a red bar beside a failed command, and ticks on the scrollbar at each
+  prompt (red for failures). `command-marks` in `[terminal]`: `"failures"` (default), `"all"`
+  (successes get a green bar too) or `"none"`;
+- **show what's running**: with workspaces on the left, the title bar shows the running command and
+  how long it has been going.
+
+The marks are invisible. Add them to your shell's startup file.
+
+**zsh with powerlevel10k**: it sends them itself. In `p10k.zsh`:
+
+```zsh
+typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
+```
+
+**zsh** (`.zshrc`, after your prompt is set up):
+
+```zsh
+autoload -Uz add-zsh-hook
+__phosphor_precmd() { print -n "\e]133;D;$?\a\e]133;A\a" }
+__phosphor_preexec() { print -n "\e]133;C\a" }
+precmd_functions=(__phosphor_precmd $precmd_functions)  # first, so $? is the command's
+add-zsh-hook preexec __phosphor_preexec
+PS1="$PS1%{"$'\e]133;B\a'"%}"
+```
+
+**bash**, including Git Bash (`.bashrc`):
+
+```bash
+__phosphor_prompt() { printf '\e]133;D;%s\a\e]133;A\a' "$?"; }
+PROMPT_COMMAND="__phosphor_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+PS1="$PS1"'\[\e]133;B\a\]'
+PS0=$'\e]133;C\a'"$PS0"
+```
+
+**PowerShell** (`$PROFILE`; this prompt also reports the folder, as above):
+
+```powershell
+function prompt {
+    $code = if ($?) { 0 } elseif ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }
+    $e, $a = [char]27, [char]7
+    $location = $executionContext.SessionState.Path.CurrentLocation
+    $report = ""
+    if ($location.Provider.Name -eq "FileSystem") {
+        $report = "$e]9;9;`"$($location.ProviderPath)`"$e\"
+    }
+
+    "$e]133;D;$code$a$e]133;A$a${report}PS $location$('>' * ($nestedPromptLevel + 1)) "
+}
+
+# The command line starts after the prompt, and the command once it's read (PSReadLine). Marking
+# them here rather than in the prompt keeps PSReadLine's prompt redraws working.
+if (Test-Path Function:\PSConsoleHostReadLine) {
+    $Global:__PhosphorReadLine = $function:PSConsoleHostReadLine
+    function Global:PSConsoleHostReadLine {
+        [Console]::Write("$([char]27)]133;B$([char]7)")
+        $line = & $Global:__PhosphorReadLine
+        [Console]::Write("$([char]27)]133;C;cmdline_url=$([uri]::EscapeDataString($line))$([char]7)")
+        $line
+    }
+}
+```
+
+**cmd** can mark prompts (for jumping), but not commands or exit codes:
+`setx PROMPT "$e]133;D$e\$e]133;A$e\$P$G$e]133;B$e\"`.
+
+Other shells (fish, nushell and more) aren't covered here yet.
+
 ## Choosing a shell
 
 1. Arguments after the executable: `Phosphor.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
@@ -280,6 +359,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Ctrl+Shift+P` | Command palette: every action, profile and tab, fuzzy-searchable |
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
+| `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | Previous / next prompt ([shell integration](#shell-integration)); a line without it |
 | `Ctrl+Shift+B` | With workspaces on the left: sidebar full → rail → auto-hide |
 | `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab in the focused pane (its profile / profile N) |
 | `Ctrl+Alt+T` | New workspace (default profile) |
@@ -338,6 +418,8 @@ its line, and the rest still applies.
 | `resize <direction>` | Move the focused pane's divider. |
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
+| `jump-to-prompt previous`, `jump-to-prompt next` | Scroll the previous or next prompt to the top (needs [shell integration](#shell-integration); without it, a line). |
+| `select-output`, `copy-output` | Select or copy the output of the command at the top of the pane, or the last one ([shell integration](#shell-integration)). |
 | `toggle-sidebar` | With workspaces on the left: cycle the sidebar through full, rail and auto-hide. `toggle-sidebar rail` (or `auto-hide`) switches between that and full. |
 | `toggle-title-bar` | With workspaces on the left: auto-hide the title bar, or show it again. |
 | `focus-mode` | With workspaces on the left: auto-hide the title bar and the sidebar; again to bring them back. |

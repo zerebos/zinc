@@ -35,6 +35,7 @@ public unsafe partial class AbiTests
         [typeof(CellData)] = "GhosttyCellData",
         [typeof(RowData)] = "GhosttyRowData",
         [typeof(CellWide)] = "GhosttyCellWide",
+        [typeof(CellSemanticContent)] = "GhosttyCellSemanticContent",
         [typeof(KeyEncoderOption)] = "GhosttyKeyEncoderOption",
         [typeof(MouseEncoderOption)] = "GhosttyMouseEncoderOption",
         [typeof(SelectionGestureEventType)] = "GhosttySelectionGestureEventType",

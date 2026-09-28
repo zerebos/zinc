@@ -14,7 +14,7 @@ namespace Phosphor.Terminal;
 /// thread renders and encodes input. libghostty-vt handles are not thread
 /// safe, so every call touching <see cref="Handle"/> must hold <see cref="Lock"/>.
 /// </summary>
-public sealed unsafe class TerminalSession : IDisposable
+public sealed unsafe partial class TerminalSession : IDisposable
 {
     public readonly object Lock = new();
 
@@ -184,7 +184,7 @@ public sealed unsafe class TerminalSession : IDisposable
     {
         string? title = null;
         var directoryChanged = false;
-        bool bell;
+        bool bell, commandsChanged;
         lock (Lock)
         {
             if (_disposed)
@@ -192,10 +192,9 @@ public sealed unsafe class TerminalSession : IDisposable
                 return;
             }
 
-            fixed (byte* p = data)
-            {
-                Native.TerminalVtWrite(_terminal, p, (nuint)data.Length);
-            }
+            WriteWithMarks(data);
+            commandsChanged = _commandsChanged;
+            _commandsChanged = false;
 
             // Callbacks fire mid-parse, so read derived state only once the
             // write has finished.
@@ -226,6 +225,8 @@ public sealed unsafe class TerminalSession : IDisposable
         {
             DirectoryChanged?.Invoke();
         }
+
+        AnnounceCommands(commandsChanged);
 
         if (bell)
         {
@@ -324,6 +325,7 @@ public sealed unsafe class TerminalSession : IDisposable
         {
             _size = new GhosttySizeReportSize { Columns = cols, Rows = rows, CellWidth = cellWidthPx, CellHeight = cellHeightPx };
             Native.TerminalResize(_terminal, cols, rows, cellWidthPx, cellHeightPx);
+            _commandSnapshot = null; // reflow moves rows
         }
 
         _pty?.Resize((short)cols, (short)rows);
@@ -1077,6 +1079,7 @@ public sealed unsafe class TerminalSession : IDisposable
             Native.MouseEventFree(_mouseEvent);
             Native.MouseEncoderFree(_mouseEncoder);
             Native.KittyPlacementIteratorFree(_placements);
+            FreeCommands();
             Native.TerminalFree(_terminal);
             _self.Free();
         }

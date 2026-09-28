@@ -29,7 +29,8 @@ internal sealed unsafe class RowText
     public int IndexOf(int col) => _cellStart[col];
 
     /// <summary>Reads row <paramref name="row"/> (in <paramref name="tag"/> coordinates). Hold the session lock.</summary>
-    public static RowText Read(nint terminal, PointTag tag, uint row, ushort cols)
+    /// <param name="inputOnly">Only the cells OSC 133 marks as typed input (a command line without its prompts).</param>
+    public static RowText Read(nint terminal, PointTag tag, uint row, ushort cols, bool inputOnly = false)
     {
         var text = new StringBuilder(cols);
         var cellStart = new int[cols + 1];
@@ -51,6 +52,15 @@ internal sealed unsafe class RowText
                     wide is (int)CellWide.SpacerTail or (int)CellWide.SpacerHead)
                 {
                     spacerTail[c] = true;
+                    continue;
+                }
+
+                int semantic;
+                if (inputOnly && cell != 0 &&
+                    Native.CellGet(cell, CellData.SemanticContent, &semantic) == GhosttyResult.Success &&
+                    semantic != (int)CellSemanticContent.Input)
+                {
+                    text.Append(' '); // blank, so columns still line up
                     continue;
                 }
 

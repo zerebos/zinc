@@ -237,6 +237,7 @@ public sealed partial class TerminalControl : UserControl
             TitleChanged?.Invoke(title);
         });
         session.DirectoryChanged += () => dq.TryEnqueue(() => DirectoryChanged?.Invoke());
+        session.CommandsChanged += () => dq.TryEnqueue(OnCommandsChanged);
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
         ApplyClipboardPermissions(session);
         _session = session;
@@ -352,6 +353,7 @@ public sealed partial class TerminalControl : UserControl
         // Test captures draw every cursor as focused: whether a new window gets focus varies.
         var presentation = new CursorPresentation(_focused || TestHooks.Deterministic, _blinkOn);
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
+        DrawCommandMarks(args.DrawingSession, session);
         DrawSearchTicks(args.DrawingSession, session);
         UpdateBlinkTimer(blinking);
         UpdateScrollBar(session);

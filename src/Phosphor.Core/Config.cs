@@ -22,6 +22,19 @@ public enum WorkspaceTabs
     Left,
 }
 
+/// <summary>Which commands get a bar in the pane's left edge (shell integration). Config: <c>command-marks</c>.</summary>
+public enum CommandMarks
+{
+    /// <summary>Failed commands only (and scrollbar ticks for every prompt).</summary>
+    Failures,
+
+    /// <summary>Every command that ran: green, or red if it failed.</summary>
+    All,
+
+    /// <summary>No bars and no ticks.</summary>
+    None,
+}
+
 /// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
 public enum TitleBarMode
 {
@@ -101,6 +114,9 @@ public sealed record Config
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
+    /// <summary>Marks for shell-integrated commands. Config: <c>command-marks = failures | all | none</c>.</summary>
+    public CommandMarks CommandMarks { get; init; }
+
     /// <summary>The title bar with the workspace list. Config: <c>title-bar = show | auto-hide</c> (global).</summary>
     public TitleBarMode TitleBar { get; init; }
 
@@ -172,6 +188,7 @@ public sealed record Config
                 this with { WorkspaceTabs = tabs },
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
             "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
+            "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>

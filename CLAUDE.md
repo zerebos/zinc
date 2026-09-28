@@ -113,6 +113,18 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `LaunchIn` turns one into a start (WSL `--cd`, Windows cwd, MSYS `/c/`). App side:
   `MainWindow.Session.cs`, `App` (restore at launch or tray click, save every 2 s when changed,
   and first thing in `Quit`). libghostty's pwd callback (`OPT_PWD_CHANGED`) → `ReportedDirectory`.
+- Shell integration (OSC 133): `Terminal/ShellMarks.cs` (`Osc133Scanner` finds marks as output
+  streams by, split reads included; `ShellMark.Parse`: exit codes, C's `cmdline_url`) and
+  `TerminalSession.Commands.cs`: `Feed` writes up to each mark, then pins the cursor with a
+  *tracked* grid ref (follows scrolling/pruning/reflow; freed with the command). libghostty marks
+  prompt rows/cells itself but ignores D's exit code and keeps no history. `Commands()` snapshots
+  as screen rows (= scrollbar units; cached until the next write/resize); `JumpToPrompt`,
+  `CommandInView`, `SelectOutput`. A command `Ran` only if it has text: shells send D (and p10k C)
+  after an empty Enter too. Text comes from C's cmdline_url, else input cells read back (wide gaps
+  = prompt decoration: p10k draws its frame corner after B). App: `TerminalControl.Commands.cs`
+  (actions, scrollbar ticks, failure bars; logs `command: ...` with PHOSPHOR_LOG), command center.
+  PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
+  string broke PSReadLine's prompt redraw after a failed command (text overwrote `> `).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

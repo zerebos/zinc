@@ -26,6 +26,9 @@ public static class Actions
 
         /// <summary>Optional: "rail" or "auto-hide" (toggled with full); none cycles.</summary>
         OptionalSidebarMode,
+
+        /// <summary>"previous" or "next".</summary>
+        PromptDirection,
     }
 
     private sealed record Definition(string Name, TerminalAction Action, Arg Arg, string Title, string Description);
@@ -43,6 +46,12 @@ public static class Actions
         new("scroll-page-down", TerminalAction.ScrollPageDown, Arg.None, "Scroll page down", "Scroll forward a page."),
         new("scroll-to-top", TerminalAction.ScrollToTop, Arg.None, "Scroll to top", "Scroll to the start of the scrollback."),
         new("scroll-to-bottom", TerminalAction.ScrollToBottom, Arg.None, "Scroll to bottom", "Scroll to the prompt."),
+        new("jump-to-prompt", TerminalAction.JumpToPrompt, Arg.PromptDirection, "Jump to prompt",
+            "Scroll to the previous or next prompt: \"jump-to-prompt previous\" / \"next\". Needs shell integration; without it, scrolls a line."),
+        new("select-output", TerminalAction.SelectOutput, Arg.None, "Select command output",
+            "Select the output of the command at the top of the view (or the last command). Needs shell integration."),
+        new("copy-output", TerminalAction.CopyOutput, Arg.None, "Copy command output",
+            "Copy the output of the command at the top of the view (or the last command). Needs shell integration."),
         new("new-tab", TerminalAction.NewTab, Arg.OptionalProfile, "New tab",
             "Open a tab (in the focused pane, with tab groups). With a profile: that profile, by id or menu position."),
         new("new-workspace", TerminalAction.NewWorkspace, Arg.None, "New workspace", "Open a workspace with the default profile."),
@@ -140,6 +149,13 @@ public static class Actions
             case Arg.OptionalSidebarMode:
                 error = $"'{name}' takes nothing, \"rail\" or \"auto-hide\", not '{arg}'";
                 return null;
+            case Arg.PromptDirection when arg.Equals("previous", StringComparison.OrdinalIgnoreCase):
+                return new ActionInvocation(def.Action, -1);
+            case Arg.PromptDirection when arg.Equals("next", StringComparison.OrdinalIgnoreCase):
+                return new ActionInvocation(def.Action, 1);
+            case Arg.PromptDirection:
+                error = $"'{name}' takes \"previous\" or \"next\"{(arg.Length > 0 ? $", not '{arg}'" : "")}";
+                return null;
         }
 
         error = $"unsupported argument for '{name}'";
@@ -156,6 +172,7 @@ public static class Actions
             { Arg: Arg.Direction } d => $"{d.Name} {invocation.Direction.ToString().ToLowerInvariant()}",
             { Arg: Arg.Workspace } d => $"{d.Name} {(invocation.Index < 0 ? "last" : (invocation.Index + 1).ToString(CultureInfo.InvariantCulture))}",
             { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 => $"{d.Name} {SidebarModeName(invocation.Index)}",
+            { Arg: Arg.PromptDirection } d => $"{d.Name} {(invocation.Index < 0 ? "previous" : "next")}",
             var d => d.Name,
         },
     };
@@ -170,6 +187,7 @@ public static class Actions
             { Arg: Arg.Direction } d => $"{d.Title} {invocation.Direction.ToString().ToLowerInvariant()}",
             { Arg: Arg.Workspace } d => invocation.Index < 0 ? "Go to the last workspace" : $"{d.Title} {invocation.Index + 1}",
             { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 => $"{d.Title} {SidebarModeName(invocation.Index)}",
+            { Arg: Arg.PromptDirection } => invocation.Index < 0 ? "Jump to previous prompt" : "Jump to next prompt",
             var d => d.Title,
         },
     };

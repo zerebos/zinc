@@ -19,6 +19,11 @@ public sealed partial class MainWindow
     private TextBlock? _commandContext;
     private TextBlock? _commandShortcut;
     private ColumnDefinition? _markColumn;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _commandClock;
+
+    /// <summary>0:38, 12:05, 1:02:03.</summary>
+    private static string Elapsed(TimeSpan t) =>
+        t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes}:{t.Seconds:00}";
     private StackPanel? _mark;
 
     private FrameworkElement BuildTitleRow()
@@ -118,12 +123,39 @@ public sealed partial class MainWindow
         }
 
         var text = "";
+        var running = false;
         if (SelectedTab is { } tab)
         {
             var pane = tab.Active;
-            var title = string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title;
-            var folder = ShellDirectory.Parse(pane.Control.ReportedDirectory);
-            text = folder != null && !title.Contains(folder, StringComparison.OrdinalIgnoreCase) ? $"{title}  ·  {folder}" : title;
+            if (pane.Control.RunningCommand is { Text: { } command, Started: { } started })
+            {
+                // Shell integration: what's running, and for how long.
+                text = $"{command}  ·  {Elapsed(DateTime.UtcNow - started)}";
+                running = true;
+            }
+            else
+            {
+                var title = string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title;
+                var folder = ShellDirectory.Parse(pane.Control.ReportedDirectory);
+                text = folder != null && !title.Contains(folder, StringComparison.OrdinalIgnoreCase) ? $"{title}  ·  {folder}" : title;
+            }
+        }
+
+        // While a command runs, the elapsed time ticks.
+        if (running && _commandClock == null)
+        {
+            _commandClock = DispatcherQueue.CreateTimer();
+            _commandClock.Interval = TimeSpan.FromSeconds(1);
+            _commandClock.Tick += (_, _) => UpdateCommandCenter();
+        }
+
+        if (running)
+        {
+            _commandClock!.Start();
+        }
+        else
+        {
+            _commandClock?.Stop();
         }
 
         if (_commandContext.Text != text)

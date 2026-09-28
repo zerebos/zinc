@@ -283,6 +283,10 @@ public sealed partial class MainWindow
         Action(TerminalAction.ScrollToBottom);
         Action(TerminalAction.ScrollPageUp);
         Action(TerminalAction.ScrollPageDown);
+        Action(new ActionInvocation(TerminalAction.JumpToPrompt, -1));
+        Action(new ActionInvocation(TerminalAction.JumpToPrompt, 1));
+        Action(TerminalAction.CopyOutput);
+        Action(TerminalAction.SelectOutput);
 
         // Profiles: open as a tab (in this pane, with tab groups), a workspace, a split either way, or a window.
         var group = _config.Global.TabGroups ? tab.Workspace.GroupOf(tab.Active) : null;

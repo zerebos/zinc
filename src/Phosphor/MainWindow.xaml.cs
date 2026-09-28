@@ -189,6 +189,7 @@ public sealed partial class MainWindow : Window
         control.ActionHandler = invocation => HandleAction(invocation, tab, pane);
         control.TitleChanged += title;
         control.DirectoryChanged += directory;
+        control.CommandsChanged += directory; // and the running command
         control.CloseRequested += close;
         control.GotFocus += focus;
         pane.Unwire = () =>
@@ -196,6 +197,7 @@ public sealed partial class MainWindow : Window
             control.ActionHandler = null;
             control.TitleChanged -= title;
             control.DirectoryChanged -= directory;
+            control.CommandsChanged -= directory;
             control.CloseRequested -= close;
             control.GotFocus -= focus;
             pane.Unwire = null;

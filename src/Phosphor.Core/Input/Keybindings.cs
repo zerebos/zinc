@@ -67,6 +67,15 @@ public enum TerminalAction
 
     /// <summary>Auto-hide both the title bar and the workspace list; again to bring them back.</summary>
     FocusMode,
+
+    /// <summary>Scroll to the previous (<see cref="ActionInvocation.Index"/> -1) or next (+1) prompt.</summary>
+    JumpToPrompt,
+
+    /// <summary>Select the output of the command in view (or the last one).</summary>
+    SelectOutput,
+
+    /// <summary>Copy the output of the command in view (or the last one).</summary>
+    CopyOutput,
 }
 
 /// <summary>
@@ -322,6 +331,10 @@ public sealed class Keybindings
         b.Bind("ctrl+shift+p", TerminalAction.OpenCommandPalette);
         b.Bind("ctrl+shift+f", TerminalAction.Find);
         b.Bind("ctrl+shift+b", new ActionInvocation(TerminalAction.ToggleSidebar, -1));
+        // Windows Terminal scrolls a line with these; prompts are the better stops (and without
+        // shell integration they still scroll a line).
+        b.Bind("ctrl+shift+up", new ActionInvocation(TerminalAction.JumpToPrompt, -1));
+        b.Bind("ctrl+shift+down", new ActionInvocation(TerminalAction.JumpToPrompt, 1));
         b.Bind("alt+shift+plus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         b.Bind("alt+shift+minus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
         b.Bind("alt+shift+d", TerminalAction.DuplicatePane);

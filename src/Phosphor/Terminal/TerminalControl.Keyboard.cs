@@ -263,6 +263,8 @@ public sealed partial class TerminalControl
                 session.ScrollLines(action == TerminalAction.ScrollPageUp ? -(_rows - 1) : _rows - 1);
                 _canvas.Invalidate();
                 return true;
+            case TerminalAction.JumpToPrompt or TerminalAction.SelectOutput or TerminalAction.CopyOutput:
+                return RunCommandAction(invocation, session);
             case TerminalAction.ScrollToTop:
             case TerminalAction.ScrollToBottom:
                 session.ScrollViewport(new GhosttyTerminalScrollViewport
