@@ -311,9 +311,11 @@ internal sealed partial class GroupView : Grid
         private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
         private readonly MainWindow.TerminalTab _tab;
         private readonly AttentionDot _dot = new() { Corner = false };
+        private readonly Button _close;
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        private bool _active;
+        private bool _active, _hovered;
+        private Attention _attention;
 
         public TabItem(MainWindow.TerminalTab tab)
         {
@@ -323,11 +325,11 @@ internal sealed partial class GroupView : Grid
             CornerRadius = new CornerRadius(6, 6, 0, 0);
             Background = _clear;
 
-            var close = new Button
+            var close = _close = new Button
             {
                 Content = new FontIcon { Glyph = "", FontSize = 9 },
                 Padding = new Thickness(5),
-                Margin = new Thickness(6, 0, 0, 0),
+                HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
                 Background = _clear,
                 BorderThickness = new Thickness(0),
@@ -343,18 +345,26 @@ internal sealed partial class GroupView : Grid
                 VerticalAlignment = VerticalAlignment.Center,
                 Children = { new IconSourceElement { IconSource = ProfileIcons.For(tab.Profile) } },
             };
+            // The close button and the attention dot share one slot, as in the sidebar: the dot
+            // until you hover, then the close button, so the tab keeps its width.
+            _dot.Margin = new Thickness(0);
+            _dot.HorizontalAlignment = HorizontalAlignment.Center;
+            var slot = new Grid { Width = 20, Margin = new Thickness(6, 0, 0, 0), Children = { close, _dot } };
+
             // The padding goes on the content, not the tab, so the accent line spans the whole tab
             // (like the line across a strip-less focused pane).
             Children.Add(new StackPanel
             {
                 Padding = new Thickness(10, 0, 4, 0),
                 Orientation = Orientation.Horizontal,
-                Children = { icon, _title, _dot, close },
+                Children = { icon, _title, slot },
             });
             Children.Add(_accent);
 
             PointerEntered += (_, _) =>
             {
+                _hovered = true;
+                ShowSlot();
                 if (!_active)
                 {
                     Background = (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"];
@@ -362,6 +372,8 @@ internal sealed partial class GroupView : Grid
             };
             PointerExited += (_, _) =>
             {
+                _hovered = false;
+                ShowSlot();
                 if (!_active)
                 {
                     Background = _clear;
@@ -371,9 +383,18 @@ internal sealed partial class GroupView : Grid
 
         public event Action? CloseClicked;
 
+        private void ShowSlot()
+        {
+            _dot.Show(_attention);
+            var dot = _attention != Attention.None && !_hovered;
+            _dot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
+            _close.Visibility = dot ? Visibility.Collapsed : Visibility.Visible;
+        }
+
         public void Show(string title, bool active, bool focused, Brush accent, Attention attention)
         {
-            _dot.Show(attention);
+            _attention = attention;
+            ShowSlot();
             if (_title.Text != title)
             {
                 _title.Text = title;
