@@ -32,6 +32,9 @@ public sealed partial class MainWindow : Window
 
         /// <summary>Removes the owning window's event wiring (set by <see cref="Wire"/>).</summary>
         public Action? Unwire { get; set; }
+
+        /// <summary>A long command finished (or failed) here out of view; cleared once seen.</summary>
+        public Attention Attention { get; set; }
     }
 
     /// <summary>
@@ -119,6 +122,7 @@ public sealed partial class MainWindow : Window
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
         MenuKeySuppressor.Attach(this);
+        ConfirmWindowClose();
 
         Tabs.Loaded += (_, _) => DisableTabAnimations();
         if (config.Global.WorkspaceTabs == WorkspaceTabs.Left)
@@ -179,6 +183,7 @@ public sealed partial class MainWindow : Window
         };
         Action close = () => ClosePane(tab, pane);
         Action directory = () => UpdateTitle(tab); // the command center shows the folder
+        Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
         RoutedEventHandler focus = (_, _) =>
         {
             tab.Workspace.Activate(pane);
@@ -190,6 +195,7 @@ public sealed partial class MainWindow : Window
         control.TitleChanged += title;
         control.DirectoryChanged += directory;
         control.CommandsChanged += directory; // and the running command
+        control.CommandFinished += finished;
         control.CloseRequested += close;
         control.GotFocus += focus;
         pane.Unwire = () =>
@@ -198,6 +204,7 @@ public sealed partial class MainWindow : Window
             control.TitleChanged -= title;
             control.DirectoryChanged -= directory;
             control.CommandsChanged -= directory;
+            control.CommandFinished -= finished;
             control.CloseRequested -= close;
             control.GotFocus -= focus;
             pane.Unwire = null;
@@ -320,7 +327,7 @@ public sealed partial class MainWindow : Window
             var view = new GroupView();
             // Groups can move between workspaces, so look the workspace up when it's needed.
             view.TabClicked += pane => WithTabOf(group, t => ShowGroupTab(t, pane));
-            view.TabCloseClicked += pane => WithTabOf(group, t => ClosePane(t, pane));
+            view.TabCloseClicked += pane => WithTabOf(group, t => AskClosePane(t, pane));
             view.NewTabClicked += () => WithTabOf(group, t => NewTabInGroup(t, group, group.Active.Profile));
             view.TabMenuRequested += (pane, anchor) => WithTabOf(group, t => ShowGroupTabMenu(t, pane, anchor));
             view.TabDragStarting += (pane, e) =>
@@ -365,6 +372,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Brings each group's pane up to date: focus marks, tab strip, shown terminal.</summary>
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
+        ClearSeenAttention(tab);
         // Focus is only marked once a workspace is split: an accent line along the focused
         // pane's top (its shown tab's, when it has a strip), and optionally dimmed others.
         var several = tab.Workspace.Layout.Count > 1;
@@ -376,6 +384,8 @@ public sealed partial class MainWindow : Window
             var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
             ((GroupView)host.Child).Update(group, ShowsStrip(group), focused, _focusBrush, several, dim, fill);
         }
+
+        ShowWorkspaceAttention(tab);
     }
 
     private void FocusActive(WorkspaceTab tab)
@@ -547,16 +557,10 @@ public sealed partial class MainWindow : Window
         var group = tab.Workspace.GroupOf(pane);
         var alone = tab.Workspace.Tabs.Count() == 1;
         var menu = new MenuFlyout();
-        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.ClosePane), () => ClosePane(tab, pane)));
+        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.ClosePane), () => AskClosePane(tab, pane)));
         if (group is { Tabs.Count: > 1 })
         {
-            menu.Items.Add(Item("Close other tabs", null, null, () =>
-            {
-                foreach (var other in group.Tabs.Where(t => t != pane).ToList())
-                {
-                    ClosePane(tab, other);
-                }
-            }));
+            menu.Items.Add(Item("Close other tabs", null, null, () => AskClosePanes(tab, group.Tabs.Where(t => t != pane).ToList())));
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
@@ -711,8 +715,21 @@ public sealed partial class MainWindow : Window
     private void OpenTab(Profile profile) =>
         OpenTab(profile, ShellResolver.ForProfile(profile.Config), profile.Config.ResolveWorkingDirectory());
 
+    /// <summary>Closes a workspace when you ask to: asks first if a command is running.</summary>
+    private async void CloseTab(WorkspaceTab tab)
+    {
+        if (await ConfirmClose(tab.Workspace.Tabs.ToList()))
+        {
+            CloseTabNow(tab);
+        }
+        else if (SelectedTab is { } shown)
+        {
+            FocusActive(shown);
+        }
+    }
+
     /// <summary>Closes every terminal in a workspace and removes its tab.</summary>
-    private void CloseTab(WorkspaceTab tab)
+    private void CloseTabNow(WorkspaceTab tab)
     {
         foreach (var pane in tab.Workspace.Tabs.ToList())
         {
@@ -814,6 +831,7 @@ public sealed partial class MainWindow : Window
         if (SelectedTab is { } tab)
         {
             UpdateTitle(tab);
+            UpdateFocusBorders(tab); // now in view: its dots clear
             FocusActive(tab);
         }
 
@@ -1092,7 +1110,7 @@ public sealed partial class MainWindow : Window
                 NewTabMenu.ShowAt(NewTabMenuButton);
                 return true;
             case TerminalAction.ClosePane:
-                ClosePane(tab, origin);
+                AskClosePane(tab, origin);
                 return true;
             case TerminalAction.NextTab:
                 Tabs.SelectedIndex = (Tabs.SelectedIndex + 1) % count;
@@ -1134,7 +1152,7 @@ public sealed partial class MainWindow : Window
             case TerminalAction.ToggleSidebar or TerminalAction.ToggleTitleBar or TerminalAction.FocusMode:
                 return HandleChromeAction(invocation);
             case TerminalAction.Quit:
-                App.Instance.Quit();
+                App.Instance.AskQuit();
                 return true;
             case TerminalAction.ResizePane:
                 if (tab.Workspace.GroupOf(origin) is { } group &&

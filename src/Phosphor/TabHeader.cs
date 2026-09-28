@@ -18,14 +18,20 @@ internal sealed partial class TabHeader : StackPanel
     private readonly Dictionary<Profile, UIElement> _iconByProfile = new();
     private FrameworkElement _owner;
 
+    private readonly AttentionDot _dot = new();
+
     public TabHeader(FrameworkElement owner)
     {
         _owner = owner;
         Orientation = Orientation.Horizontal;
         VerticalAlignment = VerticalAlignment.Center;
+        _icons.Children.Add(_dot);
         Children.Add(_icons);
         Children.Add(_title);
     }
+
+    /// <summary>A dot on the icon: a command finished (or failed) here while you weren't looking.</summary>
+    public void SetAttention(Attention attention) => _dot.Show(attention);
 
     public string Title => _title.Text;
 
@@ -79,7 +85,7 @@ internal sealed partial class TabHeader : StackPanel
         {
             var icon = new IconSourceElement { IconSource = ProfileIcons.For(profile), Visibility = Visibility.Collapsed };
             _iconByProfile[profile] = icon;
-            _icons.Children.Add(icon);
+            _icons.Children.Insert(_icons.Children.Count - 1, icon); // under the dot
         }
 
         foreach (var (p, element) in _iconByProfile)

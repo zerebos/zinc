@@ -117,7 +117,7 @@ public sealed class ConfigFile
     /// <summary>The sections a profile may override; the rest belong to the app.</summary>
     private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal"];
 
-    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "quick-terminal"];
+    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "notify", "quick-terminal"];
 
 
     private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover)
@@ -472,6 +472,8 @@ public sealed class ConfigFile
                 ["window", "unfocused-split-fill"] => ("unfocused-split-fill", e.Value as string),
                 ["window", "save-state"] => ("window-save-state", e.Value is bool b ? (b ? "always" : "never") : e.Value as string),
                 ["window", "quit-after-last-window-closed"] => ("quit-after-last-window-closed", Bool(e.Value)),
+                ["notify", "command-finished"] => ("notify-command-finished", e.Value as string),
+                ["notify", "command-finished-after"] => ("notify-command-finished-after", e.Value is string d ? d : Number(e.Value)),
                 ["quick-terminal", "position"] => ("quick-terminal-position", e.Value as string),
                 ["quick-terminal", "screen"] => ("quick-terminal-screen", e.Value as string),
                 ["quick-terminal", "size"] => ("quick-terminal-size", Pair(e.Value)),

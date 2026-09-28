@@ -16,6 +16,9 @@ public sealed partial class TerminalControl
     /// <summary>The shell started or finished a command (or showed a prompt). Raised on the UI thread.</summary>
     public event Action? CommandsChanged;
 
+    /// <summary>A command that was typed and run has finished (once per command). Raised on the UI thread.</summary>
+    public event Action<ShellCommand>? CommandFinished;
+
     /// <summary>The command running in this pane, if the shell says one is.</summary>
     public ShellCommand? RunningCommand => _session?.Commands() is { Count: > 0 } commands && commands[^1].Running ? commands[^1] : null;
 
@@ -29,6 +32,7 @@ public sealed partial class TerminalControl
         {
             _loggedCommand = started;
             Log.Write($"command: '{done.Text}' exit {done.ExitCode?.ToString() ?? "?"} in {done.Duration?.TotalSeconds:0.0}s, rows {done.PromptRow}-{done.LastRow}");
+            CommandFinished?.Invoke(done);
         }
 
         CommandsChanged?.Invoke();

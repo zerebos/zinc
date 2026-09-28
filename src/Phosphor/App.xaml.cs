@@ -151,6 +151,21 @@ public partial class App : Application
     }
 
     /// <summary>Closes every window (ending their shells) and exits.</summary>
+    /// <summary>Quits when you ask to: first asks, in the front window, if commands are running.</summary>
+    internal async void AskQuit()
+    {
+        if (_windows.LastOrDefault() is { } front && _windows.Any(w => w.RunningCommands().Any()))
+        {
+            front.Activate();
+            if (!await front.ConfirmQuit(_windows.ToList()))
+            {
+                return;
+            }
+        }
+
+        Quit();
+    }
+
     internal void Quit()
     {
         if (_quitting)
@@ -162,7 +177,7 @@ public partial class App : Application
         _quitting = true;
         foreach (var window in _windows.ToList())
         {
-            window.Close();
+            window.CloseWithoutAsking();
         }
 
         _quick?.Close();
@@ -507,7 +522,7 @@ public partial class App : Application
                 new TrayIcon.MenuItem("New window", () => OpenWindow(_config.DefaultProfile)),
                 new TrayIcon.MenuItem(quickLabel, ToggleQuickTerminalFromTray),
                 null,
-                new TrayIcon.MenuItem("Quit Phosphor", Quit),
+                new TrayIcon.MenuItem("Quit Phosphor", AskQuit),
             ];
         };
     }

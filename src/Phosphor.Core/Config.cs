@@ -35,6 +35,14 @@ public enum CommandMarks
     None,
 }
 
+/// <summary>What happens when a long command finishes where you weren't looking. Config: <c>[notify] command-finished</c>.</summary>
+public enum NotifyCommandFinished
+{
+    /// <summary>A dot on its tab (red if it failed), and the taskbar button flashes if the window is in the background.</summary>
+    Badge,
+    Never,
+}
+
 /// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
 public enum TitleBarMode
 {
@@ -114,6 +122,12 @@ public sealed record Config
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
+    /// <summary>Config: <c>[notify] command-finished = badge | never</c> (global).</summary>
+    public NotifyCommandFinished NotifyCommandFinished { get; init; }
+
+    /// <summary>How long a command must run to count as long. Config: <c>[notify] command-finished-after = 10</c> (seconds, or "30s", "2m"; global).</summary>
+    public TimeSpan NotifyCommandFinishedAfter { get; init; } = TimeSpan.FromSeconds(10);
+
     /// <summary>Marks for shell-integrated commands. Config: <c>command-marks = failures | all | none</c>.</summary>
     public CommandMarks CommandMarks { get; init; }
 
@@ -189,6 +203,8 @@ public sealed record Config
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
             "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
             "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
+            "notify-command-finished" when TryMode<NotifyCommandFinished>(value, out var notify) => this with { NotifyCommandFinished = notify },
+            "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
@@ -247,6 +263,32 @@ public sealed record Config
             }
 
             secondary = s;
+        }
+
+        return true;
+    }
+
+    /// <summary>Parses a duration: seconds ("10", "2.5"), or with units ("30s", "2m", "1m30s", "1h").</summary>
+    public static bool TryDuration(string value, out TimeSpan duration)
+    {
+        duration = TimeSpan.Zero;
+        var s = value.Trim().ToLowerInvariant();
+        if (double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var seconds))
+        {
+            duration = TimeSpan.FromSeconds(seconds);
+            return seconds >= 0;
+        }
+
+        var parts = System.Text.RegularExpressions.Regex.Matches(s, @"(\d+(?:\.\d+)?)\s*(h|m|s)");
+        if (parts.Count == 0 || string.Concat(parts.Select(p => p.Value)).Replace(" ", "") != s.Replace(" ", ""))
+        {
+            return false;
+        }
+
+        foreach (System.Text.RegularExpressions.Match part in parts)
+        {
+            var n = double.Parse(part.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            duration += part.Groups[2].Value switch { "h" => TimeSpan.FromHours(n), "m" => TimeSpan.FromMinutes(n), _ => TimeSpan.FromSeconds(n) };
         }
 
         return true;

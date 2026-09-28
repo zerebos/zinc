@@ -109,6 +109,38 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void CommandFinishedNotifications()
+    {
+        var defaults = Load("");
+        Assert.Equal(NotifyCommandFinished.Badge, defaults.NotifyCommandFinished);
+        Assert.Equal(TimeSpan.FromSeconds(10), defaults.NotifyCommandFinishedAfter);
+        Assert.Equal(NotifyCommandFinished.Never, Load("[notify]\ncommand-finished = \"never\"").NotifyCommandFinished);
+        Assert.Equal(TimeSpan.FromSeconds(30), Load("[notify]\ncommand-finished-after = 30").NotifyCommandFinishedAfter);
+        Assert.Equal(TimeSpan.FromSeconds(90), Load("[notify]\ncommand-finished-after = \"1m30s\"").NotifyCommandFinishedAfter);
+    }
+
+    [Theory]
+    [InlineData("5", 5)]
+    [InlineData("2.5", 2.5)]
+    [InlineData("30s", 30)]
+    [InlineData("2m", 120)]
+    [InlineData("1h", 3600)]
+    [InlineData("1m 30s", 90)]
+    public void ReadsDurations(string text, double seconds)
+    {
+        Assert.True(Config.TryDuration(text, out var d));
+        Assert.Equal(TimeSpan.FromSeconds(seconds), d);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("soon")]
+    [InlineData("10x")]
+    [InlineData("-5")]
+    [InlineData("5s later")]
+    public void RejectsWhatIsNotADuration(string text) => Assert.False(Config.TryDuration(text, out _));
+
+    [Fact]
     public void QuitAfterLastWindowDefaultsToAutomatic()
     {
         Assert.Null(Load("").QuitAfterLastWindowClosed);

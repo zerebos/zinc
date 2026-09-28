@@ -125,6 +125,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
 features they control below.
 
+**`[notify]`**: `command-finished`, `command-finished-after` (see
+[Shell integration](#shell-integration)).
+
 **`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
 relative to this one. Settings in the including file win.
 
@@ -275,7 +278,14 @@ output starts, and how it ended. With those marks, Phosphor can:
   prompt (red for failures). `command-marks` in `[terminal]`: `"failures"` (default), `"all"`
   (successes get a green bar too) or `"none"`;
 - **show what's running**: with workspaces on the left, the title bar shows the running command and
-  how long it has been going.
+  how long it has been going;
+- **tell you when a long command finishes out of view**: in another workspace or tab, or while
+  you're in another app, a command that ran 10 seconds or more puts a dot on its tab's icon
+  (green, or red if it failed) until you look at it, and the taskbar button flashes if Phosphor
+  is in the background. In `[notify]`: `command-finished = "never"` turns this off, and
+  `command-finished-after` sets what counts as long (`30`, `"45s"`, `"2m"`);
+- **ask before closing a running command**: closing a tab, pane, workspace or window, or
+  quitting, asks first while a command is running there (never at an idle prompt).
 
 The marks are invisible. Add them to your shell's startup file.
 

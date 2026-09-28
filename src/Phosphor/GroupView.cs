@@ -236,7 +236,7 @@ internal sealed partial class GroupView : Grid
 
         foreach (var tab in group.Tabs)
         {
-            _items[tab].Show(TitleOf(tab), tab == group.Active, focused, accent);
+            _items[tab].Show(TitleOf(tab), tab == group.Active, focused, accent, tab.Attention);
         }
 
         if (_shown != group.Active)
@@ -310,6 +310,7 @@ internal sealed partial class GroupView : Grid
 
         private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
         private readonly MainWindow.TerminalTab _tab;
+        private readonly AttentionDot _dot = new();
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private bool _active;
@@ -334,13 +335,13 @@ internal sealed partial class GroupView : Grid
             AutomationProperties.SetName(close, "Close tab");
             close.Click += (_, _) => CloseClicked?.Invoke();
 
-            var icon = new IconSourceElement
+            var icon = new Grid
             {
-                IconSource = ProfileIcons.For(tab.Profile),
                 Width = 14,
                 Height = 14,
                 Margin = new Thickness(0, 0, 8, 0),
                 VerticalAlignment = VerticalAlignment.Center,
+                Children = { new IconSourceElement { IconSource = ProfileIcons.For(tab.Profile) }, _dot },
             };
             // The padding goes on the content, not the tab, so the accent line spans the whole tab
             // (like the line across a strip-less focused pane).
@@ -370,8 +371,9 @@ internal sealed partial class GroupView : Grid
 
         public event Action? CloseClicked;
 
-        public void Show(string title, bool active, bool focused, Brush accent)
+        public void Show(string title, bool active, bool focused, Brush accent, Attention attention)
         {
+            _dot.Show(attention);
             if (_title.Text != title)
             {
                 _title.Text = title;

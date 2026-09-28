@@ -92,11 +92,17 @@ public sealed partial class MainWindow
     private void SplitFocused(WorkspaceTab tab, PaneDirection direction) =>
         HandleAction(new ActionInvocation(TerminalAction.SplitPane, Direction: direction), tab, tab.Active);
 
-    private void CloseTabs(IEnumerable<WorkspaceTab> tabs)
+    private async void CloseTabs(IEnumerable<WorkspaceTab> tabs)
     {
-        foreach (var t in tabs.ToList())
+        var list = tabs.ToList();
+        if (!await ConfirmClose(list.SelectMany(t => t.Workspace.Tabs).ToList()))
         {
-            CloseTab(t);
+            return;
+        }
+
+        foreach (var t in list)
+        {
+            CloseTabNow(t);
         }
     }
 

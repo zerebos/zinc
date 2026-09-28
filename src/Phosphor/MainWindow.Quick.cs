@@ -45,6 +45,11 @@ public sealed partial class MainWindow
         if (_active)
         {
             App.Instance.NoteActivated(this);
+            if (SelectedTab is { } shown)
+            {
+                UpdateFocusBorders(shown); // back in front: what's shown has been seen
+            }
+
             ShowHotkeyNoticeIfNeeded();
         }
     }

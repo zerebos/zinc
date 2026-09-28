@@ -123,6 +123,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   after an empty Enter too. Text comes from C's cmdline_url, else input cells read back (wide gaps
   = prompt decoration: p10k draws its frame corner after B). App: `TerminalControl.Commands.cs`
   (actions, scrollbar ticks, failure bars; logs `command: ...` with PHOSPHOR_LOG), command center.
+  `MainWindow.Attention.cs`: `TerminalControl.CommandFinished` → `TerminalTab.Attention` (dot on
+  `TabHeader`/`GroupView` icons via `AttentionDot`; cleared in `UpdateFocusBorders` for what's in
+  view while the window is active), `FlashWindowEx`, and close confirmation: user closes go
+  through `AskClosePane`/`CloseTab`/`CloseTabs`/`AppWindow.Closing`/`App.AskQuit`; `ClosePane`,
+  `CloseTabNow`, `Quit` never ask (a shell exiting must not). `[notify]` is a config group.
   PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
   string broke PSReadLine's prompt redraw after a failed command (text overwrote `> `).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
