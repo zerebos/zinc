@@ -40,6 +40,9 @@ public sealed partial class TerminalControl : UserControl
 
     public event Action<string>? TitleChanged;
 
+    /// <summary>The shell reported a new working directory (<see cref="ReportedDirectory"/>); on the UI thread.</summary>
+    public event Action? DirectoryChanged;
+
     /// <summary>
     /// Handles bound actions the pane doesn't own (tabs, windows). Returns false to let
     /// the key through to the app.
@@ -233,6 +236,7 @@ public sealed partial class TerminalControl : UserControl
             Title = title;
             TitleChanged?.Invoke(title);
         });
+        session.DirectoryChanged += () => dq.TryEnqueue(() => DirectoryChanged?.Invoke());
         session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
         ApplyClipboardPermissions(session);
         _session = session;

@@ -135,7 +135,9 @@ DPI). Close the source window *after* the target has the workspace, or the app m
 no windows. `workspace-tabs = left`: `MainWindow.WorkspaceList.cs` + `WorkspaceList.cs` — the
 TabView stays (holds workspaces, shows the selected one) with its strip (`TabContainerGrid`)
 collapsed; the list mirrors `Tabs.TabItems` via `RefreshWorkspaceList` (call it after item,
-selection or color changes). Never remove + re-insert the *selected* TabViewItem: its content is
+selection or color changes). Its title row (`MainWindow.TitleRow.cs`: app mark + command
+center) sits in the caption `DragRegion`; clickable things there need a `KeepClickThrough`
+(Passthrough region rects, physical px). Never remove + re-insert the *selected* TabViewItem: its content is
 still attached until the next layout pass → 0x800F1000 (`MoveWorkspace` moves the others around
 it). `MainWindow.Drag.cs`: dragging workspaces (TabView events or list items) and pane tabs
 (`GroupView` items with `CanDrag`; their strip is its own drop target and marks `Handled` so the

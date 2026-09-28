@@ -59,6 +59,7 @@ public sealed partial class MainWindow
 
         RefreshWorkspaceList();
         BuildNewTabMenu();
+        UpdateCommandCenter(); // the palette's shortcut may have changed
         ShowConfigProblems(config, applied: true);
     }
 

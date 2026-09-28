@@ -38,4 +38,19 @@ public class ShellDirectoryTests
         session.WriteToScreen("\x1b]9;9;C:\\Users\\Zack\x1b\\");
         Assert.Equal(@"C:\Users\Zack", ShellDirectory.Parse(session.ReportedDirectory));
     }
+
+    [Fact]
+    public void DirectoryChangesAreAnnouncedOnce()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var changes = 0;
+        session.DirectoryChanged += () => changes++;
+
+        session.WriteToScreen("\x1b]7;file://box/home/zack\x07");
+        session.WriteToScreen("\x1b]7;file://box/home/zack\x07"); // every prompt re-reports it
+        Assert.Equal(1, changes);
+
+        session.WriteToScreen("\x1b]7;file://box/tmp\x07");
+        Assert.Equal(2, changes);
+    }
 }

@@ -17,7 +17,6 @@ public sealed partial class MainWindow
     private const double TitleBarHeight = 32;
 
     private WorkspaceList? _workspaceList;
-    private TextBlock? _windowTitle;
 
     private void UseWorkspaceList()
     {
@@ -56,15 +55,7 @@ public sealed partial class MainWindow
         Grid.SetRowSpan(Tabs, 1);
         Grid.SetColumnSpan(Tabs, 1);
 
-        _windowTitle = new TextBlock
-        {
-            Margin = new Thickness(14, 0, 150, 0), // clear of the caption buttons
-            VerticalAlignment = VerticalAlignment.Center,
-            FontSize = 12,
-            TextTrimming = TextTrimming.CharacterEllipsis,
-            Text = Title,
-        };
-        DragRegion.Children.Add(_windowTitle);
+        DragRegion.Children.Add(BuildTitleRow());
         Grid.SetColumn(DragRegion, 0); // it was the footer's second column
         Grid.SetColumnSpan(DragRegion, 2);
         Root.Children.Insert(0, DragRegion);

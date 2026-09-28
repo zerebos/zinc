@@ -392,7 +392,9 @@ its current tab's profile; the title bar's + and ▾ open workspaces.
   (default `"auto"`: only with two or more).
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
-  close, right-click, drag to reorder or anywhere a title-bar tab can go.
+  close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows
+  what the focused tab is running and the folder its shell last reported (see Reopening where you
+  left off); clicking it opens the command palette.
 
 Right-clicking a workspace offers rename, workspace color, duplicate, split, moving it to a new
 window, export text (whole scrollback to a file), and closing this / other / right-hand

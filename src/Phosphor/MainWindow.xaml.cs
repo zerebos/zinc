@@ -178,6 +178,7 @@ public sealed partial class MainWindow : Window
             UpdateFocusBorders(tab); // group strips show titles too
         };
         Action close = () => ClosePane(tab, pane);
+        Action directory = () => UpdateTitle(tab); // the command center shows the folder
         RoutedEventHandler focus = (_, _) =>
         {
             tab.Workspace.Activate(pane);
@@ -187,12 +188,14 @@ public sealed partial class MainWindow : Window
 
         control.ActionHandler = invocation => HandleAction(invocation, tab, pane);
         control.TitleChanged += title;
+        control.DirectoryChanged += directory;
         control.CloseRequested += close;
         control.GotFocus += focus;
         pane.Unwire = () =>
         {
             control.ActionHandler = null;
             control.TitleChanged -= title;
+            control.DirectoryChanged -= directory;
             control.CloseRequested -= close;
             control.GotFocus -= focus;
             pane.Unwire = null;
@@ -755,13 +758,14 @@ public sealed partial class MainWindow : Window
         tab.Header.SetProfile(pane.Profile);
         ApplyTabBackground(tab);
 
-        if (SelectedTab == tab && Title != title)
+        if (SelectedTab == tab)
         {
-            Title = title;
-            if (_windowTitle != null)
+            if (Title != title)
             {
-                _windowTitle.Text = title;
+                Title = title;
             }
+
+            UpdateCommandCenter();
         }
     }
 

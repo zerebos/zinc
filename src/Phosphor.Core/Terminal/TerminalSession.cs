@@ -38,6 +38,9 @@ public sealed unsafe class TerminalSession : IDisposable
     /// <summary>The OSC 0/2 title changed. Raised on the reader thread.</summary>
     public event Action<string>? TitleChanged;
 
+    /// <summary>The shell reported a different working directory (<see cref="ReportedDirectory"/>); raised after the write.</summary>
+    public event Action? DirectoryChanged;
+
     /// <summary>BEL received. Raised on the reader thread.</summary>
     public event Action? Bell;
 
@@ -180,6 +183,7 @@ public sealed unsafe class TerminalSession : IDisposable
     private void Feed(ReadOnlySpan<byte> data)
     {
         string? title = null;
+        var directoryChanged = false;
         bool bell;
         lock (Lock)
         {
@@ -204,7 +208,9 @@ public sealed unsafe class TerminalSession : IDisposable
             if (_pwdDirty)
             {
                 _pwdDirty = false;
-                ReportedDirectory = ReadString(TerminalData.Pwd);
+                var reported = ReadString(TerminalData.Pwd);
+                directoryChanged = reported != ReportedDirectory;
+                ReportedDirectory = reported;
             }
 
             bell = _bell;
@@ -214,6 +220,11 @@ public sealed unsafe class TerminalSession : IDisposable
         if (title != null)
         {
             TitleChanged?.Invoke(title);
+        }
+
+        if (directoryChanged)
+        {
+            DirectoryChanged?.Invoke();
         }
 
         if (bell)
