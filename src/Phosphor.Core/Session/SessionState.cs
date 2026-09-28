@@ -15,9 +15,25 @@ public sealed record SessionState(int Version, List<WindowState> Windows)
 
 /// <summary>
 /// A window: its bounds (physical pixels, as AppWindow reports them), whether it was maximized,
-/// its workspaces in order and which was shown.
+/// its workspaces in order and which was shown, and (with the workspace list) its sidebar and title bar.
 /// </summary>
-public sealed record WindowState(int X, int Y, int Width, int Height, bool Maximized, int Selected, List<WorkspaceState> Workspaces);
+public sealed record WindowState(int X, int Y, int Width, int Height, bool Maximized, int Selected, List<WorkspaceState> Workspaces,
+    WindowChrome? Chrome = null);
+
+/// <summary>
+/// A window's sidebar and title bar modes as toggled, the config's modes when it was saved, and
+/// what focus mode replaced (while it's on).
+/// </summary>
+public sealed record WindowChrome(SidebarMode Sidebar, TitleBarMode TitleBar, SidebarMode ConfigSidebar, TitleBarMode ConfigTitleBar,
+    SidebarMode? FocusSidebar = null, TitleBarMode? FocusTitleBar = null)
+{
+    /// <summary>
+    /// Whether to reopen with these modes: only while the config still sets what it did when they
+    /// were saved. An edited config wins, as it does over the toggles on a live reload.
+    /// </summary>
+    public bool Applies(SidebarMode configSidebar, TitleBarMode configTitleBar) =>
+        ConfigSidebar == configSidebar && ConfigTitleBar == configTitleBar;
+}
 
 /// <summary>A workspace: its custom title and color (if set) and its layout.</summary>
 public sealed record WorkspaceState(string? Title, string? Color, LayoutNode Layout);

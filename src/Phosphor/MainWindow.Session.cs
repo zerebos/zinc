@@ -28,6 +28,7 @@ public sealed partial class MainWindow
         }
 
         Tabs.SelectedIndex = Math.Clamp(saved.Selected, 0, Tabs.TabItems.Count - 1);
+        RestoreChrome(saved.Chrome);
         if (Plausible(saved))
         {
             AppWindow.MoveAndResize(new RectInt32(saved.X, saved.Y, saved.Width, saved.Height));
@@ -62,7 +63,7 @@ public sealed partial class MainWindow
         // for its terminals to start (2026-09-27). Minimized windows come back restored.
         var b = _normalBounds;
         var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
-        return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, Tabs.SelectedIndex), workspaces);
+        return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, Tabs.SelectedIndex), workspaces, CaptureChrome());
     }
 
     /// <summary>Where the window is when neither minimized nor maximized (what a session saves).</summary>

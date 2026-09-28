@@ -404,7 +404,8 @@ its current tab's profile; the title bar's + and ▾ open workspaces.
   touches the window's left edge, or a dragged tab does; it slides back once the pointer leaves).
   `title-bar`: `"show"` (default) or `"auto-hide"` (revealed at the top edge, window buttons
   included). `Ctrl+Shift+B` and the palette's Toggle sidebar / Toggle title bar / Focus mode
-  switch them per window until the next launch.
+  switch them per window, and a reopened window keeps its own (until you change these settings
+  in the config, which then win).
 
 Right-clicking a workspace offers rename, workspace color, duplicate, split, moving it to a new
 window, export text (whole scrollback to a file), and closing this / other / right-hand

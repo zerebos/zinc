@@ -93,6 +93,30 @@ public sealed partial class MainWindow
         SetTitleBarMode(global.TitleBar);
     }
 
+    /// <summary>This window's modes for the session (null without the workspace list).</summary>
+    private Session.WindowChrome? CaptureChrome() => _workspaceList == null
+        ? null
+        : new(_sidebarMode, _titleBarMode, _chromeConfig.Item1, _chromeConfig.Item2, _beforeFocusMode?.Item1, _beforeFocusMode?.Item2);
+
+    /// <summary>Reopens with a saved window's modes, unless the config's have changed since.</summary>
+    private void RestoreChrome(Session.WindowChrome? saved)
+    {
+        if (_workspaceList == null || saved == null)
+        {
+            return;
+        }
+
+        if (!saved.Applies(_chromeConfig.Item1, _chromeConfig.Item2))
+        {
+            Log.Write($"session: config's sidebar/title bar changed since the save; using the config's");
+            return;
+        }
+
+        SetSidebarMode(saved.Sidebar);
+        SetTitleBarMode(saved.TitleBar);
+        _beforeFocusMode = saved is { FocusSidebar: { } sidebar, FocusTitleBar: { } titleBar } ? (sidebar, titleBar) : null;
+    }
+
     /// <summary>The chrome actions; false without the workspace list (nothing to switch).</summary>
     private bool HandleChromeAction(ActionInvocation invocation)
     {

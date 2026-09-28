@@ -77,6 +77,34 @@ public class SessionStateTests
         Assert.Equal("/home/zack/café", back.Windows[0].Workspaces[0].Layout.First!.Pane!.Tabs[0].Directory);
     }
 
+    [Fact]
+    public void WindowModesRoundTripAndOlderSessionsStillLoad()
+    {
+        var chrome = new WindowChrome(SidebarMode.AutoHide, TitleBarMode.AutoHide, SidebarMode.Full, TitleBarMode.Show,
+            FocusSidebar: SidebarMode.Rail, FocusTitleBar: TitleBarMode.Show);
+        var state = new SessionState(SessionState.CurrentVersion,
+            [new WindowState(0, 0, 800, 600, false, 0, [], chrome)]);
+        var json = SessionStore.Serialize(state);
+        Assert.Contains("\"sidebar\": \"AutoHide\"", json);
+        Assert.Equal(chrome, SessionStore.Deserialize(json)!.Windows[0].Chrome);
+
+        // Saved before the modes existed: no chrome, the config's modes apply.
+        var old = SessionStore.Deserialize("""
+            {"version": 1, "windows": [{"x": 0, "y": 0, "width": 800, "height": 600, "maximized": false, "selected": 0, "workspaces": []}]}
+            """);
+        Assert.NotNull(old);
+        Assert.Null(old.Windows[0].Chrome);
+    }
+
+    [Fact]
+    public void SavedModesGiveWayToAnEditedConfig()
+    {
+        var saved = new WindowChrome(SidebarMode.Rail, TitleBarMode.Show, SidebarMode.Full, TitleBarMode.Show);
+        Assert.True(saved.Applies(SidebarMode.Full, TitleBarMode.Show));
+        Assert.False(saved.Applies(SidebarMode.AutoHide, TitleBarMode.Show));
+        Assert.False(saved.Applies(SidebarMode.Full, TitleBarMode.AutoHide));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("not json")]
