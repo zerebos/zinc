@@ -119,7 +119,7 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   OSC 52. Off by default because anything running in the terminal, including a remote host,
   could read it.
 
-**`[window]`**: `workspace-tabs`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
+**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
 features they control below.
 
@@ -280,6 +280,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
 | `Ctrl+Shift+P` | Command palette: every action, profile and tab, fuzzy-searchable |
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
+| `Ctrl+Shift+B` | With workspaces on the left: sidebar full → rail → auto-hide |
 | `Ctrl+Shift+T` / `Ctrl+Shift+1..9` | New tab in the focused pane (its profile / profile N) |
 | `Ctrl+Alt+T` | New workspace (default profile) |
 | `Ctrl+Shift+Space`, ▾ button | Profile menu: new workspace (Alt+click: open as a split; Shift+click: new window) |
@@ -337,6 +338,9 @@ its line, and the rest still applies.
 | `resize <direction>` | Move the focused pane's divider. |
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
+| `toggle-sidebar` | With workspaces on the left: cycle the sidebar through full, rail and auto-hide. `toggle-sidebar rail` (or `auto-hide`) switches between that and full. |
+| `toggle-title-bar` | With workspaces on the left: auto-hide the title bar, or show it again. |
+| `focus-mode` | With workspaces on the left: auto-hide the title bar and the sidebar; again to bring them back. |
 | `reload-config` | Read the config again. |
 | `quit` | Close every window and exit. |
 
@@ -395,6 +399,12 @@ its current tab's profile; the title bar's + and ▾ open workspaces.
   close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows
   what the focused tab is running and the folder its shell last reported (see Reopening where you
   left off); clicking it opens the command palette.
+- `sidebar` (in `[window]`, with `workspace-tabs = "left"`): `"full"` (default), `"rail"` (a narrow
+  column of workspace icons; names in tooltips) or `"auto-hide"` (hidden until the pointer
+  touches the window's left edge, or a dragged tab does; it slides back once the pointer leaves).
+  `title-bar`: `"show"` (default) or `"auto-hide"` (revealed at the top edge, window buttons
+  included). `Ctrl+Shift+B` and the palette's Toggle sidebar / Toggle title bar / Focus mode
+  switch them per window until the next launch.
 
 Right-clicking a workspace offers rename, workspace color, duplicate, split, moving it to a new
 window, export text (whole scrollback to a file), and closing this / other / right-hand

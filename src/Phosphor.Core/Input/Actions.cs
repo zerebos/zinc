@@ -23,6 +23,9 @@ public static class Actions
 
         /// <summary>Optional: "if-selection".</summary>
         CopyMode,
+
+        /// <summary>Optional: "rail" or "auto-hide" (toggled with full); none cycles.</summary>
+        OptionalSidebarMode,
     }
 
     private sealed record Definition(string Name, TerminalAction Action, Arg Arg, string Title, string Description);
@@ -55,6 +58,12 @@ public static class Actions
         new("resize", TerminalAction.ResizePane, Arg.Direction, "Resize pane", "Move the focused pane's divider: left, right, up or down."),
         new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Open the profile menu", "The ▾ menu of profiles."),
         new("command-palette", TerminalAction.OpenCommandPalette, Arg.None, "Command palette", "Search every command."),
+        new("toggle-sidebar", TerminalAction.ToggleSidebar, Arg.OptionalSidebarMode, "Toggle sidebar",
+            "With workspace-tabs = \"left\": cycle the workspace list through full, rail and auto-hide. \"toggle-sidebar rail\" (or auto-hide) switches between that and full."),
+        new("toggle-title-bar", TerminalAction.ToggleTitleBar, Arg.None, "Toggle title bar",
+            "With workspace-tabs = \"left\": auto-hide the title bar, or show it again."),
+        new("focus-mode", TerminalAction.FocusMode, Arg.None, "Focus mode",
+            "With workspace-tabs = \"left\": auto-hide the title bar and the workspace list; again to bring them back."),
         new("reload-config", TerminalAction.ReloadConfig, Arg.None, "Reload config", "Read config.toml again."),
         new("quit", TerminalAction.Quit, Arg.None, "Quit Phosphor", "Close every window and exit."),
     ];
@@ -124,6 +133,13 @@ public static class Actions
                 return null;
             case Arg.OptionalProfile:
                 return new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: arg);
+            case Arg.OptionalSidebarMode when arg.Length == 0:
+                return new ActionInvocation(def.Action, -1);
+            case Arg.OptionalSidebarMode when Config.TryMode<SidebarMode>(arg, out var mode) && mode != SidebarMode.Full:
+                return new ActionInvocation(def.Action, (int)mode);
+            case Arg.OptionalSidebarMode:
+                error = $"'{name}' takes nothing, \"rail\" or \"auto-hide\", not '{arg}'";
+                return null;
         }
 
         error = $"unsupported argument for '{name}'";
@@ -139,6 +155,7 @@ public static class Actions
         {
             { Arg: Arg.Direction } d => $"{d.Name} {invocation.Direction.ToString().ToLowerInvariant()}",
             { Arg: Arg.Workspace } d => $"{d.Name} {(invocation.Index < 0 ? "last" : (invocation.Index + 1).ToString(CultureInfo.InvariantCulture))}",
+            { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 => $"{d.Name} {SidebarModeName(invocation.Index)}",
             var d => d.Name,
         },
     };
@@ -152,7 +169,10 @@ public static class Actions
         {
             { Arg: Arg.Direction } d => $"{d.Title} {invocation.Direction.ToString().ToLowerInvariant()}",
             { Arg: Arg.Workspace } d => invocation.Index < 0 ? "Go to the last workspace" : $"{d.Title} {invocation.Index + 1}",
+            { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 => $"{d.Title} {SidebarModeName(invocation.Index)}",
             var d => d.Title,
         },
     };
+
+    private static string SidebarModeName(int mode) => (SidebarMode)mode == SidebarMode.AutoHide ? "auto-hide" : "rail";
 }

@@ -463,6 +463,8 @@ public sealed class ConfigFile
                 ["terminal", "clipboard-read"] => ("clipboard-read", Permission(e.Value)),
                 ["terminal", "clipboard-write"] => ("clipboard-write", Permission(e.Value)),
                 ["window", "workspace-tabs"] => ("workspace-tabs", e.Value as string),
+                ["window", "title-bar"] => ("title-bar", e.Value as string),
+                ["window", "sidebar"] => ("sidebar", e.Value as string),
                 ["window", "tab-groups"] => ("tab-groups", Bool(e.Value)),
                 ["window", "group-tab-strip"] => ("group-tab-strip", e.Value as string),
                 ["window", "unfocused-split-opacity"] => ("unfocused-split-opacity", Number(e.Value)),

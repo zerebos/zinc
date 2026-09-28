@@ -60,6 +60,7 @@ public sealed partial class MainWindow
         RefreshWorkspaceList();
         BuildNewTabMenu();
         UpdateCommandCenter(); // the palette's shortcut may have changed
+        ApplyChromeConfig(config.Global);
         ShowConfigProblems(config, applied: true);
     }
 

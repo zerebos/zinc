@@ -41,6 +41,28 @@ public class KeysConfigTests
     }
 
     [Theory]
+    [InlineData("toggle-sidebar", -1, "Toggle sidebar")]
+    [InlineData("toggle-sidebar rail", (int)SidebarMode.Rail, "Toggle sidebar rail")]
+    [InlineData("toggle-sidebar auto-hide", (int)SidebarMode.AutoHide, "Toggle sidebar auto-hide")]
+    public void ParsesSidebarToggles(string text, int mode, string title)
+    {
+        var parsed = Actions.Parse(text, out var error);
+        Assert.Null(error);
+        Assert.Equal(new ActionInvocation(TerminalAction.ToggleSidebar, mode), parsed);
+        Assert.Equal(text, Actions.Format(parsed!.Value));
+        Assert.Equal(title, Actions.Title(parsed.Value));
+    }
+
+    [Theory]
+    [InlineData("toggle-sidebar full")]
+    [InlineData("toggle-sidebar sideways")]
+    public void RejectsOtherSidebarModes(string text)
+    {
+        Assert.Null(Actions.Parse(text, out var error));
+        Assert.StartsWith("'toggle-sidebar' takes nothing, \"rail\" or \"auto-hide\"", error);
+    }
+
+    [Theory]
     [InlineData("teleport", "unknown action 'teleport'")]
     [InlineData("split sideways", "'split' takes left, right, up or down, not 'sideways'")]
     [InlineData("split", "'split' takes left, right, up or down")]

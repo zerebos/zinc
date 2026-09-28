@@ -55,6 +55,18 @@ public enum TerminalAction
 
     /// <summary>Close every window and exit.</summary>
     Quit,
+
+    /// <summary>
+    /// Switch the workspace list's mode: <see cref="ActionInvocation.Index"/> -1 cycles full → rail →
+    /// auto-hide; otherwise it's a <see cref="SidebarMode"/> to toggle with full.
+    /// </summary>
+    ToggleSidebar,
+
+    /// <summary>Title bar shown ↔ auto-hidden.</summary>
+    ToggleTitleBar,
+
+    /// <summary>Auto-hide both the title bar and the workspace list; again to bring them back.</summary>
+    FocusMode,
 }
 
 /// <summary>
@@ -309,6 +321,7 @@ public sealed class Keybindings
         b.Bind("ctrl+shift+n", TerminalAction.NewWindow);
         b.Bind("ctrl+shift+p", TerminalAction.OpenCommandPalette);
         b.Bind("ctrl+shift+f", TerminalAction.Find);
+        b.Bind("ctrl+shift+b", new ActionInvocation(TerminalAction.ToggleSidebar, -1));
         b.Bind("alt+shift+plus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         b.Bind("alt+shift+minus", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
         b.Bind("alt+shift+d", TerminalAction.DuplicatePane);

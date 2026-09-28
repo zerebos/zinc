@@ -246,6 +246,15 @@ public sealed partial class MainWindow
         Custom("Rename workspace…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));
         Action(TerminalAction.NewWindow);
+        if (_workspaceList != null)
+        {
+            Action(new ActionInvocation(TerminalAction.ToggleSidebar, -1));
+            Action(new ActionInvocation(TerminalAction.ToggleSidebar, (int)SidebarMode.Rail));
+            Action(new ActionInvocation(TerminalAction.ToggleSidebar, (int)SidebarMode.AutoHide));
+            Action(TerminalAction.ToggleTitleBar);
+            Action(TerminalAction.FocusMode);
+        }
+
         Action(TerminalAction.Quit);
         Action(TerminalAction.ReloadConfig);
 

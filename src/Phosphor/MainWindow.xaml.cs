@@ -907,6 +907,32 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord == "test:chrome-hide")
+            {
+                // What the pointer leaving does, for both auto-hidden bars.
+                _chromePinned = false;
+                RevealSidebar(false);
+                RevealTitleBar(false);
+                Log.Write($"test {chord}: done");
+                return;
+            }
+
+            if (chord is "test:sidebar-show" or "test:titlebar-show")
+            {
+                // Reveals an auto-hidden bar and keeps it (a capture has no pointer to hold it open).
+                if (chord == "test:sidebar-show")
+                {
+                    RevealSidebar(true, pinned: true);
+                }
+                else
+                {
+                    RevealTitleBar(true, pinned: true);
+                }
+
+                Log.Write($"test {chord}: done");
+                return;
+            }
+
             if (chord == "test:gc")
             {
                 // Frees whatever is unreferenced (e.g. a retired canvas), as a later GC would.
@@ -1103,6 +1129,8 @@ public sealed partial class MainWindow : Window
             case TerminalAction.ReloadConfig:
                 App.Instance.ReloadConfig();
                 return true;
+            case TerminalAction.ToggleSidebar or TerminalAction.ToggleTitleBar or TerminalAction.FocusMode:
+                return HandleChromeAction(invocation);
             case TerminalAction.Quit:
                 App.Instance.Quit();
                 return true;

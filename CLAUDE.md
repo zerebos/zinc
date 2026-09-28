@@ -137,7 +137,12 @@ TabView stays (holds workspaces, shows the selected one) with its strip (`TabCon
 collapsed; the list mirrors `Tabs.TabItems` via `RefreshWorkspaceList` (call it after item,
 selection or color changes). Its title row (`MainWindow.TitleRow.cs`: app mark + command
 center) sits in the caption `DragRegion`; clickable things there need a `KeepClickThrough`
-(Passthrough region rects, physical px). Never remove + re-insert the *selected* TabViewItem: its content is
+(Passthrough region rects, physical px; a WM_NCHITTEST probe still answers HTCAPTION there, but
+real clicks do pass through — user-verified). `MainWindow.Chrome.cs`: `sidebar` full/rail/
+auto-hide and `title-bar` show/auto-hide (config + toggle actions, per window); hidden bars are
+overlays revealed by edge hot zones and hidden by a GetCursorPos poll; `test:sidebar-show`,
+`test:titlebar-show` (pinned) and `test:chrome-hide`; `.scratch/tools/chrome-shot.ps1`
+launches a mode and captures it. Never remove + re-insert the *selected* TabViewItem: its content is
 still attached until the next layout pass → 0x800F1000 (`MoveWorkspace` moves the others around
 it). `MainWindow.Drag.cs`: dragging workspaces (TabView events or list items) and pane tabs
 (`GroupView` items with `CanDrag`; their strip is its own drop target and marks `Handled` so the
@@ -276,6 +281,10 @@ and read state after the write (see `_titleDirty`).
   temporarily: `InputNonClientPointerSource` Clear/SetRegionRects(Caption) and
   `SetTitleBar(0x0 element)` all left the caption rect in place (verified with GetRegionRects
   and WM_NCHITTEST). Tab drops are accepted over the tabs and +/▾ only.
+  Once the title bar element is *collapsed*, though, WinUI stops re-asserting it and
+  `ClearRegionRects(Caption)` does free the area (auto-hidden title bar, `MainWindow.Chrome.cs`);
+  after revealing it, call `SetTitleBar` again *once it's in place* (after the slide), or the
+  row isn't draggable. Check both with WM_NCHITTEST: 2 = drag, 1 = client, 20 = close.
 - Alt+character chords beep unless `MenuKeySuppressor` swallows WM_SYSCOMMAND/SC_KEYMENU:
   handling KeyDown doesn't stop DefWindowProc's menu-mnemonic lookup (no menu bar → beep).
   Alt+Space (system menu) and a bare Alt tap are passed through.

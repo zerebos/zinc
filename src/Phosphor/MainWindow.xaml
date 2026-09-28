@@ -55,6 +55,7 @@
         <!-- Where a dragged tab would land when dropped on a pane's edge (MainWindow.Drag.cs). -->
         <Border
             x:Name="DropPreview"
+            Canvas.ZIndex="10"
             HorizontalAlignment="Left"
             VerticalAlignment="Top"
             Background="{ThemeResource SystemControlHighlightAccentBrush}"
@@ -64,6 +65,7 @@
 
         <!-- Notices, stacked at the bottom right. -->
         <StackPanel
+            Canvas.ZIndex="10"
             MaxWidth="520"
             Margin="12"
             HorizontalAlignment="Right"
@@ -85,7 +87,7 @@
 
         <!-- Command palette (Ctrl+Shift+P). The transparent layer catches clicks outside
              the panel to close it. -->
-        <Grid x:Name="PaletteLayer" Background="Transparent" Visibility="Collapsed">
+        <Grid x:Name="PaletteLayer" Canvas.ZIndex="10" Background="Transparent" Visibility="Collapsed">
             <Border
                 x:Name="PalettePanel"
                 Width="640"

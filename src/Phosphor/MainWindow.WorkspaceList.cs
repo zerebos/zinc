@@ -17,6 +17,8 @@ public sealed partial class MainWindow
     private const double TitleBarHeight = 32;
 
     private WorkspaceList? _workspaceList;
+    private Grid? _listFooter;
+    private TextBlock? _newWorkspaceLabel;
 
     private void UseWorkspaceList()
     {
@@ -93,6 +95,7 @@ public sealed partial class MainWindow
             return AcceptWorkspaceDrop(e, under, reorder: true);
         };
         list.ListDrop += (_, index) => DropOnWorkspaces(index);
+        SetUpChrome();
     }
 
     /// <summary>"New workspace" and the profile menu, below the list (where the pointer tends to rest).</summary>
@@ -113,7 +116,7 @@ public sealed partial class MainWindow
                 Children =
                 {
                     new FontIcon { Glyph = "", FontSize = 12 },
-                    new TextBlock { Text = "New workspace", FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
+                    (_newWorkspaceLabel = new TextBlock { Text = "New workspace", FontSize = 12, VerticalAlignment = VerticalAlignment.Center }),
                 },
             },
         };
@@ -129,12 +132,34 @@ public sealed partial class MainWindow
         // From the bottom of the window, the profile menu opens upward.
         NewTabMenu.Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.TopEdgeAlignedLeft;
 
-        var footer = new Grid { Margin = new Thickness(6, 4, 6, 6) };
+        var footer = _listFooter = new Grid { Margin = new Thickness(6, 4, 6, 6) };
         footer.ColumnDefinitions.Add(new ColumnDefinition());
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         footer.Children.Add(add);
         footer.Children.Add(NewTabMenuButton);
         return footer;
+    }
+
+    /// <summary>On the rail: "+" and "▾" stacked, without the label.</summary>
+    private void SetListFooterCompact(bool compact)
+    {
+        if (_listFooter == null || _newWorkspaceLabel == null)
+        {
+            return;
+        }
+
+        var add = (Button)_listFooter.Children[0];
+        _newWorkspaceLabel.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        add.HorizontalContentAlignment = compact ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        add.Padding = compact ? new Thickness(0) : new Thickness(12, 0, 8, 0);
+        Grid.SetColumnSpan(add, compact ? 2 : 1);
+        Grid.SetRow(NewTabMenuButton, compact ? 1 : 0);
+        Grid.SetColumn(NewTabMenuButton, compact ? 0 : 1);
+        Grid.SetColumnSpan(NewTabMenuButton, compact ? 2 : 1);
+        NewTabMenuButton.HorizontalAlignment = compact ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
+        NewTabMenuButton.Margin = new Thickness(compact ? 0 : 2, 0, 0, 0);
     }
 
     /// <summary>Brings the list (if shown) up to date with the TabView's workspaces.</summary>

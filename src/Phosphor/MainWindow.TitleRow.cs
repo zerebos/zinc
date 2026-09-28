@@ -18,15 +18,18 @@ public sealed partial class MainWindow
 {
     private TextBlock? _commandContext;
     private TextBlock? _commandShortcut;
+    private ColumnDefinition? _markColumn;
+    private StackPanel? _mark;
 
     private FrameworkElement BuildTitleRow()
     {
         var row = new Grid();
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(WorkspaceList.DefaultWidth) });
+        _markColumn = new ColumnDefinition { Width = new GridLength(WorkspaceList.DefaultWidth) };
+        row.ColumnDefinitions.Add(_markColumn);
         row.ColumnDefinitions.Add(new ColumnDefinition());
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) }); // the window buttons
 
-        var mark = new StackPanel
+        var mark = _mark = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
@@ -83,9 +86,27 @@ public sealed partial class MainWindow
         Grid.SetColumn(center, 1);
         row.Children.Add(center);
 
-        KeepClickThrough(center);
+        _refreshClickThrough = KeepClickThrough(center);
         UpdateCommandCenter();
         return row;
+    }
+
+    /// <summary>Keeps the app mark over the sidebar: its width, just the icon over the rail, or its own width when the sidebar hides.</summary>
+    private void UpdateMark(SidebarMode mode)
+    {
+        if (_markColumn == null || _mark == null)
+        {
+            return;
+        }
+
+        _markColumn.Width = mode switch
+        {
+            SidebarMode.Full => new GridLength(WorkspaceList.DefaultWidth),
+            SidebarMode.Rail => new GridLength(WorkspaceList.RailWidth),
+            _ => GridLength.Auto,
+        };
+        _mark.Children[1].Visibility = mode == SidebarMode.Rail ? Visibility.Collapsed : Visibility.Visible;
+        _mark.Margin = new Thickness(mode == SidebarMode.Rail ? (WorkspaceList.RailWidth - 16) / 2 : 14, 0, 14, 0);
     }
 
     /// <summary>What the focused tab of the shown workspace is doing: its title, and the folder its shell reported.</summary>
@@ -118,7 +139,8 @@ public sealed partial class MainWindow
     /// Lets an element in the title row take clicks: the row is caption (it drags the window),
     /// so the element is registered as a click-through region, kept in step with layout.
     /// </summary>
-    private void KeepClickThrough(FrameworkElement element)
+    /// <returns>Brings the region up to date now (after a move layout doesn't see, like a slide).</returns>
+    private Action KeepClickThrough(FrameworkElement element)
     {
         RectInt32? set = null;
         void Update()
@@ -143,5 +165,6 @@ public sealed partial class MainWindow
 
         element.SizeChanged += (_, _) => Update();
         element.LayoutUpdated += (_, _) => Update();
+        return Update;
     }
 }

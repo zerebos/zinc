@@ -29,6 +29,17 @@ internal sealed partial class TabHeader : StackPanel
 
     public string Title => _title.Text;
 
+    /// <summary>Just the icon, centered (the sidebar's rail); the title stays in the tooltip.</summary>
+    public bool Compact
+    {
+        set
+        {
+            _title.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+            _icons.Margin = new Thickness(0, 0, value ? 0 : 10, 0);
+            HorizontalAlignment = value ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        }
+    }
+
     /// <summary>
     /// Room for the title, so it ends in an ellipsis rather than being cut off (a horizontal
     /// StackPanel gives its children unlimited width, so the TextBlock can't tell on its own).

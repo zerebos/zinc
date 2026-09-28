@@ -97,6 +97,18 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void SidebarAndTitleBarModes()
+    {
+        Assert.Equal(SidebarMode.Full, Load("").Sidebar);
+        Assert.Equal(TitleBarMode.Show, Load("").TitleBar);
+        Assert.Equal(SidebarMode.Rail, Load("[window]\nsidebar = \"rail\"").Sidebar);
+        Assert.Equal(SidebarMode.AutoHide, Load("[window]\nsidebar = \"auto-hide\"").Sidebar);
+        Assert.Equal(TitleBarMode.AutoHide, Load("[window]\ntitle-bar = \"auto-hide\"").TitleBar);
+        Assert.Equal(SidebarMode.Full, Load("[window]\nsidebar = \"2\"").Sidebar);        // not by number
+        Assert.Equal(TitleBarMode.Show, Load("[window]\ntitle-bar = \"hidden\"").TitleBar);
+    }
+
+    [Fact]
     public void QuitAfterLastWindowDefaultsToAutomatic()
     {
         Assert.Null(Load("").QuitAfterLastWindowClosed);

@@ -22,6 +22,27 @@ public enum WorkspaceTabs
     Left,
 }
 
+/// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
+public enum TitleBarMode
+{
+    Show,
+
+    /// <summary>Hidden until the pointer reaches the window's top edge.</summary>
+    AutoHide,
+}
+
+/// <summary>The workspace list with <c>workspace-tabs = left</c>. Config: <c>sidebar = full | rail | auto-hide</c>.</summary>
+public enum SidebarMode
+{
+    Full,
+
+    /// <summary>A narrow column of workspace icons.</summary>
+    Rail,
+
+    /// <summary>Hidden until the pointer reaches the window's left edge.</summary>
+    AutoHide,
+}
+
 /// <summary>
 /// One resolved set of settings (the global ones, or a profile's). <see cref="ConfigFile"/>
 /// reads config.toml into it; <see cref="Apply"/> parses one value by its Ghostty-style key,
@@ -79,6 +100,12 @@ public sealed record Config
 
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
+
+    /// <summary>The title bar with the workspace list. Config: <c>title-bar = show | auto-hide</c> (global).</summary>
+    public TitleBarMode TitleBar { get; init; }
+
+    /// <summary>How the workspace list shows. Config: <c>sidebar = full | rail | auto-hide</c> (global).</summary>
+    public SidebarMode Sidebar { get; init; }
 
     /// <summary>
     /// How visible panes without focus stay, 0.15–1 (1 = not dimmed). Config, as in Ghostty and
@@ -143,6 +170,8 @@ public sealed record Config
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
                 this with { WorkspaceTabs = tabs },
+            "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
+            "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
@@ -204,6 +233,14 @@ public sealed record Config
         }
 
         return true;
+    }
+
+    /// <summary>Parses a kebab-case mode name ("auto-hide" → AutoHide).</summary>
+    public static bool TryMode<T>(string value, out T mode) where T : struct, Enum
+    {
+        mode = default;
+        var name = value.Replace("-", "");
+        return name.Length > 0 && name.All(char.IsLetter) && Enum.TryParse(name, true, out mode);
     }
 
     private static bool TryHotkey(string value)

@@ -18,6 +18,9 @@ internal sealed partial class WorkspaceList : Grid
 {
     public const double DefaultWidth = 220;
 
+    /// <summary>The width as a rail: icons only.</summary>
+    public const double RailWidth = 52;
+
     private readonly StackPanel _items = new() { Spacing = 2, Padding = new Thickness(6, 6, 6, 6) };
     private readonly Dictionary<MainWindow.WorkspaceTab, Item> _byTab = new();
 
@@ -90,6 +93,23 @@ internal sealed partial class WorkspaceList : Grid
     /// <summary>Something was dropped on the list at a position (0 = before the first item).</summary>
     public event Action<DragEventArgs, int>? ListDrop;
 
+    private bool _compact;
+
+    /// <summary>A rail of icons (titles in tooltips) instead of the full list.</summary>
+    public bool Compact
+    {
+        get => _compact;
+        set
+        {
+            _compact = value;
+            Width = value ? RailWidth : DefaultWidth;
+            foreach (var item in _byTab.Values)
+            {
+                item.Compact = value;
+            }
+        }
+    }
+
     /// <summary>The element showing a workspace (to anchor flyouts to).</summary>
     public FrameworkElement? ElementFor(MainWindow.WorkspaceTab tab) => _byTab.GetValueOrDefault(tab);
 
@@ -132,7 +152,7 @@ internal sealed partial class WorkspaceList : Grid
     {
         if (!_byTab.TryGetValue(tab, out var item))
         {
-            item = new Item(tab);
+            item = new Item(tab) { Compact = _compact };
             item.Tapped += (_, e) =>
             {
                 e.Handled = true;
@@ -228,7 +248,8 @@ internal sealed partial class WorkspaceList : Grid
 
         private readonly Button _close;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        private bool _selected, _hovered;
+        private readonly TabHeader _header;
+        private bool _selected, _hovered, _compact;
         private (bool, Color?, Color)? _shown;
 
         public Item(MainWindow.WorkspaceTab tab)
@@ -239,6 +260,7 @@ internal sealed partial class WorkspaceList : Grid
             ColumnDefinitions.Add(new ColumnDefinition());
             ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
+            _header = tab.Header;
             tab.Header.Owner = this;
             // The same menu as the (hidden) title-bar tab: rename, color, split, move, close…
             ContextFlyout = tab.Item.ContextFlyout;
@@ -279,6 +301,18 @@ internal sealed partial class WorkspaceList : Grid
 
         public event Action? CloseClicked;
 
+        public bool Compact
+        {
+            set
+            {
+                _compact = value;
+                _header.Compact = value;
+                _header.Margin = new Thickness(value ? 0 : 12, 0, 0, 0);
+                SetColumnSpan(_header, value ? 2 : 1);
+                Restyle();
+            }
+        }
+
         private Color? _color;
         private Color _pane;
 
@@ -304,7 +338,8 @@ internal sealed partial class WorkspaceList : Grid
                     ? new SolidColorBrush(Color.FromArgb(0x80, c.R, c.G, c.B))
                     : _hovered ? (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"] : _clear;
             _pill.Visibility = _selected ? Visibility.Visible : Visibility.Collapsed;
-            _close.Visibility = _selected || _hovered ? Visibility.Visible : Visibility.Collapsed;
+            // The rail has no room for it: middle click and the context menu still close.
+            _close.Visibility = !_compact && (_selected || _hovered) ? Visibility.Visible : Visibility.Collapsed;
         }
     }
 }
