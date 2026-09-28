@@ -37,21 +37,19 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Whether a terminal is in front of you: its window active, its workspace shown, and it's its pane's shown tab.</summary>
+    /// <summary>
+    /// Whether you're looking at a terminal: its window active, its workspace shown, and it has
+    /// focus. A visible pane beside the focused one doesn't count; your attention is elsewhere.
+    /// </summary>
     private bool IsLookingAt(WorkspaceTab tab, TerminalTab pane) =>
-        _active && SelectedTab == tab && tab.Workspace.GroupOf(pane)?.Active == pane;
+        _active && SelectedTab == tab && tab.Workspace.Active == pane;
 
-    /// <summary>Clears the dots of what's now in front of you. Called from <see cref="UpdateFocusBorders"/>.</summary>
+    /// <summary>Clears the dot of what you're now looking at. Called from <see cref="UpdateFocusBorders"/>.</summary>
     private void ClearSeenAttention(WorkspaceTab tab)
     {
-        if (!_active || SelectedTab != tab)
+        if (_active && SelectedTab == tab)
         {
-            return;
-        }
-
-        foreach (var group in tab.Workspace.Groups)
-        {
-            group.Active.Attention = Attention.None;
+            tab.Active.Attention = Attention.None;
         }
     }
 

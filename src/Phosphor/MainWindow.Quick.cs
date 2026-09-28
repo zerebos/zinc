@@ -47,7 +47,13 @@ public sealed partial class MainWindow
             App.Instance.NoteActivated(this);
             if (SelectedTab is { } shown)
             {
-                UpdateFocusBorders(shown); // back in front: what's shown has been seen
+                UpdateFocusBorders(shown); // back in front: what's focused has been seen
+            }
+
+            // What finished while you were away pulses again now that you can see it.
+            foreach (var t in AllTabs())
+            {
+                t.Header.PulseAttention();
             }
 
             ShowHotkeyNoticeIfNeeded();

@@ -310,7 +310,7 @@ internal sealed partial class GroupView : Grid
 
         private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
         private readonly MainWindow.TerminalTab _tab;
-        private readonly AttentionDot _dot = new();
+        private readonly AttentionDot _dot = new() { Corner = false };
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private bool _active;
@@ -341,7 +341,7 @@ internal sealed partial class GroupView : Grid
                 Height = 14,
                 Margin = new Thickness(0, 0, 8, 0),
                 VerticalAlignment = VerticalAlignment.Center,
-                Children = { new IconSourceElement { IconSource = ProfileIcons.For(tab.Profile) }, _dot },
+                Children = { new IconSourceElement { IconSource = ProfileIcons.For(tab.Profile) } },
             };
             // The padding goes on the content, not the tab, so the accent line spans the whole tab
             // (like the line across a strip-less focused pane).
@@ -349,7 +349,7 @@ internal sealed partial class GroupView : Grid
             {
                 Padding = new Thickness(10, 0, 4, 0),
                 Orientation = Orientation.Horizontal,
-                Children = { icon, _title, close },
+                Children = { icon, _title, _dot, close },
             });
             Children.Add(_accent);
 

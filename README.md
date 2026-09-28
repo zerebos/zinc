@@ -279,10 +279,10 @@ output starts, and how it ended. With those marks, Phosphor can:
   (successes get a green bar too) or `"none"`;
 - **show what's running**: with workspaces on the left, the title bar shows the running command and
   how long it has been going;
-- **tell you when a long command finishes out of view**: in another workspace or tab, or while
-  you're in another app, a command that ran 10 seconds or more puts a dot on its tab's icon
-  (green, or red if it failed) until you look at it, and the taskbar button flashes if Phosphor
-  is in the background. In `[notify]`: `command-finished = "never"` turns this off, and
+- **tell you when a long command finishes out of view**: in another workspace, tab or pane
+  (anywhere but the focused one), or while you're in another app, a command that ran 10 seconds
+  or more puts a pulsing dot after its tab's title (on the icon in the rail): green, or red if it
+  failed, until you focus it. The taskbar button flashes if Phosphor is in the background. In `[notify]`: `command-finished = "never"` turns this off, and
   `command-finished-after` sets what counts as long (`30`, `"45s"`, `"2m"`);
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
   quitting, asks first while a command is running there (never at an idle prompt).

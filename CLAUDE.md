@@ -124,8 +124,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   = prompt decoration: p10k draws its frame corner after B). App: `TerminalControl.Commands.cs`
   (actions, scrollbar ticks, failure bars; logs `command: ...` with PHOSPHOR_LOG), command center.
   `MainWindow.Attention.cs`: `TerminalControl.CommandFinished` → `TerminalTab.Attention` (dot on
-  `TabHeader`/`GroupView` icons via `AttentionDot`; cleared in `UpdateFocusBorders` for what's in
-  view while the window is active), `FlashWindowEx`, and close confirmation: user closes go
+  `TabHeader`/`GroupView` via `AttentionDot`, after the title or on the icon's corner on the rail;
+  pulses on appearing and on window activation; "looking" = the focused terminal of the shown
+  workspace in the active window, cleared in `UpdateFocusBorders`), `FlashWindowEx`, and close confirmation: user closes go
   through `AskClosePane`/`CloseTab`/`CloseTabs`/`AppWindow.Closing`/`App.AskQuit`; `ClosePane`,
   `CloseTabNow`, `Quit` never ask (a shell exiting must not). `[notify]` is a config group.
   PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
