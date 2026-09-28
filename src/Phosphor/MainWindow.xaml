@@ -108,7 +108,7 @@
                     <TextBox
                         x:Name="PaletteQuery"
                         AutomationProperties.Name="Command palette search"
-                        PlaceholderText="Type a command (tabs, panes, profiles…)" />
+                        PlaceholderText="Type a command, or @ to find a tab" />
                     <ListView
                         x:Name="PaletteList"
                         Grid.Row="1"

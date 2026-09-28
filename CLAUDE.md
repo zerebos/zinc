@@ -137,6 +137,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   an unpackaged app's identity follows its exe path, and installs are versioned folders.
   PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
   string broke PSReadLine's prompt redraw after a failed command (text overwrote `> `).
+- Palette recents: `RecentCommands` (Core/Commands, by title; one instance on `App`, saved in
+  session.json's `recentCommands`) — `CommandFilter.Filter(..., recent)` puts the 5 newest first
+  on an empty query and boosts them a little otherwise. Entries that come and go (workspaces,
+  tabs) are `Remember: false`. "@" = tab switcher (`MainWindow.TabSwitcher.cs`, `IsTab` entries);
+  `test:palette-open:<query>` opens it for captures; `palette:<title>` runs through
+  `RunPaletteCommand`, so it counts as recent.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

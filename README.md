@@ -376,7 +376,8 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | Drag / double-click / triple-click | Select cells / word / line |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
-| `Ctrl+Shift+P` | Command palette: every action, profile and tab, fuzzy-searchable |
+| `Ctrl+Shift+P` | Command palette: every action, profile and workspace, fuzzy-searchable; recently used first. Type `@` to search this window's tabs instead |
+| `Ctrl+Shift+O` | Go to tab: the palette's `@` (title, running command, folder, workspace; tabs with a dot first) |
 | `Ctrl+Shift+F` | Find in the pane's scrollback |
 | `Ctrl+Shift+↑` / `Ctrl+Shift+↓` | Previous / next prompt ([shell integration](#shell-integration)); a line without it |
 | `Ctrl+Shift+B` | With workspaces on the left: sidebar full → rail → auto-hide |
@@ -437,6 +438,8 @@ its line, and the rest still applies.
 | `resize <direction>` | Move the focused pane's divider. |
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
+| `tab-switcher` | Open the palette searching this window's tabs (its `@`). |
+| `next-attention` | Go to the next tab with a dot: failed commands first, then programs' notifications, then finished commands. |
 | `jump-to-prompt previous`, `jump-to-prompt next` | Scroll the previous or next prompt to the top (needs [shell integration](#shell-integration); without it, a line). |
 | `select-output`, `copy-output` | Select or copy the output of the command at the top of the pane, or the last one ([shell integration](#shell-integration)). |
 | `toggle-sidebar` | With workspaces on the left: cycle the sidebar through full, rail and auto-hide. `toggle-sidebar rail` (or `auto-hide`) switches between that and full. |

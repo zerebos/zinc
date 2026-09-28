@@ -1011,7 +1011,19 @@ public sealed partial class MainWindow : Window
                 // "palette:Move tab to new workspace" runs the command palette entry with that title.
                 var command = BuildPaletteCommands(tab).FirstOrDefault(c => c.Title == chord["palette:".Length..]);
                 Log.Write($"test {chord}: {(command != null ? "found" : "missing")}");
-                command?.Run();
+                if (command != null)
+                {
+                    RunPaletteCommand(command); // as if chosen: it becomes a recent command
+                }
+
+                return;
+            }
+
+            if (chord.StartsWith("test:palette-open:"))
+            {
+                // "test:palette-open:@" opens the palette with that query typed (for captures).
+                OpenCommandPalette(chord["test:palette-open:".Length..]);
+                Log.Write($"test {chord}: done");
                 return;
             }
 
@@ -1109,6 +1121,12 @@ public sealed partial class MainWindow : Window
                 return true;
             case TerminalAction.PreviousTab when tabGroup is { Tabs.Count: > 1 }:
                 CycleGroup(tab, tabGroup, -1);
+                return true;
+            case TerminalAction.TabSwitcher:
+                OpenCommandPalette(TabPrefix);
+                return true;
+            case TerminalAction.NextAttention:
+                GoToNextAttention();
                 return true;
             case TerminalAction.OpenCommandPalette:
                 OpenCommandPalette();

@@ -12,15 +12,19 @@ using Windows.System;
 
 namespace Phosphor;
 
-// The command palette: every action, profile and tab as a searchable list.
+// The command palette: every action, profile and workspace as a searchable list, recently used
+// ones first; "@" searches this window's tabs instead (the tab switcher), dots first.
 public sealed partial class MainWindow
 {
     private const int MaxPaletteRows = 200;
 
+    /// <summary>Typed first, the palette searches tabs (what "Go to tab…" opens with).</summary>
+    private const string TabPrefix = "@";
+
     private List<PaletteCommand> _paletteCommands = [];
     private bool _paletteWired;
 
-    private void OpenCommandPalette()
+    private void OpenCommandPalette(string prefix = "")
     {
         if (SelectedTab is not { } tab)
         {
@@ -29,7 +33,8 @@ public sealed partial class MainWindow
 
         WirePalette();
         _paletteCommands = BuildPaletteCommands(tab);
-        PaletteQuery.Text = "";
+        PaletteQuery.Text = prefix;
+        PaletteQuery.SelectionStart = prefix.Length;
         RefreshPalette();
         PaletteLayer.Visibility = Visibility.Visible;
         PaletteQuery.Focus(FocusState.Programmatic);
@@ -53,6 +58,11 @@ public sealed partial class MainWindow
     {
         // Close first so commands that open UI or move focus (rename, splits) start clean.
         ClosePalette();
+        if (command.Remember && !command.IsTab)
+        {
+            App.Instance.RecentCommands.Note(command.Title);
+        }
+
         command.Run();
     }
 
@@ -138,7 +148,11 @@ public sealed partial class MainWindow
     private void RefreshPalette()
     {
         PaletteList.Items.Clear();
-        foreach (var match in CommandFilter.Filter(_paletteCommands, PaletteQuery.Text).Take(MaxPaletteRows))
+        var query = PaletteQuery.Text;
+        var tabs = query.StartsWith(TabPrefix, StringComparison.Ordinal);
+        var matches = CommandFilter.Filter(_paletteCommands.Where(c => c.IsTab == tabs),
+            tabs ? query[TabPrefix.Length..] : query, tabs ? null : App.Instance.RecentCommands);
+        foreach (var match in matches.Take(MaxPaletteRows))
         {
             PaletteList.Items.Add(PaletteRow(match));
         }
@@ -149,7 +163,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>One row: the title with matched letters in bold, the shortcut on the right.</summary>
+    /// <summary>One row: an icon (profiles, tabs), the title with matched letters in bold, "recent" and the shortcut on the right.</summary>
     private static FrameworkElement PaletteRow(PaletteMatch match)
     {
         var title = new TextBlock { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
@@ -169,10 +183,40 @@ public sealed partial class MainWindow
             start = end;
         }
 
-        var row = new Grid { Tag = match.Command, ColumnSpacing = 12 };
+        var row = new Grid { Tag = match.Command, ColumnSpacing = 10 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(16) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        // A profile's icon (profile commands, tabs); a tab also shows its dot.
+        var (profile, tabAttention) = match.Command.Icon switch
+        {
+            Profile p => (p, Attention.None),
+            TerminalTab t => (t.Profile, t.Attention),
+            _ => (null, Attention.None),
+        };
+        if (profile != null)
+        {
+            row.Children.Add(new IconSourceElement { IconSource = ProfileIcons.For(profile), Width = 16, Height = 16, VerticalAlignment = VerticalAlignment.Center });
+        }
+
+        Grid.SetColumn(title, 1);
         row.Children.Add(title);
+        if (tabAttention != Attention.None)
+        {
+            var dot = new AttentionDot { Corner = false };
+            dot.Show(tabAttention);
+            Grid.SetColumn(dot, 2);
+            row.Children.Add(dot);
+        }
+        else if (match.Recent)
+        {
+            var recent = new TextBlock { Text = "recent", Opacity = 0.45, FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+            Grid.SetColumn(recent, 2);
+            row.Children.Add(recent);
+        }
+
         if (match.Command.Shortcut is { } shortcut)
         {
             var keys = new TextBlock
@@ -182,7 +226,7 @@ public sealed partial class MainWindow
                 VerticalAlignment = VerticalAlignment.Center,
                 FontSize = 12,
             };
-            Grid.SetColumn(keys, 1);
+            Grid.SetColumn(keys, 3);
             row.Children.Add(keys);
         }
 
@@ -294,19 +338,21 @@ public sealed partial class MainWindow
         for (var i = 0; i < profiles.Count; i++)
         {
             var profile = profiles[i];
+            void ForProfile(string title, Action run, string? keys = null) =>
+                commands.Add(new PaletteCommand(title, keys, run, Icon: profile));
             var command = ShellResolver.ForProfile(profile.Config);
             var dir = profile.Config.ResolveWorkingDirectory();
             if (group != null)
             {
-                Custom($"New tab: {profile.Name}", () => NewTabInGroup(tab, group, profile, command, dir),
+                ForProfile($"New tab: {profile.Name}", () => NewTabInGroup(tab, group, profile, command, dir),
                     ShortcutForProfile(profile, i));
             }
 
-            Custom($"New workspace: {profile.Name}", () => OpenTab(profile, command, dir),
+            ForProfile($"New workspace: {profile.Name}", () => OpenTab(profile, command, dir),
                 group == null ? ShortcutForProfile(profile, i) : null);
-            Custom($"Split right: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Right, profile, command, dir));
-            Custom($"Split down: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Down, profile, command, dir));
-            Custom($"New window: {profile.Name}", () => App.Instance.OpenWindow(profile));
+            ForProfile($"Split right: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Right, profile, command, dir));
+            ForProfile($"Split down: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Down, profile, command, dir));
+            ForProfile($"New window: {profile.Name}", () => App.Instance.OpenWindow(profile));
         }
 
         // Open workspaces, and the tabs of this one.
@@ -315,18 +361,12 @@ public sealed partial class MainWindow
         {
             var target = t;
             var switchKeys = index < 8 ? Keys(new ActionInvocation(TerminalAction.SwitchToTab, index)) : null;
-            Custom($"Switch to workspace: {t.Header.Title}", () => Tabs.SelectedItem = target.Item, switchKeys);
+            commands.Add(new PaletteCommand($"Switch to workspace: {t.Header.Title}", switchKeys,
+                () => Tabs.SelectedItem = target.Item, Remember: false, Icon: target.Active.Profile));
             index++;
         }
 
-        if (tab.Workspace.Tabs.Count() > 1)
-        {
-            foreach (var t in tab.Workspace.Tabs)
-            {
-                var target = t;
-                Custom($"Switch to tab: {GroupView.TitleOf(t)}", () => ShowGroupTab(tab, target));
-            }
-        }
+        commands.AddRange(TabSwitcherCommands());
 
         // Workspace colors.
         foreach (var (name, rgb) in TabColors)

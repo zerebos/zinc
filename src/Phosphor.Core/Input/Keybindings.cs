@@ -76,6 +76,12 @@ public enum TerminalAction
 
     /// <summary>Copy the output of the command in view (or the last one).</summary>
     CopyOutput,
+
+    /// <summary>The command palette searching this window's tabs (its "@" mode).</summary>
+    TabSwitcher,
+
+    /// <summary>Go to the next tab with a dot (a failed command first, then programs' notifications, then finished ones).</summary>
+    NextAttention,
 }
 
 /// <summary>
@@ -329,6 +335,7 @@ public sealed class Keybindings
         b.Bind("ctrl+shift+tab", TerminalAction.PreviousTab);
         b.Bind("ctrl+shift+n", TerminalAction.NewWindow);
         b.Bind("ctrl+shift+p", TerminalAction.OpenCommandPalette);
+        b.Bind("ctrl+shift+o", TerminalAction.TabSwitcher);
         b.Bind("ctrl+shift+f", TerminalAction.Find);
         b.Bind("ctrl+shift+b", new ActionInvocation(TerminalAction.ToggleSidebar, -1));
         // Windows Terminal scrolls a line with these; prompts are the better stops (and without

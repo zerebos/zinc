@@ -33,6 +33,7 @@ public partial class App : Application
         // leave it running in the tray for the quick terminal.
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
         _config = ConfigFile.Load();
+        LoadRecentCommands();
         _keybindings = _config.Keybindings;
         foreach (var warning in _config.Warnings)
         {
@@ -390,6 +391,18 @@ public partial class App : Application
     private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
     private string? _savedSession;
 
+    /// <summary>The command palette's recently run commands, shared by every window; saved with the session.</summary>
+    internal Phosphor.Commands.RecentCommands RecentCommands { get; private set; } = new();
+
+    /// <summary>Recent commands come back even when the windows don't (a launch with a command).</summary>
+    private void LoadRecentCommands()
+    {
+        if (_sessionPath != null && _config.Global.RestoreSession && SessionStore.Load(_sessionPath)?.RecentCommands is { } titles)
+        {
+            RecentCommands = new Phosphor.Commands.RecentCommands(titles);
+        }
+    }
+
     // Held here: a DispatcherQueueTimer nothing references is garbage-collected and stops
     // firing (saves silently stopped after the first GC, 2026-09-27).
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _sessionTimer;
@@ -490,7 +503,7 @@ public partial class App : Application
                 return;
             }
 
-            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows));
+            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles]));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);
