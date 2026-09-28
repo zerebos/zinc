@@ -83,7 +83,7 @@ internal sealed partial class AttentionDot : Microsoft.UI.Xaml.Controls.Grid
         }
     }
 
-    /// <summary>Grows and shrinks three times: easy to catch from the corner of an eye, then still.</summary>
+    /// <summary>Grows and shrinks twice (the user tried three: a bit much): easy to catch from the corner of an eye, then still.</summary>
     private void Pulse()
     {
         _pulse?.Stop();
@@ -96,7 +96,7 @@ internal sealed partial class AttentionDot : Microsoft.UI.Xaml.Controls.Grid
                 To = 1.8,
                 Duration = TimeSpan.FromMilliseconds(300),
                 AutoReverse = true,
-                RepeatBehavior = new RepeatBehavior(3),
+                RepeatBehavior = new RepeatBehavior(2),
                 EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
             };
             Storyboard.SetTarget(grow, _scale);
