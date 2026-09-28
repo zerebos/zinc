@@ -10,8 +10,11 @@ plain vector render smears it, so below 256 px each size is composed from layers
      3 px up the faint glow around each cell;
   3. the glass highlight and rim on top, rendered by resvg.
 
-At 16 and 20 px the 13-column mark can't keep its proportions (it needs 13 px), so
-it's drawn at 1 px per cell and fills more of the tile than the design does.
+At 20 px the 13-column mark can't keep its proportions (it needs 13 px), so it's drawn
+at 1 px per cell and fills more of the tile than the design does. At 16 px (the tray and
+the title bar at 100%) that filled almost all of it, so there the cells are blended
+instead: the grid is scaled to 1.3x the design's proportion (~70% of the tile) and each
+pixel lit by how much of it the cells cover (the user's pick among crisper options).
 
 Cell positions and colors are parsed from the SVG, so edits to the design are picked
 up by rerunning this. Requires: pip install resvg-py pillow
@@ -117,9 +120,46 @@ def snapped(size: int) -> Image.Image:
     return Image.alpha_composite(Image.alpha_composite(screen, layer), top_layer)
 
 
+def blended(size: int, scale: float) -> Image.Image:
+    """The lit cells as full blocks, scaled to `scale` x the design's size and centered as
+    designed; each pixel takes the mark's color with its coverage (8x8 samples) as alpha."""
+    screen = render(src.replace(lit_group, "").replace(glow_group.group(0), "")
+                    .replace(highlight, "").replace(rim, ""), size)
+    glass = re.sub(r'<rect width="[\d.]+" height="[\d.]+" fill="url\(#screen\)"/>', "", src)
+    glass = re.sub(r'<g fill="#3DF2A0" fill-opacity="[\d.]+">.*?</g>', "", glass, flags=re.S)
+    glass = glass.replace(lit_group, "")
+
+    unit = size / view * scale
+    width = ((grid_w - 1) * PITCH + cell_size) * unit
+    height = width * grid_h / grid_w
+    left = center_x * size / view - width / 2
+    top = center_y * size / view - height / 2
+    top_c, bot_c = hex_rgb(lit_top), hex_rgb(lit_bottom)
+    layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    pixels = layer.load()
+    n = 8
+    for y in range(size):
+        for x in range(size):
+            hits = 0
+            for sy in range(n):
+                for sx in range(n):
+                    u = (x + (sx + 0.5) / n - left) / width * grid_w
+                    v = (y + (sy + 0.5) / n - top) / height * grid_h
+                    if 0 <= u < grid_w and 0 <= v < grid_h and (c0 + int(u), r0 + int(v)) in cells:
+                        hits += 1
+            if hits:
+                t = min(1.0, max(0.0, (y + 0.5 - top) / height))
+                color = tuple(round(a + (b - a) * t) for a, b in zip(top_c, bot_c))
+                pixels[x, y] = color + (round(255 * hits / (n * n)),)
+
+    return Image.alpha_composite(Image.alpha_composite(screen, layer), render(glass, size))
+
+
 def icon(size: int) -> Image.Image:
     # At 256 px a cell is ~11 px: the vector render is crisp enough and keeps the rounding.
-    return vector(size) if size >= 256 else snapped(size)
+    if size >= 256:
+        return vector(size)
+    return blended(size, 1.3) if size == 16 else snapped(size)
 
 
 def preview(path: pathlib.Path):

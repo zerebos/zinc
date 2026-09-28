@@ -293,8 +293,10 @@ and read state after the write (see `_titleDirty`).
 - App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
   `.scratch/venv`) builds the .ico from assets/phosphor-icon.svg (the user's design, 2026-09-26;
   shade-phosphor-fluent.svg is the previous one). The mark is a dot-matrix of lit cells, so
-  sizes below 256 are re-drawn snapped to whole pixels — rerun after SVG edits and look at
-  `--preview`. The SVG carries a large C2PA `<metadata>` blob; the script strips it. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
+  sizes below 256 are re-drawn snapped to whole pixels, except 16 px (tray and title bar at
+  100%; the taskbar and Alt+Tab use the 32 frame — checked with a color-per-size debug .ico),
+  which is blended at ~70% of the tile: the user's pick side by side. Rerun after SVG edits and
+  look at `--preview`. The SVG carries a large C2PA `<metadata>` blob; the script strips it. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
   uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
 - Keep every `DispatcherQueueTimer` in a field: one only a local references is garbage-collected
   and silently stops firing. The session save timer did this — saves stopped after the first GC,
