@@ -1,9 +1,11 @@
+using System.Numerics;
 using Microsoft.Graphics.Canvas.Text;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Documents;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Phosphor.Ghostty;
 using Phosphor.Terminal;
@@ -36,6 +38,16 @@ internal sealed partial class WelcomeWindow : Window
     private readonly Border _preview = new() { CornerRadius = new CornerRadius(8), Padding = new Thickness(14, 12, 14, 12) };
     private readonly RichTextBlock _previewText = new() { FontSize = 13, IsTextSelectionEnabled = false };
 
+    // One question per page, Back/Next and page dots below.
+    private readonly bool _firstRun;
+    private readonly FrameworkElement[] _pages;
+    private readonly ScrollViewer _scroller = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+    private readonly StackPanel _dots = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _back = new() { Content = "Back", MinWidth = 96 };
+    private readonly Button _next = new() { MinWidth = 120 };
+    private Button? _save;
+    private int _page = -1;
+
     /// <summary>The answers (null if the page was skipped or closed).</summary>
     public event Action<WelcomeChoices?>? Finished;
 
@@ -46,7 +58,8 @@ internal sealed partial class WelcomeWindow : Window
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(980, 820));
+        AppWindow.Resize(new Windows.Graphics.SizeInt32(940, 720));
+        _firstRun = firstRun;
 
         // Start from what's in force; on first run, workspaces in the sidebar (Phosphor at its most
         // itself; Simple is one click away).
@@ -57,19 +70,33 @@ internal sealed partial class WelcomeWindow : Window
         _scheme = config.SchemeName;
         _profile = config.DefaultProfile.Id;
 
-        var page = new StackPanel { Spacing = 28, MaxWidth = 860, Padding = new Thickness(32, 44, 32, 32) };
-        page.Children.Add(Header());
+        FrameworkElement style;
+        (style, _simpleCard, _workspacesCard, _workspacesOnRow) = StylePage();
+        _pages = [style, LookPage(), ShellPage()];
 
-        (_simpleCard, _workspacesCard, _workspacesOnRow) = StyleSection(page);
-        LookSection(page);
-        ShellSection(page);
-        page.Children.Add(Footer(firstRun));
+        // Header, the page (scrolls if the window is small), footer pinned at the bottom.
+        var root = new Grid { RequestedTheme = ElementTheme.Dark, Padding = new Thickness(40, 44, 40, 24), RowSpacing = 24 };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition());
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var pages = new Grid();
+        foreach (var page in _pages)
+        {
+            page.Visibility = Visibility.Collapsed;
+            pages.Children.Add(page);
+        }
 
-        var root = new Grid { RequestedTheme = ElementTheme.Dark };
-        root.Children.Add(new ScrollViewer { Content = page, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _scroller.Content = pages;
+        var footer = Footer();
+        Grid.SetRow(_scroller, 1);
+        Grid.SetRow(footer, 2);
+        root.Children.Add(Header());
+        root.Children.Add(_scroller);
+        root.Children.Add(footer);
         Content = root;
         ShowStyle();
         UpdatePreview();
+        ShowPage(0);
 
         // Closing it is skipping it.
         Closed += (_, _) =>
@@ -82,27 +109,78 @@ internal sealed partial class WelcomeWindow : Window
         };
     }
 
-    private static FrameworkElement Header() => new StackPanel
-    {
-        Spacing = 6,
-        Children =
-        {
-            new TextBlock { Text = "Welcome to Phosphor", FontSize = 30, FontWeight = FontWeights.SemiBold },
-            new TextBlock
-            {
-                Text = "A few choices to start with. They all end up in config.toml, and you can change them any time, " +
-                       "or come back here from the command palette (Ctrl+Shift+P): Welcome…",
-                TextWrapping = TextWrapping.Wrap,
-                Opacity = 0.8,
-            },
-        },
-    };
+    private static FrameworkElement Header() =>
+        new TextBlock { Text = "Welcome to Phosphor", FontSize = 30, FontWeight = FontWeights.SemiBold };
 
     private static TextBlock SectionTitle(string text) => new() { Text = text, FontSize = 18, FontWeight = FontWeights.SemiBold };
 
+    private static TextBlock Note(string text) => new() { Text = text, TextWrapping = TextWrapping.Wrap, Opacity = 0.8 };
+
+    // ------------------------------------------------------------ pages
+
+    private void ShowPage(int index)
+    {
+        index = Math.Clamp(index, 0, _pages.Length - 1);
+        if (index == _page)
+        {
+            return;
+        }
+
+        var forward = index > _page;
+        if (_page >= 0)
+        {
+            _pages[_page].Visibility = Visibility.Collapsed;
+        }
+
+        SlideIn(_pages[index], forward);
+        _pages[index].Visibility = Visibility.Visible;
+        _page = index;
+        _scroller.ChangeView(null, 0, null, disableAnimation: true);
+        ShowDots();
+
+        var last = index == _pages.Length - 1;
+        _back.Visibility = index > 0 ? Visibility.Visible : Visibility.Collapsed;
+        _next.Content = !last ? "Next" : _firstRun ? "Get started" : "Save";
+        AutomationProperties.SetName(_next, (string)_next.Content);
+        if (_save != null)
+        {
+            _save.Visibility = last ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        // Enter moves on (and nothing on the page wears a focus outline at first).
+        _next.Focus(FocusState.Programmatic);
+    }
+
+    /// <summary>The page slides in from the side it comes from (and fades in).</summary>
+    private static void SlideIn(FrameworkElement page, bool forward)
+    {
+        if (TestHooks.Deterministic)
+        {
+            return;
+        }
+
+        ElementCompositionPreview.SetIsTranslationEnabled(page, true);
+        var compositor = ElementCompositionPreview.GetElementVisual(page).Compositor;
+        var ease = compositor.CreateCubicBezierEasingFunction(new Vector2(0.1f, 0.9f), new Vector2(0.2f, 1f));
+        var slide = compositor.CreateVector3KeyFrameAnimation();
+        slide.Target = "Translation";
+        slide.InsertKeyFrame(0, new Vector3(forward ? 48 : -48, 0, 0));
+        slide.InsertKeyFrame(1, Vector3.Zero, ease);
+        slide.Duration = TimeSpan.FromMilliseconds(300);
+        var fade = compositor.CreateScalarKeyFrameAnimation();
+        fade.Target = "Opacity";
+        fade.InsertKeyFrame(0, 0);
+        fade.InsertKeyFrame(1, 1, ease);
+        fade.Duration = TimeSpan.FromMilliseconds(200);
+        var show = compositor.CreateAnimationGroup();
+        show.Add(slide);
+        show.Add(fade);
+        ElementCompositionPreview.SetImplicitShowAnimation(page, show);
+    }
+
     // ------------------------------------------------------------ how you work
 
-    private (Button Simple, Button Workspaces, StackPanel OnRow) StyleSection(Panel page)
+    private (FrameworkElement Page, Button Simple, Button Workspaces, StackPanel OnRow) StylePage()
     {
         var simple = Card("Simple", "Tabs along the top, one terminal each. Like Windows Terminal.", Mockup(sidebar: false, panes: false));
         var workspaces = Card("Workspaces", "Workspaces in a sidebar, each with its own tabs and splits. Good for juggling projects.",
@@ -129,8 +207,25 @@ internal sealed partial class WelcomeWindow : Window
             Children = { new TextBlock { Text = "Workspaces:", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 }, left, top },
         };
 
-        page.Children.Add(new StackPanel { Spacing = 12, Children = { SectionTitle("How do you like to work?"), cards, onRow } });
-        return (simple, workspaces, onRow);
+        var page = new StackPanel
+        {
+            Spacing = 12,
+            Children =
+            {
+                Note("A few choices to start with. They all end up in config.toml, and you can change them any time, " +
+                     "or come back here from the command palette (Ctrl+Shift+P): Welcome…"),
+                new Border { Height = 8 },
+                SectionTitle("How do you like to work?"),
+                cards,
+                onRow,
+            },
+        };
+        if (!_firstRun)
+        {
+            page.Children.Add(Note("This applies to windows opened from now on; colors, font and shell apply right away."));
+        }
+
+        return (page, simple, workspaces, onRow);
     }
 
     /// <summary>A layout choice: a button (keyboard, screen readers), drawn as a card.</summary>
@@ -221,11 +316,11 @@ internal sealed partial class WelcomeWindow : Window
 
     // ------------------------------------------------------------ colors and font
 
-    private void LookSection(Panel page)
+    private FrameworkElement LookPage()
     {
         var schemes = new List<string> { DefaultSchemeLabel };
         schemes.AddRange(_config.Themes.Names());
-        var list = new ListView { Height = 260, SelectionMode = ListViewSelectionMode.Single };
+        var list = new ListView { Height = 390, SelectionMode = ListViewSelectionMode.Single };
         AutomationProperties.SetName(list, "Color schemes");
         var search = new TextBox { PlaceholderText = "Search 650 color schemes" };
         AutomationProperties.SetName(search, "Search color schemes");
@@ -275,7 +370,7 @@ internal sealed partial class WelcomeWindow : Window
         Grid.SetColumn(right, 1);
         columns.Children.Add(left);
         columns.Children.Add(right);
-        page.Children.Add(new StackPanel { Spacing = 12, Children = { SectionTitle("Colors and font"), columns } });
+        return new StackPanel { Spacing = 12, Children = { SectionTitle("Colors and font"), columns } };
     }
 
     /// <summary>Installed fixed-width families, sorted.</summary>
@@ -362,9 +457,9 @@ internal sealed partial class WelcomeWindow : Window
 
     // ------------------------------------------------------------ shell
 
-    private void ShellSection(Panel page)
+    private FrameworkElement ShellPage()
     {
-        var shells = new ListView { SelectionMode = ListViewSelectionMode.Single, MaxHeight = 280 };
+        var shells = new ListView { SelectionMode = ListViewSelectionMode.Single, MaxHeight = 440 };
         AutomationProperties.SetName(shells, "Default shell");
         foreach (var profile in _config.VisibleProfiles)
         {
@@ -385,51 +480,100 @@ internal sealed partial class WelcomeWindow : Window
 
         shells.SelectedItem = shells.Items.OfType<StackPanel>().FirstOrDefault(r => (string)r.Tag == _profile) ?? shells.Items.FirstOrDefault();
         shells.SelectionChanged += (_, _) => _profile = (shells.SelectedItem as StackPanel)?.Tag as string;
-        page.Children.Add(new StackPanel
+        return new StackPanel
         {
             Spacing = 12,
             Children =
             {
                 SectionTitle("Default shell"),
-                new TextBlock { Text = "New tabs open with it. Found on this PC; every one of them stays a click away in the ▾ menu.", Opacity = 0.8, TextWrapping = TextWrapping.Wrap },
+                Note("New tabs open with it. Found on this PC; every one of them stays a click away in the ▾ menu."),
                 shells,
             },
-        });
+        };
     }
 
     // ------------------------------------------------------------ finish
 
-    private FrameworkElement Footer(bool firstRun)
+    /// <summary>Skip (or Cancel) on the left, page dots in the middle, Back / Next on the right.</summary>
+    private FrameworkElement Footer()
     {
-        var start = new Button
-        {
-            Content = firstRun ? "Get started" : "Save",
-            Style = (Style)Application.Current.Resources["AccentButtonStyle"],
-            MinWidth = 140,
-        };
-        var skip = new Button { Content = firstRun ? "Skip: use the defaults" : "Cancel" };
-        start.Click += (_, _) => Finish(new WelcomeChoices(_style, _workspacesOn, _scheme, _font, _profile));
-        // Enter accepts what's shown (and nothing above wears a focus outline at first).
-        start.Loaded += (_, _) => start.Focus(FocusState.Programmatic);
+        var skip = new Button { Content = _firstRun ? "Skip: use the defaults" : "Cancel" };
         skip.Click += (_, _) => Finish(null);
-        var note = new TextBlock
+        _next.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
+        _next.Click += (_, _) =>
         {
-            Text = firstRun ? "" : "How you work applies to windows opened from now on; colors, font and shell apply right away.",
-            Opacity = 0.7,
-            TextWrapping = TextWrapping.Wrap,
-            VerticalAlignment = VerticalAlignment.Center,
+            if (_page < _pages.Length - 1)
+            {
+                ShowPage(_page + 1);
+            }
+            else
+            {
+                Save();
+            }
         };
+        _back.Click += (_, _) => ShowPage(_page - 1);
+        for (var i = 0; i < _pages.Length; i++)
+        {
+            _dots.Children.Add(Dot(i));
+        }
+        _next.Loaded += (_, _) => _next.Focus(FocusState.Programmatic);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _back, _next } };
+        // Coming back later to change one thing: save from any page.
+        if (!_firstRun)
+        {
+            _save = new Button { Content = "Save", MinWidth = 96 };
+            _save.Click += (_, _) => Save();
+            buttons.Children.Insert(0, _save);
+        }
+
         var row = new Grid { ColumnSpacing = 12 };
         row.ColumnDefinitions.Add(new ColumnDefinition());
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(skip, 1);
-        Grid.SetColumn(start, 2);
-        row.Children.Add(note);
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        skip.HorizontalAlignment = HorizontalAlignment.Left;
+        buttons.HorizontalAlignment = HorizontalAlignment.Right;
+        Grid.SetColumn(_dots, 1);
+        Grid.SetColumn(buttons, 2);
         row.Children.Add(skip);
-        row.Children.Add(start);
+        row.Children.Add(_dots);
+        row.Children.Add(buttons);
         return row;
     }
+
+    /// <summary>A page dot: a button (click, keyboard, screen readers) with no chrome of its own.</summary>
+    private Button Dot(int page)
+    {
+        var dot = new Button
+        {
+            Padding = new Thickness(5, 8, 5, 8),
+            BorderThickness = new Thickness(0),
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            Content = new Border { Height = 8, CornerRadius = new CornerRadius(4) },
+        };
+        foreach (var key in new[] { "ButtonBackgroundPointerOver", "ButtonBackgroundPressed" })
+        {
+            dot.Resources[key] = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        }
+
+        AutomationProperties.SetName(dot, $"Page {page + 1} of {_pages.Length}");
+        dot.Click += (_, _) => ShowPage(page);
+        return dot;
+    }
+
+    /// <summary>The current page's dot is a wider accent pill; the others, small grey dots.</summary>
+    private void ShowDots()
+    {
+        for (var i = 0; i < _dots.Children.Count; i++)
+        {
+            var pill = (Border)((Button)_dots.Children[i]).Content;
+            var current = i == _page;
+            pill.Width = current ? 24 : 8;
+            pill.Background = (Brush)Application.Current.Resources[current ? "AccentFillColorDefaultBrush" : "ControlStrongFillColorDefaultBrush"];
+        }
+    }
+
+    private void Save() => Finish(new WelcomeChoices(_style, _workspacesOn, _scheme, _font, _profile));
 
     private void Finish(WelcomeChoices? choices)
     {

@@ -159,7 +159,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   in place and only what changed vs the config in force) → first window opens; palette
   "Welcome…" reopens it (then a reload applies; the layout only to new windows).
   `ConfigFile.SchemeName` = the global colors.theme name. A missing config path is how tests get
-  a first run (`visual.ps1` captures `welcome.png`).
+  a first run (`visual.ps1` captures `welcome.png`, then `welcome-2/3.png` via UIA "Next"). Paged:
+  one question per page, Back/Next and page dots (buttons named "Page N of M"); reopened, Save
+  is on every page.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.
