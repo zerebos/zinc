@@ -128,6 +128,15 @@ public sealed record Config
 
     public TerminalTheme Theme { get; init; } = TerminalTheme.Default;
 
+    /// <summary>With a light/dark theme pair: whether its dark side is the one in force. Null for a single theme.</summary>
+    public bool? PairedDark { get; init; }
+
+    /// <summary>
+    /// Whether programs are told the colors are dark (CSI ? 996 n, mode 2031): the side of a
+    /// light/dark pair in force, else whether the background is dark.
+    /// </summary>
+    public bool IsDark => PairedDark ?? 0.2126 * Theme.Background.R + 0.7152 * Theme.Background.G + 0.0722 * Theme.Background.B < 128;
+
     /// <summary>
     /// Pointer over the terminal: an arrow (default, like Windows Terminal) or a text
     /// I-beam (like Ghostty, kitty, WezTerm). Config: <c>mouse-pointer = arrow | text</c>.

@@ -226,6 +226,7 @@ public sealed partial class TerminalControl : UserControl
         Log.Write($"pane: start {cols}x{rows}: {_commandLine}");
         var m = _renderer.Metrics;
         var session = new TerminalSession(cols, rows, _config.Theme);
+        session.SetColorScheme(_config.IsDark);
         session.Resize(cols, rows, m.WidthPx, m.HeightPx);
         _selection = new SelectionGesture(session);
 
@@ -305,6 +306,7 @@ public sealed partial class TerminalControl : UserControl
         if (_session is { } session)
         {
             session.SetTheme(config.Theme);
+            session.SetColorScheme(config.IsDark); // tells programs that asked to hear of it
             ApplyClipboardPermissions(session);
         }
 

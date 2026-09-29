@@ -156,6 +156,7 @@ public sealed partial class MainWindow
     [
         "TabViewItemHeaderBackground", "TabViewItemHeaderBackgroundSelected",
         "TabViewItemHeaderBackgroundPointerOver", "TabViewItemHeaderBackgroundPressed",
+        "TabViewItemHeaderForegroundSelected", "TabViewItemIconForegroundSelected", "TabViewItemHeaderSelectedCloseButtonForeground",
     ];
 
     private void SetTabColor(WorkspaceTab tab, Windows.UI.Color? color)
@@ -197,6 +198,14 @@ public sealed partial class MainWindow
         else
         {
             tab.Item.Resources["TabViewItemHeaderBackgroundSelected"] = new SolidColorBrush(paneBackground);
+        }
+
+        // The selected tab's text on a light background (a light scheme, a yellow tab): dark.
+        if (Contrast.TextOn(tab.Color ?? paneBackground) is { } text)
+        {
+            tab.Item.Resources["TabViewItemHeaderForegroundSelected"] = text;
+            tab.Item.Resources["TabViewItemIconForegroundSelected"] = text;
+            tab.Item.Resources["TabViewItemHeaderSelectedCloseButtonForeground"] = text;
         }
 
         // Theme resources are resolved when the template applies; flipping the theme

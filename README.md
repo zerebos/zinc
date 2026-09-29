@@ -123,6 +123,11 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   your own go in `%APPDATA%\Phosphor\themes\`, one file per scheme in Ghostty's theme format
   (`background = #181818`, `palette = 1=#AC4242`, ...), named as `theme` refers to them. Yours
   win over bundled ones with the same name.
+  **Light and dark**: `theme = "light:Catppuccin Latte,dark:Catppuccin Mocha"` (Ghostty's syntax)
+  follows Windows' app mode (Settings > Personalization > Colors), switching as it changes.
+  Programs that ask whether the terminal is light or dark (`CSI ? 996 n`) are told the side in
+  force (with a single scheme: whether its background is dark), and those that subscribe (mode
+  2031, e.g. neovim) hear of each change, so they can switch their own colors too.
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.
 - `palette`: an array of up to 256 colors from index 0, or single entries: `palette.1 = "#AC4242"`.
 

@@ -319,6 +319,13 @@ internal sealed partial class WelcomeWindow : Window
     private FrameworkElement LookPage()
     {
         var schemes = new List<string> { DefaultSchemeLabel };
+        // A light/dark pair from the config ("light:X,dark:Y") is a choice of its own, so saving
+        // the page untouched keeps it.
+        if (_scheme is { } current && ThemeLibrary.TryParsePair(current, out _, out _))
+        {
+            schemes.Add(current);
+        }
+
         schemes.AddRange(_config.Themes.Names());
         var list = new ListView { Height = 390, SelectionMode = ListViewSelectionMode.Single };
         AutomationProperties.SetName(list, "Color schemes");
@@ -400,7 +407,8 @@ internal sealed partial class WelcomeWindow : Window
     /// <summary>A little shell session in the chosen colors and font (a Nerd Font icon included).</summary>
     private void UpdatePreview()
     {
-        var theme = (_scheme is { } name ? _config.Themes.Apply(new Config(), name)?.Theme : null) ?? TerminalTheme.Default;
+        var theme = (_scheme is { } name ? _config.Themes.Apply(new Config(), ThemeLibrary.Resolve(name, ConfigFile.SystemScheme))?.Theme : null) ??
+                    TerminalTheme.Default;
         Color Ansi(int index) => theme.Palette.TryGetValue(index, out var c) ? ToColor(c) : AnsiDefaults[index];
         _preview.Background = new SolidColorBrush(ToColor(theme.Background));
         _previewText.Foreground = new SolidColorBrush(ToColor(theme.Foreground));

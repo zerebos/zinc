@@ -121,6 +121,22 @@ internal sealed partial class TabHeader : Grid
 
     public string Title => _title.Text;
 
+    /// <summary>The title's color where its surface needs one (a light selection in the sidebar); null inherits.</summary>
+    public Microsoft.UI.Xaml.Media.Brush? TextForeground
+    {
+        set
+        {
+            if (value == null)
+            {
+                _title.ClearValue(TextBlock.ForegroundProperty);
+            }
+            else
+            {
+                _title.Foreground = value;
+            }
+        }
+    }
+
     /// <summary>Just the icon, centered (the sidebar's rail); the title stays in the tooltip.</summary>
     public bool Compact
     {

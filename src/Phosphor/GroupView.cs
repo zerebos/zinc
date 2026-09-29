@@ -434,6 +434,18 @@ internal sealed partial class GroupView : Grid
 
             _active = active;
             Background = active ? _background : _clear;
+            // On a light terminal background (the shown tab takes it), dark text.
+            if (active && Contrast.TextOn(_background.Color) is { } text)
+            {
+                _title.Foreground = text;
+                _close.Foreground = text;
+            }
+            else
+            {
+                _title.ClearValue(TextBlock.ForegroundProperty);
+                _close.ClearValue(Control.ForegroundProperty);
+            }
+
             _title.Opacity = active ? 1 : 0.7;
             _accent.Background = active && focused ? accent : _clear;
         }

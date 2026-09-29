@@ -1000,6 +1000,13 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord is "test:appearance-light" or "test:appearance-dark")
+            {
+                App.Instance.SetSystemScheme(chord.EndsWith("light") ? Ghostty.ColorScheme.Light : Ghostty.ColorScheme.Dark);
+                Log.Write($"test {chord}: done");
+                return;
+            }
+
             if (chord == "test:scrollbar-expand")
             {
                 // The focused pane's scrollbar, expanded and kept so (hover can't be posted).

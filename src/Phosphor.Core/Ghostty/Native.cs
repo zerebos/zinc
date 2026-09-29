@@ -61,6 +61,13 @@ public struct GhosttyTerminalDesktopNotification
     [FieldOffset(24)] public GhosttyString Body;
 }
 
+/// <summary>Light or dark, as reported to programs (CSI ? 996 n, mode 2031).</summary>
+public enum ColorScheme : int
+{
+    Light = 0,
+    Dark = 1,
+}
+
 public enum TerminalProgressState : int
 {
     Remove = 0,
@@ -411,6 +418,7 @@ public static class GhosttyMode
     public static readonly ushort DecCkm = New(1, false);
     public static readonly ushort GraphemeCluster = New(2027, false);
     public static readonly ushort SyncOutput = New(2026, false);
+    public static readonly ushort ColorSchemeReport = New(2031, false);
 }
 
 [Flags]
@@ -461,6 +469,7 @@ public enum TerminalOption : int
     Xtversion = 4,
     TitleChanged = 5,
     Size = 6,
+    ColorScheme = 7,
     ColorForeground = 11,
     ColorBackground = 12,
     ColorCursor = 13,
@@ -923,4 +932,7 @@ public static unsafe partial class Native
     // ---- paste ----
     [LibraryImport(Lib, EntryPoint = "ghostty_paste_encode")]
     public static partial GhosttyResult PasteEncode(byte* data, nuint dataLen, byte bracketed, byte* buf, nuint bufLen, out nuint outWritten);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_color_scheme_report_encode")]
+    public static partial GhosttyResult ColorSchemeReportEncode(ColorScheme scheme, byte* buf, nuint bufLen, out nuint outWritten);
 }

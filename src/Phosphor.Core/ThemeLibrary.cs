@@ -13,6 +13,47 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
     public string UserFolder => userFolder;
 
+    /// <summary>
+    /// A theme that follows Windows' light/dark mode, written as Ghostty does:
+    /// <c>"light:Catppuccin Latte,dark:Catppuccin Mocha"</c> (either order; a missing side uses
+    /// the other). False for a plain scheme name.
+    /// </summary>
+    public static bool TryParsePair(string value, out string light, out string dark)
+    {
+        light = dark = "";
+        string? l = null, d = null;
+        foreach (var part in value.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            var colon = part.IndexOf(':');
+            var side = colon > 0 ? part[..colon].Trim().ToLowerInvariant() : "";
+            if (side == "light")
+            {
+                l = part[(colon + 1)..].Trim();
+            }
+            else if (side == "dark")
+            {
+                d = part[(colon + 1)..].Trim();
+            }
+            else
+            {
+                return false; // a scheme's own name (they may contain neither ':' sides nor commas)
+            }
+        }
+
+        if (string.IsNullOrEmpty(l) && string.IsNullOrEmpty(d))
+        {
+            return false;
+        }
+
+        light = string.IsNullOrEmpty(l) ? d! : l;
+        dark = string.IsNullOrEmpty(d) ? l! : d;
+        return true;
+    }
+
+    /// <summary>The scheme in force for <paramref name="value"/> (a name, or a light/dark pair) in <paramref name="scheme"/> mode.</summary>
+    public static string Resolve(string value, Phosphor.Ghostty.ColorScheme scheme) =>
+        TryParsePair(value, out var light, out var dark) ? (scheme == Phosphor.Ghostty.ColorScheme.Light ? light : dark) : value;
+
     private IEnumerable<string> Folders => [userFolder, bundledFolder];
 
     /// <summary>Every scheme's name, sorted; a user's scheme hides a bundled one of the same name.</summary>
@@ -73,7 +114,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
         try
         {
-            return ApplyFile(config, file);
+            return ApplyFile(config, file) with { PairedDark = null }; // one scheme, whatever came before
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

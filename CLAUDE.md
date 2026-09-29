@@ -58,13 +58,19 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Pty/ConPty.cs` — pseudoconsole, child process, reader thread, exit waiter.
 - `Terminal/TerminalSession.cs` — owns the GhosttyTerminal + encoders + ConPty; libghostty
   callbacks; `ReadScreenText()` (formatter) for tests; internal `PtyReplyObserver` test hook.
+  Light/dark: `theme = "light:X,dark:Y"` (`ThemeLibrary.TryParsePair`) resolves against
+  `ConfigFile.SystemScheme` (App keeps it from `UISettings`; a flip → `SetSystemScheme` → config
+  reload if `FollowsAppearance`; `test:appearance-light/-dark` simulate it). `Config.IsDark` (pair
+  side, else background luminance) → `TerminalSession.SetColorScheme`: answers CSI ? 996 n via
+  the COLOR_SCHEME callback, sends CSI ? 997 on change when mode 2031 is set. Chrome surfaces
+  colored like the pane (selected tab, sidebar item, pane strip) get dark text when light (`Contrast`).
   Options worth knowing: `RESIZE_PULL_SCROLLBACK` off (ConPTY has no scrollback; libghostty's
   docs name it), `XTVERSION` → "phosphor <InformationalVersion, short hash>", `RENDER_HOLD`
   (synchronized output, mode 2026): the callback captures the renderer's snapshot at hold start
   (`RenderHoldBegan` → `TerminalRenderer.CaptureHeldFrame`, under the renderer's `_stateLock`,
   which guards the snapshot read outside the terminal lock); Draw skips updates while held and
   calls `EndRenderHold` after 1 s; a one-shot `_holdTimer` redraws at the timeout. Unset so far:
-  COLOR_SCHEME (light/dark roadmap item), ENQUIRY, TITLE_REPORT (off on purpose), GLYPH_PROTOCOL.
+  ENQUIRY, TITLE_REPORT (off on purpose), GLYPH_PROTOCOL.
 - `Input/` — scan code → GhosttyKey map; Win32 `ToUnicodeEx` layout translation.
 - `Config.cs` (one resolved settings set; `Apply(key, value)` parses one value by its
   Ghostty-style key — the TOML reader maps each `[section] key` onto it, and scheme files are

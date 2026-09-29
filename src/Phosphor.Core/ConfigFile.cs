@@ -56,8 +56,20 @@ public sealed class ConfigFile
     /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
     public ThemeLibrary Themes { get; }
 
-    /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page).</summary>
+    /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page); may be a light/dark pair.</summary>
     public string? SchemeName { get; private init; }
+
+    /// <summary>
+    /// Windows' light/dark mode, which a <c>light:…,dark:…</c> theme follows. The app keeps it
+    /// current (and reloads when it flips); files are read with it unless told otherwise.
+    /// </summary>
+    public static Phosphor.Ghostty.ColorScheme SystemScheme { get; set; } = Phosphor.Ghostty.ColorScheme.Dark;
+
+    /// <summary>The scheme this was read for (<see cref="SystemScheme"/> at the time, unless given).</summary>
+    public Phosphor.Ghostty.ColorScheme Appearance { get; private init; }
+
+    /// <summary>Whether any theme here is a light/dark pair (so a flip of Windows' mode changes colors).</summary>
+    public bool FollowsAppearance { get; private init; }
 
     /// <summary>The Windows Terminal defaults with the <c>[keys]</c> table applied.</summary>
     public Keybindings Keybindings { get; }
@@ -140,9 +152,9 @@ public sealed class ConfigFile
     /// that shouldn't look at the machine).
     /// </summary>
     public static ConfigFile Parse(string text, string path = "config.toml", string? bundledThemes = null,
-        Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover = null)
+        Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover = null, Phosphor.Ghostty.ColorScheme? appearance = null)
     {
-        var reader = new Reader(path, bundledThemes ?? BundledThemesDirectory, discover);
+        var reader = new Reader(path, bundledThemes ?? BundledThemesDirectory, discover, appearance ?? SystemScheme);
         reader.Read(text, path, depth: 0);
         return reader.Build();
     }
@@ -162,8 +174,11 @@ public sealed class ConfigFile
     private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "notify", "quick-terminal"];
 
 
-    private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover)
+    private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover,
+        Phosphor.Ghostty.ColorScheme appearance)
     {
+        private bool _followsAppearance;
+
         private readonly List<Entry> _entries = [];
         private readonly ThemeLibrary _themes = ThemeLibrary.For(mainPath, bundledThemes);
         private readonly List<string> _warnings = [];
@@ -470,6 +485,8 @@ public sealed class ConfigFile
             return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes)
             {
                 SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
+                Appearance = appearance,
+                FollowsAppearance = _followsAppearance,
             };
         }
 
@@ -567,9 +584,26 @@ public sealed class ConfigFile
         /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
         private Config ApplyTheme(Config config, string name, Entry at)
         {
+            // "light:X,dark:Y": the side for Windows' current mode (both sides checked, so a
+            // typo shows up now rather than when the mode flips).
+            if (ThemeLibrary.TryParsePair(name, out var light, out var dark))
+            {
+                _followsAppearance = true;
+                foreach (var side in new[] { light, dark }.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (_themes.Find(side) == null)
+                    {
+                        _warnings.Add($"{at.Where}: no color scheme named '{side}' (looked in {_themes.UserFolder} and the bundled ones)");
+                    }
+                }
+
+                var isDark = appearance == Phosphor.Ghostty.ColorScheme.Dark;
+                return (_themes.Apply(config, isDark ? dark : light) ?? config) with { PairedDark = isDark };
+            }
+
             if (_themes.Apply(config, name) is { } themed)
             {
-                return themed;
+                return themed with { PairedDark = null };
             }
 
             _warnings.Add($"{at.Where}: no color scheme named '{name}' (looked in {_themes.UserFolder} and the bundled ones)");

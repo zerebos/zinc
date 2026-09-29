@@ -67,6 +67,7 @@ public partial class App : Application
         // Phosphor decides when to exit (see OnWindowClosed): closing the last window may
         // leave it running in the tray for the quick terminal.
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
+        WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
         _config = ConfigFile.Load();
         LoadRecentCommands();
         _keybindings = _config.Keybindings;
@@ -450,6 +451,44 @@ public partial class App : Application
     /// Reads the config again and applies it to every window. A file that isn't valid TOML (a
     /// save mid-edit) is only reported: the settings in force stay.
     /// </summary>
+    // Held here: it's what raises ColorValuesChanged.
+    private Windows.UI.ViewManagement.UISettings? _uiSettings;
+
+    /// <summary>
+    /// Follows Windows' app light/dark mode (Settings > Personalization > Colors): a
+    /// <c>light:…,dark:…</c> theme switches sides when it flips, through a config reload.
+    /// </summary>
+    private void WatchSystemScheme()
+    {
+        _uiSettings = new Windows.UI.ViewManagement.UISettings();
+        ConfigFile.SystemScheme = CurrentSystemScheme();
+        var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        _uiSettings.ColorValuesChanged += (_, _) => dispatcher.SafeEnqueue(() => SetSystemScheme(CurrentSystemScheme()));
+    }
+
+    /// <summary>Windows is light or dark now (or a test says so: test:appearance-light / -dark).</summary>
+    internal void SetSystemScheme(Ghostty.ColorScheme scheme)
+    {
+        if (scheme == ConfigFile.SystemScheme)
+        {
+            return; // an accent color change, say
+        }
+
+        ConfigFile.SystemScheme = scheme;
+        Log.Write($"appearance: Windows is now {scheme.ToString().ToLowerInvariant()}{(_config.FollowsAppearance ? "; reloading the config" : "")}");
+        if (_config.FollowsAppearance)
+        {
+            ReloadConfig();
+        }
+    }
+
+    /// <summary>Light or dark apps, by Windows' own app background.</summary>
+    private Ghostty.ColorScheme CurrentSystemScheme()
+    {
+        var background = _uiSettings!.GetColorValue(Windows.UI.ViewManagement.UIColorType.Background);
+        return background.R + background.G + background.B > 3 * 128 ? Ghostty.ColorScheme.Light : Ghostty.ColorScheme.Dark;
+    }
+
     internal void ReloadConfig()
     {
         if (_quitting)

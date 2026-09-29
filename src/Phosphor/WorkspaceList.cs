@@ -349,6 +349,17 @@ internal sealed partial class WorkspaceList : Grid
                 : _color is { } c
                     ? new SolidColorBrush(Color.FromArgb(0x80, c.R, c.G, c.B))
                     : _hovered ? (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"] : _clear;
+            // On a light selection (a light scheme, a yellow workspace), dark text.
+            var text = _selected ? Contrast.TextOn(_color ?? _pane) : null;
+            _header.TextForeground = text;
+            if (text != null)
+            {
+                _close.Foreground = text;
+            }
+            else
+            {
+                _close.ClearValue(Control.ForegroundProperty);
+            }
             _pill.Visibility = _selected ? Visibility.Visible : Visibility.Collapsed;
             // The rail has no room for either (its dot sits on the icon): middle click and the
             // context menu still close.

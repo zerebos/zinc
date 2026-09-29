@@ -136,6 +136,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
         // like TERM_PROGRAM (and Ghostty's own "ghostty 1.x"). Default: "libghostty".
         Native.TerminalSet(_terminal, TerminalOption.Xtversion, (delegate* unmanaged[Cdecl]<nint, nint, GhosttyString>)&OnXtversion);
 
+        // Light or dark, for programs that ask (CSI ? 996 n): see SetColorScheme.
+        Native.TerminalSet(_terminal, TerminalOption.ColorScheme, (delegate* unmanaged[Cdecl]<nint, nint, ColorScheme*, byte>)&OnColorScheme);
+
         // Synchronized output (mode 2026): see RenderHold.
         Native.TerminalSet(_terminal, TerminalOption.RenderHold, (delegate* unmanaged[Cdecl]<nint, nint, byte, void>)&OnRenderHold);
 
@@ -265,6 +268,47 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// Changes the terminal's colors while it runs (a config reload): the default foreground,
     /// background, cursor and palette. Colors a program set itself (OSC 4/10/11) stay.
     /// </summary>
+    private bool _dark = true;
+
+    /// <summary>
+    /// Whether this pane's colors are dark, as programs are told: they ask (CSI ? 996 n), or
+    /// subscribe to changes (mode 2031), which this then reports (CSI ? 997 ; 1|2 n).
+    /// </summary>
+    public void SetColorScheme(bool dark)
+    {
+        byte[]? report = null;
+        lock (Lock)
+        {
+            if (_disposed || dark == _dark)
+            {
+                return;
+            }
+
+            _dark = dark;
+            if (GetMode(GhosttyMode.ColorSchemeReport))
+            {
+                var buffer = stackalloc byte[32];
+                if (Native.ColorSchemeReportEncode(dark ? ColorScheme.Dark : ColorScheme.Light, buffer, 32, out var written) == GhosttyResult.Success)
+                {
+                    report = new ReadOnlySpan<byte>(buffer, (int)written).ToArray();
+                }
+            }
+        }
+
+        if (report != null)
+        {
+            PtyReplyObserver?.Invoke(report);
+            _pty?.Write(report);
+        }
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static byte OnColorScheme(nint terminal, nint userdata, ColorScheme* scheme)
+    {
+        *scheme = FromUserdata(userdata)._dark ? ColorScheme.Dark : ColorScheme.Light;
+        return 1;
+    }
+
     public void SetTheme(TerminalTheme theme)
     {
         lock (Lock)
