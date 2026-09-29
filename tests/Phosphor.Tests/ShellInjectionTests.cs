@@ -147,6 +147,14 @@ public class ShellInjectionTests
             $"the folder report ({folderEnd})");
     }
 
+    /// <summary>A folder with a space (and a non-ASCII letter) comes back whole: the report is percent-encoded.</summary>
+    private static void ChecksFolderEncoding(TerminalSession session)
+    {
+        session.SendInput("mkdir -p '/tmp/phosphor a é' && cd '/tmp/phosphor a é'\r");
+        WaitFor(session, () => ShellDirectory.Parse(session.ReportedDirectory)?.EndsWith("/tmp/phosphor a é", StringComparison.Ordinal) == true,
+            "the folder report with a space");
+    }
+
     [Fact]
     public void PowerShell()
     {
@@ -171,6 +179,7 @@ public class ShellInjectionTests
         Assert.SkipUnless(File.Exists(bash), "no Git Bash");
         using var session = StartShell($"\"{bash}\" --noprofile --norc -i");
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
+        ChecksFolderEncoding(session);
     }
 
     [Fact]
@@ -193,10 +202,18 @@ public class ShellInjectionTests
         Assert.SkipUnless(File.Exists(zsh), "no MSYS2 zsh");
         var home = Directory.CreateTempSubdirectory("phosphor-zsh-").FullName;
         File.WriteAllText(Path.Combine(home, ".zshrc"), "PS1='%~ %# '\n");
-        using var session = StartShell($"{zsh} -i", new() { ["HOME"] = home });
+        // MSYS2's own tools and a UTF-8 locale, as its launcher sets them (Git's mkdir on PATH first
+        // named a non-ASCII folder differently from how this zsh looked it up).
+        using var session = StartShell($"{zsh} -i", new()
+        {
+            ["HOME"] = home,
+            ["LANG"] = "C.UTF-8",
+            ["PATH"] = $@"C:\msys64\usr\bin;{Environment.GetEnvironmentVariable("PATH")}",
+        });
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
         // Its own startup files still ran (and ZDOTDIR is back to unset).
         session.SendInput("echo \"[${ZDOTDIR-unset}]\"\r");
         WaitFor(session, () => session.ReadScreenText().Contains("[unset]"), "ZDOTDIR restored");
+        ChecksFolderEncoding(session);
     }
 }

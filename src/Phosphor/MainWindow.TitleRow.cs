@@ -21,6 +21,7 @@ public sealed partial class MainWindow
     private bool _windowClosed;
     private ColumnDefinition? _markColumn;
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _commandClock;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _commandSettle;
 
     /// <summary>0:38, 12:05, 1:02:03.</summary>
     private static string Elapsed(TimeSpan t) =>
@@ -115,6 +116,25 @@ public sealed partial class MainWindow
         _mark.Margin = new Thickness(mode == SidebarMode.Rail ? (WorkspaceList.RailWidth - 16) / 2 : 14, 0, 14, 0);
     }
 
+    /// <summary>
+    /// <see cref="UpdateCommandCenter"/> once a shell's reports have settled. They come in bursts: a
+    /// prompt reports its new folder, then sets the title (Git Bash's names the folder), and drawn
+    /// in between, the center showed the new folder beside the old title for a moment.
+    /// </summary>
+    private void UpdateCommandCenterSoon()
+    {
+        if (_commandSettle == null)
+        {
+            _commandSettle = DispatcherQueue.CreateTimer();
+            _commandSettle.Interval = TimeSpan.FromMilliseconds(80);
+            _commandSettle.IsRepeating = false;
+            _commandSettle.OnTick(_ => UpdateCommandCenter());
+        }
+
+        _commandSettle.Stop();
+        _commandSettle.Start();
+    }
+
     /// <summary>What the focused tab of the shown workspace is doing: its title, and the folder its shell reported.</summary>
     private void UpdateCommandCenter()
     {
@@ -161,6 +181,11 @@ public sealed partial class MainWindow
 
         if (_commandContext.Text != text)
         {
+            if (!running)
+            {
+                Log.Write($"command center: {text}");
+            }
+
             _commandContext.Text = text;
             ToolTipService.SetToolTip(_commandContext, text);
         }

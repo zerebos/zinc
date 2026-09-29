@@ -153,6 +153,7 @@ public sealed partial class MainWindow : Window
             _windowClosed = true;
             _chromeTimer?.Stop();
             _commandClock?.Stop();
+            _commandSettle?.Stop();
             _springTimer?.Stop();
             _replayTimer?.Stop();
             foreach (var tab in AllTabs().ToList())
@@ -197,11 +198,11 @@ public sealed partial class MainWindow : Window
         var control = pane.Control;
         Action<string> title = _ =>
         {
-            UpdateTitle(tab);
+            UpdateTitle(tab, fromShell: true);
             UpdateFocusBorders(tab); // group strips show titles too
         };
         Action close = () => ClosePane(tab, pane);
-        Action directory = () => UpdateTitle(tab); // the command center shows the folder
+        Action directory = () => UpdateTitle(tab, fromShell: true); // the command center shows the folder
         Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
         Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
         Action progress = () => OnProgress(tab);
@@ -792,7 +793,8 @@ public sealed partial class MainWindow : Window
         RefreshWorkspaceList();
     }
 
-    private void UpdateTitle(WorkspaceTab tab)
+    /// <param name="fromShell">A shell reported a new title or folder: the command center waits for the rest of the burst.</param>
+    private void UpdateTitle(WorkspaceTab tab, bool fromShell = false)
     {
         var pane = tab.Active;
         var title = tab.CustomTitle ??
@@ -810,7 +812,14 @@ public sealed partial class MainWindow : Window
                 Title = title;
             }
 
-            UpdateCommandCenter();
+            if (fromShell)
+            {
+                UpdateCommandCenterSoon();
+            }
+            else
+            {
+                UpdateCommandCenter();
+            }
         }
     }
 

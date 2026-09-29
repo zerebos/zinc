@@ -41,11 +41,14 @@ __phosphor_folder=1
 [[ "$__phosphor_theirs" != *']7;'* ]] || __phosphor_folder=
 builtin unset __phosphor_theirs
 
-# The current folder as a file:// URI (percent-encoded byte by byte), when it changes.
-__phosphor_report_folder() {
+# The current folder as OSC 7 with a file:// URI (percent-encoded byte by byte), for PS1.
+__phosphor_folder_report() {
     [[ "$PWD" != "${__phosphor_pwd-}" ]] || return 0
     __phosphor_pwd=$PWD
-    builtin local LC_ALL=C path=$PWD out= c i
+    # (Assigned apart: with "builtin" in front, local's arguments are split like any command's.)
+    builtin local LC_ALL=C path out= c i
+    path=$PWD
+    [[ "$path" == /* ]] || path=/$path   # C:/x (MSYS, rarely) → file://host/C:/x
     for (( i = 0; i < ${#path}; i++ )); do
         c=${path:i:1}
         case $c in
@@ -53,7 +56,7 @@ __phosphor_report_folder() {
             *) builtin printf -v c '%%%02X' "'$c"; out+=$c ;;
         esac
     done
-    builtin printf '\e]7;file://%s%s\e\\' "${HOSTNAME-}" "$out"
+    __phosphor_osc7='\[\e]7;file://'"${HOSTNAME-}$out"'\a\]'
 }
 
 # First in PROMPT_COMMAND: the last command's exit code, before anything else changes it.
@@ -61,19 +64,30 @@ __phosphor_status() { __phosphor_last=$?; }
 
 __phosphor_b='\[\e]133;B\a\]'
 __phosphor_c=$'\e]133;C\a'
+__phosphor_suffix=
 
-# Last in PROMPT_COMMAND: the command finished (D), a prompt starts (A); typing starts where the
-# prompt ends (B, kept at the end of PS1 even if a prompt theme rebuilds it), and the command
-# runs once it's read (C, in PS0).
+# Last in PROMPT_COMMAND: the command finished (D), a prompt starts (A), and the command runs
+# once it's read (C, in PS0). The end of PS1 (kept there even if a prompt theme rebuilds PS1)
+# reports the folder, drawn with the rest of the prompt, so it arrives with a title the prompt
+# sets, and marks where typing starts (B).
 __phosphor_prompt() {
+    builtin local suffix=
+    if [[ -n "$__phosphor_folder" ]]; then
+        __phosphor_folder_report
+        suffix+=$__phosphor_osc7
+    fi
+
     if [[ -n "$__phosphor_marks" ]]; then
         [[ -z "${__phosphor_prompted-}" ]] || builtin printf '\e]133;D;%s\a' "${__phosphor_last-0}"
         __phosphor_prompted=1
         builtin printf '\e]133;A\a'
-        [[ "$PS1" == *"$__phosphor_b" ]] || PS1+=$__phosphor_b
         [[ "${PS0-}" == *"$__phosphor_c"* ]] || PS0+=$__phosphor_c
+        suffix+=$__phosphor_b
     fi
-    [[ -z "$__phosphor_folder" ]] || __phosphor_report_folder
+
+    [[ -z "$__phosphor_suffix" || "$PS1" != *"$__phosphor_suffix" ]] || PS1=${PS1%"$__phosphor_suffix"}
+    PS1+=$suffix
+    __phosphor_suffix=$suffix
 }
 
 if [[ "$(builtin declare -p PROMPT_COMMAND 2>/dev/null)" == "declare -a"* ]]; then
