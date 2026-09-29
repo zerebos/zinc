@@ -38,6 +38,13 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
     private readonly Dictionary<(uint, int), int> _glyphCache = new();
+
+    // The bundled Cascadia Mono NF, tried before Windows' font fallback for cell-filling shapes
+    // the configured font lacks (it covers most of Symbols for Legacy Computing, which no Windows
+    // font does: flow draws its tabs with them). Its cell at our font size, for fitting them.
+    private readonly CanvasFontFace?[] _bundledFaces = new CanvasFontFace?[4];
+    private readonly Dictionary<(uint, int), int> _bundledGlyphCache = new();
+    private float _bundledAdvance, _bundledLineHeight, _bundledBaseline;
     private CanvasSolidColorBrush? _brush;
     private string _fontFamily;
     private float _fontSize;
@@ -136,9 +143,22 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var faces = bundled ? BundledFonts.Set(italic) ?? fonts : fonts;
             var matches = faces.GetMatchingFonts(_fontFamily, weight, FontStretch.Normal, style).Fonts;
             _faces[v] = matches.Count > 0 ? matches[0] : _faces[0];
+
+            // (Not when it is the font: what that lacks, it lacks.)
+            var bundledMatches = bundled ? null : BundledFonts.Set(italic)?.GetMatchingFonts(BundledFonts.Family, weight, FontStretch.Normal, style).Fonts;
+            _bundledFaces[v] = bundledMatches is { Count: > 0 } ? bundledMatches[0] : null;
         }
 
         _glyphCache.Clear();
+        _bundledGlyphCache.Clear();
+        if (_bundledFaces[0] != null)
+        {
+            using var format = new CanvasTextFormat { FontFamily = BundledFonts.FormatFamily(italic: false), FontSize = _fontSize, WordWrapping = CanvasWordWrapping.NoWrap };
+            using var cell = new CanvasTextLayout(device, "M", format, float.MaxValue, float.MaxValue);
+            _bundledAdvance = (float)cell.LayoutBounds.Width;
+            _bundledLineHeight = (float)cell.LayoutBounds.Height;
+            _bundledBaseline = cell.LineMetrics[0].Baseline;
+        }
 
         // Measure a run of M's: the advance of a monospace glyph and the
         // natural line height of the font.
@@ -508,6 +528,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
     private void DrawFallback(CanvasDrawingSession ds, ref Cell cell, int x, float top)
     {
+        if (DrawBundled(ds, ref cell, x, top))
+        {
+            return;
+        }
+
         var m = Metrics;
         var text = CellText(ref cell);
         var width = (cell.Flags & CellFlags.Wide) != 0 ? 2 * m.Width : m.Width;
@@ -526,6 +551,51 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var offset = lines.Length > 0 ? m.Baseline - lines[0].Baseline : 0;
         ds.DrawTextLayout(layout, PadLeft + x * m.Width, top + offset, cell.Fg);
     }
+
+    /// <summary>
+    /// A cell-filling shape (box drawing, blocks, Symbols for Legacy Computing) the configured
+    /// font lacks, from the bundled Cascadia Mono NF, stretched from Cascadia's cell to ours so
+    /// it meets its neighbours. Only those: other characters keep Windows' fallback (as in
+    /// Windows Terminal). False if it isn't one, or Cascadia lacks it too.
+    /// </summary>
+    private bool DrawBundled(CanvasDrawingSession ds, ref Cell cell, int x, float top)
+    {
+        if (cell.CpLen != 1 || (cell.Flags & CellFlags.Wide) != 0 || _bundledFaces[cell.FontVariant] is not { } face ||
+            !FillsCell(_codepoints[cell.CpStart]))
+        {
+            return false;
+        }
+
+        var codepoint = _codepoints[cell.CpStart];
+        if (!_bundledGlyphCache.TryGetValue((codepoint, cell.FontVariant), out var glyph))
+        {
+            glyph = face.GetGlyphIndices([codepoint])[0];
+            _bundledGlyphCache[(codepoint, cell.FontVariant)] = glyph;
+        }
+
+        if (glyph == 0 || _bundledAdvance <= 0 || _bundledLineHeight <= 0)
+        {
+            return false;
+        }
+
+        var m = Metrics;
+        var left = PadLeft + x * m.Width;
+        _brush!.Color = cell.Fg;
+        var glyphs = new[] { new CanvasGlyph { Index = glyph, Advance = _bundledAdvance } };
+        // Half a pixel past the cell on every side: the anti-aliased edges of neighbouring
+        // shapes overlap instead of leaving a hairline between them.
+        var bleed = 0.5f / m.Scale;
+        var saved = ds.Transform;
+        ds.Transform = Matrix3x2.CreateScale((m.Width + 2 * bleed) / _bundledAdvance, (m.Height + 2 * bleed) / _bundledLineHeight) *
+                       Matrix3x2.CreateTranslation(left - bleed, top - bleed) * saved;
+        ds.DrawGlyphRun(new Vector2(0, _bundledBaseline), face, _fontSize, glyphs, false, 0, _brush);
+        ds.Transform = saved;
+        return true;
+    }
+
+    /// <summary>Box drawing, block elements and Symbols for Legacy Computing: shapes drawn edge to edge of the cell.</summary>
+    private static bool FillsCell(uint codepoint) =>
+        codepoint is >= 0x2500 and <= 0x259F or >= 0x1FB00 and <= 0x1FBFF;
 
     private void DrawDecorations(CanvasDrawingSession ds, int count, float top)
     {
