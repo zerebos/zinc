@@ -6,5 +6,6 @@ external/
 native/
 native-src/*/zig-out/
 native-src/*/.zig-cache/
+native-src/*/zig-pkg/
 
 .scratch/
