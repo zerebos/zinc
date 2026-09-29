@@ -71,14 +71,17 @@ you change there and leaves the rest of the file as it is.
 **Settings** (`Ctrl+,`, the command palette or the tray menu) edits the settings below in a window
 of its own, next to your terminals: each change is written to `config.toml` right away and applied
 as you make it (only that line changes; choosing a default removes the line), and **Undo changes**
-puts the file back as it was when you opened the window. Each setting shows its key in the file.
-While `config.toml` has an error, Settings says so and changes nothing. Under **Profiles**:
-the default profile, every profile (found on this PC or your own; add, delete, or undo your changes
-to a found one), each one's name, command, folder, icon and visibility, its own font, colors and
-padding where it shouldn't inherit them, and which shells Phosphor looks for. Under **Keyboard**:
+(at the bottom while there are changes) puts the file back as it was when you opened the window.
+Each setting shows its key in the file; the arrow beside a changed setting's name resets it.
+While `config.toml` has an error, Settings says so and changes nothing. The window reopens where
+you left it. Under **Profiles**: the default profile, every profile in your order (drag them, or
+**⋯ → Move up/down**; the new-tab menu follows it), found on this PC or your own (add, delete, or
+undo your changes to a found one), each one's name, command, folder, icon and visibility, and its
+own font, colors and padding: each shows what it inherits until you change it there, and the
+reset arrow makes it inherit again. Also which shells Phosphor looks for. Under **Keyboard**:
 every action with its keys (filter by name or key); click a key to take it away, **+** to add one
-by pressing it (it says if another action has that key, and takes it over), **Reset** for the
-defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key
+by pressing it (it says if another action has that key, and takes it over), the reset arrow for
+the defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key
 sequences are listed but added in the file.
 
 `%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
@@ -194,6 +197,8 @@ size = 12
 ```
 
 - `default-profile` (at the top): the profile Phosphor starts with; defaults to the first.
+- `profile-order` (at the top): profile ids in the order menus list them (Settings writes it when
+  you reorder); profiles not in it follow in their usual order.
 - `name`: shown in menus and tabs; defaults to the id.
 - `command`: the command line; without one, PowerShell 7, else Windows PowerShell, else cmd.
 - `icon`: image shown for the profile in tabs. Without one, Phosphor picks one like Windows

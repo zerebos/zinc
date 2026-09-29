@@ -1,15 +1,16 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using Microsoft.UI;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Phosphor.Settings;
 using Phosphor.Terminal;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.UI;
 
 namespace Phosphor;
@@ -31,27 +32,34 @@ internal sealed partial class SettingsWindow : Window
     private ConfigFile _config;
     private readonly NavigationView _nav;
     private readonly AutoSuggestBox _search;
-    private readonly StackPanel _page = new() { Spacing = 4, MaxWidth = 960, Padding = new Thickness(40, 12, 40, 40) };
+
+    // Bottom padding: room for the undo bar floating over the last card.
+    private readonly StackPanel _page = new() { Spacing = 4, MaxWidth = 960, Padding = new Thickness(40, 12, 40, 96) };
     private readonly ScrollViewer _scroller = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-    private readonly InfoBar _changes = new() { Severity = InfoBarSeverity.Informational, IsClosable = false };
+    private readonly Border _snackbar;
+    private readonly Button _undo = new() { Content = "Undo changes", IsEnabled = false };
+    private bool _snackbarShown;
     private readonly InfoBar _problems = new() { Severity = InfoBarSeverity.Error, IsClosable = false, Title = "config.toml has an error" };
     private readonly List<Action> _refreshers = [];
-    private string _section = "appearance";
+    private string _section;
     private string? _editing; // the profile open in the Profiles section's editor
     private bool _updating;
 
     /// <summary>A change was written to config.toml.</summary>
     public event Action? Wrote;
 
-    public SettingsWindow(ConfigFile config)
+    /// <summary>The section shown (reopening the window during this run starts there).</summary>
+    public string Section => _section;
+
+    public SettingsWindow(ConfigFile config, string? startSection = null)
     {
         _config = config;
         _writer = new SettingsWriter(config.Path);
+        _section = SettingsCatalog.Sections.Any(s => s.Id == startSection) ? startSection! : SettingsCatalog.Sections[0].Id;
         Title = "Phosphor Settings";
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(1040, 780));
 
         // Title bar: the app's mark and the window's name, in the caption area.
         var titleBar = new StackPanel
@@ -71,6 +79,51 @@ internal sealed partial class SettingsWindow : Window
         AutomationProperties.SetName(_search, "Find a setting");
         _search.TextChanged += (_, _) => Render();
 
+        // The undo bar: floats at the bottom while there are changes to undo.
+        ToolTipService.SetToolTip(_undo, "Puts config.toml back as it was when Settings opened");
+        _undo.Click += (_, _) => Guard("undoing changes", () =>
+        {
+            _writer.Undo();
+            Wrote?.Invoke();
+            ShowChanges(false);
+        });
+        _snackbar = new Border
+        {
+            Child = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 12,
+                Children =
+                {
+                    new FontIcon
+                    {
+                        Glyph = "",
+                        FontSize = 14,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+                    },
+                    new TextBlock { Text = "Saved to config.toml and applied", VerticalAlignment = VerticalAlignment.Center },
+                    _undo,
+                },
+            },
+            Padding = new Thickness(16, 8, 8, 8),
+            Margin = new Thickness(0, 0, 0, 20),
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            Background = (Brush)Application.Current.Resources["SolidBackgroundFillColorTertiaryBrush"],
+            BorderBrush = (Brush)Application.Current.Resources["SurfaceStrokeColorFlyoutBrush"],
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Opacity = 0,
+            IsHitTestVisible = false,
+            Translation = new Vector3(0, 16, 32),
+            OpacityTransition = new ScalarTransition { Duration = TimeSpan.FromMilliseconds(160) },
+            TranslationTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(160) },
+        };
+        var shadow = new ThemeShadow();
+        shadow.Receivers.Add(_scroller);
+        _snackbar.Shadow = shadow;
+
         _nav = new NavigationView
         {
             PaneDisplayMode = NavigationViewPaneDisplayMode.Left,
@@ -79,7 +132,7 @@ internal sealed partial class SettingsWindow : Window
             IsPaneToggleButtonVisible = false,
             OpenPaneLength = 250,
             AutoSuggestBox = _search,
-            Content = _scroller,
+            Content = new Grid { Children = { _scroller, _snackbar } },
         };
         foreach (var section in SettingsCatalog.Sections)
         {
@@ -87,7 +140,7 @@ internal sealed partial class SettingsWindow : Window
             (section.Id == "about" ? _nav.FooterMenuItems : _nav.MenuItems).Add(item);
         }
 
-        _nav.SelectedItem = _nav.MenuItems[0];
+        _nav.SelectedItem = _nav.MenuItems.Concat(_nav.FooterMenuItems).OfType<NavigationViewItem>().First(i => (string)i.Tag == _section);
         _nav.SelectionChanged += (_, e) =>
         {
             if (e.SelectedItem is NavigationViewItem { Tag: string id })
@@ -99,16 +152,6 @@ internal sealed partial class SettingsWindow : Window
                 _scroller.ChangeView(null, 0, null, disableAnimation: true);
             }
         };
-
-        var undo = new Button { Content = "Undo changes" };
-        undo.Click += (_, _) => Guard("undoing changes", () =>
-        {
-            _writer.Undo();
-            Wrote?.Invoke();
-            _changes.IsOpen = false;
-        });
-        _changes.ActionButton = undo;
-        _changes.Message = "Your changes are saved in config.toml and applied as you make them.";
 
         var openFile = new Button { Content = "Open config.toml" };
         openFile.Click += (_, _) => OpenConfigFile();
@@ -133,7 +176,7 @@ internal sealed partial class SettingsWindow : Window
         if (_section == "profiles" && _search.Text.Trim().Length == 0 &&
             (_editing == null ? !listed.SequenceEqual(config.Profiles.Select(p => (p.Id, p.Name, p.Hidden))) : listed.All(p => p.Id != _editing)))
         {
-            Render(); // the list changed (or the profile being edited just appeared)
+            Render(); // the list changed (or its order, or the profile being edited just appeared)
             return;
         }
 
@@ -169,7 +212,6 @@ internal sealed partial class SettingsWindow : Window
             Margin = new Thickness(0, 8, 0, 12),
         });
         _page.Children.Add(_problems);
-        _page.Children.Add(_changes);
         UpdateBanners();
 
         if (query.Length > 0)
@@ -226,17 +268,45 @@ internal sealed partial class SettingsWindow : Window
     {
         _problems.IsOpen = _config.HasErrors;
         _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until it's fixed.";
-        _changes.IsOpen = !_config.HasErrors && _writer.Changed;
+        ShowChanges(!_config.HasErrors && _writer.Changed);
+    }
+
+    /// <summary>Slides the undo bar in (there are changes) or out.</summary>
+    private void ShowChanges(bool show)
+    {
+        if (show == _snackbarShown)
+        {
+            return;
+        }
+
+        _snackbarShown = show;
+        _snackbar.Opacity = show ? 1 : 0;
+        _snackbar.Translation = new Vector3(0, show ? 0 : 16, 32);
+        _snackbar.IsHitTestVisible = show;
+        _undo.IsEnabled = show; // out of the tab order while hidden
     }
 
     private void AddGroup(string title, IEnumerable<SettingDef> settings)
     {
-        _page.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+        _page.Children.Add(GroupTitle(title));
         foreach (var setting in settings)
         {
-            _page.Children.Add(Card(setting));
+            if (setting.Kind == SettingKind.Scheme)
+            {
+                foreach (var card in SchemeCards(setting, null))
+                {
+                    _page.Children.Add(card);
+                }
+            }
+            else
+            {
+                _page.Children.Add(Card(setting));
+            }
         }
     }
+
+    private static TextBlock GroupTitle(string title) =>
+        new() { Text = title, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) };
 
     private static TextBlock Note(string text) => new()
     {
@@ -272,10 +342,10 @@ internal sealed partial class SettingsWindow : Window
 
     // ------------------------------------------------------------ profiles
 
-    /// <summary>The default profile, every profile (found and yours), and where Phosphor looks for shells.</summary>
+    /// <summary>The default profile, every profile (found and yours, in your order), and where Phosphor looks for shells.</summary>
     private void ProfilesPage()
     {
-        _page.Children.Add(new TextBlock { Text = "Default", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+        _page.Children.Add(GroupTitle("Default"));
         var visible = _config.VisibleProfiles.ToList();
         var defaults = new ComboBox { MinWidth = 260 };
         AutomationProperties.SetName(defaults, "Default profile");
@@ -296,19 +366,66 @@ internal sealed partial class SettingsWindow : Window
 
         var add = new Button { Content = "New profile", HorizontalAlignment = HorizontalAlignment.Right };
         add.Click += (_, _) => NewProfile();
-        var header = new Grid { Margin = new Thickness(0, 18, 0, 6) };
+        var header = new Grid { Margin = new Thickness(0, 18, 0, 0) };
         header.Children.Add(new TextBlock { Text = "Profiles", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
         header.Children.Add(add);
         _page.Children.Add(header);
+        _page.Children.Add(Note("Drag to reorder: the new-tab menu lists them in this order."));
+
+        // The rows are their own ListViewItems, so a drag moves them as they are.
+        var list = new ListView
+        {
+            SelectionMode = ListViewSelectionMode.None,
+            CanReorderItems = true,
+            CanDragItems = true,
+            AllowDrop = true,
+            Margin = new Thickness(0, 6, 0, 0),
+        };
+        AutomationProperties.SetName(list, "Profiles");
+        var ids = _config.Profiles.Select(p => p.Id).ToList();
         foreach (var profile in _config.Profiles)
         {
-            _page.Children.Add(ProfileRow(profile));
+            var item = new ListViewItem
+            {
+                Content = ProfileRow(profile, ids),
+                Tag = profile.Id,
+                Padding = new Thickness(0),
+                Margin = new Thickness(0, 0, 0, 4),
+                MinHeight = 0,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            };
+            AutomationProperties.SetName(item, profile.Name);
+            list.Items.Add(item);
         }
+
+        list.DragItemsCompleted += (_, e) =>
+        {
+            if (e.DropResult == DataPackageOperation.Move)
+            {
+                WriteProfileOrder(list.Items.OfType<ListViewItem>().Select(i => (string)i.Tag).ToList());
+            }
+        };
+        _page.Children.Add(list);
 
         AddGroup("Find shells on this PC", SettingsCatalog.Discovery);
     }
 
-    private Border ProfileRow(Profile profile)
+    /// <summary>
+    /// The profiles' order, as <c>profile-order</c> (every id, so profiles found later go after
+    /// them). Without a default-profile the default is the first one, so moving profiles would
+    /// change it: the default in force is written first.
+    /// </summary>
+    private void WriteProfileOrder(List<string> ids)
+    {
+        if (_config.ValueOf("default-profile") == null)
+        {
+            Write(["default-profile"], _config.DefaultProfile.Id);
+        }
+
+        Write(["profile-order"], ids.Cast<object>().ToList());
+    }
+
+    private Border ProfileRow(Profile profile, List<string> order)
     {
         var what = new List<string>();
         if (profile.Id == _config.DefaultProfile.Id)
@@ -330,6 +447,34 @@ internal sealed partial class SettingsWindow : Window
             Render();
             _scroller.ChangeView(null, 0, null, disableAnimation: true);
         };
+
+        // Moving without a mouse (and for automation): the same order a drag writes.
+        var at = order.IndexOf(profile.Id);
+        void Move(int to)
+        {
+            var ids = order.ToList();
+            ids.Remove(profile.Id);
+            ids.Insert(Math.Clamp(to, 0, ids.Count), profile.Id);
+            WriteProfileOrder(ids);
+        }
+
+        MenuFlyoutItem MoveItem(string text, int to)
+        {
+            var item = new MenuFlyoutItem { Text = text, IsEnabled = to != at && to >= 0 && to < order.Count };
+            item.Click += (_, _) => Move(to);
+            return item;
+        }
+
+        var more = new Button
+        {
+            Content = new FontIcon { Glyph = "", FontSize = 14 },
+            Padding = new Thickness(8, 8, 8, 8),
+            VerticalAlignment = VerticalAlignment.Center,
+            Flyout = new MenuFlyout { Items = { MoveItem("Move up", at - 1), MoveItem("Move down", at + 1), MoveItem("Move to the top", 0) } },
+        };
+        ToolTipService.SetToolTip(more, "More");
+        AutomationProperties.SetName(more, $"More for {profile.Name}");
+
         var grid = new Grid { ColumnSpacing = 14 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -350,11 +495,12 @@ internal sealed partial class SettingsWindow : Window
                 },
             },
         };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { edit, more } };
         Grid.SetColumn(text, 1);
-        Grid.SetColumn(edit, 2);
+        Grid.SetColumn(buttons, 2);
         grid.Children.Add(icon);
         grid.Children.Add(text);
-        grid.Children.Add(edit);
+        grid.Children.Add(buttons);
         return CardBorder(grid);
     }
 
@@ -389,7 +535,7 @@ internal sealed partial class SettingsWindow : Window
             ? $"Found on this PC ({profile.FoundCommand}). What you change here is kept in its own section in config.toml."
             : "Yours, in its own section in config.toml."));
 
-        _page.Children.Add(new TextBlock { Text = "General", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+        _page.Children.Add(GroupTitle("General"));
         foreach (var field in SettingsCatalog.ProfileFields)
         {
             var hint = field.Key switch
@@ -401,12 +547,23 @@ internal sealed partial class SettingsWindow : Window
             _page.Children.Add(Card(field with { Placeholder = hint }, id));
         }
 
+        _page.Children.Add(Note("The settings below come from the defaults until you change them here; the reset arrow gives one back."));
         foreach (var group in SettingsCatalog.All.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))
         {
-            _page.Children.Add(new TextBlock { Text = group.Key, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+            _page.Children.Add(GroupTitle(group.Key));
             foreach (var setting in group)
             {
-                _page.Children.Add(OverrideCard(setting, id));
+                if (setting.Kind == SettingKind.Scheme)
+                {
+                    foreach (var card in SchemeCards(setting, id))
+                    {
+                        _page.Children.Add(card);
+                    }
+                }
+                else
+                {
+                    _page.Children.Add(OverrideCard(setting, id));
+                }
             }
         }
 
@@ -448,7 +605,7 @@ internal sealed partial class SettingsWindow : Window
             {
                 _writer.RemoveTable(["profile", id]);
                 Wrote?.Invoke();
-                _changes.IsOpen = true;
+                ShowChanges(true);
             });
             _editing = null;
             Render();
@@ -457,26 +614,41 @@ internal sealed partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// A setting in a profile: inherited (shown, greyed) unless "Own value" is on, which writes it
-    /// into the profile's section; off removes it again.
+    /// A setting in a profile: shows the value in force for it, inherited ("Inherited: 11 pt")
+    /// until changed here, which writes it into the profile's section; the reset arrow removes it
+    /// again.
     /// </summary>
     private Border OverrideCard(SettingDef setting, string id)
     {
         IReadOnlyList<string> path = ["profile", id, .. setting.Path];
         var error = ErrorText();
-        var own = new ToggleSwitch { OnContent = "Own value", OffContent = "Inherited", MinWidth = 0 };
-        AutomationProperties.SetName(own, $"{setting.Label}: own value");
-        var holder = new ContentControl { VerticalAlignment = VerticalAlignment.Center };
-        var pending = false; // switched on, nothing written yet (no value to start from)
+        var reset = ResetArrow(setting.Label, "Back to the value every profile inherits");
+        var description = DescriptionText();
         object? Inherited() => _config.ValueOf(setting.Key) ?? setting.Default;
+
+        void State(object? own)
+        {
+            reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
+            var inherited = Describe(setting, Inherited());
+            SetText(description, own != null ? $"Its own. Everywhere else: {inherited}." : $"Inherited: {inherited}.");
+        }
 
         void Commit(object? value)
         {
-            if (_updating || !own.IsOn)
+            if (_updating)
             {
                 return;
             }
 
+            if (_config.HasErrors)
+            {
+                Show(error, "config.toml has an error; fix it first (see the top of the page).");
+                return;
+            }
+
+            // The control's "default" (the included font, a number's default) is a value of the
+            // profile's own here: without one, it inherits whatever the defaults say.
+            value ??= setting.Kind == SettingKind.Font ? BundledFonts.Family : setting.Default;
             if (value != null && SettingsCatalog.Problem(setting, value) is { } problem)
             {
                 Show(error, problem);
@@ -484,91 +656,32 @@ internal sealed partial class SettingsWindow : Window
             }
 
             error.Visibility = Visibility.Collapsed;
-            pending = false;
             Write(path, value);
+            State(value);
         }
 
         var (control, show) = Control(setting, Commit);
-        holder.Content = control;
-
-        void Showing(object? value)
-        {
-            _updating = true;
-            try
-            {
-                show(value);
-            }
-            finally
-            {
-                _updating = false;
-            }
-        }
-
-        own.Toggled += (_, _) =>
-        {
-            if (_updating)
-            {
-                return;
-            }
-
-            holder.IsEnabled = own.IsOn;
-            if (own.IsOn)
-            {
-                // Starts from the inherited value, now the profile's own.
-                if (Inherited() is { } start)
-                {
-                    Write(path, start);
-                }
-                else
-                {
-                    pending = true;
-                }
-            }
-            else
-            {
-                pending = false;
-                Write(path, null);
-                Showing(Inherited());
-            }
-        };
 
         void Refresh()
         {
-            var value = _config.ValueOf(id, setting.Key);
-            own.IsOn = value != null || pending;
-            holder.IsEnabled = own.IsOn;
-            show(value ?? Inherited());
+            var own = _config.ValueOf(id, setting.Key);
+            show(own ?? Inherited());
+            State(own);
         }
 
+        reset.Click += (_, _) =>
+        {
+            Write(path, null);
+            error.Visibility = Visibility.Collapsed;
+            Quietly(() =>
+            {
+                show(Inherited());
+                State(null);
+            });
+        };
         _refreshers.Add(Refresh);
-        _updating = true;
-        try
-        {
-            Refresh();
-        }
-        finally
-        {
-            _updating = false;
-        }
-
-        var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
-        text.Children.Add(new TextBlock { Text = setting.Label, TextWrapping = TextWrapping.Wrap });
-        text.Children.Add(new TextBlock
-        {
-            Text = $"profile.{id}.{setting.Key}",
-            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-            FontSize = 11,
-            Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-        });
-        text.Children.Add(error);
-        var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center, Children = { own, holder } };
-        var grid = new Grid { ColumnSpacing = 24 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(controls, 1);
-        grid.Children.Add(text);
-        grid.Children.Add(controls);
-        return CardBorder(grid);
+        Quietly(Refresh);
+        return CardLayout(new TextBlock { Text = setting.Label }, reset, description, $"profile.{id}.{setting.Key}", error, control);
     }
 
     /// <summary>Writes one key (null removes it), unless the file has an error.</summary>
@@ -583,35 +696,42 @@ internal sealed partial class SettingsWindow : Window
         {
             _writer.Set(path, value);
             Wrote?.Invoke();
-            _changes.IsOpen = true;
+            ShowChanges(true);
         });
     }
 
-    private static TextBlock ErrorText() => new()
+    /// <summary>Runs <paramref name="work"/> as showing values, not changing them.</summary>
+    private void Quietly(Action work)
     {
-        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4)),
-        TextWrapping = TextWrapping.Wrap,
-        Visibility = Visibility.Collapsed,
-        Margin = new Thickness(0, 6, 0, 0),
-    };
+        var was = _updating;
+        _updating = true;
+        try
+        {
+            work();
+        }
+        finally
+        {
+            _updating = was;
+        }
+    }
 
     // ------------------------------------------------------------ cards
 
-    /// <summary>A setting's row: what it is (and its config key), the control, Reset, and a problem if its value won't do.</summary>
+    /// <summary>A setting's card: its name (and the reset arrow while it's changed), what it does, its config key, and the control.</summary>
     private Border Card(SettingDef setting, string? profile = null)
     {
         // A profile's own field ([profile.<id>] name, command, ...), or a global setting.
         IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
-        var error = new TextBlock
+        var error = ErrorText();
+        var reset = ResetArrow(setting.Label, "Back to the default (removes it from config.toml)");
+        var description = DescriptionText();
+        bool Changed(object? value) => value != null && !SettingsCatalog.Same(value, setting.Default);
+
+        void State(object? value)
         {
-            Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4)),
-            TextWrapping = TextWrapping.Wrap,
-            Visibility = Visibility.Collapsed,
-            Margin = new Thickness(0, 6, 0, 0),
-        };
-        var reset = new HyperlinkButton { Content = "Reset", VerticalAlignment = VerticalAlignment.Center, Padding = new Thickness(6, 2, 6, 2) };
-        ToolTipService.SetToolTip(reset, "Back to the default (removes it from config.toml)");
-        AutomationProperties.SetName(reset, $"Reset {setting.Label}");
+            reset.Visibility = Changed(value) ? Visibility.Visible : Visibility.Collapsed;
+            SetText(description, Explain(setting, value));
+        }
 
         void Commit(object? value)
         {
@@ -635,10 +755,10 @@ internal sealed partial class SettingsWindow : Window
             error.Visibility = Visibility.Collapsed;
             Guard($"saving {setting.Key}", () =>
             {
-                _writer.Set(path, value is null || SettingsCatalog.Same(value, setting.Default) ? null : value);
+                _writer.Set(path, Changed(value) ? value : null);
                 Wrote?.Invoke();
-                _changes.IsOpen = true;
-                reset.Visibility = value != null && !SettingsCatalog.Same(value, setting.Default) ? Visibility.Visible : Visibility.Collapsed;
+                ShowChanges(true);
+                State(value);
             });
         }
 
@@ -646,67 +766,280 @@ internal sealed partial class SettingsWindow : Window
         reset.Click += (_, _) =>
         {
             Commit(null);
-            _updating = true;
-            try
-            {
-                show(null);
-            }
-            finally
-            {
-                _updating = false;
-            }
+            Quietly(() => show(null));
         };
 
         void Refresh()
         {
             var value = profile == null ? _config.ValueOf(setting.Key) : _config.ValueOf(profile, setting.Key);
-            reset.Visibility = value != null && !SettingsCatalog.Same(value, setting.Default) ? Visibility.Visible : Visibility.Collapsed;
+            State(value);
             show(value);
         }
 
         _refreshers.Add(Refresh);
-        _updating = true;
-        try
-        {
-            Refresh();
-        }
-        finally
-        {
-            _updating = false;
-        }
+        Quietly(Refresh);
+        return CardLayout(new TextBlock { Text = setting.Label }, reset, description,
+            profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", error, control);
+    }
 
-        var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
-        text.Children.Add(new TextBlock { Text = setting.Label, TextWrapping = TextWrapping.Wrap });
-        if (setting.Description.Length > 0)
+    /// <summary>
+    /// The color scheme as cards: "Follow Windows light/dark", then the scheme ("Dark scheme"
+    /// while following) and, while following, "Light scheme". Written as one key, a name or
+    /// <c>"light:X,dark:Y"</c>. In a profile (<paramref name="profile"/>), inherited until changed.
+    /// </summary>
+    private IEnumerable<Border> SchemeCards(SettingDef setting, string? profile)
+    {
+        IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
+        var names = _config.Themes.Names();
+        ComboBox Box(string name, bool withDefault)
         {
-            text.Children.Add(new TextBlock
+            var box = new ComboBox { MinWidth = 240 };
+            AutomationProperties.SetName(box, name);
+            if (withDefault)
             {
-                Text = setting.Description,
-                TextWrapping = TextWrapping.Wrap,
-                FontSize = 12,
-                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-            });
+                box.Items.Add(DefaultSchemeLabel);
+            }
+
+            foreach (var n in names)
+            {
+                box.Items.Add(n);
+            }
+
+            return box;
         }
 
-        text.Children.Add(new TextBlock
+        // A profile has no "Phosphor's own" to pick: without a scheme of its own it inherits.
+        var scheme = Box("Color scheme", withDefault: profile == null);
+        var light = Box("Light scheme", withDefault: false);
+        var follow = new ToggleSwitch { OnContent = "On", OffContent = "Off", MinWidth = 0 };
+        AutomationProperties.SetName(follow, "Follow Windows light/dark");
+        var label = new TextBlock { Text = setting.Label };
+        var description = DescriptionText();
+        var reset = ResetArrow(setting.Label, profile == null
+            ? "Back to Phosphor's own (removes it from config.toml)"
+            : "Back to the scheme every profile inherits");
+        var lightCard = CardLayout(new TextBlock { Text = "Light scheme" }, null, DescriptionText("While Windows is in light mode."), null, null, light);
+        var local = false; // showing a value: not a change
+
+        object? Own() => profile == null ? _config.ValueOf(setting.Key) : _config.ValueOf(profile, setting.Key);
+        object? Inherited() => profile == null ? null : _config.ValueOf(setting.Key);
+
+        void Layout(bool pair, object? own)
         {
-            Text = profile == null ? setting.Key : $"profile.{profile}.{setting.Key}",
-            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-            FontSize = 11,
-            Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-        });
-        text.Children.Add(error);
+            label.Text = pair ? "Dark scheme" : setting.Label;
+            lightCard.Visibility = pair ? Visibility.Visible : Visibility.Collapsed;
+            reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
+            SetText(description,
+                pair ? "While Windows is in dark mode."
+                : profile == null ? setting.Description
+                : own != null ? $"Its own. Everywhere else: {Describe(setting, Inherited())}."
+                : $"Inherited: {Describe(setting, Inherited())}.");
+        }
 
-        var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-        controls.Children.Add(reset);
-        controls.Children.Add(control);
+        void Display(object? value, object? own)
+        {
+            local = true;
+            var text = value as string;
+            var pair = text != null && ThemeLibrary.TryParsePair(text, out _, out _);
+            follow.IsOn = pair;
+            if (pair && ThemeLibrary.TryParsePair(text!, out var l, out var d))
+            {
+                scheme.SelectedItem = scheme.Items.Contains(d) ? d : null;
+                light.SelectedItem = light.Items.Contains(l) ? l : null;
+            }
+            else
+            {
+                scheme.SelectedItem = text != null && scheme.Items.Contains(text) ? text : profile == null ? DefaultSchemeLabel : null;
+            }
 
+            scheme.PlaceholderText = scheme.SelectedItem == null ? Describe(setting, value) : "";
+            Layout(pair, own);
+            local = false;
+        }
+
+        void Commit(string? value)
+        {
+            Write(path, value);
+            Layout(follow.IsOn, value);
+        }
+
+        void Changed()
+        {
+            if (local || _updating)
+            {
+                return;
+            }
+
+            if (follow.IsOn)
+            {
+                if (light.SelectedItem is string l && scheme.SelectedItem is string d && d != DefaultSchemeLabel)
+                {
+                    Commit($"light:{l},dark:{d}");
+                }
+            }
+            else if (scheme.SelectedItem is string s)
+            {
+                Commit(s == DefaultSchemeLabel ? null : s);
+            }
+        }
+
+        scheme.SelectionChanged += (_, _) => Changed();
+        light.SelectionChanged += (_, _) => Changed();
+        follow.Toggled += (_, _) =>
+        {
+            if (local || _updating)
+            {
+                return;
+            }
+
+            if (follow.IsOn)
+            {
+                // The scheme in use becomes the dark side (Phosphor's own: Catppuccin Mocha), and
+                // the light side starts from its counterpart.
+                local = true;
+                var current = scheme.SelectedItem as string;
+                var dark = current != null && current != DefaultSchemeLabel
+                    ? current
+                    : names.FirstOrDefault(n => n == "Catppuccin Mocha") ?? names.FirstOrDefault();
+                scheme.SelectedItem = dark;
+                light.SelectedItem = ThemeLibrary.LightCounterpart(dark, names);
+                local = false;
+            }
+
+            Changed();
+        };
+        reset.Click += (_, _) =>
+        {
+            Write(path, null);
+            Display(Inherited(), null);
+        };
+
+        void Refresh()
+        {
+            var own = Own();
+            Display(own ?? Inherited(), own);
+        }
+
+        _refreshers.Add(Refresh);
+        Quietly(Refresh);
+        var followCard = CardLayout(new TextBlock { Text = "Follow Windows light/dark" }, null,
+            DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, follow);
+        var main = CardLayout(label, reset, description, profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", null, scheme);
+        return [followCard, main, lightCard];
+    }
+
+    /// <summary>A setting's description, and what its chosen option means.</summary>
+    private static string Explain(SettingDef setting, object? value)
+    {
+        var detail = setting.Kind == SettingKind.Choice
+            ? setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value ?? setting.Default))?.Detail
+            : null;
+        return string.Join(" ", new[] { setting.Description, detail }.Where(t => !string.IsNullOrEmpty(t)));
+    }
+
+    /// <summary>A value as words, for "Inherited: …".</summary>
+    private static string Describe(SettingDef setting, object? value) => value switch
+    {
+        null => setting.Kind switch
+        {
+            SettingKind.Color => "the scheme's",
+            SettingKind.Font => BundledFonts.Family,
+            SettingKind.Scheme => DefaultSchemeLabel,
+            _ => "the default",
+        },
+        bool b => b ? "on" : "off",
+        string t when setting.Kind == SettingKind.Scheme && ThemeLibrary.TryParsePair(t, out var l, out var d) => $"{d} / {l}",
+        _ when setting.Kind == SettingKind.Choice =>
+            setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value))?.Label ?? Format(value),
+        _ => setting.Unit is { } unit ? $"{Format(value)} {unit}" : Format(value),
+    };
+
+    /// <summary>The small arrow beside a setting's name that puts it back; shown while it's changed.</summary>
+    private static Button ResetArrow(string name, string tip)
+    {
+        var button = new Button
+        {
+            Content = new FontIcon { Glyph = "", FontSize = 12 },
+            Padding = new Thickness(5),
+            Margin = new Thickness(0, -4, 0, -4),
+            Background = new SolidColorBrush(Colors.Transparent),
+            BorderThickness = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = Visibility.Collapsed,
+        };
+        ToolTipService.SetToolTip(button, tip);
+        AutomationProperties.SetName(button, $"Reset {name}");
+        return button;
+    }
+
+    private static TextBlock DescriptionText(string text = "")
+    {
+        var block = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+        };
+        SetText(block, text);
+        return block;
+    }
+
+    private static void SetText(TextBlock block, string text)
+    {
+        block.Text = text;
+        block.Visibility = text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private static TextBlock KeyText(string key) => new()
+    {
+        Text = key,
+        FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+        FontSize = 11,
+        Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+    };
+
+    private static TextBlock ErrorText() => new()
+    {
+        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4)),
+        TextWrapping = TextWrapping.Wrap,
+        Visibility = Visibility.Collapsed,
+        Margin = new Thickness(0, 6, 0, 0),
+    };
+
+    /// <summary>A card: name (+ reset arrow), description, config key and error on the left; the control on the right.</summary>
+    private static Border CardLayout(TextBlock label, Button? reset, TextBlock? description, string? key, TextBlock? error, FrameworkElement control)
+    {
+        label.TextWrapping = TextWrapping.Wrap;
+        label.VerticalAlignment = VerticalAlignment.Center;
+        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { label } };
+        if (reset != null)
+        {
+            title.Children.Add(reset);
+        }
+
+        var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center, Children = { title } };
+        if (description != null)
+        {
+            text.Children.Add(description);
+        }
+
+        if (key != null)
+        {
+            text.Children.Add(KeyText(key));
+        }
+
+        if (error != null)
+        {
+            text.Children.Add(error);
+        }
+
+        control.VerticalAlignment = VerticalAlignment.Center;
         var grid = new Grid { ColumnSpacing = 24 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(controls, 1);
+        Grid.SetColumn(control, 1);
         grid.Children.Add(text);
-        grid.Children.Add(controls);
+        grid.Children.Add(control);
         return CardBorder(grid);
     }
 
@@ -768,8 +1101,7 @@ internal sealed partial class SettingsWindow : Window
         SettingKind.Number => NumberControl(setting, commit),
         SettingKind.Color => ColorControl(commit),
         SettingKind.Font => FontControl(commit),
-        SettingKind.Scheme => SchemeControl(commit),
-        _ => TextControl(setting, commit),
+        _ => TextControl(setting, commit), // SettingKind.Scheme has cards of its own (SchemeCards)
     };
 
     private static (FrameworkElement, Action<object?>) ToggleControl(SettingDef setting, Action<object?> commit)
@@ -782,7 +1114,7 @@ internal sealed partial class SettingsWindow : Window
 
     private static (FrameworkElement, Action<object?>) ChoiceControl(SettingDef setting, Action<object?> commit)
     {
-        var box = new ComboBox { MinWidth = 220 };
+        var box = new ComboBox { MinWidth = 200 };
         AutomationProperties.SetName(box, setting.Label);
         foreach (var choice in setting.Choices)
         {
@@ -870,27 +1202,58 @@ internal sealed partial class SettingsWindow : Window
         });
     }
 
+    /// <summary>A color: typed as #rrggbb, or picked (applied live while you drag, a few times a second).</summary>
     private static (FrameworkElement, Action<object?>) ColorControl(Action<object?> commit)
     {
         var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1) };
         swatch.BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
         var box = new TextBox { Width = 120, PlaceholderText = "The scheme's" };
         var picker = new ColorPicker { IsAlphaEnabled = false, IsMoreButtonVisible = true, ColorSpectrumShape = ColorSpectrumShape.Ring };
-        var pick = new Button { Content = new FontIcon { Glyph = "", FontSize = 14 }, Flyout = new Flyout { Content = picker } };
+        var flyout = new Flyout { Content = picker };
+        var pick = new Button { Content = new FontIcon { Glyph = "", FontSize = 14 }, Flyout = flyout };
         AutomationProperties.SetName(pick, "Pick a color");
         string? shown = null;
+        var picking = false;
         void Paint(string? hex) => swatch.Background = hex != null && TryHex(hex, out var c)
             ? new SolidColorBrush(c)
             : (Brush)Application.Current.Resources["SubtleFillColorTransparentBrush"];
         void Apply(string text)
         {
-            if (text != shown)
+            if (!string.Equals(text, shown, StringComparison.OrdinalIgnoreCase))
             {
                 shown = text;
                 Paint(text);
                 commit(text.Trim().Length == 0 ? null : text.Trim());
             }
         }
+
+        void Picked()
+        {
+            var c = picker.Color;
+            box.Text = $"#{c.R:x2}{c.G:x2}{c.B:x2}";
+            Apply(box.Text);
+        }
+
+        // While the picker is open, each change is written once it settles for a moment: live,
+        // without a config reload per pixel of a drag.
+        var settle = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        settle.Interval = TimeSpan.FromMilliseconds(150);
+        settle.IsRepeating = false;
+        settle.OnTick(_ =>
+        {
+            if (picking)
+            {
+                Picked();
+            }
+        });
+        picker.ColorChanged += (_, _) =>
+        {
+            if (picking)
+            {
+                settle.Stop();
+                settle.Start();
+            }
+        };
 
         box.LostFocus += (_, _) => Apply(box.Text);
         box.KeyDown += (_, e) =>
@@ -901,23 +1264,24 @@ internal sealed partial class SettingsWindow : Window
                 e.Handled = true;
             }
         };
-        ((Flyout)pick.Flyout).Opening += (_, _) =>
+        flyout.Opening += (_, _) =>
         {
             if (TryHex(box.Text, out var c))
             {
                 picker.Color = c;
             }
         };
-        ((Flyout)pick.Flyout).Closed += (_, _) =>
+        flyout.Opened += (_, _) => picking = true;
+        flyout.Closed += (_, _) =>
         {
-            var c = picker.Color;
-            box.Text = $"#{c.R:x2}{c.G:x2}{c.B:x2}";
-            Apply(box.Text);
+            picking = false;
+            settle.Stop();
+            Picked();
         };
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { swatch, box, pick } };
         return (panel, value =>
         {
-            if (box.FocusState == FocusState.Unfocused)
+            if (box.FocusState == FocusState.Unfocused && !picking)
             {
                 box.Text = shown = value as string ?? "";
                 Paint(shown);
@@ -945,117 +1309,12 @@ internal sealed partial class SettingsWindow : Window
         return (box, value =>
         {
             var family = value as string;
-            if (family != null && !box.Items.Contains(family))
+            if (family != null && !family.Equals(BundledFonts.Family, StringComparison.OrdinalIgnoreCase) && !box.Items.Contains(family))
             {
                 box.Items.Add(family); // not installed, or not monospace: still shown as written
             }
 
             box.SelectedItem = family is null || family.Equals(BundledFonts.Family, StringComparison.OrdinalIgnoreCase) ? BundledFontLabel : family;
-        });
-    }
-
-    /// <summary>
-    /// A scheme, or (switched on) a light/dark pair that follows Windows: <c>"light:X,dark:Y"</c>.
-    /// </summary>
-    private (FrameworkElement, Action<object?>) SchemeControl(Action<object?> commit)
-    {
-        var names = _config.Themes.Names();
-        ComboBox Box(string label)
-        {
-            var box = new ComboBox { MinWidth = 240, Header = label };
-            AutomationProperties.SetName(box, label);
-            box.Items.Add(DefaultSchemeLabel);
-            foreach (var name in names)
-            {
-                box.Items.Add(name);
-            }
-
-            return box;
-        }
-
-        var single = Box("Scheme");
-        var light = Box("When Windows is light");
-        var dark = Box("When Windows is dark");
-        light.Items.Remove(DefaultSchemeLabel); // a pair names two schemes
-        dark.Items.Remove(DefaultSchemeLabel);
-        var follow = new ToggleSwitch { Header = "Follow Windows light/dark", OnContent = "Two schemes", OffContent = "One scheme", MinWidth = 0 };
-        AutomationProperties.SetName(follow, "Follow Windows light/dark");
-        var local = false; // set while showing a value: not a change
-
-        void Layout(bool pair)
-        {
-            single.Visibility = pair ? Visibility.Collapsed : Visibility.Visible;
-            light.Visibility = dark.Visibility = pair ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        void Changed()
-        {
-            if (local)
-            {
-                return;
-            }
-
-            if (follow.IsOn)
-            {
-                if (light.SelectedItem is string l && dark.SelectedItem is string d)
-                {
-                    commit($"light:{l},dark:{d}");
-                }
-            }
-            else
-            {
-                commit(single.SelectedItem is string s && s != DefaultSchemeLabel ? s : null);
-            }
-        }
-
-        single.SelectionChanged += (_, _) => Changed();
-        light.SelectionChanged += (_, _) => Changed();
-        dark.SelectionChanged += (_, _) => Changed();
-        follow.Toggled += (_, _) =>
-        {
-            if (local)
-            {
-                return;
-            }
-
-            local = true;
-            if (follow.IsOn)
-            {
-                // Start both sides from the scheme in use (or a well-known pair for Phosphor's own).
-                var current = single.SelectedItem as string;
-                var named = current != null && current != DefaultSchemeLabel;
-                light.SelectedItem = named ? current : names.FirstOrDefault(n => n == "Catppuccin Latte") ?? names.FirstOrDefault();
-                dark.SelectedItem = named ? current : names.FirstOrDefault(n => n == "Catppuccin Mocha") ?? names.FirstOrDefault();
-            }
-            else
-            {
-                single.SelectedItem = dark.SelectedItem ?? DefaultSchemeLabel;
-            }
-
-            Layout(follow.IsOn);
-            local = false;
-            Changed();
-        };
-
-        var panel = new StackPanel { Spacing = 10, Children = { follow, single, light, dark } };
-        return (panel, value =>
-        {
-            local = true;
-            var text = value as string;
-            var pair = text != null && ThemeLibrary.TryParsePair(text, out var l, out var d);
-            follow.IsOn = pair;
-            if (pair && ThemeLibrary.TryParsePair(text!, out l, out d))
-            {
-                light.SelectedItem = light.Items.Contains(l) ? l : null;
-                dark.SelectedItem = dark.Items.Contains(d) ? d : null;
-            }
-            else
-            {
-                single.SelectedItem = text != null && single.Items.Contains(text) ? text : DefaultSchemeLabel;
-            }
-
-            Layout(pair);
-            local = false;
         });
     }
 

@@ -7,11 +7,17 @@ namespace Phosphor.Session;
 // What Phosphor remembers between launches (session.json): which windows, workspaces, panes and
 // tabs exist, and what each tab runs and where — not what the terminals showed.
 
-/// <summary>Everything to reopen: the normal windows (not the quick terminal), and the command palette's recent commands.</summary>
-public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null)
+/// <summary>
+/// Everything to reopen: the normal windows (not the quick terminal), the command palette's recent
+/// commands, and where the settings window was.
+/// </summary>
+public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null, WindowBounds? Settings = null)
 {
     public const int CurrentVersion = 1;
 }
+
+/// <summary>A window's place and size (physical pixels, as AppWindow reports them).</summary>
+public sealed record WindowBounds(int X, int Y, int Width, int Height);
 
 /// <summary>
 /// A window: its bounds (physical pixels, as AppWindow reports them), whether it was maximized,

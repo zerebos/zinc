@@ -373,6 +373,7 @@ public sealed class ConfigFile
         public ConfigFile Build()
         {
             string? defaultId = null;
+            List<string>? listOrder = null;
             var global = new Config();
             var profileEntries = new Dictionary<string, List<Entry>>();
             var profileOrder = new List<string>();
@@ -391,6 +392,17 @@ public sealed class ConfigFile
                         else
                         {
                             _warnings.Add($"{e.Where}: default-profile takes a profile id");
+                        }
+
+                        break;
+                    case ["profile-order"]:
+                        if (e.Value is List<object> ids && ids.All(i => i is string))
+                        {
+                            listOrder = ids.Cast<string>().ToList();
+                        }
+                        else
+                        {
+                            _warnings.Add($"{e.Where}: profile-order takes a list of profile ids");
                         }
 
                         break;
@@ -508,6 +520,14 @@ public sealed class ConfigFile
             foreach (var d in discovered.Where(d => found.ContainsKey(d.Id)))
             {
                 profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d)) { Found = true, FoundName = d.Name, FoundCommand = d.Command });
+            }
+
+            if (listOrder != null)
+            {
+                // profile-order (the settings window's drag order) first; the rest keep their places after it.
+                profiles = profiles.Select((p, i) => (p, i))
+                    .OrderBy(x => listOrder.IndexOf(x.p.Id) is var at and >= 0 ? at : listOrder.Count + x.i)
+                    .Select(x => x.p).ToList();
             }
 
             if (profiles.Count == 0)

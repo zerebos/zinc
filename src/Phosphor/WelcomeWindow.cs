@@ -61,7 +61,7 @@ internal sealed partial class WelcomeWindow : Window
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
-        AppWindow.Resize(new Windows.Graphics.SizeInt32(940, 720));
+        WindowPlacement.Resize(this, 940, 720);
         _firstRun = firstRun;
 
         // Start from what's in force; on first run, workspaces in the sidebar (Phosphor at its most
@@ -347,6 +347,17 @@ internal sealed partial class WelcomeWindow : Window
         }
 
         search.TextChanged += (_, _) => Fill();
+        // The page is laid out only once it's shown: bring the chosen scheme into view then.
+        void FirstLayout(object sender, SizeChangedEventArgs e)
+        {
+            list.SizeChanged -= FirstLayout;
+            if (list.SelectedItem is { } chosen)
+            {
+                list.ScrollIntoView(chosen, ScrollIntoViewAlignment.Leading);
+            }
+        }
+
+        list.SizeChanged += FirstLayout;
         list.SelectionChanged += (_, _) =>
         {
             if (list.SelectedItem is string name)

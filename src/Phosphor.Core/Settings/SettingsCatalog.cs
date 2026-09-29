@@ -27,8 +27,11 @@ public enum SettingKind
     Scheme,
 }
 
-/// <summary>A choice's label and the value written for it (null: the default, written as nothing).</summary>
-public sealed record SettingChoice(string Label, object? Value);
+/// <summary>
+/// A choice's label (short: it's a menu item), the value written for it (null: the default, written
+/// as nothing), and what it means in more words, shown under the setting's name while it's chosen.
+/// </summary>
+public sealed record SettingChoice(string Label, object? Value, string? Detail = null);
 
 /// <summary>A section of the settings window.</summary>
 public sealed record SettingsSection(string Id, string Title, string Glyph);
@@ -85,10 +88,10 @@ public static class SettingsCatalog
 
     private static readonly SettingChoice[] NotifyChoices =
     [
-        new("A dot on its tab", "badge"),
-        new("A Windows notification while Phosphor is in the background", "toast"),
-        new("A Windows notification whenever you're not looking", "toast-always"),
-        new("Nothing", "never"),
+        new("Tab dot", "badge", "A dot on its tab; the taskbar button flashes if Phosphor is in the background."),
+        new("Notification", "toast", "A dot on its tab, and a Windows notification if Phosphor is in the background."),
+        new("Always notify", "toast-always", "A Windows notification whenever you aren't looking at that pane, even in Phosphor."),
+        new("Nothing", "never", "No dot, no notification."),
     ];
 
     public static IReadOnlyList<SettingDef> All { get; } =
@@ -117,12 +120,12 @@ public static class SettingsCatalog
         new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice, "top")
             { Choices = [new("Along the top", "top"), new("In a sidebar", "left")] },
         new("layout", "Workspaces", "window.sidebar", "Sidebar", "With workspaces in a sidebar.", SettingKind.Choice, "full")
-            { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Hidden until you reach the edge", "auto-hide")] },
+            { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window's left edge.")] },
         new("layout", "Workspaces", "window.title-bar", "Title bar", "With workspaces in a sidebar.", SettingKind.Choice, "show")
-            { Choices = [new("Shown", "show"), new("Hidden until you reach the top", "auto-hide")] },
+            { Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window's top edge.")] },
         new("layout", "Panes", "window.tab-groups", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
         new("layout", "Panes", "window.group-tab-strip", "Pane tab strip", "The row of tabs above a pane.", SettingKind.Choice, "auto")
-            { Choices = [new("When a pane has two or more tabs", "auto"), new("Always", "always")] },
+            { Choices = [new("Automatic", "auto", "Shown when a pane has two or more tabs."), new("Always", "always")] },
         new("layout", "Panes", "window.unfocused-split-opacity", "Unfocused panes",
             "How much of an unfocused pane shows through (1: not dimmed).", SettingKind.Number, 0.7)
             { Minimum = 0.15, Maximum = 1, Step = 0.05 },
@@ -130,9 +133,16 @@ public static class SettingsCatalog
         new("layout", "When you come back", "window.save-state", "Reopen windows",
             "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice, "always")
             { Choices = [new("Reopen them", "always"), new("Start fresh", "never")] },
-        new("layout", "When you come back", "window.quit-after-last-window-closed", "After the last window closes",
-            "Staying in the tray keeps the quick terminal's hotkey working.", SettingKind.Choice, null)
-            { Choices = [new("Stay in the tray while the quick terminal hotkey works", null), new("Always quit", true), new("Always stay in the tray", false)] },
+        new("layout", "When you come back", "window.quit-after-last-window-closed", "When the last window closes",
+            "", SettingKind.Choice, null)
+            {
+                Choices =
+                [
+                    new("Automatic", null, "Stays in the tray while the quick terminal's hotkey is set, so it keeps working; otherwise quits."),
+                    new("Quit", true),
+                    new("Stay in the tray", false, "Click the tray icon to open a window again."),
+                ],
+            },
 
         // ---- Terminal
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
@@ -142,19 +152,21 @@ public static class SettingsCatalog
         new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command's output.", SettingKind.Choice, "failures")
             { Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")] },
         new("terminal", "Mouse", "terminal.mouse-pointer", "Pointer over text", "", SettingKind.Choice, "arrow")
-            { Choices = [new("Arrow, like Windows Terminal", "arrow"), new("Text I-beam, like Ghostty", "text")] },
+            { Choices = [new("Arrow", "arrow", "Like Windows Terminal."), new("Text I-beam", "text", "Like Ghostty.")] },
         new("terminal", "Clipboard", "terminal.clipboard-write", "Programs may copy",
             "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle, true),
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs may read the clipboard",
             "Anything running, including a remote host, could read it.", SettingKind.Toggle, false),
 
         // ---- Notifications
-        new("notifications", "Long commands", "notify.command-finished", "When a long command finishes out of view", "", SettingKind.Choice, "badge")
+        new("notifications", "Long commands", "notify.command-finished", "Long command finishes",
+            "In a pane you weren't looking at.", SettingKind.Choice, "badge")
             { Choices = NotifyChoices },
         new("notifications", "Long commands", "notify.command-finished-after", "Counts as long after",
             "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 10L)
             { Placeholder = "10", NumbersAsNumbers = true },
-        new("notifications", "Programs", "notify.programs", "When a program sends a notification", "OSC 9 and OSC 777, e.g. a build script.", SettingKind.Choice, "badge")
+        new("notifications", "Programs", "notify.programs", "Program notifications",
+            "Sent with OSC 9 or OSC 777, e.g. by a build script.", SettingKind.Choice, "badge")
             { Choices = NotifyChoices },
 
         // ---- Quick terminal
@@ -162,7 +174,7 @@ public static class SettingsCatalog
         new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice, "top")
             { Choices = [new("Top", "top"), new("Bottom", "bottom"), new("Left", "left"), new("Right", "right"), new("Center", "center")] },
         new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice, "mouse")
-            { Choices = [new("The one with the pointer", "mouse"), new("The main one", "main")] },
+            { Choices = [new("With the pointer", "mouse", "Opens on the screen the pointer is on."), new("Main", "main", "Always opens on the main screen.")] },
         new("quick", "Placement", "quick-terminal.size", "Size",
             "A percentage or pixels (50%, 600px) along its edge; defaults: 50%, or 70% by 60% centered.", SettingKind.Text, null)
             { Placeholder = "50%" },

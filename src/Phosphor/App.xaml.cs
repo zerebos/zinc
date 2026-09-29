@@ -125,11 +125,36 @@ public partial class App : Application
             return;
         }
 
-        _settings = new SettingsWindow(_config);
-        _settings.Closed += (_, _) => _settings = null;
+        // It comes back where it was (saved with the session), else over the window you're in;
+        // during a run, on the section it was left on.
+        var settings = _settings = new SettingsWindow(_config, _settingsSection);
+        if (!WindowPlacement.Restore(settings, _settingsBounds))
+        {
+            if (_windows.LastOrDefault(w => w.AppWindow is { IsVisible: true }) is { } owner)
+            {
+                WindowPlacement.CenterOver(settings, owner, 1040, 780);
+            }
+            else
+            {
+                WindowPlacement.Resize(settings, 1040, 780);
+            }
+        }
+
+        settings.AppWindow.Changed += (window, e) =>
+        {
+            if ((e.DidPositionChange || e.DidSizeChange) && WindowPlacement.Bounds(window) is { } bounds)
+            {
+                _settingsBounds = bounds;
+            }
+        };
+        settings.Closed += (_, _) =>
+        {
+            _settingsSection = settings.Section;
+            _settings = null;
+        };
         // Its writes reach the windows through the config watcher (started if the folder is new).
-        _settings.Wrote += WatchConfig;
-        _settings.Activate();
+        settings.Wrote += WatchConfig;
+        settings.Activate();
     }
 
     internal void ShowWelcome(bool firstRun)
@@ -544,6 +569,10 @@ public partial class App : Application
     // --------------------------------------------------------------- session
 
     private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
+
+    // The settings window's place (saved with the session) and, for this run, its section.
+    private WindowBounds? _settingsBounds;
+    private string? _settingsSection;
     private string? _savedSession;
 
     /// <summary>The command palette's recently run commands, shared by every window; saved with the session.</summary>
@@ -552,10 +581,13 @@ public partial class App : Application
     /// <summary>Recent commands come back even when the windows don't (a launch with a command).</summary>
     private void LoadRecentCommands()
     {
-        if (_sessionPath != null && _config.Global.RestoreSession && SessionStore.Load(_sessionPath)?.RecentCommands is { } titles)
+        var saved = _sessionPath != null && _config.Global.RestoreSession ? SessionStore.Load(_sessionPath) : null;
+        if (saved?.RecentCommands is { } titles)
         {
             RecentCommands = new Phosphor.Commands.RecentCommands(titles);
         }
+
+        _settingsBounds = saved?.Settings;
     }
 
     // Held here: a DispatcherQueueTimer nothing references is garbage-collected and stops
@@ -658,7 +690,7 @@ public partial class App : Application
                 return;
             }
 
-            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles]));
+            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);

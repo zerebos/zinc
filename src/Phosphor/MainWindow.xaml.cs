@@ -107,7 +107,7 @@ public sealed partial class MainWindow : Window
         }
         else
         {
-            AppWindow.Resize(new Windows.Graphics.SizeInt32(1100, 700));
+            WindowPlacement.Resize(this, 1100, 700);
         }
 
         Activated += OnActivated;

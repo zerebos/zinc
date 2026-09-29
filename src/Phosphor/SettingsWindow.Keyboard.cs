@@ -76,7 +76,8 @@ internal sealed partial class SettingsWindow
     private Border KeyRow(ActionInvocation action, string title, List<KeyChord> chords, List<KeySequence> sequences,
         IReadOnlyDictionary<string, string> lines)
     {
-        var keys = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
+        // Chips wrap onto more rows rather than squeezing the action's name.
+        var keys = new WrapPanel { HorizontalSpacing = 6, VerticalSpacing = 6, AlignRight = true, VerticalAlignment = VerticalAlignment.Center };
         foreach (var chord in chords)
         {
             keys.Children.Add(KeyChip(chord.ToString(), $"Remove {chord} from {title}", () => ApplyKeys(KeyBindingEditor.Remove(lines, action, chord))));
@@ -93,13 +94,18 @@ internal sealed partial class SettingsWindow
         add.Flyout = CaptureFlyout(action, title, lines);
         keys.Children.Add(add);
 
+        var name = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            Children = { new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center } },
+        };
         if (KeyBindingEditor.Customized(lines, action))
         {
-            var reset = new HyperlinkButton { Content = "Reset", Padding = new Thickness(6, 2, 6, 2), VerticalAlignment = VerticalAlignment.Center };
-            ToolTipService.SetToolTip(reset, "Back to its default keys");
-            AutomationProperties.SetName(reset, $"Reset {title}");
+            var reset = ResetArrow(title, "Back to its default keys");
+            reset.Visibility = Visibility.Visible;
             reset.Click += (_, _) => ApplyKeys(KeyBindingEditor.Reset(lines, action));
-            keys.Children.Insert(0, reset);
+            name.Children.Add(reset);
         }
 
         var text = new StackPanel
@@ -108,7 +114,7 @@ internal sealed partial class SettingsWindow
             VerticalAlignment = VerticalAlignment.Center,
             Children =
             {
-                new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap },
+                name,
                 new TextBlock
                 {
                     Text = Actions.Format(action),
@@ -118,9 +124,10 @@ internal sealed partial class SettingsWindow
                 },
             },
         };
+        // Two shares of the width to the keys, one to the name (never under 200 px).
         var grid = new Grid { ColumnSpacing = 24 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star), MinWidth = 200 });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(3, GridUnitType.Star) });
         Grid.SetColumn(keys, 1);
         grid.Children.Add(text);
         grid.Children.Add(keys);

@@ -175,4 +175,25 @@ public class ProfileSettingsTests
         Assert.Equal("cmd.exe", config.ValueOf("mine", "command"));
         Assert.Null(config.ValueOf("wsl:Fedora", "command"));
     }
+
+    private static IReadOnlyList<DiscoveredProfile> Three(DiscoverySettings _) =>
+        [new("wsl:Fedora", "Fedora", "wsl.exe -d Fedora"), new("pwsh", "PowerShell", "pwsh.exe"), new("cmd", "Command Prompt", "cmd.exe")];
+
+    [Fact]
+    public void ProfileOrderSortsTheListAndTheRestFollow()
+    {
+        var config = ConfigFile.Parse("profile-order = [\"cmd\", \"mine\", \"gone\"]\n\n[profile.mine]\ncommand = \"x.exe\"\n", discover: Three);
+        Assert.Empty(config.Warnings);
+        // Listed first (an id that no longer exists is skipped), then the others in their usual order.
+        Assert.Equal(["cmd", "mine", "wsl:Fedora", "pwsh"], config.Profiles.Select(p => p.Id));
+        Assert.Contains(ConfigFile.Parse("profile-order = \"cmd\"\n").Warnings, w => w.Contains("profile-order"));
+    }
+
+    [Fact]
+    public void ProfileOrderIsWrittenAtTheTop()
+    {
+        var text = ConfigEditor.Set("[profile.mine]\ncommand = \"x.exe\"\n", ["profile-order"], new List<object> { "pwsh", "mine" });
+        Assert.StartsWith("profile-order = [\"pwsh\", \"mine\"]", text);
+        Assert.Equal(["pwsh", "mine", "wsl:Fedora", "cmd"], ConfigFile.Parse(text, discover: Three).Profiles.Select(p => p.Id));
+    }
 }

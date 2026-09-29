@@ -206,7 +206,18 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   capture flyout: PreviewKeyDown + `InputKeyboardSource` modifier state, so posted keys can't
   drive it — the user tests it) over Core `Settings/KeyBindingEditor.cs` (tested: default key
   removed = "none", given back = line removed, other spellings edited in place, Reset skips
-  sequences; `KeyChord.ToConfig`). Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
+  sequences; `KeyChord.ToConfig`). Polish (session 4): cards via `CardLayout` (reset arrow beside
+  the name = "changed" marker; `SettingChoice.Detail` explains the chosen option under the name);
+  profile settings show "Inherited: …" (`OverrideCard`, arrow = inherit); `SchemeCards` (follow
+  switch, scheme / "Dark scheme", "Light scheme"); profile list = a ListView of its own
+  ListViewItems (drag reorder + ⋯ Move up/down) → top-level `profile-order` (ConfigFile sorts
+  `Profiles` by it; tested; writing it pins `default-profile`, else the default would move); undo =
+  a floating bar (`ShowChanges`); color picker writes live (150 ms settle timer). Key chips wrap
+  (`WrapPanel`). `WindowPlacement`: sizes in DIPs for every window; Settings reopens at its
+  saved bounds (session.json `settings`, only with save-state on) or centered over the last main
+  window, on its last section during a run (`App._settingsSection`). The sidebar's selection
+  animation is NavigationView's own (600 ms, not adjustable; see .scratch/NOTES.md). Tools:
+  `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
