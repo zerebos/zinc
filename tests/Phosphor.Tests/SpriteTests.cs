@@ -60,6 +60,21 @@ public class SpriteTests
         Assert.True(off.Profiles.Single(p => p.Id == "x").Config.BuiltinGlyphs); // per profile, like the rest of [font]
     }
 
+    [Theory]
+    [InlineData("", 1, 1)]
+    [InlineData("adjust-box-thickness = 1", 1, 2)]
+    [InlineData("adjust-box-thickness = -1", 2, 1)]
+    [InlineData("adjust-box-thickness = -5", 2, 1)]       // never below 1
+    [InlineData("adjust-box-thickness = \"2px\"", 1, 3)]
+    [InlineData("adjust-box-thickness = \"50%\"", 2, 3)]
+    [InlineData("adjust-box-thickness = \"-50%\"", 2, 1)]
+    public void BoxThicknessCanBeAdjusted(string line, int thickness, int adjusted)
+    {
+        var config = ConfigFile.Parse($"[font]\n{line}\n");
+        Assert.Empty(config.Warnings);
+        Assert.Equal(adjusted, config.Global.AdjustedBoxThickness(thickness));
+    }
+
     [Fact]
     public void ThicknessFollowsTheFont()
     {

@@ -113,6 +113,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   font: pixel-exact for the cell, so lines, prompt segments and blocks meet without seams in any
   font, and characters most fonts lack still show. `false` uses the font's (as a font designed
   them); what the font lacks then comes from the bundled Cascadia Mono NF where it has it.
+- `adjust-box-thickness`: the built-in glyphs' lines are as thick as the font's underline, rounded
+  up to whole pixels (as in Ghostty; thin with light fonts like JetBrains Mono at small sizes).
+  `1` adds a pixel, `-1` takes one away (never below 1), `"20%"` scales.
 
 **`[colors]`**
 - `theme`: a color scheme by name. About 650 come with Phosphor (the

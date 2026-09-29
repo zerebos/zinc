@@ -32,7 +32,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
     public Config Config
     {
         get => _config;
-        set => _config = value;
+        set
+        {
+            if (value.AdjustBoxThickness != _config.AdjustBoxThickness)
+            {
+                ClearSprites(); // drawn with the old line thickness
+            }
+
+            _config = value;
+        }
     }
     private readonly nint _renderState, _rowIterator, _rowCells;
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
@@ -560,7 +568,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         // Lines as thick as the font's underline in device pixels, rounded up: Ghostty's rule
         // (Metrics.zig: box_thickness = max(1, ceil(underline thickness))).
         var underline = _faces[0] is { UnderlineThickness: > 0 } face ? face.UnderlineThickness * _fontSize : _fontSize / 14;
-        var thickness = (int)MathF.Max(1, MathF.Ceiling(underline * m.Scale));
+        var thickness = _config.AdjustedBoxThickness((int)MathF.Max(1, MathF.Ceiling(underline * m.Scale)));
         (CanvasBitmap, int, int)? sprite = null;
         if (Sprites.Draw(codepoint, (int)m.WidthPx, ascent, (int)m.HeightPx - ascent, thickness) is { } image)
         {

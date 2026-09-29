@@ -103,6 +103,20 @@ public sealed record Config
     /// </summary>
     public bool BuiltinGlyphs { get; init; } = true;
 
+    /// <summary>
+    /// Makes the built-in glyphs' lines thicker or thinner than the font's underline (Ghostty's
+    /// adjust-box-thickness): whole pixels, or a percentage. Config: <c>[font] adjust-box-thickness = 1 | "20%"</c>.
+    /// </summary>
+    public (double Amount, bool Percent) AdjustBoxThickness { get; init; }
+
+    /// <summary><paramref name="thickness"/> pixels, adjusted by <see cref="AdjustBoxThickness"/> (at least 1).</summary>
+    public int AdjustedBoxThickness(int thickness) => Math.Max(1, AdjustBoxThickness switch
+    {
+        (0, _) => thickness,
+        (var percent, true) => (int)Math.Round(thickness * (1 + percent / 100)),
+        (var pixels, false) => thickness + (int)Math.Round(pixels),
+    });
+
     /// <summary>Font size in points, like Ghostty and Windows Terminal.</summary>
     public float FontSize { get; init; } = DefaultFontSize;
 
@@ -216,6 +230,7 @@ public sealed record Config
         {
             "font-family" when value.Length > 0 => this with { FontFamily = value },
             "builtin-glyphs" when bool.TryParse(value, out var builtin) => this with { BuiltinGlyphs = builtin },
+            "adjust-box-thickness" when TryAdjustment(value, out var adjust) => this with { AdjustBoxThickness = adjust },
             "font-size" when TryFloat(value, out var size) && size > 0 => this with { FontSize = size },
             "command" when value.Length > 0 => this with { Command = value },
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
@@ -330,6 +345,17 @@ public sealed record Config
     }
 
     /// <summary>Parses a kebab-case mode name ("auto-hide" → AutoHide).</summary>
+    /// <summary>A metric adjustment as Ghostty writes one: whole pixels ("1", "-1", "1px") or a percentage ("20%").</summary>
+    private static bool TryAdjustment(string value, out (double Amount, bool Percent) adjustment)
+    {
+        var s = value.Trim();
+        var percent = s.EndsWith('%');
+        s = percent ? s[..^1] : s.EndsWith("px", StringComparison.OrdinalIgnoreCase) ? s[..^2] : s;
+        var ok = double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var amount);
+        adjustment = (amount, percent);
+        return ok;
+    }
+
     public static bool TryMode<T>(string value, out T mode) where T : struct, Enum
     {
         mode = default;
