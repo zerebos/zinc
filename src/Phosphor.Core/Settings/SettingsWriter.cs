@@ -35,6 +35,17 @@ public sealed class SettingsWriter
         }
     }
 
+    /// <summary>Removes a whole table (a profile: <c>["profile", id]</c>) and its sub-tables.</summary>
+    public void RemoveTable(IReadOnlyList<string> path)
+    {
+        var text = Current();
+        var updated = ConfigEditor.RemoveTable(text, path);
+        if (updated != text)
+        {
+            Write(updated);
+        }
+    }
+
     /// <summary>Puts the file back as it was when the window opened.</summary>
     public void Undo()
     {

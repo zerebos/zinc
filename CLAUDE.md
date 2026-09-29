@@ -198,8 +198,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   table) to be in the catalog or `FileOnly`, and every default to equal an empty config's. App
   `SettingsWindow.cs` (code-only, NavigationView, cards generated per kind, `Refresh` on every
   reload, read-only while HasErrors); `App.ShowSettings` (one instance; writes reach windows via
-  the config watcher). Open: `open-settings` (Ctrl+,), palette, tray. Profiles/Keyboard pages are
-  placeholders until sessions 2-3. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
+  the config watcher). Open: `open-settings` (Ctrl+,), palette, tray. Profiles (session 2): list
+  + editor (`_editing`), `Profile.Found/InFile/FoundName/FoundCommand`, `ConfigFile.ProfileValues`
+  / `ValueOf(id, key)`, catalog `ProfileFields` + `Discovery`, `OverrideCard` (inherit ↔ own value
+  into `[profile.x]`), delete/undo via `ConfigEditor.RemoveTable` (tested; keeps the next section's
+  comment). Keyboard page is a placeholder until session 3. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`

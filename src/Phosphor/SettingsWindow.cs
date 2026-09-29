@@ -37,6 +37,7 @@ internal sealed partial class SettingsWindow : Window
     private readonly InfoBar _problems = new() { Severity = InfoBarSeverity.Error, IsClosable = false, Title = "config.toml has an error" };
     private readonly List<Action> _refreshers = [];
     private string _section = "appearance";
+    private string? _editing; // the profile open in the Profiles section's editor
     private bool _updating;
 
     /// <summary>A change was written to config.toml.</summary>
@@ -92,6 +93,7 @@ internal sealed partial class SettingsWindow : Window
             if (e.SelectedItem is NavigationViewItem { Tag: string id })
             {
                 _section = id;
+                _editing = null;
                 _search.Text = "";
                 Render();
                 _scroller.ChangeView(null, 0, null, disableAnimation: true);
@@ -126,7 +128,15 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>The config was read again (after our write, or an edit elsewhere): show what's in force.</summary>
     public void Refresh(ConfigFile config)
     {
+        var listed = _config.Profiles.Select(p => (p.Id, p.Name, p.Hidden)).ToList();
         _config = config;
+        if (_section == "profiles" && _search.Text.Trim().Length == 0 &&
+            (_editing == null ? !listed.SequenceEqual(config.Profiles.Select(p => (p.Id, p.Name, p.Hidden))) : listed.All(p => p.Id != _editing)))
+        {
+            Render(); // the list changed (or the profile being edited just appeared)
+            return;
+        }
+
         _updating = true;
         try
         {
@@ -151,7 +161,9 @@ internal sealed partial class SettingsWindow : Window
         var query = _search.Text.Trim();
         _page.Children.Add(new TextBlock
         {
-            Text = query.Length > 0 ? "Results" : SettingsCatalog.Sections.First(s => s.Id == _section).Title,
+            Text = query.Length > 0 ? "Results"
+                : _section == "profiles" && _editing is { } editing ? _config.FindProfile(editing)?.Name ?? editing
+                : SettingsCatalog.Sections.First(s => s.Id == _section).Title,
             FontSize = 28,
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 8, 0, 12),
@@ -177,7 +189,18 @@ internal sealed partial class SettingsWindow : Window
         {
             AboutPage();
         }
-        else if (_section is "profiles" or "keyboard")
+        else if (_section == "profiles")
+        {
+            if (_editing is { } id)
+            {
+                ProfileEditor(id);
+            }
+            else
+            {
+                ProfilesPage();
+            }
+        }
+        else if (_section == "keyboard")
         {
             ComingSoon();
         }
@@ -225,9 +248,7 @@ internal sealed partial class SettingsWindow : Window
 
     private void ComingSoon()
     {
-        var what = _section == "profiles"
-            ? "Profiles (each shell's command, folder, icon, font and colors) are edited here in the next update. For now, they're [profile.<id>] sections in config.toml; the README lists what they take."
-            : "Keys are changed here in the next update. For now, they're in the [keys] section of config.toml; the README lists every action.";
+        const string what = "Keys are changed here in the next update. For now, they're in the [keys] section of config.toml; the README lists every action.";
         _page.Children.Add(Note(what));
         var open = new Button { Content = "Open config.toml", Margin = new Thickness(0, 12, 0, 0) };
         open.Click += (_, _) => OpenConfigFile();
@@ -258,11 +279,338 @@ internal sealed partial class SettingsWindow : Window
         return row;
     }
 
+    // ------------------------------------------------------------ profiles
+
+    /// <summary>The default profile, every profile (found and yours), and where Phosphor looks for shells.</summary>
+    private void ProfilesPage()
+    {
+        _page.Children.Add(new TextBlock { Text = "Default", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+        var visible = _config.VisibleProfiles.ToList();
+        var defaults = new ComboBox { MinWidth = 260 };
+        AutomationProperties.SetName(defaults, "Default profile");
+        foreach (var profile in visible)
+        {
+            defaults.Items.Add(profile.Name);
+        }
+
+        defaults.SelectedIndex = visible.FindIndex(p => p.Id == _config.DefaultProfile.Id);
+        defaults.SelectionChanged += (_, _) =>
+        {
+            if (defaults.SelectedIndex >= 0)
+            {
+                Write(["default-profile"], visible[defaults.SelectedIndex].Id);
+            }
+        };
+        _page.Children.Add(Row("Default profile", "New windows, workspaces and tabs open with it.", defaults));
+
+        var add = new Button { Content = "New profile", HorizontalAlignment = HorizontalAlignment.Right };
+        add.Click += (_, _) => NewProfile();
+        var header = new Grid { Margin = new Thickness(0, 18, 0, 6) };
+        header.Children.Add(new TextBlock { Text = "Profiles", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+        header.Children.Add(add);
+        _page.Children.Add(header);
+        foreach (var profile in _config.Profiles)
+        {
+            _page.Children.Add(ProfileRow(profile));
+        }
+
+        AddGroup("Find shells on this PC", SettingsCatalog.Discovery);
+    }
+
+    private Border ProfileRow(Profile profile)
+    {
+        var what = new List<string>();
+        if (profile.Id == _config.DefaultProfile.Id)
+        {
+            what.Add("default");
+        }
+
+        what.Add(profile.Found ? profile.InFile ? "found on this PC, with your changes" : "found on this PC" : "yours");
+        if (profile.Hidden)
+        {
+            what.Add("hidden");
+        }
+
+        var edit = new Button { Content = "Edit", VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(edit, $"Edit {profile.Name}");
+        edit.Click += (_, _) =>
+        {
+            _editing = profile.Id;
+            Render();
+            _scroller.ChangeView(null, 0, null, disableAnimation: true);
+        };
+        var grid = new Grid { ColumnSpacing = 14 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var icon = new IconSourceElement { IconSource = ProfileIcons.For(profile), Width = 20, Height = 20, VerticalAlignment = VerticalAlignment.Center };
+        var text = new StackPanel
+        {
+            Spacing = 1,
+            Opacity = profile.Hidden ? 0.6 : 1,
+            Children =
+            {
+                new TextBlock { Text = profile.Name },
+                new TextBlock
+                {
+                    Text = $"{string.Join(" · ", what)} · {profile.Id}",
+                    FontSize = 12,
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                },
+            },
+        };
+        Grid.SetColumn(text, 1);
+        Grid.SetColumn(edit, 2);
+        grid.Children.Add(icon);
+        grid.Children.Add(text);
+        grid.Children.Add(edit);
+        return CardBorder(grid);
+    }
+
+    /// <summary>A profile of your own, named "New profile", running what the default profile runs; opened in the editor.</summary>
+    private void NewProfile()
+    {
+        var n = 1;
+        while (_config.FindProfile($"profile-{n}") != null || _config.ProfileValues.ContainsKey($"profile-{n}"))
+        {
+            n++;
+        }
+
+        var id = $"profile-{n}";
+        Write(["profile", id, "name"], "New profile");
+        Write(["profile", id, "command"], _config.DefaultProfile.Config.Command ?? "pwsh.exe");
+        _editing = id;
+        Render();
+    }
+
+    /// <summary>One profile: its own fields, then every font, color and terminal setting it inherits or overrides.</summary>
+    private void ProfileEditor(string id)
+    {
+        var profile = _config.FindProfile(id);
+        var back = new HyperlinkButton { Content = "‹ All profiles", Padding = new Thickness(0, 2, 0, 2) };
+        back.Click += (_, _) =>
+        {
+            _editing = null;
+            Render();
+        };
+        _page.Children.Insert(0, back);
+        _page.Children.Add(Note(profile is { Found: true }
+            ? $"Found on this PC ({profile.FoundCommand}). What you change here is kept in its own section in config.toml."
+            : "Yours, in its own section in config.toml."));
+
+        _page.Children.Add(new TextBlock { Text = "General", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+        foreach (var field in SettingsCatalog.ProfileFields)
+        {
+            var hint = field.Key switch
+            {
+                "name" => profile?.FoundName ?? id,
+                "command" => profile?.FoundCommand ?? "The default shell",
+                _ => field.Placeholder,
+            };
+            _page.Children.Add(Card(field with { Placeholder = hint }, id));
+        }
+
+        foreach (var group in SettingsCatalog.All.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))
+        {
+            _page.Children.Add(new TextBlock { Text = group.Key, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) });
+            foreach (var setting in group)
+            {
+                _page.Children.Add(OverrideCard(setting, id));
+            }
+        }
+
+        // Found profiles go back to what was found; your own can be deleted.
+        var found = profile is { Found: true };
+        var remove = new Button { Content = found ? "Undo all changes to this profile" : "Delete this profile", Margin = new Thickness(0, 24, 0, 0) };
+        var confirm = new Button { Content = found ? "Undo them" : "Delete it", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        var flyout = new Flyout
+        {
+            Content = new StackPanel
+            {
+                Spacing = 10,
+                MaxWidth = 300,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = found
+                            ? "Removes its section from config.toml: back to what was found on this PC."
+                            : "Removes its section from config.toml.",
+                        TextWrapping = TextWrapping.Wrap,
+                    },
+                    confirm,
+                },
+            },
+        };
+        remove.Flyout = flyout;
+        AutomationProperties.SetName(remove, found ? "Undo all changes to this profile" : "Delete this profile");
+        AutomationProperties.SetName(confirm, found ? "Undo them" : "Delete it");
+        confirm.Click += (_, _) =>
+        {
+            flyout.Hide();
+            if (_config.HasErrors)
+            {
+                return;
+            }
+
+            Guard($"removing profile {id}", () =>
+            {
+                _writer.RemoveTable(["profile", id]);
+                Wrote?.Invoke();
+                _changes.IsOpen = true;
+            });
+            _editing = null;
+            Render();
+        };
+        _page.Children.Add(remove);
+    }
+
+    /// <summary>
+    /// A setting in a profile: inherited (shown, greyed) unless "Own value" is on, which writes it
+    /// into the profile's section; off removes it again.
+    /// </summary>
+    private Border OverrideCard(SettingDef setting, string id)
+    {
+        IReadOnlyList<string> path = ["profile", id, .. setting.Path];
+        var error = ErrorText();
+        var own = new ToggleSwitch { OnContent = "Own value", OffContent = "Inherited", MinWidth = 0 };
+        AutomationProperties.SetName(own, $"{setting.Label}: own value");
+        var holder = new ContentControl { VerticalAlignment = VerticalAlignment.Center };
+        var pending = false; // switched on, nothing written yet (no value to start from)
+        object? Inherited() => _config.ValueOf(setting.Key) ?? setting.Default;
+
+        void Commit(object? value)
+        {
+            if (_updating || !own.IsOn)
+            {
+                return;
+            }
+
+            if (value != null && SettingsCatalog.Problem(setting, value) is { } problem)
+            {
+                Show(error, problem);
+                return;
+            }
+
+            error.Visibility = Visibility.Collapsed;
+            pending = false;
+            Write(path, value);
+        }
+
+        var (control, show) = Control(setting, Commit);
+        holder.Content = control;
+
+        void Showing(object? value)
+        {
+            _updating = true;
+            try
+            {
+                show(value);
+            }
+            finally
+            {
+                _updating = false;
+            }
+        }
+
+        own.Toggled += (_, _) =>
+        {
+            if (_updating)
+            {
+                return;
+            }
+
+            holder.IsEnabled = own.IsOn;
+            if (own.IsOn)
+            {
+                // Starts from the inherited value, now the profile's own.
+                if (Inherited() is { } start)
+                {
+                    Write(path, start);
+                }
+                else
+                {
+                    pending = true;
+                }
+            }
+            else
+            {
+                pending = false;
+                Write(path, null);
+                Showing(Inherited());
+            }
+        };
+
+        void Refresh()
+        {
+            var value = _config.ValueOf(id, setting.Key);
+            own.IsOn = value != null || pending;
+            holder.IsEnabled = own.IsOn;
+            show(value ?? Inherited());
+        }
+
+        _refreshers.Add(Refresh);
+        _updating = true;
+        try
+        {
+            Refresh();
+        }
+        finally
+        {
+            _updating = false;
+        }
+
+        var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
+        text.Children.Add(new TextBlock { Text = setting.Label, TextWrapping = TextWrapping.Wrap });
+        text.Children.Add(new TextBlock
+        {
+            Text = $"profile.{id}.{setting.Key}",
+            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+            FontSize = 11,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+        });
+        text.Children.Add(error);
+        var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, VerticalAlignment = VerticalAlignment.Center, Children = { own, holder } };
+        var grid = new Grid { ColumnSpacing = 24 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(controls, 1);
+        grid.Children.Add(text);
+        grid.Children.Add(controls);
+        return CardBorder(grid);
+    }
+
+    /// <summary>Writes one key (null removes it), unless the file has an error.</summary>
+    private void Write(IReadOnlyList<string> path, object? value)
+    {
+        if (_updating || _config.HasErrors)
+        {
+            return;
+        }
+
+        Guard($"saving {string.Join('.', path)}", () =>
+        {
+            _writer.Set(path, value);
+            Wrote?.Invoke();
+            _changes.IsOpen = true;
+        });
+    }
+
+    private static TextBlock ErrorText() => new()
+    {
+        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4)),
+        TextWrapping = TextWrapping.Wrap,
+        Visibility = Visibility.Collapsed,
+        Margin = new Thickness(0, 6, 0, 0),
+    };
+
     // ------------------------------------------------------------ cards
 
     /// <summary>A setting's row: what it is (and its config key), the control, Reset, and a problem if its value won't do.</summary>
-    private Border Card(SettingDef setting)
+    private Border Card(SettingDef setting, string? profile = null)
     {
+        // A profile's own field ([profile.<id>] name, command, ...), or a global setting.
+        IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
         var error = new TextBlock
         {
             Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4)),
@@ -287,7 +635,7 @@ internal sealed partial class SettingsWindow : Window
                 return;
             }
 
-            if (value != null && SettingsCatalog.Problem(setting, value) is { } problem)
+            if (value != null && profile == null && SettingsCatalog.Problem(setting, value) is { } problem)
             {
                 Show(error, problem);
                 return;
@@ -296,7 +644,7 @@ internal sealed partial class SettingsWindow : Window
             error.Visibility = Visibility.Collapsed;
             Guard($"saving {setting.Key}", () =>
             {
-                _writer.Set(setting, value);
+                _writer.Set(path, value is null || SettingsCatalog.Same(value, setting.Default) ? null : value);
                 Wrote?.Invoke();
                 _changes.IsOpen = true;
                 reset.Visibility = value != null && !SettingsCatalog.Same(value, setting.Default) ? Visibility.Visible : Visibility.Collapsed;
@@ -320,7 +668,7 @@ internal sealed partial class SettingsWindow : Window
 
         void Refresh()
         {
-            var value = _config.ValueOf(setting.Key);
+            var value = profile == null ? _config.ValueOf(setting.Key) : _config.ValueOf(profile, setting.Key);
             reset.Visibility = value != null && !SettingsCatalog.Same(value, setting.Default) ? Visibility.Visible : Visibility.Collapsed;
             show(value);
         }
@@ -351,7 +699,7 @@ internal sealed partial class SettingsWindow : Window
 
         text.Children.Add(new TextBlock
         {
-            Text = setting.Key,
+            Text = profile == null ? setting.Key : $"profile.{profile}.{setting.Key}",
             FontFamily = new FontFamily("Cascadia Mono, Consolas"),
             FontSize = 11,
             Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],

@@ -144,3 +144,35 @@ public class SettingsWriterTests
         Assert.False(writer.Changed);
     }
 }
+
+public class ProfileSettingsTests
+{
+    [Fact]
+    public void ProfileFieldsAndDiscoveryReadWithoutWarnings()
+    {
+        var fields = string.Join("\n", SettingsCatalog.ProfileFields.Select(f =>
+            $"{f.Key} = {(f.Kind == SettingKind.Toggle ? "true" : "\"x\"")}"));
+        Assert.DoesNotContain(ConfigFile.Parse($"[profile.x]\n{fields}\n").Warnings, w => !w.Contains("default-profile"));
+
+        var discovery = string.Join("\n", SettingsCatalog.Discovery.Select(d => $"{d.Path[1]} = false"));
+        Assert.Empty(ConfigFile.Parse($"[discover]\n{discovery}\n").Warnings);
+    }
+
+    [Fact]
+    public void KnowsFoundProfilesFromYourOwn()
+    {
+        static IReadOnlyList<DiscoveredProfile> Found(DiscoverySettings _) =>
+            [new("wsl:Fedora", "Fedora", "wsl.exe -d Fedora"), new("pwsh", "PowerShell", "pwsh.exe")];
+        var config = ConfigFile.Parse("[profile.mine]\ncommand = \"cmd.exe\"\n\n[profile.pwsh]\nfont.size = 14\n",
+            discover: Found);
+        var mine = config.Profiles.Single(p => p.Id == "mine");
+        var pwsh = config.Profiles.Single(p => p.Id == "pwsh");
+        var fedora = config.Profiles.Single(p => p.Id == "wsl:Fedora");
+        Assert.Equal((false, true), (mine.Found, mine.InFile));
+        Assert.Equal((true, true, "pwsh.exe"), (pwsh.Found, pwsh.InFile, pwsh.FoundCommand));
+        Assert.Equal((true, false), (fedora.Found, fedora.InFile));
+        Assert.Equal(14L, config.ValueOf("pwsh", "font.size"));
+        Assert.Equal("cmd.exe", config.ValueOf("mine", "command"));
+        Assert.Null(config.ValueOf("wsl:Fedora", "command"));
+    }
+}

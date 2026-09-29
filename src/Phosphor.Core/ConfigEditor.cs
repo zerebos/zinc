@@ -124,6 +124,46 @@ public static partial class ConfigEditor
         return text[..start] + text[end..];
     }
 
+    /// <summary>
+    /// <paramref name="text"/> without the table <paramref name="path"/> (e.g. <c>[profile.x]</c>)
+    /// and its sub-tables (<c>[profile.x.font]</c>): each from its header to the next table's,
+    /// less the comment lines just above that one (they introduce it). Keys set elsewhere as
+    /// dotted keys (<c>profile.x.name = …</c> at the top) aren't touched.
+    /// </summary>
+    public static string RemoveTable(string text, IReadOnlyList<string> path)
+    {
+        var doc = Parse(text);
+        var headers = doc.Tables.Where(t => t.Name != null)
+            .Select(t => (Path: KeyParts(t.Name!), Start: text.LastIndexOf('\n', Math.Max(0, t.Span.Start.Offset - 1)) + 1))
+            .OrderBy(t => t.Start)
+            .ToList();
+        for (var i = headers.Count - 1; i >= 0; i--)
+        {
+            var (tablePath, start) = headers[i];
+            if (!(tablePath.SequenceEqual(path) || IsPrefix(path, tablePath)))
+            {
+                continue;
+            }
+
+            var end = i + 1 < headers.Count ? headers[i + 1].Start : text.Length;
+            // Comment lines right above the next header belong to it.
+            while (end > start)
+            {
+                var lineStart = text.LastIndexOf('\n', Math.Max(0, end - 2)) + 1;
+                if (lineStart <= start || !text[lineStart..end].TrimStart().StartsWith('#'))
+                {
+                    break;
+                }
+
+                end = lineStart;
+            }
+
+            text = text[..start] + text[end..];
+        }
+
+        return text;
+    }
+
     /// <summary>Sets a value in a config file, writing it atomically (a temp file moved over it).</summary>
     public static void SetInFile(string file, IReadOnlyList<string> path, object value)
     {

@@ -146,4 +146,25 @@ public class ConfigEditorTests
     {
         Assert.Throws<FormatException>(() => Set("[font\nsize = 1", "font.size", 2));
     }
+
+    [Fact]
+    public void RemovesAProfileWithItsSubTablesAndKeepsTheNextSectionsComment()
+    {
+        const string text = "[profile.a]\ncommand = \"x\"\n\n[profile.a.font]\nsize = 12\n\n# my keys\n[keys]\n\"ctrl+w\" = \"close-tab\"\n";
+        Assert.Equal("# my keys\n[keys]\n\"ctrl+w\" = \"close-tab\"\n", ConfigEditor.RemoveTable(text, ["profile", "a"]));
+    }
+
+    [Fact]
+    public void RemovesOnlyThatProfile()
+    {
+        const string text = "[profile.a]\ncommand = \"x\"\n\n[profile.\"wsl:Ubuntu\"]\nhidden = true\n\n[profile.ab]\ncommand = \"y\"\n";
+        Assert.Equal("[profile.a]\ncommand = \"x\"\n\n[profile.ab]\ncommand = \"y\"\n",
+            ConfigEditor.RemoveTable(text, ["profile", "wsl:Ubuntu"]));
+        Assert.Equal("[profile.\"wsl:Ubuntu\"]\nhidden = true\n\n[profile.ab]\ncommand = \"y\"\n",
+            ConfigEditor.RemoveTable(text, ["profile", "a"]));
+    }
+
+    [Fact]
+    public void RemovingATableThatIsntThereChangesNothing() =>
+        Assert.Equal(Sample, ConfigEditor.RemoveTable(Sample, ["profile", "nope"]));
 }

@@ -71,8 +71,11 @@ you change there and leaves the rest of the file as it is.
 of its own, next to your terminals: each change is written to `config.toml` right away and applied
 as you make it (only that line changes; choosing a default removes the line), and **Undo changes**
 puts the file back as it was when you opened the window. Each setting shows its key in the file.
-While `config.toml` has an error, Settings says so and changes nothing. Profiles and keys are
-edited in the file for now.
+While `config.toml` has an error, Settings says so and changes nothing. Under **Profiles**:
+the default profile, every profile (found on this PC or your own; add, delete, or undo your changes
+to a found one), each one's name, command, folder, icon and visibility, its own font, colors and
+padding where it shouldn't inherit them, and which shells Phosphor looks for. Keys are edited in
+the file for now.
 
 `%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
 [TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,

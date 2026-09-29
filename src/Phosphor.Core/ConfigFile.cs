@@ -9,7 +9,20 @@ namespace Phosphor;
 /// A named set of settings: the global settings with the profile's own on top. <see cref="Id"/>
 /// is what keys, the default profile and saved sessions refer to; <see cref="Name"/> is shown.
 /// </summary>
-public sealed record Profile(string Id, string Name, Config Config, bool Hidden = false);
+public sealed record Profile(string Id, string Name, Config Config, bool Hidden = false)
+{
+    /// <summary>Found on this machine (WSL, Git Bash, …), as opposed to only defined in the file.</summary>
+    public bool Found { get; init; }
+
+    /// <summary>The file has a <c>[profile.&lt;id&gt;]</c> section for it (its own, or changes to a found one).</summary>
+    public bool InFile { get; init; }
+
+    /// <summary>What was found on this machine, before the file's changes (null if it wasn't found).</summary>
+    public string? FoundName { get; init; }
+
+    /// <inheritdoc cref="FoundName"/>
+    public string? FoundCommand { get; init; }
+}
 
 /// <summary>
 /// The config file, <c>%APPDATA%\Phosphor\config.toml</c>: settings grouped into sections,
@@ -61,6 +74,14 @@ public sealed class ConfigFile
     /// TOML values (string, bool, long, double, lists). For the settings window.
     /// </summary>
     public IReadOnlyDictionary<string, object> GlobalValues { get; private init; } = new Dictionary<string, object>();
+
+    /// <summary>Each profile section's settings as written, by profile id, then key relative to it ("font.size", "command").</summary>
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> ProfileValues { get; private init; } =
+        new Dictionary<string, IReadOnlyDictionary<string, object>>();
+
+    /// <summary>The value profile <paramref name="id"/>'s section writes for <paramref name="key"/>, if any.</summary>
+    public object? ValueOf(string id, string key) =>
+        ProfileValues.TryGetValue(id, out var values) && values.TryGetValue(key, out var value) ? value : null;
 
     /// <summary>The value written for <paramref name="key"/> ("font.size"), if any.</summary>
     public object? ValueOf(string key) => GlobalValues.TryGetValue(key, out var value) ? value : null;
@@ -190,6 +211,7 @@ public sealed class ConfigFile
         Phosphor.Ghostty.ColorScheme appearance)
     {
         private bool _followsAppearance;
+        private readonly Dictionary<string, IReadOnlyDictionary<string, object>> _profileValues = new();
 
         private readonly List<Entry> _entries = [];
         private readonly ThemeLibrary _themes = ThemeLibrary.For(mainPath, bundledThemes);
@@ -444,8 +466,10 @@ public sealed class ConfigFile
                 string name = id;
                 var hidden = false;
                 var config = global;
+                DiscoveredProfile? foundAs = null;
                 if (found.Remove(id, out var basis))
                 {
+                    foundAs = basis;
                     name = basis.Name;
                     config = FromDiscovery(config, basis);
                 }
@@ -474,12 +498,16 @@ public sealed class ConfigFile
                 }
 
                 config = ApplyGroups(config, entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: true);
-                profiles.Add(new Profile(id, name, config, hidden));
+                profiles.Add(new Profile(id, name, config, hidden)
+                {
+                    Found = foundAs != null, InFile = true, FoundName = foundAs?.Name, FoundCommand = foundAs?.Command,
+                });
+                _profileValues[id] = entries.GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.Last().Value);
             }
 
             foreach (var d in discovered.Where(d => found.ContainsKey(d.Id)))
             {
-                profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d)));
+                profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d)) { Found = true, FoundName = d.Name, FoundCommand = d.Command });
             }
 
             if (profiles.Count == 0)
@@ -499,6 +527,7 @@ public sealed class ConfigFile
                 SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
                 Appearance = appearance,
                 FollowsAppearance = _followsAppearance,
+                ProfileValues = _profileValues,
                 GlobalValues = _entries.Where(e => e.Path[0] != "profile")
                     .GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.Last().Value),
             };
