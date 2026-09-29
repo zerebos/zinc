@@ -114,7 +114,7 @@ public static class SettingsCatalog
             { Unit = "pt", Maximum = 100 },
 
         // ---- Layout
-        new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar.", SettingKind.Choice, "top")
+        new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice, "top")
             { Choices = [new("Along the top", "top"), new("In a sidebar", "left")] },
         new("layout", "Workspaces", "window.sidebar", "Sidebar", "With workspaces in a sidebar.", SettingKind.Choice, "full")
             { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Hidden until you reach the edge", "auto-hide")] },
