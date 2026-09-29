@@ -28,7 +28,8 @@ internal enum Attention
 /// A tab's status mark: the <see cref="Attention"/> dot (green finished, blue a program's
 /// notification, red failed), else a small ring while a program reports progress (OSC 9;4).
 /// After a tab's title, or on its icon's corner (ringed in the background color) where there's
-/// no title. The dot pulses twice when it appears, then stays.
+/// no title. The dot pulses twice when it appears, then stays. A workspace with two or more
+/// tabs to look at shows how many in a pill instead (not on a corner: no room).
 /// </summary>
 internal sealed partial class AttentionDot : Grid
 {
@@ -38,6 +39,25 @@ internal sealed partial class AttentionDot : Grid
 
     private readonly Ellipse _dot = new();
     private readonly ScaleTransform _scale = new();
+    private readonly TextBlock _countText = new()
+    {
+        FontSize = 10,
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0x1A, 0x1A, 0x1A)),
+        HorizontalAlignment = HorizontalAlignment.Center,
+        VerticalAlignment = VerticalAlignment.Center,
+    };
+    private readonly Border _pill = new()
+    {
+        Height = 14,
+        MinWidth = 14,
+        CornerRadius = new CornerRadius(7),
+        Padding = new Thickness(4, 0, 4, 0),
+        Visibility = Visibility.Collapsed,
+    };
+    private readonly ScaleTransform _pillScale = new();
+    private bool _corner;
+    private int _count;
     private readonly ProgressRing _ring = new() { MinWidth = 0, MinHeight = 0, IsActive = false, Visibility = Visibility.Collapsed };
     private Attention _shown;
     private TerminalProgress _progress = TerminalProgress.None;
@@ -50,8 +70,12 @@ internal sealed partial class AttentionDot : Grid
         _dot.Stroke = (Brush)Application.Current.Resources["SolidBackgroundFillColorBaseBrush"];
         _dot.RenderTransform = _scale;
         _dot.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
+        _pill.Child = _countText;
+        _pill.RenderTransform = _pillScale;
+        _pill.RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5);
         Children.Add(_ring);
         Children.Add(_dot);
+        Children.Add(_pill);
         Corner = true;
     }
 
@@ -60,6 +84,7 @@ internal sealed partial class AttentionDot : Grid
     {
         set
         {
+            _corner = value;
             _dot.Width = _dot.Height = value ? 10 : 8;
             _dot.StrokeThickness = value ? 1.5 : 0;
             _ring.Width = _ring.Height = value ? 10 : 12;
@@ -67,33 +92,41 @@ internal sealed partial class AttentionDot : Grid
             HorizontalAlignment = value ? HorizontalAlignment.Right : HorizontalAlignment.Left;
             VerticalAlignment = value ? VerticalAlignment.Top : VerticalAlignment.Center;
             Margin = value ? new Thickness(0, -4, -4, 0) : new Thickness(8, 0, 2, 0);
+            Refresh();
         }
     }
 
     /// <summary>Whether it shows anything (a dot or a ring).</summary>
     public bool HasContent => _shown != Attention.None || _progress.Active;
 
-    public void Show(Attention attention)
+    /// <param name="count">How many tabs it stands for (a workspace's): 2 or more shows the number.</param>
+    public void Show(Attention attention, int count = 1)
     {
-        if (attention == _shown)
+        count = attention == Attention.None ? 0 : Math.Max(1, count);
+        if (attention == _shown && count == _count)
         {
             return;
         }
 
-        var appeared = _shown == Attention.None;
+        // Pulses when it appears, and when one more tab wants you.
+        var news = count > _count;
         _shown = attention;
+        _count = count;
         if (attention != Attention.None)
         {
-            _dot.Fill = new SolidColorBrush(attention switch
+            var brush = new SolidColorBrush(attention switch
             {
                 Attention.Failed => FailedColor,
                 Attention.Notified => NotifiedColor,
                 _ => FinishedColor,
             });
+            _dot.Fill = brush;
+            _pill.Background = brush;
+            _countText.Text = count > 9 ? "9+" : count.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         Refresh();
-        if (attention != Attention.None && appeared && !TestHooks.Deterministic)
+        if (news && !TestHooks.Deterministic)
         {
             Pulse();
         }
@@ -123,10 +156,14 @@ internal sealed partial class AttentionDot : Grid
     {
         var dot = _shown != Attention.None;
         var ring = !dot && _progress.Active;
+        var pill = dot && _count >= 2 && !_corner;
+        _pill.Visibility = pill ? Visibility.Visible : Visibility.Collapsed;
+        Width = Height = pill ? double.NaN : _corner ? 10 : 12;
+        dot &= !pill;
         _dot.Visibility = dot ? Visibility.Visible : Visibility.Collapsed;
         _ring.Visibility = ring ? Visibility.Visible : Visibility.Collapsed;
         _ring.IsActive = ring;
-        Visibility = dot || ring ? Visibility.Visible : Visibility.Collapsed;
+        Visibility = dot || ring || pill ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public void PulseIfShown()
@@ -142,18 +179,19 @@ internal sealed partial class AttentionDot : Grid
     {
         _pulse?.Stop();
         _pulse = new Storyboard();
+        var pill = _pill.Visibility == Visibility.Visible;
         foreach (var axis in new[] { "ScaleX", "ScaleY" })
         {
             var grow = new DoubleAnimation
             {
                 From = 1,
-                To = 1.8,
+                To = pill ? 1.35 : 1.8, // the pill is bigger to begin with
                 Duration = TimeSpan.FromMilliseconds(300),
                 AutoReverse = true,
                 RepeatBehavior = new RepeatBehavior(2),
                 EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut },
             };
-            Storyboard.SetTarget(grow, _scale);
+            Storyboard.SetTarget(grow, pill ? _pillScale : _scale);
             Storyboard.SetTargetProperty(grow, axis);
             _pulse.Children.Add(grow);
         }

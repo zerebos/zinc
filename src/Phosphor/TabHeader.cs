@@ -27,6 +27,7 @@ internal sealed partial class TabHeader : Grid
     private FrameworkElement _owner;
     private bool _compact, _dotElsewhere;
     private Attention _attention;
+    private int _attentionCount;
     private Phosphor.Terminal.TerminalProgress _progress = Phosphor.Terminal.TerminalProgress.None;
 
     public TabHeader(FrameworkElement owner)
@@ -43,15 +44,26 @@ internal sealed partial class TabHeader : Grid
         PlaceDot();
     }
 
-    /// <summary>A command finished (or failed) here while you weren't looking.</summary>
-    public void SetAttention(Attention attention)
+    /// <summary>A command finished (or failed) here while you weren't looking; <paramref name="count"/> tabs want you.</summary>
+    public void SetAttention(Attention attention, int count = 1)
     {
+        count = attention == Attention.None ? 0 : Math.Max(1, count);
+        if (attention == _attention && count == _attentionCount)
+        {
+            return;
+        }
+
         _attention = attention;
+        _attentionCount = count;
         ShowDot();
+        UpdateToolTip();
         AttentionChanged?.Invoke();
     }
 
     public Attention Attention => _attention;
+
+    /// <summary>How many tabs want you (the number in the dot, from 2).</summary>
+    public int AttentionCount => _attentionCount;
 
     /// <summary>A program's progress in this workspace: a ring where the dot goes, while there's no dot.</summary>
     public void SetProgress(Phosphor.Terminal.TerminalProgress progress)
@@ -90,7 +102,7 @@ internal sealed partial class TabHeader : Grid
     private void ShowDot()
     {
         var here = !_dotElsewhere || _compact;
-        _dot.Show(here ? _attention : Attention.None);
+        _dot.Show(here ? _attention : Attention.None, _attentionCount);
         _dot.ShowProgress(here ? _progress : Phosphor.Terminal.TerminalProgress.None);
     }
 
@@ -156,7 +168,7 @@ internal sealed partial class TabHeader : Grid
         set
         {
             _owner = value;
-            ToolTipService.SetToolTip(_owner, _title.Text);
+            UpdateToolTip();
             AutomationProperties.SetName(_owner, _title.Text);
         }
     }
@@ -169,9 +181,13 @@ internal sealed partial class TabHeader : Grid
         }
 
         _title.Text = title;
-        ToolTipService.SetToolTip(_owner, title);
+        UpdateToolTip();
         AutomationProperties.SetName(_owner, title);
     }
+
+    /// <summary>The title, and how many tabs want you when that's more than one (the rail shows no number).</summary>
+    private void UpdateToolTip() =>
+        ToolTipService.SetToolTip(_owner, _attentionCount >= 2 ? $"{_title.Text}\n{_attentionCount} tabs need attention" : _title.Text);
 
     public void SetProfile(Profile profile)
     {

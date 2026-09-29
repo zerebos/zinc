@@ -171,7 +171,8 @@ public sealed partial class MainWindow
     /// <summary>A workspace's dot: the most urgent of its terminals'; else a ring for a program's progress (an error first).</summary>
     private static void ShowWorkspaceAttention(WorkspaceTab tab)
     {
-        tab.Header.SetAttention(tab.Workspace.Tabs.Select(t => t.Attention).DefaultIfEmpty().Max());
+        tab.Header.SetAttention(tab.Workspace.Tabs.Select(t => t.Attention).DefaultIfEmpty().Max(),
+            tab.Workspace.Tabs.Count(t => t.Attention != Attention.None));
         var progress = tab.Workspace.Tabs.Select(t => t.Control.Progress).Where(p => p.Active)
             .OrderByDescending(p => p.State == Ghostty.TerminalProgressState.Error).FirstOrDefault();
         tab.Header.SetProgress(progress.Active ? progress : TerminalProgress.None);
