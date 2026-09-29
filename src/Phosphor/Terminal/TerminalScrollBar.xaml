@@ -5,7 +5,7 @@
   ScrollBarSize, 12, a static resource no bar can override), which with WinUI's 6-DIP transparent
   thumb stroke (half of it inside the thumb) shows a 10-DIP thumb, still a 2-DIP line collapsed;
   a square track (the arrows sit flush with the pane's edges); the thumb keeps a slight rounding
-  of its own (radius 5, ~2 inside the stroke). Everything else is as WinUI ships it.
+  of its own (radius 3: Windows Terminal's, measured). Everything else is as WinUI ships it.
   Regenerate from a newer generic.xaml with the same substitutions if the ScrollBar changes.
 -->
 <ResourceDictionary
@@ -522,7 +522,7 @@
                             <Rectangle x:Name="HorizontalTrackRect" RadiusX="0" RadiusY="0" Opacity="0" Grid.ColumnSpan="5" Margin="0" StrokeThickness="{ThemeResource ScrollBarTrackBorderThemeThickness}" Fill="{ThemeResource ScrollBarTrackFill}" Stroke="{ThemeResource ScrollBarTrackStroke}" />
                             <RepeatButton x:Name="HorizontalSmallDecrease" Grid.Column="0" Opacity="0" MinHeight="16" IsTabStop="False" Interval="50" Padding="{ThemeResource ScrollBarHorizontalDecreaseMargin}" Template="{StaticResource HorizontalDecrementTemplate}" Width="16" AllowFocusOnInteraction="False" VerticalAlignment="Center" />
                             <RepeatButton x:Name="HorizontalLargeDecrease" Opacity="0" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsTabStop="False" Interval="50" Template="{StaticResource RepeatButtonTemplate}" Width="0" AllowFocusOnInteraction="False" />
-                            <Thumb x:Name="HorizontalThumb" Opacity="0" Grid.Column="2" Background="{ThemeResource ScrollBarPanningThumbBackground}" BorderBrush="{ThemeResource ScrollBarThumbBorderBrush}" Template="{StaticResource HorizontalThumbTemplate}" Height="{ThemeResource ScrollBarHorizontalThumbMinHeight}" MinWidth="{StaticResource ScrollBarHorizontalThumbMinWidth}" AutomationProperties.AccessibilityView="Raw" RenderTransformOrigin="0.5,1" CornerRadius="5">
+                            <Thumb x:Name="HorizontalThumb" Opacity="0" Grid.Column="2" Background="{ThemeResource ScrollBarPanningThumbBackground}" BorderBrush="{ThemeResource ScrollBarThumbBorderBrush}" Template="{StaticResource HorizontalThumbTemplate}" Height="{ThemeResource ScrollBarHorizontalThumbMinHeight}" MinWidth="{StaticResource ScrollBarHorizontalThumbMinWidth}" AutomationProperties.AccessibilityView="Raw" RenderTransformOrigin="0.5,1" CornerRadius="3">
                                 <Thumb.RenderTransform>
                                     <TranslateTransform x:Name="HorizontalThumbTransform" Y="{StaticResource ScrollBarThumbOffset}" />
                                 </Thumb.RenderTransform>
@@ -547,7 +547,7 @@
                             <Rectangle x:Name="VerticalTrackRect" RadiusX="0" RadiusY="0" Opacity="0" Grid.RowSpan="5" Margin="0" StrokeThickness="{ThemeResource ScrollBarTrackBorderThemeThickness}" Fill="{ThemeResource ScrollBarTrackFill}" Stroke="{ThemeResource ScrollBarTrackStroke}" />
                             <RepeatButton x:Name="VerticalSmallDecrease" Grid.Row="0" Opacity="0" Height="16" MinWidth="16" IsTabStop="False" Interval="50" Padding="{ThemeResource ScrollBarVerticalDecreaseMargin}" Template="{StaticResource VerticalDecrementTemplate}" HorizontalAlignment="Center" />
                             <RepeatButton x:Name="VerticalLargeDecrease" Opacity="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Height="0" IsTabStop="False" Interval="50" Grid.Row="1" AllowFocusOnInteraction="False" Template="{StaticResource RepeatButtonTemplate}" />
-                            <Thumb x:Name="VerticalThumb" Opacity="0" Grid.Row="2" Background="{ThemeResource ScrollBarPanningThumbBackground}" BorderBrush="{ThemeResource ScrollBarThumbBorderBrush}" Template="{StaticResource VerticalThumbTemplate}" Width="{ThemeResource ScrollBarVerticalThumbMinWidth}" MinHeight="{StaticResource ScrollBarVerticalThumbMinHeight}" AutomationProperties.AccessibilityView="Raw" RenderTransformOrigin="1,0.5" CornerRadius="5">
+                            <Thumb x:Name="VerticalThumb" Opacity="0" Grid.Row="2" Background="{ThemeResource ScrollBarPanningThumbBackground}" BorderBrush="{ThemeResource ScrollBarThumbBorderBrush}" Template="{StaticResource VerticalThumbTemplate}" Width="{ThemeResource ScrollBarVerticalThumbMinWidth}" MinHeight="{StaticResource ScrollBarVerticalThumbMinHeight}" AutomationProperties.AccessibilityView="Raw" RenderTransformOrigin="1,0.5" CornerRadius="3">
                                 <Thumb.RenderTransform>
                                     <TranslateTransform x:Name="VerticalThumbTransform" X="{StaticResource ScrollBarThumbOffset}" />
                                 </Thumb.RenderTransform>
