@@ -373,9 +373,25 @@ file is saved, and the command palette and menus show your keys.
 Keys are modifiers (`ctrl`, `alt`, `shift`) plus one key: a letter or digit, `f1`–`f24`,
 `plus`, `minus`, `grave`, `tab`, `enter`, `space`, `esc`, `backspace`, `insert`, `delete`,
 `home`, `end`, `pgup`, `pgdn`, arrows (`up` …), `numpad0`–`numpad9`, `numpad_plus`,
-`numpad_minus`. Sequences like tmux's (`"ctrl+a>c"`) are reserved for later. A key bound twice
-(e.g. `ctrl+shift+c` and `shift+ctrl+c`), an unknown key or an unknown action is reported with
-its line, and the rest still applies.
+`numpad_minus`. A key bound twice (e.g. `ctrl+shift+c` and `shift+ctrl+c`), an unknown key or
+an unknown action is reported with its line, and the rest still applies.
+
+**Key sequences**, like tmux's prefix: keys joined by `>` (spaces around it are fine), pressed one
+after another.
+
+```toml
+[keys]
+"ctrl+a > c" = "new-tab"
+"ctrl+a > shift+5" = "split right"
+"ctrl+a > w > n" = "new-window"   # as long as you like
+```
+
+The first key (the *leader*) only starts sequences: it doesn't reach the shell, and a key bound
+on its own that is also a leader loses that binding (the config notice says so). While a sequence
+waits, a hint at the bottom of the pane lists what can come next. There's no time limit. Escape,
+or a key that continues no sequence, cancels it without typing anything. The leader pressed twice
+types it once, so Ctrl+A still reaches the shell (start of line in bash and zsh) as Ctrl+A,
+Ctrl+A, unless you bind that sequence too. The palette and menus show sequences as "Ctrl+A, C".
 
 | Action | What it does |
 | --- | --- |

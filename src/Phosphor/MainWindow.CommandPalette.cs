@@ -335,7 +335,7 @@ public sealed partial class MainWindow
         var commands = new List<PaletteCommand>();
         var pane = tab.Active.Control;
 
-        string? Keys(ActionInvocation action) => _keybindings.ChordFor(action)?.ToString();
+        string? Keys(ActionInvocation action) => _keybindings.ShortcutFor(action);
 
         // Titles come from the action registry, shortcuts from the current bindings.
         void Action(ActionInvocation action) =>

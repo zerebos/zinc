@@ -102,8 +102,17 @@ public sealed partial class TerminalControl
 
         var status = e.KeyStatus;
         var state = Keyboard.State.Capture();
+        var pressed = new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift);
 
-        if (_keybindings.TryGet(new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift), out var action) &&
+        // A key sequence's leader, or a key after it (see TerminalControl.Sequences.cs).
+        if (HandleSequenceKey(pressed, status.WasKeyDown, session) is not (KeyStep.NotMine or KeyStep.PassThrough))
+        {
+            e.Handled = true;
+            _charHandledByKeyDown = true;
+            return;
+        }
+
+        if (_keybindings.TryGet(pressed, out var action) &&
             RunAction(action, session))
         {
             e.Handled = true;

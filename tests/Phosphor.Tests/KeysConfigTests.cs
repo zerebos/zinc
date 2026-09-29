@@ -133,13 +133,13 @@ public class KeysConfigTests
             [keys]
             "ctrl+shift+c" = "copy"
             "shift+ctrl+c" = "paste"
-            "ctrl+a>c" = "new-tab"
+            "ctrl+a>" = "new-tab"
             "hyper+x" = "copy"
             "ctrl+y" = "teleport"
             "ctrl+u" = 3
             """);
         Assert.Contains("config.toml:3: Ctrl+Shift+C is already bound (config.toml:2)", config.Warnings);
-        Assert.Contains("config.toml:4: key sequences like 'ctrl+a>c' aren't supported yet", config.Warnings);
+        Assert.Contains("config.toml:4: 'ctrl+a>': a key is missing around '>'", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:5: 'hyper+x': unknown key 'hyper'"));
         Assert.Contains("config.toml:6: unknown action 'teleport'", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:7: a key's action is text"));

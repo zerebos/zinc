@@ -426,6 +426,7 @@ public sealed partial class TerminalControl : UserControl
     protected override void OnLostFocus(RoutedEventArgs e)
     {
         _focused = false;
+        CancelSequence();
         SendFocusEvent(false);
         _canvas.Invalidate();
     }

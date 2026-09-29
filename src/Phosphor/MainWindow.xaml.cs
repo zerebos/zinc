@@ -1076,6 +1076,14 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            // Through the pane's key sequences first, like a real press ("ctrl+a" then "c").
+            var step = tab.Active.Control.PressForTest(KeyChord.Parse(chord));
+            if (step is not (KeyStep.NotMine or KeyStep.PassThrough))
+            {
+                Log.Write($"test key {chord}: {step}");
+                return;
+            }
+
             var bound = _keybindings.TryGet(KeyChord.Parse(chord), out var invocation);
             Log.Write($"test key {chord}: {(bound ? invocation.ToString() : "unbound")}");
             if (bound)
@@ -1107,7 +1115,7 @@ public sealed partial class MainWindow : Window
     // ------------------------------------------------------------- actions
 
     /// <summary>The shortcut shown for an action in menus, from the current bindings.</summary>
-    private string? Shortcut(ActionInvocation action) => _keybindings.ChordFor(action)?.ToString();
+    private string? Shortcut(ActionInvocation action) => _keybindings.ShortcutFor(action);
 
     /// <summary>A profile's shortcut: bound by id, or by its position in the menu (0-based).</summary>
     private string? ShortcutForProfile(Profile profile, int index) =>

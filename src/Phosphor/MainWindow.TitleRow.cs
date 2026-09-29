@@ -190,7 +190,7 @@ public sealed partial class MainWindow
             ToolTipService.SetToolTip(_commandContext, text);
         }
 
-        _commandShortcut.Text = _keybindings.ChordFor(TerminalAction.OpenCommandPalette)?.ToString() ?? "";
+        _commandShortcut.Text = _keybindings.ShortcutFor(TerminalAction.OpenCommandPalette) ?? "";
     }
 
     /// <summary>

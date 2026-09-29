@@ -190,13 +190,130 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
     }
 }
 
-/// <summary>Maps key chords to actions. Defaults follow Windows Terminal.</summary>
+/// <summary>
+/// Chords pressed one after another, like a tmux prefix: <c>"ctrl+a>c"</c> (spaces around the
+/// <c>&gt;</c> are fine). The first chord is the leader: it starts the sequence instead of doing
+/// anything itself.
+/// </summary>
+public sealed class KeySequence : IEquatable<KeySequence>
+{
+    public KeySequence(IReadOnlyList<KeyChord> keys)
+    {
+        if (keys.Count < 2)
+        {
+            throw new ArgumentException("a sequence has at least two keys", nameof(keys));
+        }
+
+        Keys = keys.ToArray();
+    }
+
+    public IReadOnlyList<KeyChord> Keys { get; }
+
+    /// <summary>Whether <paramref name="text"/> is written as a sequence (has a <c>&gt;</c>).</summary>
+    public static bool IsSequence(string text) => text.Contains('>');
+
+    public static KeySequence Parse(string text)
+    {
+        var parts = text.Split('>', StringSplitOptions.TrimEntries);
+        if (parts.Length < 2 || parts.Any(p => p.Length == 0))
+        {
+            throw new FormatException($"'{text}': a key is missing around '>'");
+        }
+
+        return new KeySequence(parts.Select(KeyChord.Parse).ToArray());
+    }
+
+    /// <summary>Whether the sequence begins with <paramref name="pressed"/> (all of it, or more).</summary>
+    public bool StartsWith(IReadOnlyList<KeyChord> pressed) =>
+        pressed.Count <= Keys.Count && pressed.Select((k, i) => Keys[i] == k).All(x => x);
+
+    /// <summary>Display form: "Ctrl+A, C".</summary>
+    public override string ToString() => string.Join(", ", Keys);
+
+    public bool Equals(KeySequence? other) => other != null && Keys.SequenceEqual(other.Keys);
+
+    public override bool Equals(object? obj) => Equals(obj as KeySequence);
+
+    public override int GetHashCode() => Keys.Aggregate(0, (h, k) => HashCode.Combine(h, k));
+}
+
+/// <summary>What a key press means to a <see cref="KeySequencer"/>.</summary>
+public enum KeyStep
+{
+    /// <summary>No sequence going, and this key starts none: handle it as usual.</summary>
+    NotMine,
+
+    /// <summary>A sequence started or went on: wait for the next key (show what can come next).</summary>
+    Waiting,
+
+    /// <summary>A sequence completed: run its action.</summary>
+    Ran,
+
+    /// <summary>Escape, or a key no sequence continues with: the sequence ends, the key is dropped.</summary>
+    Cancelled,
+
+    /// <summary>The leader pressed twice (and not bound that way): the sequence ends, the key goes to the terminal.</summary>
+    PassThrough,
+}
+
+/// <summary>
+/// Follows the keys of a sequence as they're pressed (one per pane): a leader starts one, the
+/// following keys continue or complete it. No timeout: it waits until the next key.
+/// </summary>
+public sealed class KeySequencer(Keybindings bindings)
+{
+    private readonly List<KeyChord> _pressed = [];
+
+    /// <summary>The keys pressed so far (empty when no sequence is going).</summary>
+    public IReadOnlyList<KeyChord> Pressed => _pressed;
+
+    public bool Active => _pressed.Count > 0;
+
+    public void Cancel() => _pressed.Clear();
+
+    public KeyStep Press(KeyChord chord, out ActionInvocation action)
+    {
+        action = default;
+        if (_pressed.Count == 0)
+        {
+            if (!bindings.StartsSequence(chord))
+            {
+                return KeyStep.NotMine;
+            }
+
+            _pressed.Add(chord);
+            return KeyStep.Waiting;
+        }
+
+        List<KeyChord> keys = [.. _pressed, chord];
+        if (bindings.TryGetSequence(keys, out action))
+        {
+            _pressed.Clear();
+            return KeyStep.Ran;
+        }
+
+        if (bindings.SequencesStartingWith(keys).Any())
+        {
+            _pressed.Add(chord);
+            return KeyStep.Waiting;
+        }
+
+        var leaderTwice = keys.Count == 2 && chord == keys[0];
+        _pressed.Clear();
+        return leaderTwice ? KeyStep.PassThrough : KeyStep.Cancelled;
+    }
+}
+
+/// <summary>Maps key chords (and <see cref="KeySequence"/>s) to actions. Defaults follow Windows Terminal.</summary>
 public sealed class Keybindings
 {
     private readonly Dictionary<KeyChord, ActionInvocation> _map = new();
 
     // Binding order, for display (Dictionary enumeration order isn't guaranteed).
     private readonly List<KeyChord> _order = [];
+
+    // Key sequences ("ctrl+a>c"), in binding order. Few enough to search.
+    private readonly List<(KeySequence Keys, ActionInvocation Action)> _sequences = [];
 
     public static Keybindings Default { get; } = CreateDefault();
 
@@ -220,8 +337,58 @@ public sealed class Keybindings
         }
     }
 
-    /// <summary>Every binding, in binding order.</summary>
+    public void Bind(KeySequence keys, ActionInvocation action)
+    {
+        Unbind(keys);
+        _sequences.Add((keys, action));
+    }
+
+    public void Unbind(KeySequence keys) => _sequences.RemoveAll(s => s.Keys.Equals(keys));
+
+    /// <summary>Every single-chord binding, in binding order.</summary>
     public IEnumerable<(KeyChord Chord, ActionInvocation Action)> All => _order.Select(c => (c, _map[c]));
+
+    /// <summary>Every key sequence, in binding order.</summary>
+    public IReadOnlyList<(KeySequence Keys, ActionInvocation Action)> Sequences => _sequences;
+
+    /// <summary>Whether <paramref name="chord"/> is a leader: it starts a sequence (and does nothing else).</summary>
+    public bool StartsSequence(KeyChord chord) => _sequences.Any(s => s.Keys.Keys[0] == chord);
+
+    /// <summary>The sequence that is exactly <paramref name="keys"/>.</summary>
+    public bool TryGetSequence(IReadOnlyList<KeyChord> keys, out ActionInvocation action)
+    {
+        foreach (var (seq, a) in _sequences)
+        {
+            if (seq.Keys.Count == keys.Count && seq.StartsWith(keys))
+            {
+                action = a;
+                return true;
+            }
+        }
+
+        action = default;
+        return false;
+    }
+
+    /// <summary>The sequences that go on after <paramref name="pressed"/> (longer than it).</summary>
+    public IEnumerable<(KeySequence Keys, ActionInvocation Action)> SequencesStartingWith(IReadOnlyList<KeyChord> pressed) =>
+        _sequences.Where(s => s.Keys.Keys.Count > pressed.Count && s.Keys.StartsWith(pressed));
+
+    /// <summary>
+    /// What can follow <paramref name="pressed"/>: each next key, with the action it runs, or null
+    /// when more keys come after it. For the hint shown while a sequence waits.
+    /// </summary>
+    public IReadOnlyList<(KeyChord Next, ActionInvocation? Action)> Continuations(IReadOnlyList<KeyChord> pressed) =>
+        SequencesStartingWith(pressed)
+            .GroupBy(s => s.Keys.Keys[pressed.Count])
+            .Select(g => (g.Key, g.FirstOrDefault(s => s.Keys.Keys.Count == pressed.Count + 1) is { Keys: not null } done
+                ? (ActionInvocation?)done.Action
+                : null))
+            .ToList();
+
+    /// <summary>The shortcut to show for an action: its first chord, else its first sequence ("Ctrl+A, C").</summary>
+    public string? ShortcutFor(ActionInvocation action) =>
+        ChordFor(action)?.ToString() ?? _sequences.Where(s => s.Action == action).Select(s => s.Keys.ToString()).FirstOrDefault();
 
     public Keybindings Clone()
     {
@@ -242,6 +409,9 @@ public sealed class Keybindings
         {
             Bind(chord, action);
         }
+
+        _sequences.Clear();
+        _sequences.AddRange(other._sequences);
     }
 
     /// <summary>
@@ -253,11 +423,12 @@ public sealed class Keybindings
     {
         var bindings = Default.Clone();
         var seen = new Dictionary<KeyChord, string>();
+        var seenSequences = new Dictionary<KeySequence, string>();
         foreach (var (chordText, actionText, where) in entries)
         {
-            if (chordText.Contains('>'))
+            if (KeySequence.IsSequence(chordText))
             {
-                warnings.Add($"{where}: key sequences like '{chordText}' aren't supported yet");
+                ConfigureSequence(bindings, chordText, actionText, where, seenSequences, warnings);
                 continue;
             }
 
@@ -294,7 +465,63 @@ public sealed class Keybindings
             }
         }
 
+        // A leader only starts sequences: a chord bound on its own too loses that binding.
+        foreach (var (keys, _) in bindings.Sequences.DistinctBy(s => s.Keys.Keys[0]).ToList())
+        {
+            var leader = keys.Keys[0];
+            if (bindings.TryGet(leader, out var shadowed))
+            {
+                warnings.Add($"{seenSequences[keys]}: {leader} starts key sequences now, so it no longer runs '{Actions.Format(shadowed)}'");
+                bindings.Unbind(leader);
+            }
+        }
+
+        // A sequence that goes on past a complete one can't be reached (the shorter one runs first).
+        foreach (var (keys, _) in bindings.Sequences)
+        {
+            if (bindings.Sequences.FirstOrDefault(s => s.Keys.Keys.Count < keys.Keys.Count && keys.StartsWith(s.Keys.Keys)) is { Keys: { } shorter } &&
+                seenSequences.TryGetValue(keys, out var where))
+            {
+                warnings.Add($"{where}: {keys} can't be reached: {shorter} runs first");
+            }
+        }
+
         return bindings;
+    }
+
+    private static void ConfigureSequence(Keybindings bindings, string text, string actionText, string where,
+        Dictionary<KeySequence, string> seen, List<string> warnings)
+    {
+        KeySequence keys;
+        try
+        {
+            keys = KeySequence.Parse(text);
+        }
+        catch (FormatException ex)
+        {
+            warnings.Add($"{where}: {ex.Message}");
+            return;
+        }
+
+        if (seen.TryGetValue(keys, out var first))
+        {
+            warnings.Add($"{where}: {keys} is already bound ({first})");
+            return;
+        }
+
+        seen[keys] = where;
+        if (actionText.Trim().Equals(Actions.None, StringComparison.OrdinalIgnoreCase))
+        {
+            bindings.Unbind(keys);
+        }
+        else if (Actions.Parse(actionText, out var error) is { } action)
+        {
+            bindings.Bind(keys, action);
+        }
+        else
+        {
+            warnings.Add($"{where}: {error}");
+        }
     }
 
     public bool TryGet(KeyChord chord, out ActionInvocation action) => _map.TryGetValue(chord, out action);

@@ -77,7 +77,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
 - `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
   defaults follow Windows Terminal; `Configure` applies config's `[keys]` on top; `CopyFrom`
-  updates the one instance App shares with every window and pane (live reload).
+  updates the one instance App shares with every window and pane (live reload). Key sequences
+  ("ctrl+a > c"): `KeySequence`, `Keybindings.Sequences`/`Continuations`/`ShortcutFor`, and the
+  pure `KeySequencer` state machine (tested); `TerminalControl.Sequences.cs` feeds it from
+  OnKeyDown (before plain chords) and draws the which-key hint. PHOSPHOR_TEST_KEYS entries go
+  through it too (`PressForTest`); `.scratch/tools/leader-shot.ps1` captures hints/runs.
   `Input/Actions.cs` — the action registry: names/args as text ("split right", "new-tab
   wsl:Fedora"), palette titles. **A new action needs an entry there (and the README table:
   a test checks it), plus a handler** in TerminalControl.RunAction (pane) or
