@@ -56,6 +56,9 @@ public sealed class ConfigFile
     /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
     public ThemeLibrary Themes { get; }
 
+    /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page).</summary>
+    public string? SchemeName { get; private init; }
+
     /// <summary>The Windows Terminal defaults with the <c>[keys]</c> table applied.</summary>
     public Keybindings Keybindings { get; }
 
@@ -464,7 +467,10 @@ public sealed class ConfigFile
             }
 
             var keybindings = Keybindings.Configure(keys, _warnings);
-            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes);
+            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes)
+            {
+                SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
+            };
         }
 
         private static Config FromDiscovery(Config config, DiscoveredProfile found) =>

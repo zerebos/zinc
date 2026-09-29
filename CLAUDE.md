@@ -153,6 +153,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   running…" starts the focused tab's *command* (not its profile's) and types the line via
   `TerminalControl.StartupInput` once the shell is ready (first prompt mark, else 600 ms of
   quiet output, else 6 s). A program that can't start shows why in its tab (no crash).
+- First run: no config file (and no command on the command line) → `WelcomeWindow` (its own
+  window: its layout choice decides how the main window is built) → `App.ShowWelcome`'s
+  Finished writes `FirstRun.Apply` (Core, tested: from `FirstRun.Template` on first run; later,
+  in place and only what changed vs the config in force) → first window opens; palette
+  "Welcome…" reopens it (then a reload applies; the layout only to new windows).
+  `ConfigFile.SchemeName` = the global colors.theme name. A missing config path is how tests get
+  a first run (`visual.ps1` captures `welcome.png`).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

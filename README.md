@@ -61,6 +61,12 @@ newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundle
 
 ## Configuration
 
+The first time Phosphor starts, a welcome page asks how you like to work (**Simple**: tabs along
+the top, one terminal each; **Workspaces**: in a sidebar or along the top, each with its own tabs
+and splits), a color scheme and font (with a preview) and your default shell, and writes your
+answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
+you change there and leaves the rest of the file as it is.
+
 `%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
 [TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,
 bad values, TOML mistakes) are shown in a bar naming the file and line; everything else

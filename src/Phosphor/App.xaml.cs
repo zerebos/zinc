@@ -80,7 +80,12 @@ public partial class App : Application
         // it rather than the saved session. Otherwise reopen what was open last time.
         var explicitCommand = Environment.GetCommandLineArgs().Length > 1 ||
                               Environment.GetEnvironmentVariable("PHOSPHOR_SHELL") is { Length: > 0 };
-        if (explicitCommand || !RestoreSession())
+        if (!explicitCommand && !File.Exists(_config.Path))
+        {
+            // First launch: the welcome page, then the first window, built the way it asks for.
+            ShowWelcome(firstRun: true);
+        }
+        else if (explicitCommand || !RestoreSession())
         {
             // Our own arguments / PHOSPHOR_SHELL override the first tab's command only.
             OpenWindow(profile, ShellResolver.Resolve(profile.Config));
@@ -99,6 +104,58 @@ public partial class App : Application
             // Background features failing must not take the open window down with them.
             Log.Write($"background setup failed: {ex}");
         }
+    }
+
+    private WelcomeWindow? _welcome;
+
+    /// <summary>
+    /// The welcome page (on first launch, and from the palette): writes its answers into
+    /// config.toml, in place. On first launch it then opens the first window; later, the reload
+    /// that follows the save applies colors, font and shell (the layout applies to new windows).
+    /// </summary>
+    internal void ShowWelcome(bool firstRun)
+    {
+        if (_welcome != null)
+        {
+            _welcome.Activate();
+            return;
+        }
+
+        _welcome = new WelcomeWindow(_config, firstRun);
+        _welcome.Finished += choices =>
+        {
+            _welcome = null;
+            var path = _config.Path;
+            try
+            {
+                var existing = File.Exists(path) ? File.ReadAllText(path) : null;
+                // Skipped on first launch: an almost empty config, so the page doesn't come back.
+                var text = choices == null ? existing ?? FirstRun.Template : FirstRun.Apply(existing, choices, existing != null ? _config : null);
+                if (text != existing)
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    File.WriteAllText(path, text);
+                    Log.Write($"welcome: wrote {path}");
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                Log.Crash("saving the welcome page's choices", ex);
+            }
+
+            if (firstRun)
+            {
+                _config = ConfigFile.Load(path);
+                _keybindings.CopyFrom(_config.Keybindings);
+                OpenWindow(_config.DefaultProfile);
+                WatchConfig(); // the folder exists now
+            }
+            else
+            {
+                ReloadConfig();
+            }
+        };
+        _welcome.Activate();
     }
 
     internal void OpenWindow(Profile profile, string? command = null) =>
@@ -345,6 +402,11 @@ public partial class App : Application
     /// </summary>
     private void WatchConfig()
     {
+        if (_configWatcher != null)
+        {
+            return;
+        }
+
         var folder = Path.GetDirectoryName(_config.Path);
         if (folder == null || !Directory.Exists(folder))
         {

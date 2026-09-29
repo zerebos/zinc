@@ -384,6 +384,7 @@ public sealed partial class MainWindow
 
         Action(TerminalAction.Quit);
         Action(TerminalAction.ReloadConfig);
+        Custom("Welcome…", () => App.Instance.ShowWelcome(firstRun: false));
 
         // Panes.
         Action(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
