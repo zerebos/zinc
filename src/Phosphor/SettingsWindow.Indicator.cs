@@ -48,22 +48,24 @@ internal sealed partial class SettingsWindow
             return;
         }
 
-        // Where NavigationView would draw its pill (its template's SelectionIndicator), else centered at the item's left.
-        var anchor = Descendant(item, "SelectionIndicator");
-        Point at;
+        // The size (and left edge) of NavigationView's own pill (its template's SelectionIndicator),
+        // centered on the item. Not its position: NavigationView's animation still runs on it,
+        // invisible, and starts the new item's pill at the old item's place, so reading it
+        // mid-animation put ours back on the item it came from.
+        var anchor = Descendant(item, "SelectionIndicator") is { ActualHeight: > 0 } found ? found : null;
+        Point row, left;
         try
         {
-            at = (anchor ?? item).TransformToVisual(_indicatorLayer).TransformPoint(new Point(0, 0));
+            row = item.TransformToVisual(_indicatorLayer).TransformPoint(new Point(0, 0));
+            left = anchor?.TransformToVisual(_indicatorLayer).TransformPoint(new Point(0, 0)) ?? new Point(row.X + 4, 0);
         }
         catch (ArgumentException)
         {
             return; // not in the tree yet
         }
 
-        var (width, height) = anchor is { ActualHeight: > 0 } ? (anchor.ActualWidth, anchor.ActualHeight) : (3.0, 16.0);
-        var target = anchor is { ActualHeight: > 0 }
-            ? new Vector2((float)at.X, (float)at.Y)
-            : new Vector2((float)at.X + 4, (float)(at.Y + (item.ActualHeight - height) / 2));
+        var (width, height) = anchor != null ? (anchor.ActualWidth, anchor.ActualHeight) : (3.0, 16.0);
+        var target = new Vector2((float)left.X, (float)Math.Round(row.Y + (item.ActualHeight - height) / 2));
         var slide = _indicatorSlides && _indicatorAt is { } from && from.X == target.X && _indicator.Opacity > 0;
         _indicatorSlides = false;
         if (_indicatorAt == target)
@@ -71,6 +73,7 @@ internal sealed partial class SettingsWindow
             return;
         }
 
+        Log.Write($"indicator: {(item.Content as string)} at {target.Y} (from {_indicatorAt?.Y}) slide={slide} anchor={anchor != null}");
         _indicatorAt = target;
         _indicator.Width = width;
         _indicator.Height = height;

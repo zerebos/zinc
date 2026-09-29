@@ -218,7 +218,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   window, on its last section during a run (`App._settingsSection`). The sidebar's selection
   pill is ours (`SettingsWindow.Indicator.cs`): NavigationView's is made transparent via
   `NavigationViewSelectionIndicatorForeground` (its own animation is a fixed 600 ms stretch-and-jump,
-  see .scratch/NOTES.md); ours takes the SelectionIndicator's bounds on LayoutUpdated and slides
+  see .scratch/NOTES.md); ours takes the SelectionIndicator's *size* but the item's row for its
+  position on LayoutUpdated (WinUI still animates its invisible pill, starting it at the old item,
+  and TransformToVisual sees that: reading it mid-animation sent ours back) and slides
   (composition Translation.Y from `this.StartingValue`, 250 ms). Undo bar counts settings
   (`SettingsWriter.ChangeCount`, tested). The profile list re-renders only when the profiles
   differ from what it shows (`_profilesShown`; a drag already shows its order). Reset arrow =
