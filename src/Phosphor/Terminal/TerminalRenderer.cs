@@ -557,9 +557,10 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         var m = Metrics;
         var ascent = (int)MathF.Round(m.Baseline * m.Scale);
-        // Lines as thick as the font's underline, as in Ghostty (its sprites take the font's metric).
+        // Lines as thick as the font's underline in device pixels, rounded up: Ghostty's rule
+        // (Metrics.zig: box_thickness = max(1, ceil(underline thickness))).
         var underline = _faces[0] is { UnderlineThickness: > 0 } face ? face.UnderlineThickness * _fontSize : _fontSize / 14;
-        var thickness = (int)MathF.Max(1, MathF.Round(underline * m.Scale));
+        var thickness = (int)MathF.Max(1, MathF.Ceiling(underline * m.Scale));
         (CanvasBitmap, int, int)? sprite = null;
         if (Sprites.Draw(codepoint, (int)m.WidthPx, ascent, (int)m.HeightPx - ascent, thickness) is { } image)
         {
