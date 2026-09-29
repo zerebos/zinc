@@ -1,4 +1,5 @@
 using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
 using Phosphor.Input;
 using Phosphor.Session;
 using Phosphor.Terminal;
@@ -27,7 +28,21 @@ public sealed partial class MainWindow
             return;
         }
 
-        Tabs.SelectedIndex = Math.Clamp(saved.Selected, 0, Tabs.TabItems.Count - 1);
+        // Selected again once the TabView has loaded: set before that, it's lost, and the window
+        // opened on the last workspace added instead of the one you left.
+        var selected = Tabs.TabItems[Math.Clamp(saved.Selected, 0, Tabs.TabItems.Count - 1)];
+        Tabs.SelectedItem = selected;
+        void Reselect(object sender, RoutedEventArgs e)
+        {
+            Tabs.Loaded -= Reselect;
+            if (Tabs.TabItems.Contains(selected) && !ReferenceEquals(Tabs.SelectedItem, selected))
+            {
+                Log.Write($"session: reselecting workspace {Tabs.TabItems.IndexOf(selected) + 1} (the TabView picked {Tabs.SelectedIndex + 1})");
+                Tabs.SelectedItem = selected;
+            }
+        }
+
+        Tabs.Loaded += Reselect;
         RestoreChrome(saved.Chrome);
         if (Plausible(saved))
         {
