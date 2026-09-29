@@ -96,6 +96,13 @@ public sealed record Config
     /// <summary>Primary font family; glyphs it lacks fall back through DirectWrite.</summary>
     public string FontFamily { get; init; } = "Cascadia Mono NF"; // ships with Phosphor (Fonts)
 
+    /// <summary>
+    /// Box drawing, block elements, Symbols for Legacy Computing, Powerline and Braille drawn by
+    /// Ghostty's sprite rasterizer (seamless in any font) rather than taken from the font.
+    /// Config: <c>[font] builtin-glyphs = true | false</c>.
+    /// </summary>
+    public bool BuiltinGlyphs { get; init; } = true;
+
     /// <summary>Font size in points, like Ghostty and Windows Terminal.</summary>
     public float FontSize { get; init; } = DefaultFontSize;
 
@@ -208,6 +215,7 @@ public sealed record Config
         return key switch
         {
             "font-family" when value.Length > 0 => this with { FontFamily = value },
+            "builtin-glyphs" when bool.TryParse(value, out var builtin) => this with { BuiltinGlyphs = builtin },
             "font-size" when TryFloat(value, out var size) && size > 0 => this with { FontSize = size },
             "command" when value.Length > 0 => this with { Command = value },
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },

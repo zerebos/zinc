@@ -107,6 +107,12 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   ships with Phosphor and needs no installing. A family that isn't installed falls back to it,
   then to Cascadia Mono and Consolas.
 - `size`: in points; `Ctrl+0` resets to this.
+- `builtin-glyphs`: `true` (default) draws box drawing, block elements, Symbols for Legacy
+  Computing (sextants, wedges: what editors like flow draw their tabs with), Powerline
+  separators and Braille with Ghostty's own sprite rasterizer instead of taking them from the
+  font: pixel-exact for the cell, so lines, prompt segments and blocks meet without seams in any
+  font, and characters most fonts lack still show. `false` uses the font's (as a font designed
+  them); what the font lacks then comes from the bundled Cascadia Mono NF where it has it.
 
 **`[colors]`**
 - `theme`: a color scheme by name. About 650 come with Phosphor (the

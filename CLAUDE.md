@@ -229,6 +229,17 @@ Test a press with `.scratch/tools/quick-toggle.ps1` and lifetime with `lifetime.
 to the logged hwnd; need PHOSPHOR_LOG). Don't launch `powershell.exe` consoles
 mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
+  Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,
+  Powerline, Braille come from **Ghostty's own sprite rasterizer** built as
+  `native/<arch>/phosphor-sprite.dll` (`scripts/build-sprites.sh`, run by build-libghostty.sh:
+  `native-src/sprite/phosphor_sprite.zig` is the C API, copied into the checkout as
+  src/phosphor_sprite.zig; the build repoints canvas.zig's one `global.io()` call and restores it).
+  Core `Ghostty/Sprites.cs` (Has/Draw → coverage + offset from the cell's top-left, may reach
+  past it; skips Ghostty's branch-drawing PUA set) — tested. Renderer caches a white premultiplied
+  bitmap per codepoint per cell size and draws each row's sprites in one `CanvasSpriteBatch` tinted
+  with the cell color (block cursor redraw too). Line thickness = the font's underline thickness.
+  Fallback when off / not a sprite: `DrawBundled` (cell-filling ranges from the bundled Cascadia).
+  Test screen: `.scratch/tools/legacy-test.ps1`.
   Default font Cascadia Mono NF ships in `assets/fonts` → `Fonts\` (OFL; variable upright +
   italic files) and is used *uninstalled*: `BundledFonts` loads a `CanvasFontSet(file Uri)` for
   glyph faces and names the file in the text format (`file:///…ttf#Cascadia Mono NF`); an
@@ -254,6 +265,9 @@ and read state after the write (see `_titleDirty`).
 
 ## libghostty-vt footguns
 
+- Bumping the commit also rebuilds phosphor-sprite.dll (Ghostty's sprite code is internal, not
+  API: if build-sprites.sh fails, look at the sprite Face/canvas/Metrics changes; SpriteTests pin
+  the behavior we rely on).
 - The C API is unstable. After bumping the commit: rerun gen-keys.py, then `dotnet test`
   (AbiTests checks every struct/enum/export against `ghostty_type_json()`). Structs use
   explicit offsets; C `bool` is mapped to `byte` to stay blittable. A struct field that

@@ -45,6 +45,13 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private readonly CanvasFontFace?[] _bundledFaces = new CanvasFontFace?[4];
     private readonly Dictionary<(uint, int), int> _bundledGlyphCache = new();
     private float _bundledAdvance, _bundledLineHeight, _bundledBaseline;
+
+    // Ghostty's sprites (box drawing, blocks, Legacy Computing, Powerline, Braille: Sprites.cs),
+    // one white coverage bitmap per codepoint at the current cell size (null: drew nothing),
+    // tinted per cell by a sprite batch. This row's sprite cells wait in _rowSprites.
+    private readonly Dictionary<uint, (CanvasBitmap Bitmap, int X, int Y)?> _sprites = new();
+    private readonly List<(int Column, uint Codepoint, Color Color)> _rowSprites = [];
+    private bool _spriteBatchSupported;
     private CanvasSolidColorBrush? _brush;
     private string _fontFamily;
     private float _fontSize;
@@ -96,6 +103,22 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         _bitmaps.Clear();
+        ClearSprites();
+        _spriteBatchSupported = CanvasSpriteBatch.IsSupported(device.Device);
+        if (!_spriteBatchSupported)
+        {
+            Log.Write("sprites: this device can't batch sprites; box drawing etc. come from the font");
+        }
+    }
+
+    private void ClearSprites()
+    {
+        foreach (var sprite in _sprites.Values)
+        {
+            sprite?.Bitmap.Dispose();
+        }
+
+        _sprites.Clear();
     }
 
     /// <summary>Loads the font at <paramref name="sizeDip"/> and recomputes cell metrics.</summary>
@@ -151,6 +174,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         _glyphCache.Clear();
         _bundledGlyphCache.Clear();
+        ClearSprites(); // drawn for the old cell size
         if (_bundledFaces[0] != null)
         {
             using var format = new CanvasTextFormat { FontFamily = BundledFonts.FormatFamily(italic: false), FontSize = _fontSize, WordWrapping = CanvasWordWrapping.NoWrap };
@@ -277,6 +301,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         _bitmaps.Clear();
+        ClearSprites();
         Native.RowCellsFree(_rowCells);
         Native.RowIteratorFree(_rowIterator);
         Native.RenderStateFree(_renderState);
@@ -475,6 +500,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 continue;
             }
 
+            if (IsSprite(ref cell))
+            {
+                // Ghostty draws it (after the row's text, in one batch).
+                FlushRun(ds, runStart, runLen, runVariant, runColor, top);
+                runLen = 0;
+                _rowSprites.Add((x, _codepoints[cell.CpStart], cell.Fg));
+                continue;
+            }
+
             var variant = cell.FontVariant;
             var glyph = cell.CpLen == 1 && (cell.Flags & CellFlags.Wide) == 0
                 ? GlyphIndex(_codepoints[cell.CpStart], variant)
@@ -505,6 +539,73 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         FlushRun(ds, runStart, runLen, runVariant, runColor, top);
+        DrawRowSprites(ds, top);
+    }
+
+    /// <summary>Whether Ghostty's sprite rasterizer draws this cell (one narrow codepoint it covers, builtin-glyphs on).</summary>
+    private bool IsSprite(ref Cell cell) =>
+        _spriteBatchSupported && _config.BuiltinGlyphs && cell.CpLen == 1 && (cell.Flags & CellFlags.Wide) == 0 &&
+        Sprites.Has(_codepoints[cell.CpStart]);
+
+    /// <summary>The sprite for <paramref name="codepoint"/> at the current cell size, made on first use.</summary>
+    private (CanvasBitmap Bitmap, int X, int Y)? Sprite(ICanvasResourceCreator device, uint codepoint)
+    {
+        if (_sprites.TryGetValue(codepoint, out var cached))
+        {
+            return cached;
+        }
+
+        var m = Metrics;
+        var ascent = (int)MathF.Round(m.Baseline * m.Scale);
+        // Lines as thick as the font's underline, as in Ghostty (its sprites take the font's metric).
+        var underline = _faces[0] is { UnderlineThickness: > 0 } face ? face.UnderlineThickness * _fontSize : _fontSize / 14;
+        var thickness = (int)MathF.Max(1, MathF.Round(underline * m.Scale));
+        (CanvasBitmap, int, int)? sprite = null;
+        if (Sprites.Draw(codepoint, (int)m.WidthPx, ascent, (int)m.HeightPx - ascent, thickness) is { } image)
+        {
+            // White, premultiplied: the batch's tint makes it the cell's color.
+            var pixels = new byte[image.Width * image.Height * 4];
+            for (var i = 0; i < image.Coverage.Length; i++)
+            {
+                var a = image.Coverage[i];
+                pixels[4 * i] = pixels[4 * i + 1] = pixels[4 * i + 2] = pixels[4 * i + 3] = a;
+            }
+
+            var bitmap = CanvasBitmap.CreateFromBytes(device, pixels, image.Width, image.Height,
+                DirectXPixelFormat.B8G8R8A8UIntNormalized, 96 * m.Scale, CanvasAlphaMode.Premultiplied);
+            sprite = (bitmap, image.X, image.Y);
+        }
+
+        _sprites[codepoint] = sprite;
+        return sprite;
+    }
+
+    /// <summary>This row's sprite cells, each at its cell (and past it where the shape reaches), in its color.</summary>
+    private void DrawRowSprites(CanvasDrawingSession ds, float top)
+    {
+        if (_rowSprites.Count == 0)
+        {
+            return;
+        }
+
+        var m = Metrics;
+        using (var batch = ds.CreateSpriteBatch(CanvasSpriteSortMode.None, CanvasImageInterpolation.NearestNeighbor))
+        {
+            foreach (var (column, codepoint, color) in _rowSprites)
+            {
+                if (Sprite(ds, codepoint) is not { } sprite)
+                {
+                    continue;
+                }
+
+                var size = sprite.Bitmap.SizeInPixels;
+                var rect = new Rect(PadLeft + column * m.Width + sprite.X / m.Scale, top + sprite.Y / m.Scale,
+                    size.Width / m.Scale, size.Height / m.Scale);
+                batch.Draw(sprite.Bitmap, rect, new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f));
+            }
+        }
+
+        _rowSprites.Clear();
     }
 
     private void FlushRun(CanvasDrawingSession ds, int start, int len, int variant, Color color, float top)
@@ -798,7 +899,12 @@ public sealed unsafe class TerminalRenderer : IDisposable
                     var fg = cell.Fg;
                     cell.Fg = cell.HasBg ? cell.Bg : defaultBg;
                     var glyph = cell.CpLen == 1 && !wide ? GlyphIndex(_codepoints[cell.CpStart], cell.FontVariant) : 0;
-                    if (glyph != 0 && _faces[cell.FontVariant] is { } face)
+                    if (IsSprite(ref cell))
+                    {
+                        _rowSprites.Add((x, _codepoints[cell.CpStart], cell.Fg));
+                        DrawRowSprites(ds, top);
+                    }
+                    else if (glyph != 0 && _faces[cell.FontVariant] is { } face)
                     {
                         _brush!.Color = cell.Fg;
                         ds.DrawGlyphRun(new Vector2(left, top + m.Baseline), face, _fontSize,

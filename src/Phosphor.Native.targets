@@ -15,15 +15,20 @@
     <ConptyRequiresARM64Host>true</ConptyRequiresARM64Host>
   </PropertyGroup>
 
-  <!-- libghostty-vt is built by scripts/build-libghostty.sh into native/<arch>/. -->
+  <!-- libghostty-vt and Ghostty's sprite rasterizer (phosphor-sprite: box drawing, blocks,
+       Legacy Computing, Powerline) are built by scripts/build-libghostty.sh into native/<arch>/. -->
   <ItemGroup>
     <None Include="$(GhosttyNativeDir)ghostty-vt.dll" Link="ghostty-vt.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
+    <None Include="$(GhosttyNativeDir)phosphor-sprite.dll" Link="phosphor-sprite.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(GhosttyNativeDir)phosphor-sprite.pdb" Link="phosphor-sprite.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('$(GhosttyNativeDir)phosphor-sprite.pdb')" />
   </ItemGroup>
 
   <Target Name="CheckGhostty" BeforeTargets="Build">
     <Error Condition="!Exists('$(GhosttyNativeDir)ghostty-vt.dll')"
            Text="ghostty-vt.dll not found in $(GhosttyNativeDir). Run: scripts/build-libghostty.sh $(GhosttyArch)" />
+    <Error Condition="!Exists('$(GhosttyNativeDir)phosphor-sprite.dll')"
+           Text="phosphor-sprite.dll not found in $(GhosttyNativeDir). Run: scripts/build-sprites.sh $(GhosttyArch)" />
   </Target>
 
   <ItemGroup>

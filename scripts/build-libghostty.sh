@@ -35,3 +35,6 @@ cp "$SRC/zig-out/bin/ghostty-vt.dll" "$SRC/zig-out/bin/ghostty-vt.pdb" "$ROOT/na
 rm -rf "$ROOT/native/include/ghostty"
 cp -r "$SRC/zig-out/include/ghostty" "$ROOT/native/include/"
 echo "libghostty-vt ($COMMIT) -> native/$ARCH/ghostty-vt.dll"
+
+# Ghostty's sprite rasterizer, from the same checkout.
+"$ROOT/scripts/build-sprites.sh" "$ARCH"

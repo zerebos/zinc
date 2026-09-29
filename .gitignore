@@ -4,5 +4,7 @@ obj/
 *.user
 external/
 native/
+native-src/*/zig-out/
+native-src/*/.zig-cache/
 
 .scratch/

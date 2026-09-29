@@ -511,6 +511,7 @@ public sealed class ConfigFile
             {
                 ["font", "family"] => ("font-family", e.Value as string),
                 ["font", "size"] => ("font-size", Number(e.Value)),
+                ["font", "builtin-glyphs"] => ("builtin-glyphs", Bool(e.Value)),
                 ["colors", "background"] => ("background", e.Value as string),
                 ["colors", "foreground"] => ("foreground", e.Value as string),
                 ["colors", "cursor"] => ("cursor-color", e.Value as string),
