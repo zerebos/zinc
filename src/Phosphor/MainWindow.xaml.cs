@@ -147,11 +147,19 @@ public sealed partial class MainWindow : Window
 
         Closed += (_, _) =>
         {
+            // Nothing may reach for this window once it's gone (its AppWindow is null by now): the
+            // timers stop, and the terminals are unwired before they close, so events already
+            // queued (titles, commands, progress) find no handler here.
             _windowClosed = true;
+            _chromeTimer?.Stop();
+            _commandClock?.Stop();
+            _springTimer?.Stop();
+            _replayTimer?.Stop();
             foreach (var tab in AllTabs().ToList())
             {
                 foreach (var pane in tab.Workspace.Tabs)
                 {
+                    pane.Unwire?.Invoke();
                     pane.Control.Close();
                 }
             }
@@ -411,7 +419,7 @@ public sealed partial class MainWindow : Window
         // After a rebuild the panes are re-parented and not loaded yet; focus once
         // layout has run.
         var control = tab.Active.Control;
-        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
+        DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             () => control.Focus(FocusState.Programmatic));
     }
 
@@ -738,7 +746,7 @@ public sealed partial class MainWindow : Window
     {
         if (await ConfirmClose(tab.Workspace.Tabs.ToList()))
         {
-            CloseTabNow(tab);
+            Ui.Guard("closing a workspace", () => CloseTabNow(tab));
         }
         else if (SelectedTab is { } shown)
         {
@@ -813,6 +821,11 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void UpdateCaptionInset()
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         var scale = Root.XamlRoot?.RasterizationScale ?? 1.0;
         DragRegion.MinWidth = AppWindow.TitleBar.RightInset / scale + 48;
     }
@@ -942,6 +955,13 @@ public sealed partial class MainWindow : Window
                     DropWorkspace(this, from, tab, target, chord.Contains("middle") ? null : PaneDirection.Right);
                 }
 
+                return;
+            }
+
+            if (chord == "test:throw")
+            {
+                // Checks the safety net: this should be logged to crash.log, shown, and survived.
+                DispatcherQueue.SafeEnqueue(() => throw new InvalidOperationException("test:throw, on purpose"));
                 return;
             }
 

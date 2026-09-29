@@ -338,6 +338,18 @@ and read state after the write (see `_titleDirty`).
   which is blended at ~70% of the tile: the user's pick side by side. Rerun after SVG edits and
   look at `--preview`. The SVG carries a large C2PA `<metadata>` blob; the script strips it. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
   uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
+- **An exception in a `DispatcherQueue` callback or a `DispatcherQueueTimer.Tick` ends the
+  process on the spot, unlogged** — it bypasses `Application.UnhandledException` (found with
+  `test:throw`). Queue work with `SafeEnqueue` and ticks with `OnTick` (`Ui.cs`: `Ui.Guard`
+  records + shows + survives); code after an `await` in an `async void` resumes the same way, so
+  guard it too. Native callbacks (`UnmanagedCallersOnly`, the `MessageWindow` WndProc, ConPty's
+  reader/exit threads) catch everything themselves. XAML event handlers do reach
+  `App.UnhandledException`, which now marks them handled and shows the ErrorNotice. Every
+  escaped exception goes to `Log.Crash` → `%LOCALAPPDATA%\Phosphor\crash.log` (always, even
+  without PHOSPHOR_LOG; `PHOSPHOR_CRASH_LOG=<file>` for tests). Code reachable after a window
+  closes checks `_windowClosed` (its AppWindow is null); `Closed` stops the timers and unwires
+  every terminal first. Config/theme reads share access and retry (an editor mid-save); an
+  unreadable config counts as HasErrors (report, keep settings).
 - Keep every `DispatcherQueueTimer` in a field: one only a local references is garbage-collected
   and silently stops firing. The session save timer did this — saves stopped after the first GC,
   which short test runs never reach (`test:gc` forces one).

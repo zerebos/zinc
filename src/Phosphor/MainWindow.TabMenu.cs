@@ -100,10 +100,13 @@ public sealed partial class MainWindow
             return;
         }
 
-        foreach (var t in list)
+        Ui.Guard("closing workspaces", () =>
         {
-            CloseTabNow(t);
-        }
+            foreach (var t in list)
+            {
+                CloseTabNow(t);
+            }
+        });
     }
 
     // ---- rename ----
@@ -212,10 +215,19 @@ public sealed partial class MainWindow
         // Unpackaged apps must tell the picker which window owns it.
         WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
 
-        var file = await picker.PickSaveFileAsync();
-        if (file != null)
+        try
         {
-            await File.WriteAllTextAsync(file.Path, tab.Active.Control.ReadText());
+            var file = await picker.PickSaveFileAsync();
+            if (file != null)
+            {
+                await File.WriteAllTextAsync(file.Path, tab.Active.Control.ReadText());
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+        {
+            // A fire-and-forget task: without this, a failed save vanished without a word.
+            Log.Crash("exporting text", ex);
+            ShowError(ex);
         }
     }
 }

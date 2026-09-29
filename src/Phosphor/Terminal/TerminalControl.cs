@@ -231,15 +231,15 @@ public sealed partial class TerminalControl : UserControl
 
         var dq = DispatcherQueue;
         session.OutputProcessed += RequestRedraw;
-        session.TitleChanged += title => dq.TryEnqueue(() =>
+        session.TitleChanged += title => dq.SafeEnqueue(() =>
         {
             Title = title;
             TitleChanged?.Invoke(title);
         });
-        session.DirectoryChanged += () => dq.TryEnqueue(() => DirectoryChanged?.Invoke());
-        session.CommandsChanged += () => dq.TryEnqueue(OnCommandsChanged);
+        session.DirectoryChanged += () => dq.SafeEnqueue(() => DirectoryChanged?.Invoke());
+        session.CommandsChanged += () => dq.SafeEnqueue(OnCommandsChanged);
         ForwardProgramNotifications(session);
-        session.ProcessExited += code => dq.TryEnqueue(() => OnProcessExited(code));
+        session.ProcessExited += code => dq.SafeEnqueue(() => OnProcessExited(code));
         ApplyClipboardPermissions(session);
         _session = session;
         try
@@ -264,7 +264,7 @@ public sealed partial class TerminalControl : UserControl
     {
         // Writes arrive mid-parse on the reader thread: set the clipboard on the UI thread.
         var dq = DispatcherQueue;
-        session.ClipboardWriter = _config.ClipboardWrite ? text => dq.TryEnqueue(() => ClipboardText.Set(text)) : null;
+        session.ClipboardWriter = _config.ClipboardWrite ? text => dq.SafeEnqueue(() => ClipboardText.Set(text)) : null;
         session.ClipboardReader = _config.ClipboardRead ? ClipboardText.ReadNow : null;
     }
 
@@ -323,7 +323,7 @@ public sealed partial class TerminalControl : UserControl
         // Coalesce bursts of PTY output into a single invalidate per UI tick.
         if (Interlocked.Exchange(ref _invalidatePending, 1) == 0)
         {
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue.SafeEnqueue(() =>
             {
                 Volatile.Write(ref _invalidatePending, 0);
                 _canvas.Invalidate();

@@ -232,6 +232,27 @@ public class ConfigFileTests : IDisposable
     }
 
     [Fact]
+    public void AnIncludeThatCannotBeReadIsReportedAndKeepsTheSettingsInForce()
+    {
+        const string main = "include = \"locked.toml\"\n[font]\nsize = 13";
+        WriteFile("locked.toml", "[font]\nsize = 20");
+        // Held open with no sharing, as some editors do mid-save.
+        using var held = new FileStream(Path.Combine(_dir, "locked.toml"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var config = Parse(main);
+        Assert.Contains(config.Warnings, w => w.Contains("couldn't read") && w.Contains("locked.toml"));
+        Assert.True(config.HasErrors); // a reload keeps what's in force rather than apply half a config
+    }
+
+    [Fact]
+    public void ReadsAFileAnEditorHasOpen()
+    {
+        WriteFile("open.toml", "[font]\nsize = 13");
+        // Open for writing but sharing reads, as most editors hold a file.
+        using var open = new FileStream(Path.Combine(_dir, "open.toml"), FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+        Assert.Contains("size = 13", ConfigFile.ReadShared(Path.Combine(_dir, "open.toml")));
+    }
+
+    [Fact]
     public void BadIncludesWarn()
     {
         const string main = "include = [\"missing.toml\", \"loop.toml\"]";

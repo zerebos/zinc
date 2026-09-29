@@ -17,12 +17,25 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
     /// <summary>Every scheme's name, sorted; a user's scheme hides a bundled one of the same name.</summary>
     public IReadOnlyList<string> Names() =>
-        Folders.Where(Directory.Exists)
-            .SelectMany(Directory.EnumerateFiles)
+        Folders.SelectMany(Files)
             .Select(f => Path.GetFileName(f))
             .DistinctBy(n => n, StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
+
+    /// <summary>A folder's files; none if it's missing or can't be read (a scheme folder isn't worth failing over).</summary>
+    private static IReadOnlyList<string> Files(string folder)
+    {
+        try
+        {
+            return Directory.Exists(folder) ? Directory.GetFiles(folder) : [];
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Write($"themes: couldn't list {folder}: {ex.Message}");
+            return [];
+        }
+    }
 
     /// <summary>The file for scheme <paramref name="name"/> (the user's first; names match case-insensitively), or null.</summary>
     public string? Find(string name)
@@ -41,8 +54,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             }
 
             // Case-insensitive fallback (the collection's names are mixed case).
-            if (Directory.Exists(folder) &&
-                Directory.EnumerateFiles(folder).FirstOrDefault(f => Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase)) is { } match)
+            if (Files(folder).FirstOrDefault(f => Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase)) is { } match)
             {
                 return match;
             }
@@ -52,7 +64,23 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
     }
 
     /// <summary><paramref name="config"/> with scheme <paramref name="name"/>'s colors; null if there's no such scheme.</summary>
-    public Config? Apply(Config config, string name) => Find(name) is { } file ? ApplyFile(config, file) : null;
+    public Config? Apply(Config config, string name)
+    {
+        if (Find(name) is not { } file)
+        {
+            return null;
+        }
+
+        try
+        {
+            return ApplyFile(config, file);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Write($"themes: couldn't read {file}: {ex.Message}");
+            return null;
+        }
+    }
 
     /// <summary>Applies a scheme file's colors (the rest it may set, selection or cursor text, isn't used yet).</summary>
     public static Config ApplyFile(Config config, string file)

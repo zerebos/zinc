@@ -32,7 +32,7 @@ public sealed partial class TerminalControl
         _searchPanel!.Visibility = Visibility.Visible;
         _searchBox!.SelectAll();
         // Low priority: after the host's own focus requests (e.g. the palette closing).
-        DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () => _searchBox.Focus(FocusState.Programmatic));
+        DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.Low, () => _searchBox.Focus(FocusState.Programmatic));
         RunSearch(jump: true);
     }
 
@@ -80,7 +80,7 @@ public sealed partial class TerminalControl
             _searchRefresh = DispatcherQueue.CreateTimer();
             _searchRefresh.Interval = TimeSpan.FromMilliseconds(300);
             _searchRefresh.IsRepeating = false;
-            _searchRefresh.Tick += (_, _) => RunSearch(jump: false);
+            _searchRefresh.OnTick(_ => RunSearch(jump: false));
         }
 
         if (!_searchRefresh.IsRunning)

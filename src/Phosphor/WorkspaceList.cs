@@ -144,7 +144,7 @@ internal sealed partial class WorkspaceList : Grid
 
         if (selected != null && _byTab.TryGetValue(selected, out var shown))
         {
-            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => shown.StartBringIntoView());
+            DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => shown.StartBringIntoView());
         }
     }
 

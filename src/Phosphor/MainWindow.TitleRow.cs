@@ -147,7 +147,7 @@ public sealed partial class MainWindow
         {
             _commandClock = DispatcherQueue.CreateTimer();
             _commandClock.Interval = TimeSpan.FromSeconds(1);
-            _commandClock.Tick += (_, _) => UpdateCommandCenter();
+            _commandClock.OnTick(_ => UpdateCommandCenter());
         }
 
         if (running)

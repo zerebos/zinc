@@ -77,6 +77,12 @@
                     <Button x:Name="OpenConfigButton" Content="Open config" />
                 </InfoBar.ActionButton>
             </InfoBar>
+            <!-- Something failed and was survived (App.UnhandledException); details in crash.log. -->
+            <InfoBar x:Name="ErrorNotice" IsOpen="False" Severity="Error" Title="Something went wrong">
+                <InfoBar.ActionButton>
+                    <Button x:Name="OpenCrashLogButton" Content="Open crash log" />
+                </InfoBar.ActionButton>
+            </InfoBar>
             <!-- Shown when the quick terminal's global hotkey is held by another app. -->
             <InfoBar
                 x:Name="HotkeyNotice"

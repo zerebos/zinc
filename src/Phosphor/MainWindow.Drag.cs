@@ -232,7 +232,7 @@ public sealed partial class MainWindow
             _springTimer = DispatcherQueue.CreateTimer();
             _springTimer.Interval = TimeSpan.FromMilliseconds(500);
             _springTimer.IsRepeating = false;
-            _springTimer.Tick += (_, _) =>
+            _springTimer.OnTick(_ =>
             {
                 // DragOver only comes with movement, so a resting pointer is still where it was;
                 // leaving for anywhere else cancels (CancelSpringLoad).
@@ -240,7 +240,7 @@ public sealed partial class MainWindow
                 {
                     Tabs.SelectedItem = _springTarget.Item;
                 }
-            };
+            });
         }
 
         _springTimer.Stop();

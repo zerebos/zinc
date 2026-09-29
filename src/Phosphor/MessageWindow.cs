@@ -69,7 +69,8 @@ internal sealed unsafe partial class MessageWindow : IDisposable
                 catch (Exception ex)
                 {
                     // An exception must not unwind into native code.
-                    Log.Write($"message window: handler failed: {ex}");
+                    Log.Crash("tray, hotkey or notification", ex);
+                    App.Instance.ShowSurvivedError(ex);
                     return 0;
                 }
             }

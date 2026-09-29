@@ -31,12 +31,12 @@ public sealed partial class TerminalControl
     private void ForwardProgramNotifications(TerminalSession session)
     {
         var dq = DispatcherQueue;
-        session.Notified += (title, body) => dq.TryEnqueue(() =>
+        session.Notified += (title, body) => dq.SafeEnqueue(() =>
         {
             Log.Write($"program notification: '{title}' '{body}'");
             Notified?.Invoke(title, body);
         });
-        session.ProgressChanged += progress => dq.TryEnqueue(() => ProgressChanged?.Invoke());
+        session.ProgressChanged += progress => dq.SafeEnqueue(() => ProgressChanged?.Invoke());
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public sealed partial class TerminalControl
         session.OutputProcessed += () => Interlocked.Exchange(ref _lastOutputTicks, Environment.TickCount64);
         _startupInputTimer = DispatcherQueue.CreateTimer();
         _startupInputTimer.Interval = TimeSpan.FromMilliseconds(150);
-        _startupInputTimer.Tick += (timer, _) =>
+        _startupInputTimer.OnTick(timer =>
         {
             var now = Environment.TickCount64;
             var lastOutput = Interlocked.Read(ref _lastOutputTicks);
@@ -84,7 +84,7 @@ public sealed partial class TerminalControl
                 Log.Write($"pane: typing the startup command ({(prompted ? "at the prompt" : quiet ? "output went quiet" : "timed out")})");
                 session.SendInput(line + "\r");
             }
-        };
+        });
         _startupInputTimer.Start();
     }
 

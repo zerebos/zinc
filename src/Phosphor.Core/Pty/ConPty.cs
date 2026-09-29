@@ -156,9 +156,23 @@ public sealed unsafe partial class ConPty : IDisposable
                 break;
             }
 
-            OutputReceived?.Invoke(buffer.AsSpan(0, n));
+            try
+            {
+                OutputReceived?.Invoke(buffer.AsSpan(0, n));
+            }
+            catch (Exception ex)
+            {
+                // A bug in handling output (parsing, shell integration...) would otherwise end the
+                // whole app from this background thread, silently. Record it and keep reading.
+                if (_outputFailures++ < 3)
+                {
+                    Log.Crash("handling terminal output", ex);
+                }
+            }
         }
     }
+
+    private int _outputFailures;
 
     private void WaitForExit()
     {
@@ -169,7 +183,14 @@ public sealed unsafe partial class ConPty : IDisposable
         // the output pipe, which ends the reader loop.
         Close();
         _reader.Join(TimeSpan.FromSeconds(2));
-        Exited?.Invoke(code);
+        try
+        {
+            Exited?.Invoke(code);
+        }
+        catch (Exception ex)
+        {
+            Log.Crash("a terminal's program exiting", ex); // background thread: don't take the app down
+        }
     }
 
     private void Close()

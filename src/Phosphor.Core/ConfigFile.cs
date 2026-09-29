@@ -91,8 +91,43 @@ public sealed class ConfigFile
     {
         path ??= Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
         path = System.IO.Path.GetFullPath(path);
-        var text = File.Exists(path) ? File.ReadAllText(path) : "";
+        string text;
+        try
+        {
+            text = File.Exists(path) ? ReadShared(path) : "";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Treated like invalid TOML: reported, and a reload keeps the settings in force (at
+            // startup, the defaults) rather than apply a file it couldn't see.
+            var defaults = Parse("", path, discover: ProfileDiscovery.Discover);
+            return new ConfigFile(defaults.Global, defaults.Profiles, defaults.DefaultProfile,
+                [$"{System.IO.Path.GetFileName(path)}: couldn't be read ({ex.Message})"], hasErrors: true,
+                path, defaults.Keybindings, defaults.Themes);
+        }
+
         return Parse(text, path, discover: ProfileDiscovery.Discover);
+    }
+
+    /// <summary>
+    /// Reads a file another program may have open (an editor mid-save): sharing its access, with a
+    /// few short retries while it's locked.
+    /// </summary>
+    internal static string ReadShared(string path)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
+            }
+            catch (IOException) when (attempt < 4 && File.Exists(path))
+            {
+                Thread.Sleep(50 * attempt);
+            }
+        }
     }
 
     /// <summary>
@@ -196,7 +231,19 @@ public sealed class ConfigFile
                             break;
                         }
 
-                        Read(File.ReadAllText(included), included, depth + 1);
+                        string includedText;
+                        try
+                        {
+                            includedText = ReadShared(included);
+                        }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                        {
+                            _warnings.Add($"{include.Where}: couldn't read {included} ({ex.Message})");
+                            _hasErrors = true; // as with a file that isn't valid TOML: keep what's in force
+                            continue;
+                        }
+
+                        Read(includedText, included, depth + 1);
                     }
                 }
             }

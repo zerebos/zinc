@@ -22,10 +22,45 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
-        UnhandledException += (_, e) => Log.Write($"unhandled: {e.Exception}");
+
+        // Every exception that escapes leaves a record (crash.log, even without PHOSPHOR_LOG).
+        // One on the UI thread is survived: a crash would take every terminal with it, and
+        // most such failures belong to one action (a menu item, a palette command). Background
+        // threads and XAML's own fail-fasts can't be survived; they're at least recorded.
+        UnhandledException += (_, e) =>
+        {
+            Log.Crash("UI thread", e.Exception);
+            e.Handled = true;
+            ShowSurvivedError(e.Exception);
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                Log.Crash("background thread", ex);
+            }
+        };
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            Log.Crash("async task", e.Exception);
+            e.SetObserved();
+        };
     }
 
     internal static App Instance => (App)Current;
+
+    /// <summary>Tells the front window's user that something failed and Phosphor carried on.</summary>
+    internal void ShowSurvivedError(Exception exception)
+    {
+        try
+        {
+            _windows.LastOrDefault()?.ShowError(exception);
+        }
+        catch (Exception ex)
+        {
+            Log.Crash("showing an error", ex); // never let the report become the next failure
+        }
+    }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
@@ -164,7 +199,7 @@ public partial class App : Application
             }
         }
 
-        Quit();
+        Ui.Guard("quitting", Quit);
     }
 
     internal void Quit()
@@ -211,7 +246,7 @@ public partial class App : Application
             }
         }
 
-        _launchQueue.TryEnqueue(() => Instance.OpenForLaunch(argv));
+        _launchQueue.SafeEnqueue(() => Instance.OpenForLaunch(argv));
     }
 
     /// <summary>Starts handling redirected launches on the UI thread, including any that came during startup.</summary>
@@ -222,7 +257,7 @@ public partial class App : Application
             _launchQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
             foreach (var argv in PendingLaunches)
             {
-                _launchQueue.TryEnqueue(() => OpenForLaunch(argv));
+                _launchQueue.SafeEnqueue(() => OpenForLaunch(argv));
             }
 
             PendingLaunches.Clear();
@@ -320,7 +355,7 @@ public partial class App : Application
         _reloadTimer = queue.CreateTimer();
         _reloadTimer.Interval = TimeSpan.FromMilliseconds(300);
         _reloadTimer.IsRepeating = false;
-        _reloadTimer.Tick += (_, _) => ReloadConfig();
+        _reloadTimer.OnTick(_ => ReloadConfig());
 
         var themes = Path.Combine(folder, "themes") + Path.DirectorySeparatorChar;
         void OnChange(object sender, FileSystemEventArgs e)
@@ -329,7 +364,7 @@ public partial class App : Application
             var path = e.FullPath;
             if (path.EndsWith(".toml", StringComparison.OrdinalIgnoreCase) || path.StartsWith(themes, StringComparison.OrdinalIgnoreCase))
             {
-                queue.TryEnqueue(() =>
+                queue.SafeEnqueue(() =>
                 {
                     _reloadTimer.Stop();
                     _reloadTimer.Start();
@@ -480,7 +515,7 @@ public partial class App : Application
 
         _sessionTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
         _sessionTimer.Interval = TimeSpan.FromSeconds(2);
-        _sessionTimer.Tick += (_, _) => SaveSession();
+        _sessionTimer.OnTick(_ => SaveSession());
         _sessionTimer.Start();
     }
 

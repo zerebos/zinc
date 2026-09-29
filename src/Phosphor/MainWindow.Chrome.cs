@@ -72,7 +72,7 @@ public sealed partial class MainWindow
 
         _chromeTimer = DispatcherQueue.CreateTimer();
         _chromeTimer.Interval = TimeSpan.FromMilliseconds(150);
-        _chromeTimer.Tick += (_, _) => HideChromeWhenAway();
+        _chromeTimer.OnTick(_ => HideChromeWhenAway());
 
         _chromeConfig = (_config.Global.Sidebar, _config.Global.TitleBar);
         SetSidebarMode(_config.Global.Sidebar);
@@ -220,6 +220,11 @@ public sealed partial class MainWindow
     /// <param name="pinned">Stay revealed wherever the pointer is (test captures).</param>
     internal void RevealSidebar(bool show, bool pinned = false)
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         if (_workspaceList is not { } list || _sidebarMode != SidebarMode.AutoHide || _sidebarRevealed == show)
         {
             return;
@@ -236,6 +241,11 @@ public sealed partial class MainWindow
     /// <param name="pinned">Stay revealed wherever the pointer is (test captures).</param>
     internal void RevealTitleBar(bool show, bool pinned = false)
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         if (_workspaceList == null || _titleBarMode != TitleBarMode.AutoHide || _titleRevealed == show)
         {
             return;
@@ -330,6 +340,11 @@ public sealed partial class MainWindow
     /// </summary>
     private void ReleaseTitleBarArea()
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         var source = Microsoft.UI.Input.InputNonClientPointerSource.GetForWindowId(AppWindow.Id);
         source.ClearRegionRects(Microsoft.UI.Input.NonClientRegionKind.Caption);
     }
@@ -337,6 +352,11 @@ public sealed partial class MainWindow
     /// <summary>Hides a revealed bar once the pointer has been away from it for a moment.</summary>
     private void HideChromeWhenAway()
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         if (Content?.XamlRoot is not { } root || !GetCursorPos(out var screen))
         {
             return;

@@ -160,7 +160,7 @@ public sealed partial class MainWindow
         PaletteQuery.LostFocus += (_, _) =>
         {
             // Clicking into the list keeps the palette; anything else closes it.
-            DispatcherQueue.TryEnqueue(() =>
+            DispatcherQueue.SafeEnqueue(() =>
             {
                 var focused = FocusManager.GetFocusedElement(Root.XamlRoot) as DependencyObject;
                 if (!IsInside(focused, PalettePanel))

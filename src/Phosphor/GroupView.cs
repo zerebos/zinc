@@ -253,7 +253,7 @@ internal sealed partial class GroupView : Grid
     {
         if (_shown != null && _items.TryGetValue(_shown, out var item))
         {
-            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => item.StartBringIntoView());
+            DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => item.StartBringIntoView());
         }
     }
 

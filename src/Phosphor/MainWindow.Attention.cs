@@ -76,6 +76,11 @@ public sealed partial class MainWindow
     /// <summary>Brings this window forward with <paramref name="pane"/> shown and focused (if it's still here).</summary>
     private void BringToPane(WorkspaceTab tab, TerminalTab pane)
     {
+        if (_windowClosed)
+        {
+            return; // e.g. a notification clicked after its window closed
+        }
+
         if (AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter { State: Microsoft.UI.Windowing.OverlappedPresenterState.Minimized } presenter)
         {
             presenter.Restore();
@@ -134,6 +139,11 @@ public sealed partial class MainWindow
     /// </summary>
     private void UpdateTaskbarProgress()
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         var shown = SelectedTab?.Workspace.Tabs ?? [];
         var all = AllTabs().SelectMany(t => t.Workspace.Tabs).Select(p => p.Control.Progress).Where(p => p.Active).ToList();
         var progress = all.FirstOrDefault(p => p.State == Ghostty.TerminalProgressState.Error) is { Active: true } error ? error
@@ -169,6 +179,11 @@ public sealed partial class MainWindow
 
     private void FlashTaskbarButton()
     {
+        if (_windowClosed)
+        {
+            return; // its AppWindow is gone
+        }
+
         var info = new FlashInfo
         {
             Size = (uint)Marshal.SizeOf<FlashInfo>(),
@@ -213,6 +228,13 @@ public sealed partial class MainWindow
             };
             return await dialog.ShowAsync() == ContentDialogResult.Primary;
         }
+        catch (Exception ex)
+        {
+            // Code after an await resumes as queued work, which bypasses Application.UnhandledException:
+            // record it, and don't close anything.
+            Log.Crash("asking before a close", ex);
+            return false;
+        }
         finally
         {
             _confirmingClose = false;
@@ -224,7 +246,7 @@ public sealed partial class MainWindow
     {
         if (await ConfirmClose([pane]))
         {
-            ClosePane(tab, pane);
+            Ui.Guard("closing a tab", () => ClosePane(tab, pane));
         }
         else
         {
@@ -236,10 +258,13 @@ public sealed partial class MainWindow
     {
         if (await ConfirmClose(panes))
         {
-            foreach (var pane in panes)
+            Ui.Guard("closing tabs", () =>
             {
-                ClosePane(tab, pane);
-            }
+                foreach (var pane in panes)
+                {
+                    ClosePane(tab, pane);
+                }
+            });
         }
         else
         {
@@ -267,7 +292,7 @@ public sealed partial class MainWindow
             if (await ConfirmClose(panes))
             {
                 _closeConfirmed = true;
-                Close();
+                Ui.Guard("closing a window", Close);
             }
             else if (SelectedTab is { } shown)
             {
