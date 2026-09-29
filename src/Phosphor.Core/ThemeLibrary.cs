@@ -50,6 +50,38 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         return true;
     }
 
+    /// <summary>
+    /// A light scheme to pair with <paramref name="dark"/>: its obvious counterpart where the
+    /// collection has one ("Catppuccin Mocha" → "Catppuccin Latte", "Solarized Dark" → "Solarized
+    /// Light", "Tokyo Night" → "Tokyo Night Day", "Rose Pine" → "Rose Pine Dawn"), else Catppuccin Latte.
+    /// </summary>
+    public static string? LightCounterpart(string? dark, IReadOnlyList<string> names)
+    {
+        string? Named(string name) => names.FirstOrDefault(n => n.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (dark != null)
+        {
+            foreach (var (from, to) in new[] { ("Mocha", "Latte"), ("Macchiato", "Latte"), ("Frappe", "Latte"), ("Frappé", "Latte"),
+                         ("Dark", "Light"), ("Night", "Day"), ("Moon", "Dawn"), ("Storm", "Day"), ("Black", "White") })
+            {
+                if (dark.Contains(from, StringComparison.OrdinalIgnoreCase) &&
+                    Named(dark.Replace(from, to, StringComparison.OrdinalIgnoreCase)) is { } swapped)
+                {
+                    return swapped;
+                }
+            }
+
+            foreach (var suffix in new[] { " Light", " Day", " Dawn" })
+            {
+                if (Named(dark + suffix) is { } added)
+                {
+                    return added;
+                }
+            }
+        }
+
+        return Named("Catppuccin Latte") ?? names.FirstOrDefault();
+    }
+
     /// <summary>The scheme in force for <paramref name="value"/> (a name, or a light/dark pair) in <paramref name="scheme"/> mode.</summary>
     public static string Resolve(string value, Phosphor.Ghostty.ColorScheme scheme) =>
         TryParsePair(value, out var light, out var dark) ? (scheme == Phosphor.Ghostty.ColorScheme.Light ? light : dark) : value;

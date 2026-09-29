@@ -63,8 +63,9 @@ newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundle
 
 The first time Phosphor starts, a welcome page asks how you like to work (**Simple**: tabs along
 the top, one terminal each; **Workspaces**: in a sidebar or along the top, each with its own tabs
-and splits), a color scheme and font (with a preview) and your default shell, and writes your
-answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
+and splits), a color scheme and font (with a preview; or two schemes that follow Windows' light
+and dark mode), your default shell, and whether a long command finishing in the background shows
+a Windows notification, and writes your answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
 you change there and leaves the rest of the file as it is.
 
 **Settings** (`Ctrl+,`, the command palette or the tray menu) edits the settings below in a window
@@ -74,8 +75,11 @@ puts the file back as it was when you opened the window. Each setting shows its 
 While `config.toml` has an error, Settings says so and changes nothing. Under **Profiles**:
 the default profile, every profile (found on this PC or your own; add, delete, or undo your changes
 to a found one), each one's name, command, folder, icon and visibility, its own font, colors and
-padding where it shouldn't inherit them, and which shells Phosphor looks for. Keys are edited in
-the file for now.
+padding where it shouldn't inherit them, and which shells Phosphor looks for. Under **Keyboard**:
+every action with its keys (filter by name or key); click a key to take it away, **+** to add one
+by pressing it (it says if another action has that key, and takes it over), **Reset** for the
+defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key
+sequences are listed but added in the file.
 
 `%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
 [TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,

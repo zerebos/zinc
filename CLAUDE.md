@@ -202,7 +202,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   + editor (`_editing`), `Profile.Found/InFile/FoundName/FoundCommand`, `ConfigFile.ProfileValues`
   / `ValueOf(id, key)`, catalog `ProfileFields` + `Discovery`, `OverrideCard` (inherit ↔ own value
   into `[profile.x]`), delete/undo via `ConfigEditor.RemoveTable` (tested; keeps the next section's
-  comment). Keyboard page is a placeholder until session 3. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
+  comment). Keyboard (session 3): `SettingsWindow.Keyboard.cs` (rows in `Actions.Order`, chips,
+  capture flyout: PreviewKeyDown + `InputKeyboardSource` modifier state, so posted keys can't
+  drive it — the user tests it) over Core `Settings/KeyBindingEditor.cs` (tested: default key
+  removed = "none", given back = line removed, other spellings edited in place, Reset skips
+  sequences; `KeyChord.ToConfig`). Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`

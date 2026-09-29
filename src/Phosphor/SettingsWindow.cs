@@ -202,7 +202,7 @@ internal sealed partial class SettingsWindow : Window
         }
         else if (_section == "keyboard")
         {
-            ComingSoon();
+            KeyboardPage();
         }
         else
         {
@@ -245,15 +245,6 @@ internal sealed partial class SettingsWindow : Window
         Opacity = 0.7,
         Margin = new Thickness(2, 8, 0, 0),
     };
-
-    private void ComingSoon()
-    {
-        const string what = "Keys are changed here in the next update. For now, they're in the [keys] section of config.toml; the README lists every action.";
-        _page.Children.Add(Note(what));
-        var open = new Button { Content = "Open config.toml", Margin = new Thickness(0, 12, 0, 0) };
-        open.Click += (_, _) => OpenConfigFile();
-        _page.Children.Add(open);
-    }
 
     private void AboutPage()
     {

@@ -58,4 +58,41 @@ public class FirstRunTests
         Assert.DoesNotContain("Iosevka", text); // back to the default font
         Assert.DoesNotContain("default-profile", text); // not chosen: not written
     }
+
+    [Fact]
+    public void ALightDarkPairIsWrittenAsTheScheme()
+    {
+        var text = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, "light:Catppuccin Latte,dark:Catppuccin Mocha", null, null));
+        Assert.Contains("theme = \"light:Catppuccin Latte,dark:Catppuccin Mocha\"", text);
+    }
+
+    [Fact]
+    public void NotificationsAreWrittenOnlyWhenAskedFor()
+    {
+        var toast = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null, ToastWhenDone: true));
+        Assert.Contains("command-finished = \"toast\"", toast);
+        var dot = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null, ToastWhenDone: false));
+        Assert.DoesNotContain("command-finished", dot);
+
+        // Reopened: "toast-always" already counts as notifications on; off removes it.
+        const string always = "[notify]\ncommand-finished = \"toast-always\"\n";
+        var current = Read(always);
+        Assert.Equal(always, FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, true), current));
+        Assert.DoesNotContain("command-finished",
+            FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, false), current));
+    }
+
+    [Theory]
+    [InlineData("Catppuccin Mocha", "Catppuccin Latte")]
+    [InlineData("Solarized Dark", "Solarized Light")]
+    [InlineData("Tokyo Night", "Tokyo Night Day")]
+    [InlineData("Rose Pine", "Rose Pine Dawn")]
+    [InlineData("Dracula", "Catppuccin Latte")] // no counterpart: a well-known light scheme
+    [InlineData(null, "Catppuccin Latte")]
+    public void LightSchemesPairWithTheirDarkOnes(string? dark, string light)
+    {
+        string[] names = ["Catppuccin Latte", "Catppuccin Mocha", "Dracula", "Rose Pine", "Rose Pine Dawn", "Solarized Dark",
+            "Solarized Light", "Tokyo Night", "Tokyo Night Day"];
+        Assert.Equal(light, ThemeLibrary.LightCounterpart(dark, names));
+    }
 }

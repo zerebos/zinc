@@ -139,6 +139,24 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
         return (Ctrl ? "Ctrl+" : "") + (Alt ? "Alt+" : "") + (Shift ? "Shift+" : "") + name;
     }
 
+    /// <summary>
+    /// The form config.toml takes ("ctrl+shift+t", "alt+shift+plus"), which <see cref="Parse"/>
+    /// reads back; null for a key it has no name for.
+    /// </summary>
+    public string? ToConfig()
+    {
+        var key = Key;
+        var name = key switch
+        {
+            >= VirtualKey.A and <= VirtualKey.Z => ((char)('a' + (Key - VirtualKey.A))).ToString(),
+            >= VirtualKey.Number0 and <= VirtualKey.Number9 => ((char)('0' + (Key - VirtualKey.Number0))).ToString(),
+            >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 => $"numpad{Key - VirtualKey.NumberPad0}",
+            >= VirtualKey.F1 and <= VirtualKey.F24 => $"f{Key - VirtualKey.F1 + 1}",
+            _ => Names.FirstOrDefault(n => n.Value == key && char.IsLetter(n.Key[0])).Key,
+        };
+        return name == null ? null : (Ctrl ? "ctrl+" : "") + (Alt ? "alt+" : "") + (Shift ? "shift+" : "") + name;
+    }
+
     public static KeyChord Parse(string text)
     {
         bool ctrl = false, alt = false, shift = false;

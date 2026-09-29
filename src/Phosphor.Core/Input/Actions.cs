@@ -88,6 +88,20 @@ public static class Actions
     /// <summary>Every action name, with what its argument is and does (for docs and errors).</summary>
     public static IEnumerable<(string Name, string Description)> All => Definitions.Select(d => (d.Name, d.Description));
 
+    /// <summary>Every action that needs no argument, as an invocation (for the settings' key list).</summary>
+    public static IEnumerable<ActionInvocation> WithoutArguments =>
+        Definitions.Where(d => d.Arg is Arg.None or Arg.OptionalProfile or Arg.CopyMode or Arg.OptionalSidebarMode)
+            .Select(d => new ActionInvocation(d.Action));
+
+    /// <summary>Where <paramref name="invocation"/>'s action sits in the registry (for listing in its order).</summary>
+    public static int Order(ActionInvocation invocation) =>
+        Array.FindIndex(Definitions, d => d.Action == invocation.Action switch
+        {
+            TerminalAction.CopyIfSelection => TerminalAction.Copy,
+            TerminalAction.NewTabFromProfile => TerminalAction.NewTab,
+            var a => a,
+        });
+
     /// <summary>
     /// Parses an action string. Null (with <paramref name="error"/>) if it's no action;
     /// <see cref="None"/> is handled by the caller.

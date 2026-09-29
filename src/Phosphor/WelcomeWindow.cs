@@ -28,7 +28,10 @@ internal sealed partial class WelcomeWindow : Window
     private readonly ConfigFile _config;
     private WorkStyle _style;
     private WorkspaceTabs _workspacesOn = WorkspaceTabs.Left;
-    private string? _scheme;
+    private string? _scheme;   // the scheme, or with _follow the dark side
+    private bool _follow;      // follow Windows light/dark: _light by day, _scheme by night
+    private string? _light;
+    private bool _toast;       // a Windows notification when a long command finishes out of view
     private string? _font;
     private string? _profile;
     private bool _finished;
@@ -68,6 +71,12 @@ internal sealed partial class WelcomeWindow : Window
         _workspacesOn = firstRun || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkspaceTabs.Left : WorkspaceTabs.Top;
         _font = global.FontFamily == BundledFonts.Family ? null : global.FontFamily;
         _scheme = config.SchemeName;
+        if (_scheme != null && ThemeLibrary.TryParsePair(_scheme, out var light, out var dark))
+        {
+            (_follow, _light, _scheme) = (true, light, dark);
+        }
+
+        _toast = !firstRun && global.NotifyCommandFinished is NotifyMode.Toast or NotifyMode.ToastAlways;
         _profile = config.DefaultProfile.Id;
 
         FrameworkElement style;
@@ -318,15 +327,9 @@ internal sealed partial class WelcomeWindow : Window
 
     private FrameworkElement LookPage()
     {
+        var names = _config.Themes.Names();
         var schemes = new List<string> { DefaultSchemeLabel };
-        // A light/dark pair from the config ("light:X,dark:Y") is a choice of its own, so saving
-        // the page untouched keeps it.
-        if (_scheme is { } current && ThemeLibrary.TryParsePair(current, out _, out _))
-        {
-            schemes.Add(current);
-        }
-
-        schemes.AddRange(_config.Themes.Names());
+        schemes.AddRange(names);
         var list = new ListView { Height = 390, SelectionMode = ListViewSelectionMode.Single };
         AutomationProperties.SetName(list, "Color schemes");
         var search = new TextBox { PlaceholderText = "Search 650 color schemes" };
@@ -368,9 +371,50 @@ internal sealed partial class WelcomeWindow : Window
             UpdatePreview();
         };
 
+        // Follow Windows light/dark: the list above picks the dark side, this one the light side.
+        var listLabel = new TextBlock { Text = _follow ? "When Windows is dark" : "Scheme", Opacity = 0.8 };
+        var lightBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Header = "When Windows is light" };
+        AutomationProperties.SetName(lightBox, "When Windows is light");
+        foreach (var name in names)
+        {
+            lightBox.Items.Add(name);
+        }
+
+        lightBox.SelectedItem = _light;
+        lightBox.Visibility = _follow ? Visibility.Visible : Visibility.Collapsed;
+        lightBox.SelectionChanged += (_, _) =>
+        {
+            _light = lightBox.SelectedItem as string;
+            UpdatePreview();
+        };
+        var follow = new ToggleSwitch { Header = "Follow Windows light/dark", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
+        AutomationProperties.SetName(follow, "Follow Windows light/dark");
+        follow.Toggled += (_, _) =>
+        {
+            _follow = follow.IsOn;
+            if (_follow)
+            {
+                // A pair names two schemes: Phosphor's own becomes Catppuccin Mocha, and the light
+                // side starts from the dark one's counterpart.
+                if (_scheme == null && names.FirstOrDefault(n => n == "Catppuccin Mocha") is { } mocha)
+                {
+                    _scheme = mocha;
+                    search.Text = "";
+                    list.SelectedItem = mocha;
+                    list.ScrollIntoView(mocha);
+                }
+
+                lightBox.SelectedItem = _light ?? ThemeLibrary.LightCounterpart(_scheme, names);
+            }
+
+            listLabel.Text = _follow ? "When Windows is dark" : "Scheme";
+            lightBox.Visibility = _follow ? Visibility.Visible : Visibility.Collapsed;
+            UpdatePreview();
+        };
+
         _preview.Child = _previewText;
-        var right = new StackPanel { Spacing = 12, Children = { fonts, _preview } };
-        var left = new StackPanel { Spacing = 8, Children = { search, list } };
+        var right = new StackPanel { Spacing = 12, Children = { follow, lightBox, fonts, _preview } };
+        var left = new StackPanel { Spacing = 8, Children = { listLabel, search, list } };
         var columns = new Grid { ColumnSpacing = 20 };
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
         columns.ColumnDefinitions.Add(new ColumnDefinition());
@@ -407,8 +451,9 @@ internal sealed partial class WelcomeWindow : Window
     /// <summary>A little shell session in the chosen colors and font (a Nerd Font icon included).</summary>
     private void UpdatePreview()
     {
-        var theme = (_scheme is { } name ? _config.Themes.Apply(new Config(), ThemeLibrary.Resolve(name, ConfigFile.SystemScheme))?.Theme : null) ??
-                    TerminalTheme.Default;
+        // Following Windows: the side for its current mode.
+        var shownScheme = _follow && ConfigFile.SystemScheme == Phosphor.Ghostty.ColorScheme.Light ? _light : _scheme;
+        var theme = (shownScheme is { } name ? _config.Themes.Apply(new Config(), name)?.Theme : null) ?? TerminalTheme.Default;
         Color Ansi(int index) => theme.Palette.TryGetValue(index, out var c) ? ToColor(c) : AnsiDefaults[index];
         _preview.Background = new SolidColorBrush(ToColor(theme.Background));
         _previewText.Foreground = new SolidColorBrush(ToColor(theme.Foreground));
@@ -488,16 +533,43 @@ internal sealed partial class WelcomeWindow : Window
 
         shells.SelectedItem = shells.Items.OfType<StackPanel>().FirstOrDefault(r => (string)r.Tag == _profile) ?? shells.Items.FirstOrDefault();
         shells.SelectionChanged += (_, _) => _profile = (shells.SelectedItem as StackPanel)?.Tag as string;
-        return new StackPanel
+
+        // A long command finishing out of view: a dot on its tab either way; in the background,
+        // the taskbar button flashes or (toast) a Windows notification shows.
+        var flash = new RadioButton { Content = "Flash the taskbar button", GroupName = "done", IsChecked = !_toast };
+        var toast = new RadioButton { Content = "Show a Windows notification", GroupName = "done", IsChecked = _toast };
+        AutomationProperties.SetName(toast, "Show a Windows notification");
+        flash.Checked += (_, _) => _toast = false;
+        toast.Checked += (_, _) => _toast = true;
+        var left = new StackPanel
         {
             Spacing = 12,
             Children =
             {
                 SectionTitle("Default shell"),
-                Note("New tabs open with it. Found on this PC; every one of them stays a click away in the ▾ menu."),
+                Note("New tabs open with it. Found on this PC; each one stays a click away in the ▾ menu."),
                 shells,
             },
         };
+        var right = new StackPanel
+        {
+            Spacing = 12,
+            Children =
+            {
+                SectionTitle("When a long command finishes"),
+                Note("A command that ran 10 seconds or more puts a dot on its tab if you weren't looking. " +
+                     "If Phosphor is in the background, also:"),
+                flash,
+                toast,
+            },
+        };
+        var columns = new Grid { ColumnSpacing = 32 };
+        columns.ColumnDefinitions.Add(new ColumnDefinition());
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(300) });
+        Grid.SetColumn(right, 1);
+        columns.Children.Add(left);
+        columns.Children.Add(right);
+        return columns;
     }
 
     // ------------------------------------------------------------ finish
@@ -581,7 +653,8 @@ internal sealed partial class WelcomeWindow : Window
         }
     }
 
-    private void Save() => Finish(new WelcomeChoices(_style, _workspacesOn, _scheme, _font, _profile));
+    private void Save() => Finish(new WelcomeChoices(_style, _workspacesOn,
+        _follow && _scheme != null && _light != null ? $"light:{_light},dark:{_scheme}" : _scheme, _font, _profile, _toast));
 
     private void Finish(WelcomeChoices? choices)
     {

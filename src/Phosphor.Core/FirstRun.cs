@@ -14,7 +14,9 @@ public enum WorkStyle
 /// <param name="Scheme">A color scheme's name; null keeps Phosphor's own colors.</param>
 /// <param name="FontFamily">Null keeps the default (the bundled Cascadia Mono NF).</param>
 /// <param name="DefaultProfile">A profile id; null keeps the first one.</param>
-public sealed record WelcomeChoices(WorkStyle Style, WorkspaceTabs WorkspacesOn, string? Scheme, string? FontFamily, string? DefaultProfile);
+/// <param name="ToastWhenDone">A Windows notification (too) when a long command finishes out of view; null: not asked.</param>
+public sealed record WelcomeChoices(WorkStyle Style, WorkspaceTabs WorkspacesOn, string? Scheme, string? FontFamily, string? DefaultProfile,
+    bool? ToastWhenDone = null);
 
 /// <summary>Writes the welcome page's choices into config.toml.</summary>
 public static class FirstRun
@@ -57,6 +59,20 @@ public static class FirstRun
             text = choices.FontFamily is { } family
                 ? ConfigEditor.Set(text, ["font", "family"], family)
                 : ConfigEditor.Remove(text, ["font", "family"]);
+        }
+
+        // Notifications: "toast" (a "toast-always" already there counts), else the default dot.
+        if (choices.ToastWhenDone is { } toast)
+        {
+            var toasting = global?.NotifyCommandFinished is NotifyMode.Toast or NotifyMode.ToastAlways;
+            if (toast && !toasting)
+            {
+                text = ConfigEditor.Set(text, ["notify", "command-finished"], "toast");
+            }
+            else if (!toast && (toasting || global == null))
+            {
+                text = ConfigEditor.Remove(text, ["notify", "command-finished"]);
+            }
         }
 
         if (choices.DefaultProfile is { } profile && current?.DefaultProfile.Id != profile)
