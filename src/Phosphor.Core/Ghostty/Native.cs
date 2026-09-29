@@ -410,6 +410,7 @@ public static class GhosttyMode
     public static readonly ushort AltScroll = New(1007, false);
     public static readonly ushort DecCkm = New(1, false);
     public static readonly ushort GraphemeCluster = New(2027, false);
+    public static readonly ushort SyncOutput = New(2026, false);
 }
 
 [Flags]
@@ -457,6 +458,7 @@ public enum TerminalOption : int
     Userdata = 0,
     WritePty = 1,
     Bell = 2,
+    Xtversion = 4,
     TitleChanged = 5,
     Size = 6,
     ColorForeground = 11,
@@ -475,7 +477,10 @@ public enum TerminalOption : int
     DesktopNotification = 29,
     ProgressReport = 30,
     ModeDefault = 33,
+    Mode = 34,
     ClipboardRead = 38,
+    ResizePullScrollback = 40,
+    RenderHold = 41,
 }
 
 public enum SysOption : int

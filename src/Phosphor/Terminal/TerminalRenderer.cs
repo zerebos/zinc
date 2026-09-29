@@ -239,9 +239,23 @@ public sealed unsafe class TerminalRenderer : IDisposable
         _pendingImages.Clear();
         lock (session.Lock)
         {
-            if (Native.RenderStateUpdate(_renderState, session.Handle) != GhosttyResult.Success)
+            // Synchronized output: while a program holds the screen, draw the frame captured when
+            // the hold began (CaptureHeldFrame); give up on a hold that lasts over a second.
+            if (session.RenderHeld && Environment.TickCount64 - session.RenderHeldSince >= RenderHoldTimeoutMs)
             {
-                return false;
+                Log.Write("render hold: released after a second (the program never ended it)");
+                session.EndRenderHold();
+            }
+
+            if (!session.RenderHeld)
+            {
+                lock (_stateLock)
+                {
+                    if (Native.RenderStateUpdate(_renderState, session.Handle) != GhosttyResult.Success)
+                    {
+                        return false;
+                    }
+                }
             }
 
             // Under the same lock, so images and text come from the same terminal state.
@@ -253,7 +267,33 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         UpdateImageCache(ds);
 
-        // The render state is a snapshot, so the rest runs without the lock.
+        // The render state is a snapshot, so the rest runs without the terminal's lock; only a
+        // hold beginning (on the reader thread) may refresh it meanwhile, hence _stateLock.
+        lock (_stateLock)
+        {
+            return DrawSnapshot(ds, rows, presentation);
+        }
+    }
+
+    /// <summary>How long a program may hold the screen (synchronized output) before we draw anyway.</summary>
+    public const int RenderHoldTimeoutMs = 1000;
+
+    private readonly object _stateLock = new();
+
+    /// <summary>
+    /// A program began holding the screen: keep what's there now. Called by the session on the
+    /// reader thread, under its lock (TerminalSession.RenderHoldBegan).
+    /// </summary>
+    public void CaptureHeldFrame(TerminalSession session)
+    {
+        lock (_stateLock)
+        {
+            Native.RenderStateUpdate(_renderState, session.Handle);
+        }
+    }
+
+    private bool DrawSnapshot(CanvasDrawingSession ds, int rows, CursorPresentation presentation)
+    {
         var colors = new GhosttyRenderStateColors { Size = (nuint)sizeof(GhosttyRenderStateColors) };
         Native.RenderStateGet(_renderState, RenderStateData.Colors, &colors);
         var cursor = new GhosttyRenderStateCursor { Size = (nuint)sizeof(GhosttyRenderStateCursor) };

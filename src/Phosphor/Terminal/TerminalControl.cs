@@ -231,6 +231,18 @@ public sealed partial class TerminalControl : UserControl
 
         var dq = DispatcherQueue;
         session.OutputProcessed += RequestRedraw;
+        // Synchronized output: keep the frame from when a program starts drawing one; if it never
+        // finishes, redraw once the renderer's timeout has passed (no more output would ask).
+        session.RenderHoldBegan = () => _renderer.CaptureHeldFrame(session);
+        session.RenderHoldChanged += held => dq.SafeEnqueue(() =>
+        {
+            _holdTimer ??= CreateHoldTimer();
+            _holdTimer.Stop();
+            if (held)
+            {
+                _holdTimer.Start();
+            }
+        });
         session.TitleChanged += title => dq.SafeEnqueue(() =>
         {
             Title = title;
@@ -327,6 +339,18 @@ public sealed partial class TerminalControl : UserControl
         // Like Windows Terminal: keep a failed session on screen so its output can be read.
         _exited = true;
         _session.WriteToScreen($"\r\n\x1b[0;2m[process exited with code {code} (0x{code:X8}); press any key to close]\x1b[0m");
+    }
+
+    // Held in a field: a timer only a local references is collected and stops firing.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _holdTimer;
+
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer CreateHoldTimer()
+    {
+        var timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(TerminalRenderer.RenderHoldTimeoutMs + 50);
+        timer.IsRepeating = false;
+        timer.OnTick(_ => _canvas.Invalidate());
+        return timer;
     }
 
     private void RequestRedraw()

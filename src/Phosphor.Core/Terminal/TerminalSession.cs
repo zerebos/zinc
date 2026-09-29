@@ -126,6 +126,19 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
         Check(Native.KittyPlacementIteratorNew(0, out _placements));
 
+        // ConPTY keeps its own screen without scrollback: a resize must not pull rows back out of
+        // our scrollback, or the two disagree about what's on screen (libghostty names ConPTY as
+        // the reason for this option).
+        byte pullScrollback = 0;
+        Native.TerminalSet(_terminal, TerminalOption.ResizePullScrollback, &pullScrollback);
+
+        // Who we are, for programs that ask (XTVERSION, CSI > q): "phosphor <version>", lowercase
+        // like TERM_PROGRAM (and Ghostty's own "ghostty 1.x"). Default: "libghostty".
+        Native.TerminalSet(_terminal, TerminalOption.Xtversion, (delegate* unmanaged[Cdecl]<nint, nint, GhosttyString>)&OnXtversion);
+
+        // Synchronized output (mode 2026): see RenderHold.
+        Native.TerminalSet(_terminal, TerminalOption.RenderHold, (delegate* unmanaged[Cdecl]<nint, nint, byte, void>)&OnRenderHold);
+
         Check(Native.KeyEncoderNew(0, out _keyEncoder));
         Check(Native.KeyEventNew(0, out _keyEvent));
         Check(Native.MouseEncoderNew(0, out _mouseEncoder));
@@ -188,6 +201,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         string? title = null;
         var directoryChanged = false;
         bool bell, commandsChanged;
+        bool? hold;
         lock (Lock)
         {
             if (_disposed)
@@ -217,6 +231,13 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
             bell = _bell;
             _bell = false;
+            hold = _holdChanged;
+            _holdChanged = null;
+        }
+
+        if (hold is { } held)
+        {
+            RenderHoldChanged?.Invoke(held);
         }
 
         if (title != null)
@@ -519,6 +540,20 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>Formats the whole screen (including scrollback) as plain text.</summary>
+    /// <summary>Test hook: the cursor's row in the active screen.</summary>
+    internal int CursorRow
+    {
+        get
+        {
+            lock (Lock)
+            {
+                ushort y = 0;
+                Native.TerminalGet(_terminal, TerminalData.CursorY, &y);
+                return y;
+            }
+        }
+    }
+
     public string ReadScreenText()
     {
         lock (Lock)
@@ -968,6 +1003,78 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnBell(nint terminal, nint userdata) => FromUserdata(userdata)._bell = true;
+
+    /// <summary>"phosphor 1.0.0+abc1234": the app's version, with a short commit hash if it has one.</summary>
+    public static string Version { get; } = ComputeVersion();
+
+    private static string ComputeVersion()
+    {
+        var info = typeof(TerminalSession).Assembly
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "0";
+        var plus = info.IndexOf('+');
+        return "phosphor " + (plus >= 0 && info.Length > plus + 8 ? info[..(plus + 8)] : info);
+    }
+
+    // XTVERSION's answer, in memory that stays put (libghostty reads it after we return).
+    private static readonly nint XtversionText = Marshal.StringToCoTaskMemUTF8(Version);
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static GhosttyString OnXtversion(nint terminal, nint userdata) =>
+        new() { Ptr = XtversionText, Len = (nuint)Encoding.UTF8.GetByteCount(Version) };
+
+    /// <summary>
+    /// A program holds the screen while it draws a frame (synchronized output, mode 2026), so
+    /// the renderer should keep showing what was on screen when the hold began. Set on the
+    /// reader thread, under <see cref="Lock"/>; see <see cref="RenderHoldBegan"/>.
+    /// </summary>
+    public bool RenderHeld { get; private set; }
+
+    /// <summary>When the current hold began (Environment.TickCount64).</summary>
+    public long RenderHeldSince { get; private set; }
+
+    /// <summary>
+    /// A hold began: capture the screen now (called synchronously, under <see cref="Lock"/>, on
+    /// the reader thread: the renderer updates its snapshot from <see cref="Handle"/> here).
+    /// </summary>
+    public Action? RenderHoldBegan { get; set; }
+
+    /// <summary>A hold began or ended (after the write that did it, on the reader thread).</summary>
+    public event Action<bool>? RenderHoldChanged;
+
+    private bool? _holdChanged;
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void OnRenderHold(nint terminal, nint userdata, byte held)
+    {
+        var session = FromUserdata(userdata);
+        session.RenderHeld = held != 0;
+        if (held != 0)
+        {
+            session.RenderHeldSince = Environment.TickCount64;
+            try
+            {
+                session.RenderHoldBegan?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                Log.Crash("render hold", ex);
+            }
+        }
+
+        session._holdChanged = held != 0;
+    }
+
+    /// <summary>
+    /// Gives up on a hold the program never released (it crashed mid-frame, say): turns
+    /// synchronized output off, as libghostty's docs advise. Call under <see cref="Lock"/>.
+    /// </summary>
+    public void EndRenderHold()
+    {
+        var mode = new GhosttyTerminalModeConfig { Mode = GhosttyMode.SyncOutput, Value = 0 };
+        Native.TerminalSet(_terminal, TerminalOption.Mode, &mode);
+        RenderHeld = false;
+    }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnClipboardWrite(nint terminal, nint userdata, GhosttyClipboardWrite* write)
