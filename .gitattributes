@@ -1,0 +1,2 @@
+# Shell scripts run inside bash/zsh (WSL, MSYS): CRLF would break them.
+assets/shell-integration/** text eol=lf

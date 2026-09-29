@@ -244,7 +244,18 @@ public sealed partial class TerminalControl : UserControl
         _session = session;
         try
         {
-            session.Start(_commandLine, _workingDirectory, cols, rows);
+            var launch = new ShellLaunch(_commandLine, new Dictionary<string, string?>());
+            var scripts = Path.Combine(AppContext.BaseDirectory, ShellIntegration.FolderName);
+            if (_config.ShellIntegration == ShellIntegrationMode.Auto && Directory.Exists(scripts))
+            {
+                launch = ShellIntegration.Prepare(_commandLine, scripts, Environment.GetEnvironmentVariable);
+                if (launch.CommandLine != _commandLine || launch.Environment.Count > 0)
+                {
+                    Log.Write($"pane: shell integration: {launch.CommandLine} (+{launch.Environment.Count} variables)");
+                }
+            }
+
+            session.Start(launch.CommandLine, _workingDirectory, cols, rows, launch.Environment);
             TypeStartupInputWhenReady(session);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)

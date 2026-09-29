@@ -41,7 +41,9 @@ public sealed unsafe partial class ConPty : IDisposable
     /// <summary>Raised once, on a background thread, after the child exits and output is drained.</summary>
     public event Action<uint>? Exited;
 
-    public ConPty(string commandLine, string? workingDirectory, short cols, short rows)
+    /// <param name="environment">Variables to set (or, null, remove) for the child on top of ours.</param>
+    public ConPty(string commandLine, string? workingDirectory, short cols, short rows,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         if (!CreatePipe(out var inputRead, out _inputWrite, 0, 0) ||
             !CreatePipe(out _outputRead, out var outputWrite, 0, 0))
@@ -63,7 +65,7 @@ public sealed unsafe partial class ConPty : IDisposable
 
         try
         {
-            (_process, ProcessId) = StartProcess(commandLine, workingDirectory, _hpc);
+            (_process, ProcessId) = StartProcess(commandLine, workingDirectory, _hpc, environment);
         }
         catch
         {
@@ -229,7 +231,8 @@ public sealed unsafe partial class ConPty : IDisposable
         ThreadPool.QueueUserWorkItem(_ => Close());
     }
 
-    private static (SafeWaitHandle Process, int Id) StartProcess(string commandLine, string? workingDirectory, nint hpc)
+    private static (SafeWaitHandle Process, int Id) StartProcess(string commandLine, string? workingDirectory, nint hpc,
+        IReadOnlyDictionary<string, string?>? environment)
     {
         nuint size = 0;
         InitializeProcThreadAttributeList(null, 1, 0, ref size);
@@ -255,11 +258,13 @@ public sealed unsafe partial class ConPty : IDisposable
 
             // CreateProcessW may modify the command line buffer in place.
             var cmd = (commandLine + '\0').ToCharArray();
+            var env = environment is { Count: > 0 } ? EnvironmentBlock(environment) : null;
             fixed (char* pCmd = cmd)
             fixed (char* pCwd = workingDirectory)
+            fixed (char* pEnv = env)
             {
                 if (!CreateProcessW(null, pCmd, null, null, 0, ExtendedStartupInfoPresent | CreateUnicodeEnvironment,
-                        null, pCwd, &si, out var pi))
+                        pEnv, pCwd, &si, out var pi))
                 {
                     throw new Win32Exception();
                 }
@@ -273,6 +278,36 @@ public sealed unsafe partial class ConPty : IDisposable
             DeleteProcThreadAttributeList(attrList);
             Marshal.FreeHGlobal((nint)attrList);
         }
+    }
+
+    /// <summary>Our environment with <paramref name="changes"/> applied, as CreateProcess takes it (sorted, NUL-separated).</summary>
+    private static char[] EnvironmentBlock(IReadOnlyDictionary<string, string?> changes)
+    {
+        var vars = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (System.Collections.DictionaryEntry e in Environment.GetEnvironmentVariables())
+        {
+            vars[(string)e.Key] = (string?)e.Value ?? "";
+        }
+
+        foreach (var (name, value) in changes)
+        {
+            if (value == null)
+            {
+                vars.Remove(name);
+            }
+            else
+            {
+                vars[name] = value;
+            }
+        }
+
+        var block = new System.Text.StringBuilder();
+        foreach (var (name, value) in vars)
+        {
+            block.Append(name).Append('=').Append(value).Append('\0');
+        }
+
+        return block.Append('\0').ToString().ToCharArray();
     }
 
     // ---- Win32 ----

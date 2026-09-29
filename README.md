@@ -128,6 +128,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   could read it.
 - `command-marks`: `"failures"` (default), `"all"` or `"none"`: which commands get a bar beside
   them ([shell integration](#shell-integration)).
+- `shell-integration`: `"auto"` (default) loads Phosphor's [shell integration](#shell-integration)
+  into PowerShell, bash and zsh; `"off"` starts shells as they are.
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
@@ -241,42 +243,11 @@ The state is saved as you go (`%APPDATA%\Phosphor\session.json`), so a crash kee
 closing the last window keeps that window for next time. `save-state = "never"` in `[window]` turns this
 off (`"always"`, the default, keeps it on).
 
-A tab reopens in the folder its shell last *reported*, so the shell has to tell the terminal
-where it is (OSC 7, or OSC 9;9 / OSC 1337). Without that, tabs reopen where they first started.
-
-PowerShell (add to `$PROFILE`):
-
-```powershell
-function prompt {
-    $location = $executionContext.SessionState.Path.CurrentLocation
-    $report = ""
-    if ($location.Provider.Name -eq "FileSystem") {
-        $report = "$([char]27)]9;9;`"$($location.ProviderPath)`"$([char]27)\"
-    }
-
-    "${report}PS $location$('>' * ($nestedPromptLevel + 1)) "
-}
-```
-
-zsh (`.zshrc`; bash can use the same function from `PROMPT_COMMAND`):
-
-```zsh
-autoload -Uz add-zsh-hook
-_report_cwd() {
-  local LC_ALL=C url= c i
-  for (( i = 1; i <= ${#PWD}; i++ )); do
-    c=${PWD[i]}
-    case $c in
-      [-/:_.!\'\(\)~[:alnum:]]) url+=$c ;;
-      *) url+=$(printf '%%%02X' "'$c") ;;
-    esac
-  done
-  printf '\e]7;file://%s%s\e\' "$HOST" "$url"
-}
-add-zsh-hook precmd _report_cwd
-```
-
-WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive.
+A tab reopens in the folder its shell last *reported* (OSC 7, or OSC 9;9 / OSC 1337).
+PowerShell, bash and zsh report it through Phosphor's [shell integration](#shell-integration),
+with nothing to set up; other shells need to send it themselves, e.g. from their prompt:
+`printf '\e]7;file://%s%s\e\\' "$HOSTNAME" "$PWD"`. Without it, tabs reopen where they first
+started. WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive.
 
 ### Shell integration
 
@@ -304,66 +275,34 @@ output starts, and how it ended. With those marks, Phosphor can:
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
   quitting, asks first while a command is running there (never at an idle prompt).
 
-The marks are invisible. Add them to your shell's startup file.
+The marks are invisible, and **PowerShell (7 and Windows PowerShell), bash and zsh get them
+automatically**, in WSL, Git Bash and MSYS2 too, along with folder reports for
+[reopening tabs](#reopening-where-you-left-off). Your startup files run as usual; Phosphor's
+script (in `ShellIntegration\` next to Phosphor.exe) runs after them and changes nothing you see:
 
-**zsh with powerlevel10k**: it sends them itself. In `p10k.zsh`:
+- **PowerShell** is started with `-NoExit -Command` running it after your profile. A profile
+  started with `-Command` or `-File` of its own is left alone.
+- **bash** finds it in `PROMPT_COMMAND`, which runs it once at the first prompt (then puts
+  `PROMPT_COMMAND` back as your startup files left it).
+- **zsh** finds it through `ZDOTDIR`: Phosphor's `.zshenv` puts your `ZDOTDIR` back, loads your
+  `.zshenv` as zsh would have, and sets the rest up at the first prompt.
+- **WSL** gets the same variables through `WSLENV`, so it works with whichever of these is your
+  login shell.
 
-```zsh
-typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
-```
+Marks your prompt already sends are left to it: **powerlevel10k's** own integration
+(`typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true` in `p10k.zsh`; it knows its own prompt best) or a
+hand-written one, and a folder report you send yourself. Phosphor then adds only what's missing
+(powerlevel10k sends no folder report).
 
-**zsh** (`.zshrc`, after your prompt is set up):
-
-```zsh
-autoload -Uz add-zsh-hook
-__phosphor_precmd() { print -n "\e]133;D;$?\a\e]133;A\a" }
-__phosphor_preexec() { print -n "\e]133;C\a" }
-precmd_functions=(__phosphor_precmd $precmd_functions)  # first, so $? is the command's
-add-zsh-hook preexec __phosphor_preexec
-PS1="$PS1%{"$'\e]133;B\a'"%}"
-```
-
-**bash**, including Git Bash (`.bashrc`):
-
-```bash
-__phosphor_prompt() { printf '\e]133;D;%s\a\e]133;A\a' "$?"; }
-PROMPT_COMMAND="__phosphor_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
-PS1="$PS1"'\[\e]133;B\a\]'
-PS0=$'\e]133;C\a'"$PS0"
-```
-
-**PowerShell** (`$PROFILE`; this prompt also reports the folder, as above):
-
-```powershell
-function prompt {
-    $code = if ($?) { 0 } elseif ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }
-    $e, $a = [char]27, [char]7
-    $location = $executionContext.SessionState.Path.CurrentLocation
-    $report = ""
-    if ($location.Provider.Name -eq "FileSystem") {
-        $report = "$e]9;9;`"$($location.ProviderPath)`"$e\"
-    }
-
-    "$e]133;D;$code$a$e]133;A$a${report}PS $location$('>' * ($nestedPromptLevel + 1)) "
-}
-
-# The command line starts after the prompt, and the command once it's read (PSReadLine). Marking
-# them here rather than in the prompt keeps PSReadLine's prompt redraws working.
-if (Test-Path Function:\PSConsoleHostReadLine) {
-    $Global:__PhosphorReadLine = $function:PSConsoleHostReadLine
-    function Global:PSConsoleHostReadLine {
-        [Console]::Write("$([char]27)]133;B$([char]7)")
-        $line = & $Global:__PhosphorReadLine
-        [Console]::Write("$([char]27)]133;C;cmdline_url=$([uri]::EscapeDataString($line))$([char]7)")
-        $line
-    }
-}
-```
+`shell-integration = "off"` in `[terminal]` (or in one profile) starts shells exactly as anywhere
+else. If your startup files hand over to something else (tmux, or `exec` another shell), the
+marks don't follow; the scripts in `ShellIntegration\` show what to send from there.
 
 **cmd** can mark prompts (for jumping), but not commands or exit codes:
 `setx PROMPT "$e]133;D$e\$e]133;A$e\$P$G$e]133;B$e\"`.
 
-Other shells (fish, nushell and more) aren't covered here yet.
+Other shells (fish, nushell and more) aren't covered yet. Recent fish versions send the prompt
+marks on their own. For anything else, the scripts in `ShellIntegration\` show what to send.
 
 ## Choosing a shell
 

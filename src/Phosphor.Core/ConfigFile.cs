@@ -521,6 +521,7 @@ public sealed class ConfigFile
                 ["terminal", "clipboard-read"] => ("clipboard-read", Permission(e.Value)),
                 ["terminal", "clipboard-write"] => ("clipboard-write", Permission(e.Value)),
                 ["terminal", "command-marks"] => ("command-marks", e.Value as string),
+                ["terminal", "shell-integration"] => ("shell-integration", e.Value as string),
                 ["window", "workspace-tabs"] => ("workspace-tabs", e.Value as string),
                 ["window", "title-bar"] => ("title-bar", e.Value as string),
                 ["window", "sidebar"] => ("sidebar", e.Value as string),

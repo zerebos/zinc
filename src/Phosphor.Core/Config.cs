@@ -22,6 +22,16 @@ public enum WorkspaceTabs
     Left,
 }
 
+/// <summary>Whether Phosphor loads its shell integration into the shells it starts. Config: <c>shell-integration</c>.</summary>
+public enum ShellIntegrationMode
+{
+    /// <summary>PowerShell, bash and zsh get it (after the user's own startup files).</summary>
+    Auto,
+
+    /// <summary>Shells start exactly as they would anywhere else.</summary>
+    Off,
+}
+
 /// <summary>Which commands get a bar in the pane's left edge (shell integration). Config: <c>command-marks</c>.</summary>
 public enum CommandMarks
 {
@@ -143,6 +153,9 @@ public sealed record Config
     /// <summary>Marks for shell-integrated commands. Config: <c>command-marks = failures | all | none</c>.</summary>
     public CommandMarks CommandMarks { get; init; }
 
+    /// <summary>Phosphor's shell integration, loaded automatically. Config: <c>shell-integration = auto | off</c>.</summary>
+    public ShellIntegrationMode ShellIntegration { get; init; }
+
     /// <summary>The title bar with the workspace list. Config: <c>title-bar = show | auto-hide</c> (global).</summary>
     public TitleBarMode TitleBar { get; init; }
 
@@ -215,6 +228,7 @@ public sealed record Config
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
             "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
             "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
+            "shell-integration" when TryMode<ShellIntegrationMode>(value, out var integration) => this with { ShellIntegration = integration },
             "notify-command-finished" when TryMode<NotifyMode>(value, out var notify) => this with { NotifyCommandFinished = notify },
             "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },

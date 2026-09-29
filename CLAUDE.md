@@ -137,6 +137,18 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   an unpackaged app's identity follows its exe path, and installs are versioned folders.
   PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
   string broke PSReadLine's prompt redraw after a failed command (text overwrote `> `).
+- Automatic shell integration (`shell-integration = auto|off`, per profile): `Terminal/ShellIntegration.cs`
+  (Core, tested: `Prepare` → command line + per-launch env; ConPty builds an environment block)
+  and `assets/shell-integration/` (LF-only via .gitattributes; copied to `ShellIntegration\`).
+  pwsh/powershell: `-NoExit -Command ". ([scriptblock]::Create(ReadAllText(...)))"` (text, not a
+  file: WinPS's Restricted policy); skipped when the args already run something. Everything else
+  gets env: `PROMPT_COMMAND` bootstrap (bash; the script removes it), `ZDOTDIR` (zsh; `.zshenv`
+  restores + sources the user's), `PHOSPHOR_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
+  C:/x, WSLENV `/p` translates it), `WSLENV`. Each script stands down where marks/OSC 7 already
+  exist (p10k's `POWERLEVEL9K_TERM_SHELL_INTEGRATION`, `133;`/`]7;` in prompt/hook text).
+  `ShellInjectionTests` run real pwsh, WinPS, Git Bash, MSYS2 zsh (skipped if absent);
+  `.scratch/tools/si-live.ps1 -Command ...` checks a shell in the app (log + trace marks).
+  fish/nushell: not yet (fish isn't installed in the user's distros).
 - Palette recents: `RecentCommands` (Core/Commands, by title; one instance on `App`, saved in
   session.json's `recentCommands`) — `CommandFilter.Filter(..., recent)` puts the 5 newest first
   on an empty query and boosts them a little otherwise. Entries that come and go (workspaces,

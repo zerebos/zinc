@@ -143,7 +143,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>Test hook: observes every reply libghostty writes back to the PTY.</summary>
     internal Action<byte[]>? PtyReplyObserver;
 
-    public void Start(string commandLine, string? workingDirectory, ushort cols, ushort rows)
+    /// <param name="environment">Variables to set (or, null, remove) for this child only.</param>
+    public void Start(string commandLine, string? workingDirectory, ushort cols, ushort rows,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         // Children inherit our environment; advertise what the terminal supports.
         Environment.SetEnvironmentVariable("COLORTERM", "truecolor");
@@ -155,7 +157,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             Environment.SetEnvironmentVariable(name, null);
         }
 
-        _pty = new ConPty(commandLine, workingDirectory, (short)cols, (short)rows);
+        _pty = new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, environment);
         _pty.OutputReceived += OnPtyOutput;
         _pty.Exited += code =>
         {
