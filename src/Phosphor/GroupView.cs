@@ -68,10 +68,12 @@ internal sealed partial class GroupView : Grid
         SetRow(_content, 1);
         SetRow(_dim, 1);
         SetRow(_focusLine, 1);
+        SetRow(_paneDot, 1);
         Children.Add(_strip);
         Children.Add(_content);
         Children.Add(_dim);
         Children.Add(_focusLine);
+        Children.Add(_paneDot); // above the dimming: it's what you should notice
 
         // Dropping a tab on the strip puts it between the tabs where it lands.
         _strip.Children.Add(_marker);
@@ -116,6 +118,18 @@ internal sealed partial class GroupView : Grid
         VerticalAlignment = VerticalAlignment.Top,
         IsHitTestVisible = false,
         Visibility = Visibility.Collapsed,
+    };
+
+    /// <summary>
+    /// A pane without a strip has nowhere else to say a command finished (or a program wants you, or
+    /// how its progress is going) while you looked elsewhere: its dot sits in its top-right corner.
+    /// </summary>
+    private readonly AttentionDot _paneDot = new()
+    {
+        Corner = false,
+        HorizontalAlignment = HorizontalAlignment.Right,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(0, 8, 10, 0),
     };
 
     /// <summary>Dims an unfocused pane (unfocused-split-opacity): its fill color, partly transparent, over the terminal.</summary>
@@ -211,6 +225,12 @@ internal sealed partial class GroupView : Grid
         {
             _content.Child = group.Active.Control;
         }
+
+        // Without a strip, the pane's own dot: its tabs' most urgent (and how many), else a progress ring.
+        List<MainWindow.TerminalTab> wanting = showStrip ? [] : group.Tabs.Where(t => t.Attention != Attention.None).ToList();
+        _paneDot.Show(wanting.Select(t => t.Attention).DefaultIfEmpty().Max(), wanting.Count);
+        _paneDot.ShowProgress(showStrip ? TerminalProgress.None
+            : group.Tabs.Select(t => t.Control.Progress).FirstOrDefault(p => p.Active, TerminalProgress.None));
 
         foreach (var gone in _items.Keys.Where(t => !group.Contains(t)).ToList())
         {

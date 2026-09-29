@@ -192,7 +192,51 @@ public class ShellInjectionTests
         using var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
         session.SendInput("echo \"[$PROMPT_COMMAND]\"\r");
-        WaitFor(session, () => session.ReadScreenText().Contains("[__phosphor_status; echo -n; __phosphor_prompt]"), "PROMPT_COMMAND");
+        WaitFor(session, () => session.ReadScreenText().Contains("[__phosphor_si_status; echo -n; __phosphor_si_prompt]"), "PROMPT_COMMAND");
+    }
+
+    // The README's hand-written snippets from before automatic integration (same function names
+    // as the first automatic scripts, which then replaced them and sent nothing).
+    private const string OldBashSnippet = """
+        __phosphor_prompt() { printf '\e]133;D;%s\a\e]133;A\a' "$?"; }
+        PROMPT_COMMAND="__phosphor_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+        PS1="$PS1"'\[\e]133;B\a\]'
+        PS0=$'\e]133;C\a'"$PS0"
+
+        """;
+
+    private const string OldZshSnippet = """
+        PS1='%~ %# '
+        autoload -Uz add-zsh-hook
+        __phosphor_precmd() { print -n "\e]133;D;$?\a\e]133;A\a" }
+        __phosphor_preexec() { print -n "\e]133;C\a" }
+        precmd_functions=(__phosphor_precmd $precmd_functions)
+        add-zsh-hook preexec __phosphor_preexec
+        PS1="$PS1%{"$'\e]133;B\a'"%}"
+
+        """;
+
+    [Fact]
+    public void BashLeavesAHandWrittenIntegrationWorking()
+    {
+        const string bash = @"C:\Program Files\Git\bin\bash.exe";
+        Assert.SkipUnless(File.Exists(bash), "no Git Bash");
+        var home = Directory.CreateTempSubdirectory("phosphor-bash-").FullName;
+        File.WriteAllText(Path.Combine(home, ".bashrc"), OldBashSnippet);
+        using var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
+        // The snippet sends no command text: it's read back from the screen.
+        ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
+    }
+
+    [Fact]
+    public void ZshLeavesAHandWrittenIntegrationWorking()
+    {
+        const string zsh = @"C:\msys64\usr\bin\zsh.exe";
+        Assert.SkipUnless(File.Exists(zsh), "no MSYS2 zsh");
+        var home = Directory.CreateTempSubdirectory("phosphor-zsh-").FullName;
+        File.WriteAllText(Path.Combine(home, ".zshrc"), OldZshSnippet);
+        using var session = StartShell($"{zsh} -i", new() { ["HOME"] = home });
+        ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
     }
 
     [Fact]

@@ -267,7 +267,9 @@ output starts, and how it ended. With those marks, Phosphor can:
 - **tell you when a long command finishes out of view**: in another workspace, tab or pane
   (anywhere but the focused one), or while you're in another app, a command that ran 10 seconds
   or more puts a pulsing dot after its tab's title (on the icon in the rail): green, or red if it
-  failed, until you focus it. The taskbar button flashes if Phosphor is in the background. In
+  failed, until you focus it. A pane without a tab strip shows it in its top-right corner, and a
+  workspace with several tabs to look at shows how many. The taskbar button flashes if Phosphor
+  is in the background. In
   `[notify]`: `command-finished = "toast"` shows a Windows notification instead of the flash
   (click it to go to the pane), `"toast-always"` shows one even while you're in Phosphor (just
   not looking at that pane), `"never"` turns this off, and `command-finished-after` sets what

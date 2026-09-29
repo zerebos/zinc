@@ -5,7 +5,7 @@
 # .zprofile, .zshrc and .zlogin as usual. In an interactive shell it also loads phosphor.zsh,
 # which sets itself up at the first prompt (after all of those).
 
-'builtin' 'typeset' __phosphor_dir=${ZDOTDIR}
+'builtin' 'typeset' __phosphor_si_dir=${ZDOTDIR}
 if [[ -n "${PHOSPHOR_ZDOTDIR+x}" ]]; then
     'builtin' 'export' ZDOTDIR=$PHOSPHOR_ZDOTDIR
     'builtin' 'unset' PHOSPHOR_ZDOTDIR
@@ -14,11 +14,11 @@ else
 fi
 
 {
-    'builtin' 'typeset' __phosphor_file=${ZDOTDIR-$HOME}/.zshenv
-    [[ ! -r "$__phosphor_file" ]] || 'builtin' 'source' '--' "$__phosphor_file"
+    'builtin' 'typeset' __phosphor_si_file=${ZDOTDIR-$HOME}/.zshenv
+    [[ ! -r "$__phosphor_si_file" ]] || 'builtin' 'source' '--' "$__phosphor_si_file"
 } always {
-    if [[ -o 'interactive' && -r "$__phosphor_dir/phosphor.zsh" ]]; then
-        'builtin' 'source' '--' "$__phosphor_dir/phosphor.zsh"
+    if [[ -o 'interactive' && -r "$__phosphor_si_dir/phosphor.zsh" ]]; then
+        'builtin' 'source' '--' "$__phosphor_si_dir/phosphor.zsh"
     fi
-    'builtin' 'unset' __phosphor_file __phosphor_dir
+    'builtin' 'unset' __phosphor_si_file __phosphor_si_dir
 }
