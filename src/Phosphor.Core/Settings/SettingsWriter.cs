@@ -21,6 +21,35 @@ public sealed class SettingsWriter
     /// <summary>Whether the file differs from <see cref="Original"/> (whoever changed it).</summary>
     public bool Changed => Current() != Original;
 
+    private IReadOnlyDictionary<string, string>? _originalValues;
+
+    /// <summary>
+    /// How many settings differ from <see cref="Original"/> (a key added, removed or changed, in any
+    /// section): what Undo would put back.
+    /// </summary>
+    public int ChangeCount()
+    {
+        var before = _originalValues ??= Values(Original);
+        var now = Values(Current());
+        return before.Keys.Union(now.Keys).Count(k => before.GetValueOrDefault(k) != now.GetValueOrDefault(k));
+    }
+
+    /// <summary>Every value in <paramref name="text"/>, by its full key ("font.size", "profile.pwsh.font.size"), as written.</summary>
+    private static Dictionary<string, string> Values(string text)
+    {
+        var config = ConfigFile.Parse(text, "config.toml");
+        var values = config.GlobalValues.ToDictionary(v => v.Key, v => ConfigEditor.FormatValue(v.Value));
+        foreach (var (id, keys) in config.ProfileValues)
+        {
+            foreach (var (key, value) in keys)
+            {
+                values[$"profile.{id}.{key}"] = ConfigEditor.FormatValue(value);
+            }
+        }
+
+        return values;
+    }
+
     /// <summary>Sets <paramref name="setting"/> to <paramref name="value"/>; null or its default removes the key.</summary>
     public void Set(SettingDef setting, object? value) => Set(setting.Path, value is null || SettingsCatalog.Same(value, setting.Default) ? null : value);
 

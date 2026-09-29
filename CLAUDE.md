@@ -216,7 +216,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   (`WrapPanel`). `WindowPlacement`: sizes in DIPs for every window; Settings reopens at its
   saved bounds (session.json `settings`, only with save-state on) or centered over the last main
   window, on its last section during a run (`App._settingsSection`). The sidebar's selection
-  animation is NavigationView's own (600 ms, not adjustable; see .scratch/NOTES.md). Tools:
+  pill is ours (`SettingsWindow.Indicator.cs`): NavigationView's is made transparent via
+  `NavigationViewSelectionIndicatorForeground` (its own animation is a fixed 600 ms stretch-and-jump,
+  see .scratch/NOTES.md); ours takes the SelectionIndicator's bounds on LayoutUpdated and slides
+  (composition Translation.Y from `this.StartingValue`, 250 ms). Undo bar counts settings
+  (`SettingsWriter.ChangeCount`, tested). The profile list re-renders only when the profiles
+  differ from what it shows (`_profilesShown`; a drag already shows its order). Reset arrow =
+  `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and

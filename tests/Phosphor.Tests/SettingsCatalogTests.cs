@@ -116,6 +116,21 @@ public class SettingsWriterTests
     }
 
     [Fact]
+    public void CountsTheSettingsUndoWouldPutBack()
+    {
+        var path = TempConfig("[font]\nsize = 12\n");
+        var writer = new SettingsWriter(path);
+        Assert.Equal(0, writer.ChangeCount());
+        writer.Set(["font", "size"], 13L);
+        writer.Set(["font", "size"], 14L); // the same setting twice: one change
+        writer.Set(["colors", "theme"], "Nord");
+        writer.Set(["profile", "pwsh", "font", "size"], 9L);
+        Assert.Equal(3, writer.ChangeCount());
+        writer.Set(["font", "size"], 12L); // back as it was: not a change
+        Assert.Equal(2, writer.ChangeCount());
+    }
+
+    [Fact]
     public void TheDefaultIsWrittenAsNothing()
     {
         var path = TempConfig("[font]\nsize = 12\n");

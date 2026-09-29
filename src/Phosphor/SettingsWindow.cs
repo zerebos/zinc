@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Media;
 using Phosphor.Settings;
 using Phosphor.Terminal;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
 using Windows.UI;
 
 namespace Phosphor;
@@ -43,6 +44,7 @@ internal sealed partial class SettingsWindow : Window
     private readonly List<Action> _refreshers = [];
     private string _section;
     private string? _editing; // the profile open in the Profiles section's editor
+    private List<(string Id, string Name, bool Hidden)> _profilesShown = [];
     private bool _updating;
 
     /// <summary>A change was written to config.toml.</summary>
@@ -85,7 +87,7 @@ internal sealed partial class SettingsWindow : Window
         {
             _writer.Undo();
             Wrote?.Invoke();
-            ShowChanges(false);
+            UpdateChanges();
         });
         _snackbar = new Border
         {
@@ -163,6 +165,7 @@ internal sealed partial class SettingsWindow : Window
         Grid.SetRow(_nav, 1);
         root.Children.Add(titleBar);
         root.Children.Add(_nav);
+        SetUpIndicator(root);
         Content = root;
         SetTitleBar(titleBar);
         Render();
@@ -174,7 +177,7 @@ internal sealed partial class SettingsWindow : Window
         var listed = _config.Profiles.Select(p => (p.Id, p.Name, p.Hidden)).ToList();
         _config = config;
         if (_section == "profiles" && _search.Text.Trim().Length == 0 &&
-            (_editing == null ? !listed.SequenceEqual(config.Profiles.Select(p => (p.Id, p.Name, p.Hidden))) : listed.All(p => p.Id != _editing)))
+            (_editing == null ? !_profilesShown.SequenceEqual(Listed(config)) : listed.All(p => p.Id != _editing)))
         {
             Render(); // the list changed (or its order, or the profile being edited just appeared)
             return;
@@ -268,12 +271,21 @@ internal sealed partial class SettingsWindow : Window
     {
         _problems.IsOpen = _config.HasErrors;
         _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until it's fixed.";
-        ShowChanges(!_config.HasErrors && _writer.Changed);
+        UpdateChanges();
     }
 
-    /// <summary>Slides the undo bar in (there are changes) or out.</summary>
-    private void ShowChanges(bool show)
+    /// <summary>Slides the undo bar in (with how many settings Undo would put back) or out.</summary>
+    private void UpdateChanges()
     {
+        var count = 0;
+        Guard("counting changes", () => count = _config.HasErrors ? 0 : _writer.ChangeCount());
+        var show = count > 0;
+        if (show)
+        {
+            _undo.Content = count == 1 ? "Undo 1 change" : $"Undo {count} changes";
+            AutomationProperties.SetName(_undo, "Undo changes");
+        }
+
         if (show == _snackbarShown)
         {
             return;
@@ -383,6 +395,7 @@ internal sealed partial class SettingsWindow : Window
         };
         AutomationProperties.SetName(list, "Profiles");
         var ids = _config.Profiles.Select(p => p.Id).ToList();
+        _profilesShown = Listed(_config);
         foreach (var profile in _config.Profiles)
         {
             var item = new ListViewItem
@@ -402,13 +415,19 @@ internal sealed partial class SettingsWindow : Window
         {
             if (e.DropResult == DataPackageOperation.Move)
             {
-                WriteProfileOrder(list.Items.OfType<ListViewItem>().Select(i => (string)i.Tag).ToList());
+                // Shown as dropped already: the reload that follows has nothing to re-render.
+                var order = list.Items.OfType<ListViewItem>().Select(i => (string)i.Tag).ToList();
+                _profilesShown = [.. order.Select(id => _profilesShown.First(p => p.Id == id))];
+                WriteProfileOrder(order);
             }
         };
         _page.Children.Add(list);
 
         AddGroup("Find shells on this PC", SettingsCatalog.Discovery);
     }
+
+    private static List<(string Id, string Name, bool Hidden)> Listed(ConfigFile config) =>
+        config.Profiles.Select(p => (p.Id, p.Name, p.Hidden)).ToList();
 
     /// <summary>
     /// The profiles' order, as <c>profile-order</c> (every id, so profiles found later go after
@@ -605,7 +624,7 @@ internal sealed partial class SettingsWindow : Window
             {
                 _writer.RemoveTable(["profile", id]);
                 Wrote?.Invoke();
-                ShowChanges(true);
+                UpdateChanges();
             });
             _editing = null;
             Render();
@@ -696,7 +715,7 @@ internal sealed partial class SettingsWindow : Window
         {
             _writer.Set(path, value);
             Wrote?.Invoke();
-            ShowChanges(true);
+            UpdateChanges();
         });
     }
 
@@ -757,7 +776,7 @@ internal sealed partial class SettingsWindow : Window
             {
                 _writer.Set(path, Changed(value) ? value : null);
                 Wrote?.Invoke();
-                ShowChanges(true);
+                UpdateChanges();
                 State(value);
             });
         }
@@ -959,7 +978,7 @@ internal sealed partial class SettingsWindow : Window
     {
         var button = new Button
         {
-            Content = new FontIcon { Glyph = "", FontSize = 12 },
+            Content = UTurnArrow(),
             Padding = new Thickness(5),
             Margin = new Thickness(0, -4, 0, -4),
             Background = new SolidColorBrush(Colors.Transparent),
@@ -970,6 +989,42 @@ internal sealed partial class SettingsWindow : Window
         ToolTipService.SetToolTip(button, tip);
         AutomationProperties.SetName(button, $"Reset {name}");
         return button;
+    }
+
+    /// <summary>
+    /// An arrow that goes left and turns back down (the shape of Heroicons' arrow-uturn-left, MIT):
+    /// "put it back". Drawn in a 24-unit box with a 1.5-unit stroke, like the original.
+    /// </summary>
+    private static Viewbox UTurnArrow()
+    {
+        static PathFigure Figure(Point start, params PathSegment[] segments)
+        {
+            var figure = new PathFigure { StartPoint = start, IsClosed = false, IsFilled = false };
+            foreach (var segment in segments)
+            {
+                figure.Segments.Add(segment);
+            }
+
+            return figure;
+        }
+
+        var geometry = new PathGeometry();
+        // The arrowhead, then the shaft: left along the top, round the bend, back along the bottom.
+        geometry.Figures.Add(Figure(new Point(9, 15), new LineSegment { Point = new Point(3, 9) }, new LineSegment { Point = new Point(9, 3) }));
+        geometry.Figures.Add(Figure(new Point(3, 9),
+            new LineSegment { Point = new Point(15, 9) },
+            new ArcSegment { Point = new Point(15, 21), Size = new Size(6, 6), SweepDirection = SweepDirection.Clockwise },
+            new LineSegment { Point = new Point(12, 21) }));
+        var path = new Microsoft.UI.Xaml.Shapes.Path
+        {
+            Data = geometry,
+            Stroke = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            StrokeThickness = 1.5,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+        };
+        return new Viewbox { Width = 14, Height = 14, Child = new Canvas { Width = 24, Height = 24, Children = { path } } };
     }
 
     private static TextBlock DescriptionText(string text = "")
