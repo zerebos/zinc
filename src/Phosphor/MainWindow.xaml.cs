@@ -1000,6 +1000,14 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord == "test:scrollbar-expand")
+            {
+                // The focused pane's scrollbar, expanded and kept so (hover can't be posted).
+                tab.Active.Control.PinScrollBarExpandedForTest();
+                Log.Write($"test {chord}: done");
+                return;
+            }
+
             if (chord == "test:gc")
             {
                 // Frees whatever is unreferenced (e.g. a retired canvas), as a later GC would.

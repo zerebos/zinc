@@ -9,13 +9,20 @@ namespace Phosphor.Terminal;
 // The scrollbar: mirrors libghostty's scrollback position and scrolls it when dragged.
 public sealed partial class TerminalControl
 {
-    /// <summary>Width of the right-edge zone (DIPs) that expands the scrollbar on approach.</summary>
-    private const double ScrollBarHotZone = 20;
+    /// <summary>
+    /// The expanded bar's width (DIPs; TerminalScrollBar.xaml), which is also where the pointer
+    /// expands it, as in Windows Terminal: anywhere the full bar will be.
+    /// </summary>
+    private const double ScrollBarWidth = 16;
 
     private ScrollBar? _scrollBar;
     private bool _updatingScrollBar;
     private bool _scrollBarExpanded;
     private bool _nearScrollBar;
+    private bool _scrollBarPinned;
+
+    /// <summary>A button is held on the bar (dragging the thumb, paging, an arrow): it stays expanded.</summary>
+    private bool _scrollBarHeld;
 
     /// <summary>Creates the overlay scrollbar (called once from the constructor).</summary>
     private ScrollBar CreateScrollBar()
@@ -30,6 +37,8 @@ public sealed partial class TerminalControl
             SmallChange = 1,
             Visibility = Visibility.Collapsed,
             IsTabStop = false,
+            // Windows Terminal's proportions: 16 DIPs, square, a 10-DIP thumb (TerminalScrollBar.xaml).
+            Style = (Style)Application.Current.Resources["TerminalScrollBarStyle"],
         };
         bar.ValueChanged += (_, e) =>
         {
@@ -41,6 +50,11 @@ public sealed partial class TerminalControl
             session.ScrollToRow((ulong)Math.Max(0, Math.Round(e.NewValue)));
             _canvas.Invalidate();
         };
+        // Held down on the bar, it stays expanded wherever the pointer goes (dragging the thumb
+        // along the bar, or off it); released, it's where the pointer is that counts again.
+        bar.AddHandler(PointerPressedEvent, new PointerEventHandler((_, _) => _scrollBarHeld = true), handledEventsToo: true);
+        bar.AddHandler(PointerReleasedEvent, new PointerEventHandler(ReleaseScrollBar), handledEventsToo: true);
+        bar.AddHandler(PointerCaptureLostEvent, new PointerEventHandler(ReleaseScrollBar), handledEventsToo: true);
         _scrollBar = bar;
         return bar;
     }
@@ -86,7 +100,7 @@ public sealed partial class TerminalControl
     private void TrackScrollBarProximity(object sender, PointerRoutedEventArgs e)
     {
         var near = _scrollBar is { Visibility: Visibility.Visible } &&
-                   (IsFromScrollBar(e.OriginalSource) || e.GetCurrentPoint(this).Position.X >= ActualWidth - ScrollBarHotZone);
+                   (_scrollBarHeld || IsFromScrollBar(e.OriginalSource) || e.GetCurrentPoint(this).Position.X >= ActualWidth - ScrollBarWidth);
         _nearScrollBar = near;
         SetScrollBarExpanded(near);
         if (near)
@@ -95,12 +109,34 @@ public sealed partial class TerminalControl
         }
     }
 
+    private void ReleaseScrollBar(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_scrollBarHeld)
+        {
+            return;
+        }
+
+        _scrollBarHeld = false;
+        var position = e.GetCurrentPoint(this).Position;
+        var inside = position.X >= 0 && position.Y >= 0 && position.X <= ActualWidth && position.Y <= ActualHeight;
+        _nearScrollBar = inside && position.X >= ActualWidth - ScrollBarWidth;
+        SetScrollBarExpanded(_nearScrollBar);
+    }
+
+    /// <summary>Test hook: expanded, and kept so whatever the pointer does.</summary>
+    internal void PinScrollBarExpandedForTest()
+    {
+        _scrollBarPinned = true;
+        SetScrollBarExpanded(true);
+    }
+
     /// <summary>
     /// Switches the bar between its thin and full looks via the visual states a
     /// ScrollViewer uses. (IndicatorMode.None does not mean "full bar": it hides it.)
     /// </summary>
     private void SetScrollBarExpanded(bool expanded)
     {
+        expanded |= _scrollBarPinned;
         if (_scrollBar is { } bar && expanded != _scrollBarExpanded &&
             VisualStateManager.GoToState(bar, expanded ? "Expanded" : "Collapsed", true))
         {

@@ -162,8 +162,13 @@ public sealed partial class TerminalControl
 
     protected override void OnPointerExited(PointerRoutedEventArgs e)
     {
-        SetScrollBarExpanded(false);
-        _nearScrollBar = false;
+        // (Dragging the thumb out of the pane keeps the bar: see ReleaseScrollBar.)
+        if (!_scrollBarHeld)
+        {
+            SetScrollBarExpanded(false);
+            _nearScrollBar = false;
+        }
+
         _pointerPosition = null;
         UpdateHoverLink(ctrl: false);
     }

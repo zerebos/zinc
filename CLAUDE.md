@@ -337,8 +337,13 @@ and read state after the write (see `_titleDirty`).
 - Panels (Grid) have no OnPointer* overrides — subscribe to PointerPressed etc.
 - Standalone ScrollBar: `IndicatorMode.None` *hides* it (it doesn't mean "full bar"). Widen with
   `VisualStateManager.GoToState(bar, "Expanded"/"Collapsed")` (what ScrollViewer does); GoToState
-  returns false until the template has applied. Expansion is driven by a 20-DIP right-edge hot
-  zone from a handledEventsToo PointerMoved handler (the bar handles its own pointer events).
+  returns false until the template has applied. Expansion is driven by a right-edge hot zone as
+  wide as the expanded bar (16 DIPs, Windows Terminal's) from a handledEventsToo PointerMoved
+  handler (the bar handles its own pointer events); held down (thumb drag, paging) it stays
+  expanded until release, even off the pane. Look: `Terminal/TerminalScrollBar.xaml`, a copy of
+  WinUI's DefaultScrollBarStyle with a few substitutions (its header says which) — its sizes are
+  StaticResources, which per-bar Resources can't override. `test:scrollbar-expand` pins it open
+  for captures (`.scratch/tools/sb-shot.ps1`; WT reference shots in `.scratch/tmp/wt-scrollbar-*`).
 - Hover and pointer shape can't be tested here (posted WM_MOUSEMOVE doesn't become WM_POINTER;
   screenshots omit the cursor) — ask the user.
 - Caption buttons: keep `TitleBarHeightOption.Standard` (32 px) with TabView's default ~41 px strip —
