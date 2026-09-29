@@ -114,6 +114,24 @@ public partial class App : Application
     /// config.toml, in place. On first launch it then opens the first window; later, the reload
     /// that follows the save applies colors, font and shell (the layout applies to new windows).
     /// </summary>
+    private SettingsWindow? _settings;
+
+    /// <summary>The settings window: opened, or brought forward if it's open.</summary>
+    internal void ShowSettings()
+    {
+        if (_settings != null)
+        {
+            _settings.Activate();
+            return;
+        }
+
+        _settings = new SettingsWindow(_config);
+        _settings.Closed += (_, _) => _settings = null;
+        // Its writes reach the windows through the config watcher (started if the folder is new).
+        _settings.Wrote += WatchConfig;
+        _settings.Activate();
+    }
+
     internal void ShowWelcome(bool firstRun)
     {
         if (_welcome != null)
@@ -504,6 +522,7 @@ public partial class App : Application
         }
 
         var windows = _quick != null ? _windows.Append(_quick).ToList() : _windows.ToList();
+        _settings?.Refresh(fresh);
         if (fresh.HasErrors)
         {
             windows.ForEach(w => w.ShowConfigProblems(fresh, applied: false));
@@ -671,6 +690,7 @@ public partial class App : Application
             [
                 new TrayIcon.MenuItem("New window", () => OpenWindow(_config.DefaultProfile)),
                 new TrayIcon.MenuItem(quickLabel, ToggleQuickTerminalFromTray),
+                new TrayIcon.MenuItem("Settings", ShowSettings),
                 null,
                 new TrayIcon.MenuItem("Quit Phosphor", AskQuit),
             ];

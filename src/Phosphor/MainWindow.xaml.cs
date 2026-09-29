@@ -1234,6 +1234,9 @@ public sealed partial class MainWindow : Window
                 }
 
                 return true;
+            case TerminalAction.OpenSettings:
+                App.Instance.ShowSettings();
+                return true;
             case TerminalAction.ReloadConfig:
                 App.Instance.ReloadConfig();
                 return true;

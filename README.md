@@ -67,6 +67,13 @@ and splits), a color scheme and font (with a preview) and your default shell, an
 answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
 you change there and leaves the rest of the file as it is.
 
+**Settings** (`Ctrl+,`, the command palette or the tray menu) edits the settings below in a window
+of its own, next to your terminals: each change is written to `config.toml` right away and applied
+as you make it (only that line changes; choosing a default removes the line), and **Undo changes**
+puts the file back as it was when you opened the window. Each setting shows its key in the file.
+While `config.toml` has an error, Settings says so and changes nothing. Profiles and keys are
+edited in the file for now.
+
 `%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
 [TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,
 bad values, TOML mistakes) are shown in a bar naming the file and line; everything else
@@ -435,6 +442,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `toggle-title-bar` | With workspaces on the left: auto-hide the title bar, or show it again. |
 | `focus-mode` | With workspaces on the left: auto-hide the title bar and the sidebar; again to bring them back. |
 | `reload-config` | Read the config again. |
+| `open-settings` | Open the settings window (`Ctrl+,`). |
 | `quit` | Close every window and exit. |
 
 Links are OSC 8 hyperlinks (e.g. `ls --hyperlink`) and plain `http(s)`,

@@ -381,7 +381,7 @@ internal sealed partial class WelcomeWindow : Window
     }
 
     /// <summary>Installed fixed-width families, sorted.</summary>
-    private static IEnumerable<string> MonospaceFamilies()
+    internal static IEnumerable<string> MonospaceFamilies()
     {
         var set = CanvasFontSet.GetSystemFontSet();
         foreach (var family in CanvasTextFormat.GetSystemFontFamilies().Order(StringComparer.OrdinalIgnoreCase))

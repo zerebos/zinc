@@ -191,6 +191,16 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   a first run (`visual.ps1` captures `welcome.png`, then `welcome-2/3.png` via UIA "Next"). Paged:
   one question per page, Back/Next and page dots (buttons named "Page N of M"); reopened, Save
   is on every page.
+- Settings window: Core `Settings/SettingsCatalog.cs` (every setting: section, group, key, kind,
+  default, choices; `Problem` validates a value through the real config reader; `FromText`) and
+  `SettingsWriter` (ConfigEditor Set/Remove per key, defaults removed, Undo = file text at open),
+  both tested — a test requires every `ConfigFile.SettingKeys` key (the reader's `Mappings`
+  table) to be in the catalog or `FileOnly`, and every default to equal an empty config's. App
+  `SettingsWindow.cs` (code-only, NavigationView, cards generated per kind, `Refresh` on every
+  reload, read-only while HasErrors); `App.ShowSettings` (one instance; writes reach windows via
+  the config watcher). Open: `open-settings` (Ctrl+,), palette, tray. Profiles/Keyboard pages are
+  placeholders until sessions 2-3. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
+  "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

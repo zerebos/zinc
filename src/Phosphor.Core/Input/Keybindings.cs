@@ -53,6 +53,9 @@ public enum TerminalAction
     /// <summary>Read config.toml again.</summary>
     ReloadConfig,
 
+    /// <summary>Open the settings window (or bring it forward).</summary>
+    OpenSettings,
+
     /// <summary>Close every window and exit.</summary>
     Quit,
 
@@ -98,14 +101,14 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
 {
     // VK_OEM_PLUS / VK_OEM_MINUS: the '=' and '-' keys on US layouts, which Windows
     // Terminal calls "plus" and "minus".
-    private const VirtualKey OemPlus = (VirtualKey)0xBB, OemMinus = (VirtualKey)0xBD;
+    private const VirtualKey OemPlus = (VirtualKey)0xBB, OemMinus = (VirtualKey)0xBD, OemComma = (VirtualKey)0xBC;
 
     // VK_OEM_3: the `/~ key on US layouts ("grave" in Ghostty, "`" in Windows Terminal).
     private const VirtualKey OemGrave = (VirtualKey)0xC0;
 
     private static readonly Dictionary<string, VirtualKey> Names = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["plus"] = OemPlus, ["minus"] = OemMinus, ["grave"] = OemGrave, ["grave_accent"] = OemGrave, ["`"] = OemGrave,
+        ["plus"] = OemPlus, ["minus"] = OemMinus, ["comma"] = OemComma, [","] = OemComma, ["grave"] = OemGrave, ["grave_accent"] = OemGrave, ["`"] = OemGrave,
         ["numpad_plus"] = VirtualKey.Add, ["numpad_minus"] = VirtualKey.Subtract,
         ["tab"] = VirtualKey.Tab, ["enter"] = VirtualKey.Enter, ["space"] = VirtualKey.Space,
         ["esc"] = VirtualKey.Escape, ["escape"] = VirtualKey.Escape, ["backspace"] = VirtualKey.Back,
@@ -123,6 +126,7 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
         {
             OemPlus => "Plus",
             OemMinus => "Minus",
+            OemComma => ",",
             OemGrave => "`",
             VirtualKey.Add => "Numpad Plus",
             VirtualKey.Subtract => "Numpad Minus",
@@ -555,6 +559,7 @@ public sealed class Keybindings
 
         b.Bind("ctrl+shift+t", TerminalAction.NewTab);
         b.Bind("ctrl+alt+t", TerminalAction.NewWorkspace);
+        b.Bind("ctrl+comma", TerminalAction.OpenSettings); // Windows Terminal's and VS Code's
         b.Bind("ctrl+shift+d", TerminalAction.DuplicateTab);
         b.Bind("ctrl+shift+space", TerminalAction.OpenNewTabMenu);
         b.Bind("ctrl+shift+w", TerminalAction.ClosePane);

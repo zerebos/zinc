@@ -56,6 +56,18 @@ public sealed class ConfigFile
     /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
     public ThemeLibrary Themes { get; }
 
+    /// <summary>
+    /// The global settings as written (last one wins, includes counted), by key ("font.size"):
+    /// TOML values (string, bool, long, double, lists). For the settings window.
+    /// </summary>
+    public IReadOnlyDictionary<string, object> GlobalValues { get; private init; } = new Dictionary<string, object>();
+
+    /// <summary>The value written for <paramref name="key"/> ("font.size"), if any.</summary>
+    public object? ValueOf(string key) => GlobalValues.TryGetValue(key, out var value) ? value : null;
+
+    /// <summary>Every <c>[group] key</c> setting the reader knows, as "group.key" (plus colors.theme and colors.palette).</summary>
+    public static IReadOnlyCollection<string> SettingKeys => [.. Reader.Mappings.Keys, "colors.theme", "colors.palette"];
+
     /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page); may be a light/dark pair.</summary>
     public string? SchemeName { get; private init; }
 
@@ -487,6 +499,8 @@ public sealed class ConfigFile
                 SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
                 Appearance = appearance,
                 FollowsAppearance = _followsAppearance,
+                GlobalValues = _entries.Where(e => e.Path[0] != "profile")
+                    .GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.Last().Value),
             };
         }
 
@@ -521,43 +535,52 @@ public sealed class ConfigFile
             return config;
         }
 
+        /// <summary>
+        /// Every grouped setting (<c>"font.size"</c>) and how its TOML value becomes the value
+        /// Config.Apply parses. The settings window's catalog is checked against these keys.
+        /// </summary>
+        public static readonly Dictionary<string, (string Key, Func<object, string?> Convert)> Mappings = new()
+        {
+            ["font.family"] = ("font-family", v => v as string),
+            ["font.size"] = ("font-size", v => Number(v)),
+            ["font.builtin-glyphs"] = ("builtin-glyphs", v => Bool(v)),
+            ["font.adjust-box-thickness"] = ("adjust-box-thickness", v => v is string a ? a : Number(v)),
+            ["colors.background"] = ("background", v => v as string),
+            ["colors.foreground"] = ("foreground", v => v as string),
+            ["colors.cursor"] = ("cursor-color", v => v as string),
+            ["terminal.padding-x"] = ("window-padding-x", v => Pair(v)),
+            ["terminal.padding-y"] = ("window-padding-y", v => Pair(v)),
+            ["terminal.mouse-pointer"] = ("mouse-pointer", v => v as string),
+            ["terminal.clipboard-read"] = ("clipboard-read", v => Permission(v)),
+            ["terminal.clipboard-write"] = ("clipboard-write", v => Permission(v)),
+            ["terminal.command-marks"] = ("command-marks", v => v as string),
+            ["terminal.shell-integration"] = ("shell-integration", v => v as string),
+            ["window.workspace-tabs"] = ("workspace-tabs", v => v as string),
+            ["window.title-bar"] = ("title-bar", v => v as string),
+            ["window.sidebar"] = ("sidebar", v => v as string),
+            ["window.tab-groups"] = ("tab-groups", v => Bool(v)),
+            ["window.group-tab-strip"] = ("group-tab-strip", v => v as string),
+            ["window.unfocused-split-opacity"] = ("unfocused-split-opacity", v => Number(v)),
+            ["window.unfocused-split-fill"] = ("unfocused-split-fill", v => v as string),
+            ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),
+            ["window.quit-after-last-window-closed"] = ("quit-after-last-window-closed", v => Bool(v)),
+            ["notify.command-finished"] = ("notify-command-finished", v => v as string),
+            ["notify.programs"] = ("notify-programs", v => v as string),
+            ["notify.command-finished-after"] = ("notify-command-finished-after", v => v is string d ? d : Number(v)),
+            ["quick-terminal.position"] = ("quick-terminal-position", v => v as string),
+            ["quick-terminal.screen"] = ("quick-terminal-screen", v => v as string),
+            ["quick-terminal.size"] = ("quick-terminal-size", v => Pair(v)),
+            ["quick-terminal.autohide"] = ("quick-terminal-autohide", v => Bool(v)),
+            ["quick-terminal.hotkey"] = ("quick-terminal-hotkey", v => v as string),
+        };
+
         private Config ApplySetting(Config config, Entry e)
         {
             // Each setting maps onto the (tested) value parsing of Config.Apply.
             (string Key, string? Value)? legacy = e.Path switch
             {
-                ["font", "family"] => ("font-family", e.Value as string),
-                ["font", "size"] => ("font-size", Number(e.Value)),
-                ["font", "builtin-glyphs"] => ("builtin-glyphs", Bool(e.Value)),
-                ["font", "adjust-box-thickness"] => ("adjust-box-thickness", e.Value is string a ? a : Number(e.Value)),
-                ["colors", "background"] => ("background", e.Value as string),
-                ["colors", "foreground"] => ("foreground", e.Value as string),
-                ["colors", "cursor"] => ("cursor-color", e.Value as string),
                 ["colors", "palette", var index] => ("palette", e.Value is string c ? $"{index}={c}" : null),
-                ["terminal", "padding-x"] => ("window-padding-x", Pair(e.Value)),
-                ["terminal", "padding-y"] => ("window-padding-y", Pair(e.Value)),
-                ["terminal", "mouse-pointer"] => ("mouse-pointer", e.Value as string),
-                ["terminal", "clipboard-read"] => ("clipboard-read", Permission(e.Value)),
-                ["terminal", "clipboard-write"] => ("clipboard-write", Permission(e.Value)),
-                ["terminal", "command-marks"] => ("command-marks", e.Value as string),
-                ["terminal", "shell-integration"] => ("shell-integration", e.Value as string),
-                ["window", "workspace-tabs"] => ("workspace-tabs", e.Value as string),
-                ["window", "title-bar"] => ("title-bar", e.Value as string),
-                ["window", "sidebar"] => ("sidebar", e.Value as string),
-                ["window", "tab-groups"] => ("tab-groups", Bool(e.Value)),
-                ["window", "group-tab-strip"] => ("group-tab-strip", e.Value as string),
-                ["window", "unfocused-split-opacity"] => ("unfocused-split-opacity", Number(e.Value)),
-                ["window", "unfocused-split-fill"] => ("unfocused-split-fill", e.Value as string),
-                ["window", "save-state"] => ("window-save-state", e.Value is bool b ? (b ? "always" : "never") : e.Value as string),
-                ["window", "quit-after-last-window-closed"] => ("quit-after-last-window-closed", Bool(e.Value)),
-                ["notify", "command-finished"] => ("notify-command-finished", e.Value as string),
-                ["notify", "programs"] => ("notify-programs", e.Value as string),
-                ["notify", "command-finished-after"] => ("notify-command-finished-after", e.Value is string d ? d : Number(e.Value)),
-                ["quick-terminal", "position"] => ("quick-terminal-position", e.Value as string),
-                ["quick-terminal", "screen"] => ("quick-terminal-screen", e.Value as string),
-                ["quick-terminal", "size"] => ("quick-terminal-size", Pair(e.Value)),
-                ["quick-terminal", "autohide"] => ("quick-terminal-autohide", Bool(e.Value)),
-                ["quick-terminal", "hotkey"] => ("quick-terminal-hotkey", e.Value as string),
+                [var group, var name] when Mappings.TryGetValue($"{group}.{name}", out var m) => (m.Key, m.Convert(e.Value)),
                 _ => null,
             };
 

@@ -78,6 +78,7 @@ public static class Actions
         new("focus-mode", TerminalAction.FocusMode, Arg.None, "Focus mode",
             "With workspace-tabs = \"left\": auto-hide the title bar and the workspace list; again to bring them back."),
         new("reload-config", TerminalAction.ReloadConfig, Arg.None, "Reload config", "Read config.toml again."),
+        new("open-settings", TerminalAction.OpenSettings, Arg.None, "Settings", "Open the settings window."),
         new("quit", TerminalAction.Quit, Arg.None, "Quit Phosphor", "Close every window and exit."),
     ];
 
