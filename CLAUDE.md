@@ -204,6 +204,10 @@ Test a press with `.scratch/tools/quick-toggle.ps1` and lifetime with `lifetime.
 to the logged hwnd; need PHOSPHOR_LOG). Don't launch `powershell.exe` consoles
 mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
+  Default font Cascadia Mono NF ships in `assets/fonts` → `Fonts\` (OFL; variable upright +
+  italic files) and is used *uninstalled*: `BundledFonts` loads a `CanvasFontSet(file Uri)` for
+  glyph faces and names the file in the text format (`file:///…ttf#Cascadia Mono NF`); an
+  installed family of the same name wins (the log says `font: … (bundled)`).
 - `TerminalControl.cs` — one pane: session lifecycle, grid layout, blink, focus.
   `.Keyboard.cs` (keybindings → actions, KeyDecision → encoder / WM_CHAR path, clipboard),
   `.Mouse.cs` (mouse reporting, selection, wheel, pointer shape), `.Scrollbar.cs` (overlay

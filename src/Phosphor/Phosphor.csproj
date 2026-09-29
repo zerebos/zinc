@@ -34,6 +34,9 @@
     <!-- Bundled color schemes (theme = "Name"), with their license. assets/themes/README.md says where they come from. -->
     <Content Include="..\..\assets\themes\*" Exclude="..\..\assets\themes\README.md" Link="Themes\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The default font, Cascadia Mono NF (Microsoft's Nerd Font build), used without installing it. -->
+    <Content Include="..\..\assets\fonts\*" Link="Fonts\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

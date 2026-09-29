@@ -84,7 +84,7 @@ public sealed record Config
     public const float DefaultFontSize = 10.5f;
 
     /// <summary>Primary font family; glyphs it lacks fall back through DirectWrite.</summary>
-    public string FontFamily { get; init; } = "Cascadia Mono";
+    public string FontFamily { get; init; } = "Cascadia Mono NF"; // ships with Phosphor (Fonts)
 
     /// <summary>Font size in points, like Ghostty and Windows Terminal.</summary>
     public float FontSize { get; init; } = DefaultFontSize;

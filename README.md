@@ -96,8 +96,10 @@ colors.theme = "0x96f"
 Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys64\ucrt64.ico'`.
 
 **`[font]`**
-- `family`: any installed monospace family; Nerd Fonts work. If it isn't installed, Phosphor
-  falls back to Cascadia Mono, then Consolas.
+- `family`: any installed monospace family; Nerd Fonts work. The default, **Cascadia Mono NF**
+  (Microsoft's Nerd Font build of Windows Terminal's font, so prompt icons show out of the box),
+  ships with Phosphor and needs no installing. A family that isn't installed falls back to it,
+  then to Cascadia Mono and Consolas.
 - `size`: in points; `Ctrl+0` resets to this.
 
 **`[colors]`**

@@ -97,23 +97,35 @@ public sealed unsafe class TerminalRenderer : IDisposable
         _fontSize = sizeDip;
         var fonts = CanvasFontSet.GetSystemFontSet();
         // Fall back if the configured family isn't installed (DirectWrite would
-        // otherwise substitute a proportional font and break the grid).
-        foreach (var candidate in new[] { _config.FontFamily, "Cascadia Mono", "Consolas" })
+        // otherwise substitute a proportional font and break the grid). Cascadia Mono NF ships
+        // with Phosphor, so it's there even when not installed.
+        var bundled = false;
+        foreach (var candidate in new[] { _config.FontFamily, BundledFonts.Family, "Cascadia Mono", "Consolas" })
         {
             if (fonts.GetMatchingFonts(candidate, FontWeights.Normal, FontStretch.Normal, FontStyle.Normal).Fonts.Count > 0)
             {
                 _fontFamily = candidate;
                 break;
             }
+
+            if (candidate.Equals(BundledFonts.Family, StringComparison.OrdinalIgnoreCase) && BundledFonts.Set(italic: false) is { } set &&
+                set.GetMatchingFonts(BundledFonts.Family, FontWeights.Normal, FontStretch.Normal, FontStyle.Normal).Fonts.Count > 0)
+            {
+                _fontFamily = BundledFonts.Family;
+                bundled = true;
+                break;
+            }
         }
 
+        Log.Write($"font: {_fontFamily}{(bundled ? " (bundled)" : "")}");
         for (var v = 0; v < 4; v++)
         {
             var weight = (v & 1) != 0 ? FontWeights.Bold : FontWeights.Normal;
             var style = (v & 2) != 0 ? FontStyle.Italic : FontStyle.Normal;
+            var italic = (v & 2) != 0;
             _formats[v] = new CanvasTextFormat
             {
-                FontFamily = _fontFamily,
+                FontFamily = bundled ? BundledFonts.FormatFamily(italic) : _fontFamily,
                 FontSize = _fontSize,
                 FontWeight = weight,
                 FontStyle = style,
@@ -121,7 +133,8 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 Options = CanvasDrawTextOptions.EnableColorFont,
             };
 
-            var matches = fonts.GetMatchingFonts(_fontFamily, weight, FontStretch.Normal, style).Fonts;
+            var faces = bundled ? BundledFonts.Set(italic) ?? fonts : fonts;
+            var matches = faces.GetMatchingFonts(_fontFamily, weight, FontStretch.Normal, style).Fonts;
             _faces[v] = matches.Count > 0 ? matches[0] : _faces[0];
         }
 
