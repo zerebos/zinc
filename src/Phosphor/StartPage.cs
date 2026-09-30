@@ -244,7 +244,7 @@ internal sealed partial class StartPage : UserControl
                 e.Handled = true;
                 Cancelled?.Invoke();
                 break;
-            case Windows.System.VirtualKey.Down when e.OriginalSource == _filter:
+            case Windows.System.VirtualKey.Down when ReferenceEquals(e.OriginalSource, _filter):
                 e.Handled = true;
                 _profileList.Focus(FocusState.Keyboard);
                 break;
