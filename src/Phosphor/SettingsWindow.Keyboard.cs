@@ -178,8 +178,10 @@ internal sealed partial class SettingsWindow
         // In the variants' own order (Right, Down, Left, Up; 1-9, the last), others after them.
         int Rank(ActionInvocation a) => variants.ToList().FindIndex(v => v.Invocation == a) is var i and >= 0 ? i : int.MaxValue;
         actions = [.. actions.OrderBy(Rank).ThenBy(Actions.Format, StringComparer.Ordinal)];
+        var name = ActionName(title, $"{family} <{argument}>", [.. actions.SelectMany(a => KeyBindingEditor.Reset(lines, a))]);
         var body = new StackPanel { Spacing = 6 };
-        body.Children.Add(ActionName(title, $"{family} <{argument}>", [.. actions.SelectMany(a => KeyBindingEditor.Reset(lines, a))]));
+        var folded = actions.Count > FoldKeysAfter;
+        var indent = folded ? 0 : 16; // (a fold indents its rows itself)
 
         foreach (var action in actions)
         {
@@ -188,7 +190,7 @@ internal sealed partial class SettingsWindow
                 Text = Actions.VariantLabel(action, profiles),
                 TextWrapping = TextWrapping.Wrap,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(16, 0, 0, 0),
+                Margin = new Thickness(indent, 0, 0, 0),
                 Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
             };
             body.Children.Add(NameAndKeys(label, KeysPanel(action, Actions.Title(action), ChordsOf(action), SequencesOf(action), lines)));
@@ -204,7 +206,7 @@ internal sealed partial class SettingsWindow
                 Spacing = 8,
                 Children = { new FontIcon { Glyph = AddGlyph, FontSize = 12 }, new TextBlock { Text = $"Add a key for another {argument}" } },
             },
-            Margin = new Thickness(16, 2, 0, 0),
+            Margin = new Thickness(folded ? -8 : 16, 2, 0, 0), // (its icon under the labels in a fold)
             Padding = new Thickness(8, 4, 10, 4),
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderThickness = new Thickness(0),
@@ -212,8 +214,19 @@ internal sealed partial class SettingsWindow
         };
         AutomationProperties.SetName(another, $"Add a key to {title} for another {argument}");
         body.Children.Add(another);
-        return CardBorder(body);
+        if (!folded)
+        {
+            body.Children.Insert(0, name);
+            return CardBorder(body);
+        }
+
+        // A long family folds, saying how many it has keys for (open while filtering).
+        name.Children.Insert(1, DescriptionText($"Keys for {actions.Count} {argument}s"));
+        return Fold($"keys:{family}", title, name, [new Border { Child = body }], open: _keyFilter.Trim().Length > 0);
     }
+
+    /// <summary>A family with keys for more variants than this folds.</summary>
+    private const int FoldKeysAfter = 3;
 
     /// <summary>An action's keys as chips (click one to remove it), wrapping onto more rows, and + to add one.</summary>
     private WrapPanel KeysPanel(ActionInvocation action, string title, List<KeyChord> chords, List<KeySequence> sequences,

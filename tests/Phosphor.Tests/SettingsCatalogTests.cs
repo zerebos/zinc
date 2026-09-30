@@ -7,6 +7,28 @@ public class SettingsCatalogTests
     public static TheoryData<string> Keys() => new(SettingsCatalog.All.Select(s => s.Key));
 
     [Fact]
+    public void FoldsHoldNeighboringSettingsOfOneGroup()
+    {
+        var all = SettingsCatalog.All.Select(s => s.Key).ToList();
+        var seen = new HashSet<string>();
+        foreach (var fold in SettingsCatalog.Folds)
+        {
+            // A lead, or a title of its own: not both.
+            Assert.True(fold.Lead != null ^ fold.Title != null, $"fold of {fold.Children[0]}");
+            List<string> keys = [.. fold.Lead is { } lead ? [lead] : Array.Empty<string>(), .. fold.Children];
+            Assert.NotEmpty(fold.Children);
+            Assert.All(keys, k => Assert.True(seen.Add(k), $"{k} is in two folds"));
+
+            // Shown where its settings are: consecutive, in catalog order, one group.
+            var at = all.IndexOf(keys[0]);
+            Assert.True(at >= 0, keys[0]);
+            Assert.Equal(keys, all.Skip(at).Take(keys.Count));
+            var first = SettingsCatalog.Find(keys[0])!;
+            Assert.All(keys, k => Assert.Equal((first.Section, first.Group), (SettingsCatalog.Find(k)!.Section, SettingsCatalog.Find(k)!.Group)));
+        }
+    }
+
+    [Fact]
     public void EverySettingTheReaderKnowsIsInTheWindowOrFileOnly()
     {
         var shown = SettingsCatalog.All.Select(s => s.Key).Concat(SettingsCatalog.FileOnly.Keys).ToHashSet();

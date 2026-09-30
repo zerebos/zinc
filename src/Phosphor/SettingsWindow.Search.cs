@@ -176,8 +176,14 @@ internal sealed partial class SettingsWindow
         });
     }
 
-    private static void Reveal(Border card, FrameworkElement control)
+    private void Reveal(Border card, FrameworkElement control)
     {
+        if (_foldOf.TryGetValue(card, out var open))
+        {
+            open();
+            card.UpdateLayout();
+        }
+
         card.StartBringIntoView(new BringIntoViewOptions { VerticalAlignmentRatio = 0.3, AnimationDesired = true });
         var target = control as Control ?? Microsoft.UI.Xaml.Input.FocusManager.FindFirstFocusableElement(control) as Control;
         target?.Focus(FocusState.Keyboard);
@@ -193,7 +199,9 @@ internal sealed partial class SettingsWindow
         var brush = new SolidColorBrush(accent);
         card.BorderBrush = brush;
         card.BorderThickness = new Thickness(2);
-        card.Padding = new Thickness(padding.Left - 1, padding.Top - 1, padding.Right - 1, padding.Bottom - 1);
+        card.Padding = new Thickness(
+            Math.Max(0, padding.Left - (2 - thickness.Left)), Math.Max(0, padding.Top - (2 - thickness.Top)),
+            Math.Max(0, padding.Right - (2 - thickness.Right)), Math.Max(0, padding.Bottom - (2 - thickness.Bottom)));
         var fade = new ColorAnimation
         {
             From = accent,

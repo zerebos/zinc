@@ -264,7 +264,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   built by Parse, which also fixed WithoutArguments' toggle-sidebar = cycle, Index -1) → `FamilyCard`
   (variants with keys, in variant order, + "Add a key for another …" = `CaptureFlyout(..., variants)`
   with a "For" chooser). The profile list re-renders only when the profiles
-  differ from what it shows (`_profilesShown`; a drag already shows its order). Reset arrow =
+  differ from what it shows (`_profilesShown`; a drag already shows its order). Folds
+  (`SettingsWindow.Folds.cs`, our own card, not WinUI's Expander, so a fold is one Border for
+  search's Reveal/Flash): catalog `SettingsCatalog.Folds` (a lead setting's card as header + the
+  settings under it, or a titled bundle with a "Changed: …" summary; tested: neighbors in one group),
+  each group of a profile page ("Changed here: …"), key families with more than 3 variants bound.
+  Clicks on controls in a header don't fold; `_foldOf` lets Reveal open a fold first; open folds
+  stay open for the window's life (`_openFolds`). Reset arrow =
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.

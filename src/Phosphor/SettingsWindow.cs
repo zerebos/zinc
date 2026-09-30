@@ -217,6 +217,7 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Clear();
         _refreshers.Clear();
         _cards.Clear();
+        _foldOf.Clear();
         _jumps.Clear();
         var query = _search.Text.Trim();
         _page.Children.Add(new TextBlock
@@ -305,7 +306,15 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(GroupTitle(title));
         foreach (var setting in settings)
         {
-            if (setting.Kind == SettingKind.Scheme)
+            if (SettingsCatalog.FoldOf(setting.Key) is { } fold)
+            {
+                // The fold goes where its first setting is; the rest are in it.
+                if (setting.Key == (fold.Lead ?? fold.Children[0]))
+                {
+                    _page.Children.Add(SettingFoldCard(fold));
+                }
+            }
+            else if (setting.Kind == SettingKind.Scheme)
             {
                 foreach (var card in SchemeCards(setting, null))
                 {
@@ -771,21 +780,20 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(Note("The settings below come from the defaults until you change them here; the reset arrow gives one back."));
         foreach (var group in SettingsCatalog.All.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))
         {
-            _page.Children.Add(GroupTitle(group.Key));
+            var rows = new List<FrameworkElement>();
             foreach (var setting in group)
             {
                 if (setting.Kind == SettingKind.Scheme)
                 {
-                    foreach (var card in SchemeCards(setting, id))
-                    {
-                        _page.Children.Add(card);
-                    }
+                    rows.AddRange(SchemeCards(setting, id));
                 }
                 else
                 {
-                    _page.Children.Add(OverrideCard(setting, id));
+                    rows.Add(OverrideCard(setting, id));
                 }
             }
+
+            _page.Children.Add(ProfileGroupFold(group.Key, id, [.. group], rows));
         }
 
         // Found profiles go back to what was found; your own can be deleted.
@@ -1299,7 +1307,7 @@ internal sealed partial class SettingsWindow : Window
     private static Grid TextAndControl(FrameworkElement text, FrameworkElement control)
     {
         control.VerticalAlignment = VerticalAlignment.Center;
-        var grid = new Grid { ColumnSpacing = 24, RowSpacing = 8 };
+        var grid = new Grid { ColumnSpacing = 24 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -1314,6 +1322,7 @@ internal sealed partial class SettingsWindow : Window
             Grid.SetColumn(control, narrow ? 0 : 1);
             Grid.SetRow(control, narrow ? 1 : 0);
             grid.ColumnSpacing = narrow ? 0 : 24;
+            grid.RowSpacing = narrow ? 8 : 0; // (spacing applies even to an empty row)
             control.HorizontalAlignment = narrow ? HorizontalAlignment.Left : align;
         };
         return grid;

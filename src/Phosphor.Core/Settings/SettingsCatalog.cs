@@ -68,6 +68,12 @@ public sealed record SettingDef(string Section, string Group, string Key, string
 }
 
 /// <summary>
+/// Settings folded into one card: under <paramref name="Lead"/> (its card is the fold's header), or,
+/// without one, under <paramref name="Title"/> and <paramref name="Description"/>.
+/// </summary>
+public sealed record SettingFold(string? Title, string? Description, string? Lead, IReadOnlyList<string> Children);
+
+/// <summary>
 /// Every setting the settings window edits, grouped into its sections. Tested against the config
 /// reader: each of its keys is either here or in <see cref="FileOnly"/>, each default is what an
 /// empty config gives, and each choice reads back without a warning.
@@ -233,6 +239,27 @@ public static class SettingsCatalog
     };
 
     public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);
+
+    /// <summary>
+    /// Settings shown folded into one card: under the setting they depend on (<see cref="SettingFold.Lead"/>),
+    /// or together under a title of their own. Each fold's settings are in one group, in catalog order.
+    /// </summary>
+    public static IReadOnlyList<SettingFold> Folds { get; } =
+    [
+        new(null, null, "font.builtin-glyphs", ["font.adjust-box-thickness"]),
+        new("Background, text and cursor", "The scheme's, unless you pick your own.", null,
+            ["colors.background", "colors.foreground", "colors.cursor"]),
+        new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
+        new(null, null, "window.tab-groups", ["window.group-tab-strip"]),
+        new(null, null, "window.unfocused-split-opacity", ["window.unfocused-split-fill"]),
+        new(null, null, "terminal.paste-warning", ["terminal.large-paste-warning"]),
+        new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim and remote shells do.", null,
+            ["terminal.clipboard-write", "terminal.clipboard-read"]),
+        new(null, null, "notify.command-finished", ["notify.command-finished-after"]),
+    ];
+
+    /// <summary>The fold <paramref name="key"/> leads or sits in, if any.</summary>
+    public static SettingFold? FoldOf(string key) => Folds.FirstOrDefault(f => f.Lead == key || f.Children.Contains(key));
 
     /// <summary>Whether two config values are the same setting (11 and 11.0 are).</summary>
     public static bool Same(object? a, object? b) => (a, b) switch
