@@ -135,7 +135,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   cancels it; "Allow in this tab" remembered per pane). `PHOSPHOR_TEST_CLIPBOARD` stands in for the
   clipboard's text in tests. `launch-at-login`: `LoginStartup` keeps HKCU Run "Phosphor" =
   `"<exe>" --at-login` in step (never with PHOSPHOR_CONFIG); `ShellResolver.LoginFlag` isn't a
-  command; "tray" opens no window; install.ps1 repoints/removes it. `quit-fresh` = `App.AskQuit(fresh)`
+  command; "tray" opens no window; install.ps1 repoints/removes it. `quit-fresh` (palette/keys only, not the tray: the user's call) = `App.AskQuit(fresh)`
   → `ForgetWindows` (session.json keeps recents and settings bounds, no windows).
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size

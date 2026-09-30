@@ -780,7 +780,6 @@ public partial class App : Application
                 new TrayIcon.MenuItem("Settings", () => ShowSettings()),
                 null,
                 new TrayIcon.MenuItem("Quit Phosphor", AskQuit),
-                new TrayIcon.MenuItem("Quit and start fresh next time", () => AskQuit(fresh: true)),
             ];
         };
     }

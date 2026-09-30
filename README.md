@@ -307,9 +307,9 @@ tray with no window open, reopens the saved windows.
 
 Phosphor shows a notification-area icon while it runs. Clicking it brings back the most
 recently used window (or the saved windows); right-clicking offers New window, Show/Hide quick
-terminal, Settings, Quit Phosphor, which closes every window, the hidden quick terminal
-included, and Quit and start fresh next time, which quits without keeping the windows (the next
-start opens a new one). Both are also in the command palette.
+terminal, Settings, and Quit Phosphor, which closes every window, the hidden quick terminal
+included. Quit Phosphor is also in the command palette, next to Quit and start fresh next time,
+which quits without keeping the windows (the next start opens a new one).
 
 `launch-at-login` in `[window]` starts Phosphor when you sign in to Windows: `"tray"` without a
 window (the quick terminal's hotkey works; the tray icon opens your windows), `"windows"` with
