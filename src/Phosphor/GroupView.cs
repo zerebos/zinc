@@ -206,9 +206,14 @@ internal sealed partial class GroupView : Grid
         _strip.Visibility = showStrip ? Visibility.Visible : Visibility.Collapsed;
         var line = split && focused && !showStrip;
         _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
-        if (line && _focusLine.Background != accent)
+        if (line && group.Active is { } shown)
         {
-            _focusLine.Background = accent;
+            // Over the terminal's top edge: kept visible on its background.
+            var lineBrush = Contrast.AccentOn(TerminalRenderer.ToColor(shown.Profile.Config.Theme.Background), accent);
+            if (_focusLine.Background != lineBrush)
+            {
+                _focusLine.Background = lineBrush;
+            }
         }
 
         var dimmed = split && !focused && dim > 0;
@@ -447,7 +452,7 @@ internal sealed partial class GroupView : Grid
             }
 
             _title.Opacity = active ? 1 : 0.7;
-            _accent.Background = active && focused ? accent : _clear;
+            _accent.Background = active && focused ? Contrast.AccentOn(background, accent) : _clear;
         }
     }
 }

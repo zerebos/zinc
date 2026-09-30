@@ -149,6 +149,10 @@ internal sealed partial class WorkspaceList : Grid
         {
             var (color, pane) = colors(tab);
             _byTab[tab].Show(tab == selected, color, pane);
+            if (tab == selected)
+            {
+                _pill.DrawOn(color ?? pane); // the selected item's fill
+            }
         }
 
         // Another workspace in the same list: slide. Workspaces added, closed or moved: jump.
