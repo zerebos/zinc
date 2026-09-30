@@ -110,6 +110,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ClipboardText.Paste` (ContentDialog with a preview). `test:paste:<text>` (`|` = line break)
   pastes without touching the real clipboard. Ctrl+wheel zoom, copy-on-select and
   focus-follows-mouse (`OnPointerEntered`) live in `TerminalControl.Mouse.cs`.
+- Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
+  sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
+  change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,
+  plus `PaletteCommand.SearchWords` (from `Actions.SearchWords`; ranked below title matches).
 - Kitty graphics: `Terminal/KittyImages.cs` (the process-wide PNG decoder libghostty calls —
   WIC via WinRT, blocking is fine on the MTA reader thread; premultiplied RGBA conversion),
   `TerminalSession.CollectImages` (per-frame placement snapshot, pixels copied only for images

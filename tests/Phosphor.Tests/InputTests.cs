@@ -130,9 +130,9 @@ public class KeybindingTests
     [InlineData("ctrl+v", TerminalAction.Paste)]
     [InlineData("ctrl+shift+v", TerminalAction.Paste)]
     [InlineData("shift+insert", TerminalAction.Paste)]
-    [InlineData("ctrl+plus", TerminalAction.FontSizeIncrease)]
-    [InlineData("ctrl+shift+plus", TerminalAction.FontSizeIncrease)]
-    [InlineData("ctrl+0", TerminalAction.FontSizeReset)]
+    [InlineData("ctrl+plus", TerminalAction.ZoomIn)]
+    [InlineData("ctrl+shift+plus", TerminalAction.ZoomIn)]
+    [InlineData("ctrl+0", TerminalAction.ZoomReset)]
     [InlineData("shift+pgdn", TerminalAction.ScrollPageDown)]
     [InlineData("ctrl+shift+end", TerminalAction.ScrollToBottom)]
     public void DefaultsFollowWindowsTerminal(string chord, TerminalAction expected)

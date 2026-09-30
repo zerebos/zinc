@@ -42,9 +42,9 @@ public static class Actions
             "Copy the selection. \"copy if-selection\" lets the key through to the app when nothing is selected."),
         new("paste", TerminalAction.Paste, Arg.None, "Paste", "Paste the clipboard."),
         new("find", TerminalAction.Find, Arg.None, "Find", "Open the find box."),
-        new("increase-font-size", TerminalAction.FontSizeIncrease, Arg.None, "Zoom in", "Make the text bigger (font size + 1)."),
-        new("decrease-font-size", TerminalAction.FontSizeDecrease, Arg.None, "Zoom out", "Make the text smaller (font size - 1)."),
-        new("reset-font-size", TerminalAction.FontSizeReset, Arg.None, "Reset zoom", "Back to the configured font size."),
+        new("zoom-in", TerminalAction.ZoomIn, Arg.None, "Zoom in", "Make the text 10% bigger."),
+        new("zoom-out", TerminalAction.ZoomOut, Arg.None, "Zoom out", "Make the text 10% smaller."),
+        new("reset-zoom", TerminalAction.ZoomReset, Arg.None, "Reset zoom", "Back to 100%: the configured font size."),
         new("scroll-page-up", TerminalAction.ScrollPageUp, Arg.None, "Scroll page up", "Scroll back a page."),
         new("scroll-page-down", TerminalAction.ScrollPageDown, Arg.None, "Scroll page down", "Scroll forward a page."),
         new("scroll-to-top", TerminalAction.ScrollToTop, Arg.None, "Scroll to top", "Scroll to the start of the scrollback."),
@@ -159,7 +159,7 @@ public static class Actions
 
     /// <summary>The groups actions are listed under (the settings' Keyboard page), in order.</summary>
     public static IReadOnlyList<string> Categories { get; } =
-        ["Clipboard", "Find and scroll", "Font size", "Tabs", "Panes", "Workspaces and windows", "Sidebar and title bar", "Phosphor"];
+        ["Clipboard", "Find and scroll", "Zoom", "Tabs", "Panes", "Workspaces and windows", "Sidebar and title bar", "Phosphor"];
 
     private static readonly Dictionary<string, string> CategoryOf = new()
     {
@@ -167,7 +167,7 @@ public static class Actions
         ["find"] = "Find and scroll", ["scroll-page-up"] = "Find and scroll", ["scroll-page-down"] = "Find and scroll",
         ["scroll-to-top"] = "Find and scroll", ["scroll-to-bottom"] = "Find and scroll", ["jump-to-prompt"] = "Find and scroll",
         ["select-output"] = "Find and scroll",
-        ["increase-font-size"] = "Font size", ["decrease-font-size"] = "Font size", ["reset-font-size"] = "Font size",
+        ["zoom-in"] = "Zoom", ["zoom-out"] = "Zoom", ["reset-zoom"] = "Zoom",
         ["new-tab"] = "Tabs", ["duplicate-tab"] = "Tabs", ["close-tab"] = "Tabs", ["next-tab"] = "Tabs", ["previous-tab"] = "Tabs",
         ["tab-switcher"] = "Tabs", ["next-attention"] = "Tabs", ["profile-menu"] = "Tabs",
         ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
@@ -175,6 +175,17 @@ public static class Actions
         ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
         ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor",
     };
+
+    private static readonly Dictionary<string, string> SearchWordsOf = new()
+    {
+        ["zoom-in"] = "font size bigger larger text",
+        ["zoom-out"] = "font size smaller text",
+        ["reset-zoom"] = "font size",
+    };
+
+    /// <summary>Words besides the title that find the action in the command palette, if any.</summary>
+    public static string? SearchWords(ActionInvocation invocation) =>
+        Order(invocation) is var at and >= 0 && SearchWordsOf.TryGetValue(Definitions[at].Name, out var words) ? words : null;
 
     /// <summary>The group <paramref name="invocation"/>'s action is listed under (one of <see cref="Categories"/>).</summary>
     public static string Category(ActionInvocation invocation) =>

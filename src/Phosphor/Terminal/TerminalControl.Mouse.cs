@@ -134,17 +134,17 @@ public sealed partial class TerminalControl
         if ((e.KeyModifiers & VirtualKeyModifiers.Control) != 0)
         {
             _zoomDelta += delta;
-            var size = _renderer.FontSize;
+            var level = _zoomLevel;
             while (Math.Abs(_zoomDelta) >= 120)
             {
                 var step = Math.Sign(_zoomDelta);
-                size += step;
+                level += step;
                 _zoomDelta -= step * 120;
             }
 
-            if (size != _renderer.FontSize)
+            if (level != _zoomLevel)
             {
-                Zoom(size);
+                Zoom(level);
             }
 
             return;

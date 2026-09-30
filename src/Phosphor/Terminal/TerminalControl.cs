@@ -320,7 +320,7 @@ public sealed partial class TerminalControl : UserControl
         {
             if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize)
             {
-                var size = old.FontSize != config.FontSize ? Math.Clamp(config.FontSizeDip, MinFontSize, MaxFontSize) : _renderer.FontSize;
+                var size = old.FontSize != config.FontSize ? ZoomedFontSize() : _renderer.FontSize;
                 _renderer.SetFont(_canvas, size, DisplayScale);
             }
 

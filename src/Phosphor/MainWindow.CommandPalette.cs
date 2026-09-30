@@ -339,7 +339,8 @@ public sealed partial class MainWindow
 
         // Titles come from the action registry, shortcuts from the current bindings.
         void Action(ActionInvocation action) =>
-            commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => pane.Invoke(action)));
+            commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => pane.Invoke(action),
+                SearchWords: Actions.SearchWords(action)));
 
         void Custom(string title, Action run, string? keys = null) =>
             commands.Add(new PaletteCommand(title, keys, run));
@@ -410,9 +411,9 @@ public sealed partial class MainWindow
         // The terminal.
         Action(TerminalAction.Copy);
         Action(TerminalAction.Paste);
-        Action(TerminalAction.FontSizeIncrease);
-        Action(TerminalAction.FontSizeDecrease);
-        Action(TerminalAction.FontSizeReset);
+        Action(TerminalAction.ZoomIn);
+        Action(TerminalAction.ZoomOut);
+        Action(TerminalAction.ZoomReset);
         Action(TerminalAction.Find);
         Action(TerminalAction.ScrollToTop);
         Action(TerminalAction.ScrollToBottom);

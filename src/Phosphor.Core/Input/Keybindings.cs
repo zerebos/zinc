@@ -10,9 +10,9 @@ public enum TerminalAction
     /// <summary>Copy when there is a selection; otherwise the key goes to the app (Ctrl+C).</summary>
     CopyIfSelection,
     Paste,
-    FontSizeIncrease,
-    FontSizeDecrease,
-    FontSizeReset,
+    ZoomIn,
+    ZoomOut,
+    ZoomReset,
     ScrollPageUp,
     ScrollPageDown,
     ScrollToTop,
@@ -562,12 +562,12 @@ public sealed class Keybindings
         b.Bind("shift+insert", TerminalAction.Paste);
         foreach (var shift in new[] { "", "shift+" })
         {
-            b.Bind($"ctrl+{shift}plus", TerminalAction.FontSizeIncrease);
-            b.Bind($"ctrl+{shift}numpad_plus", TerminalAction.FontSizeIncrease);
-            b.Bind($"ctrl+{shift}minus", TerminalAction.FontSizeDecrease);
-            b.Bind($"ctrl+{shift}numpad_minus", TerminalAction.FontSizeDecrease);
-            b.Bind($"ctrl+{shift}0", TerminalAction.FontSizeReset);
-            b.Bind($"ctrl+{shift}numpad0", TerminalAction.FontSizeReset);
+            b.Bind($"ctrl+{shift}plus", TerminalAction.ZoomIn);
+            b.Bind($"ctrl+{shift}numpad_plus", TerminalAction.ZoomIn);
+            b.Bind($"ctrl+{shift}minus", TerminalAction.ZoomOut);
+            b.Bind($"ctrl+{shift}numpad_minus", TerminalAction.ZoomOut);
+            b.Bind($"ctrl+{shift}0", TerminalAction.ZoomReset);
+            b.Bind($"ctrl+{shift}numpad0", TerminalAction.ZoomReset);
         }
 
         b.Bind("shift+pgup", TerminalAction.ScrollPageUp);

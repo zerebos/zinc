@@ -8,8 +8,9 @@ namespace Phosphor.Commands;
 /// <param name="Icon">What the palette shows before the title (the app's own type; e.g. a profile).</param>
 /// <param name="IsTab">A tab in the tab switcher ("@").</param>
 /// <param name="AsksArgument">Choosing it keeps the palette open to ask for its argument (its title ends in "…").</param>
+/// <param name="SearchWords">Other words that find it, not shown ("font size" for "Zoom in"); a match there ranks below title matches.</param>
 public sealed record PaletteCommand(string Title, string? Shortcut, Action Run, bool Remember = true, object? Icon = null,
-    bool IsTab = false, bool AsksArgument = false);
+    bool IsTab = false, bool AsksArgument = false, string? SearchWords = null);
 
 /// <summary>A command that matched a query, with the matched character positions.</summary>
 public sealed record PaletteMatch(PaletteCommand Command, int Score, int[] Positions, bool Recent = false);
@@ -31,10 +32,18 @@ public static class CommandFilter
         var order = 0;
         foreach (var command in commands)
         {
-            if (FuzzyMatch.Score(query, command.Title, out var positions) is { } score)
+            var score = FuzzyMatch.Score(query, command.Title, out var positions);
+            if (score == null && command.SearchWords != null && FuzzyMatch.Score(query, command.SearchWords, out _) is { } other)
+            {
+                // Found by its other words: nothing in the title to highlight, and below title matches.
+                score = other - 1_000_000;
+                positions = [];
+            }
+
+            if (score is { } found)
             {
                 var rank = command.Remember ? recent?.Rank(command.Title) : null;
-                matches.Add((new PaletteMatch(command, score + Boost(rank), positions, rank != null), order));
+                matches.Add((new PaletteMatch(command, found + Boost(rank), positions, rank != null), order));
             }
 
             order++;

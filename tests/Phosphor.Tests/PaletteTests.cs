@@ -146,7 +146,7 @@ public class ShortcutDisplayTests
         var keys = Keybindings.Default;
         Assert.Equal("Ctrl+Shift+T", keys.ChordFor(TerminalAction.NewTab)?.ToString());
         Assert.Equal("Ctrl+V", keys.ChordFor(TerminalAction.Paste)?.ToString());
-        Assert.Equal("Ctrl+Plus", keys.ChordFor(TerminalAction.FontSizeIncrease)?.ToString());
+        Assert.Equal("Ctrl+Plus", keys.ChordFor(TerminalAction.ZoomIn)?.ToString());
         Assert.Equal("Ctrl+Shift+P", keys.ChordFor(TerminalAction.OpenCommandPalette)?.ToString());
         Assert.Equal("Alt+Shift+Minus",
             keys.ChordFor(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down))?.ToString());

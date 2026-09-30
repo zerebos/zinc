@@ -258,14 +258,14 @@ public sealed partial class TerminalControl
             case TerminalAction.Find:
                 OpenSearch();
                 return true;
-            case TerminalAction.FontSizeIncrease:
-                Zoom(_renderer.FontSize + 1);
+            case TerminalAction.ZoomIn:
+                Zoom(_zoomLevel + 1);
                 return true;
-            case TerminalAction.FontSizeDecrease:
-                Zoom(_renderer.FontSize - 1);
+            case TerminalAction.ZoomOut:
+                Zoom(_zoomLevel - 1);
                 return true;
-            case TerminalAction.FontSizeReset:
-                Zoom(ConfiguredFontSize);
+            case TerminalAction.ZoomReset:
+                Zoom(0);
                 return true;
             case TerminalAction.ScrollPageUp:
             case TerminalAction.ScrollPageDown:

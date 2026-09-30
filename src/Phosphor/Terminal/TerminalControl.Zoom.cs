@@ -19,12 +19,23 @@ public sealed partial class TerminalControl
     // Held in a field: a timer only a local references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _zoomTimer;
 
+    /// <summary>This pane's zoom (<see cref="ZoomSteps"/>: 0 = 100%, each step 10% of the configured size).</summary>
+    private int _zoomLevel;
+
     /// <summary>The configured font size (DIPs), as the pane's size is clamped.</summary>
     private float ConfiguredFontSize => Math.Clamp(_config.FontSizeDip, MinFontSize, MaxFontSize);
 
-    private void Zoom(float size)
+    /// <summary>The font size for the current zoom level (after a config change too: the zoom stays, the base moves).</summary>
+    private float ZoomedFontSize()
     {
-        SetFontSize(size);
+        _zoomLevel = ZoomSteps.Clamp(_zoomLevel, ConfiguredFontSize, MinFontSize, MaxFontSize);
+        return ZoomSteps.Size(ConfiguredFontSize, _zoomLevel);
+    }
+
+    private void Zoom(int level)
+    {
+        _zoomLevel = level;
+        SetFontSize(ZoomedFontSize());
         ShowZoom();
     }
 
@@ -57,7 +68,7 @@ public sealed partial class TerminalControl
         }
 
         var size = _renderer.FontSize;
-        _zoomPercent!.Text = $"{Math.Round(size / ConfiguredFontSize * 100)}%";
+        _zoomPercent!.Text = $"{ZoomSteps.Percent(_zoomLevel)}%";
         _zoomPoints!.Text = $"{(size * 72f / 96f).ToString("0.#", CultureInfo.CurrentCulture)} pt";
         _zoomBadge.Opacity = 1;
         _zoomTimer!.Stop();

@@ -381,7 +381,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | Right click | Copy the selection if there is one, otherwise paste |
 | Drag / double-click / triple-click | Select cells / word / line |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
-| `Ctrl+=`, `Ctrl+-`, `Ctrl+0`, `Ctrl`+wheel | Zoom in / out / reset (this pane's font size; the wheel zooms even when a program uses the mouse). A badge shows the zoom and the size in points |
+| `Ctrl+=`, `Ctrl+-`, `Ctrl+0`, `Ctrl`+wheel | Zoom in / out / reset (this pane, in steps of 10% of the configured font size; the wheel zooms even when a program uses the mouse). A badge shows the zoom and the size in points |
 | `Ctrl+Shift+P` | Command palette: every action, profile and workspace, fuzzy-searchable; recently used first. Type `@` to search this window's tabs instead |
 | `Ctrl+Shift+O` | Go to tab: the palette's `@` (title, running command, folder, workspace; tabs with a dot first) |
 
@@ -455,7 +455,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `copy` | Copy the selection. `copy if-selection` lets the key through to the app when nothing is selected (the default `Ctrl+C`). |
 | `paste` | Paste the clipboard. |
 | `find` | Open the find box. |
-| `increase-font-size`, `decrease-font-size`, `reset-font-size` | Zoom in, out, or back to the configured size. |
+| `zoom-in`, `zoom-out`, `reset-zoom` | Zoom this pane in or out by 10% of the configured font size, or back to it. |
 | `scroll-page-up`, `scroll-page-down`, `scroll-to-top`, `scroll-to-bottom` | Scroll the scrollback. |
 | `new-tab` | A new tab (in the focused pane, with tab groups). `new-tab <profile>`: that profile, by id or menu position. |
 | `new-workspace` | A new workspace with the default profile. |
