@@ -133,7 +133,8 @@ internal sealed partial class SchemePicker : Button
     private readonly ThemeLibrary _themes;
     private readonly IReadOnlyList<string> _names;
     private readonly string? _defaultLabel;
-    private readonly ListView _list = new() { Height = 360, SelectionMode = ListViewSelectionMode.Single };
+    // Arrow keys move through the list (previewing, see Highlighted); Space or Enter picks.
+    private readonly ListView _list = new() { Height = 360, SelectionMode = ListViewSelectionMode.Single, SingleSelectionFollowsFocus = false };
     private readonly TextBox _filter = new();
     // Under the button's right edge; allowed past the window's edges, or WinUI moves it beside the
     // button when the window is short.
@@ -145,6 +146,8 @@ internal sealed partial class SchemePicker : Button
     private readonly ContentPresenter _shown = new() { HorizontalAlignment = HorizontalAlignment.Stretch };
     private bool _quiet;
     private string _placeholder = "";
+    private bool _picked;
+    private string? _highlighted;
 
     public SchemePicker(ThemeLibrary themes, IReadOnlyList<string> names, string? defaultLabel, string automationName)
     {
@@ -166,6 +169,16 @@ internal sealed partial class SchemePicker : Button
         AutomationProperties.SetName(_filter, "Filter schemes");
         AutomationProperties.SetName(_list, automationName);
         SchemeTiles.ShowAsTiles(_list, themes, defaultLabel);
+        _list.ContainerContentChanging += (_, e) =>
+        {
+            // Under the pointer or keyboard focus: previewed (containers are reused: hooked once).
+            if (!e.InRecycleQueue && e.ItemContainer.Tag is not "hooked")
+            {
+                e.ItemContainer.Tag = "hooked";
+                e.ItemContainer.PointerEntered += (s, _) => HighlightItem(s);
+                e.ItemContainer.GotFocus += (s, _) => HighlightItem(s);
+            }
+        };
         _flyout.Content = new StackPanel { Width = 320, Spacing = 8, Children = { _filter, _list } };
         Flyout = _flyout;
 
@@ -192,8 +205,20 @@ internal sealed partial class SchemePicker : Button
         };
         _flyout.Opening += (_, _) =>
         {
+            _picked = false;
+            _highlighted = null;
             _filter.Text = "";
             Fill();
+        };
+        _flyout.Closed += (_, _) =>
+        {
+            // Closed without a pick: whatever was previewed goes back. (A pick is written, and the
+            // reload that follows shows it.)
+            Log.Write($"scheme picker: closed ({(_picked ? "picked" : $"previewed {_highlighted ?? "nothing"}")})");
+            if (!_picked && _highlighted != null)
+            {
+                HighlightEnded?.Invoke();
+            }
         };
         _flyout.Opened += (_, _) =>
         {
@@ -208,6 +233,21 @@ internal sealed partial class SchemePicker : Button
 
     /// <summary>The user picked a scheme (null: the default entry).</summary>
     public event Action<string?>? Picked;
+
+    /// <summary>A scheme in the open list is under the pointer or has keyboard focus (null: the default entry), for a preview.</summary>
+    public event Action<string?>? Highlighted;
+
+    /// <summary>The list closed without a pick: take back the preview.</summary>
+    public event Action? HighlightEnded;
+
+    private void HighlightItem(object container)
+    {
+        if (_list.ItemFromContainer((DependencyObject)container) is string item && item != _highlighted)
+        {
+            _highlighted = item;
+            Highlighted?.Invoke(item == _defaultLabel ? null : item);
+        }
+    }
 
     /// <summary>The scheme shown (null: the default entry, or nothing).</summary>
     public string? Selected { get; private set; }
@@ -261,6 +301,7 @@ internal sealed partial class SchemePicker : Button
     private void Pick(string item)
     {
         var name = item == _defaultLabel ? null : item;
+        _picked = true;
         _flyout.Hide();
         Show(name);
         Picked?.Invoke(name);

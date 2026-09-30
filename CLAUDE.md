@@ -301,7 +301,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   (`SettingsWindow.Preview.cs`): `TerminalControl.Preview(config, script)` = a session with no
   program, fed a canned VT script, cursor drawn focused, not hit-testable; pinned above the
   scroller (`_pinned` takes the heading + back link) on Appearance and profile pages;
-  `ApplyConfig` on every reload; hidden below 560 px of page height. Reset arrow =
+  `ApplyConfig` on every reload; hidden below 560 px of page height or by its Hide/Show button
+  (`PreviewHidden`, session.json `settingsPreviewHidden`). `SchemePicker.Highlighted` (pointer or
+  keyboard focus; `SingleSelectionFollowsFocus = false`, so arrows don't pick) → `PreviewScheme`
+  (config text edited in memory + Parse: explicit colors still win); `HighlightEnded` on a close
+  without a pick. `.scratch/tools/focus-in-flyout.ps1` focuses a list item for captures. Reset arrow =
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.

@@ -84,17 +84,103 @@ internal sealed partial class SettingsWindow
             _preview.ApplyConfig(config);
         }
 
+        // The heading gets the show/hide button on its right (built with it: headings are per page).
+        var headingAt = _pinned.Children.IndexOf(heading);
+        _pinned.Children.RemoveAt(headingAt);
+        _previewToggle = PreviewToggle();
+        _pinned.Children.Insert(headingAt, new Grid { Children = { heading, _previewToggle } });
         _pinned.Children.Add(_previewFrame!);
         _pinned.Visibility = Visibility.Visible;
         FitPreview();
     }
 
-    /// <summary>Shows the preview only while the page area has room for it.</summary>
+    private bool _previewHidden;
+    private Button? _previewToggle;
+
+    /// <summary>The preview is hidden (the button beside the page heading); remembered with the session.</summary>
+    public bool PreviewHidden
+    {
+        get => _previewHidden;
+        set
+        {
+            _previewHidden = value;
+            FitPreview();
+        }
+    }
+
+    /// <summary>The preview was hidden or shown again.</summary>
+    public event Action<bool>? PreviewHiddenChanged;
+
+    private Button PreviewToggle()
+    {
+        var button = new Button
+        {
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Center,
+            Padding = new Thickness(8, 4, 10, 4),
+            Margin = new Thickness(0, 8, 0, 12), // the heading's own margins: centered on its text
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+            BorderThickness = new Thickness(0),
+        };
+        button.Click += (_, _) =>
+        {
+            PreviewHidden = !PreviewHidden;
+            PreviewHiddenChanged?.Invoke(PreviewHidden);
+        };
+        return button;
+    }
+
+    /// <summary>Shows the preview unless it's hidden, and only while the page area has room for it.</summary>
     private void FitPreview()
     {
-        if (_previewFrame != null && VisualTreeHelper.GetParent(_pinned) is FrameworkElement area && area.ActualHeight > 0)
+        if (_previewFrame == null || VisualTreeHelper.GetParent(_pinned) is not FrameworkElement area || area.ActualHeight <= 0)
         {
-            _previewFrame.Visibility = area.ActualHeight >= PreviewRoom ? Visibility.Visible : Visibility.Collapsed;
+            return;
+        }
+
+        var room = area.ActualHeight >= PreviewRoom;
+        _previewFrame.Visibility = room && !_previewHidden ? Visibility.Visible : Visibility.Collapsed;
+        if (_previewToggle is { } toggle)
+        {
+            toggle.Visibility = room ? Visibility.Visible : Visibility.Collapsed; // (nothing to show or hide)
+            var label = _previewHidden ? "Show preview" : "Hide preview";
+            toggle.Content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 8,
+                Children =
+                {
+                    new FontIcon { Glyph = ((char)(_previewHidden ? 0xE7B3 : 0xED1A)).ToString(), FontSize = 14 },
+                    new TextBlock { Text = label },
+                },
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(toggle, label);
+        }
+    }
+
+    /// <summary>
+    /// Shows <paramref name="scheme"/> (null: none of its own, i.e. Phosphor's own or inherited) in
+    /// the preview as if written at <paramref name="path"/>: config.toml read again with just that
+    /// changed, so colors it sets itself (background, a palette entry) still win, as after saving.
+    /// </summary>
+    private void PreviewScheme(IReadOnlyList<string> path, string? scheme)
+    {
+        if (_preview == null || _pinned.Visibility != Visibility.Visible || PreviewConfig() is not { } shown)
+        {
+            return;
+        }
+
+        try
+        {
+            var text = File.Exists(_config.Path) ? File.ReadAllText(_config.Path) : "";
+            var edited = ConfigFile.Parse(scheme == null ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, scheme), _config.Path);
+            // (Read without looking for shells: a found profile without a section has the global colors.)
+            var colors = (_editing is { } id ? edited.FindProfile(id)?.Config ?? edited.Global : edited.Global).Theme;
+            _preview.ApplyConfig(shown with { Theme = colors });
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            Log.Write($"settings: preview of {scheme}: {ex.Message}");
         }
     }
 
@@ -103,7 +189,7 @@ internal sealed partial class SettingsWindow
     {
         if (_preview != null && _pinned.Visibility == Visibility.Visible && PreviewConfig() is { } config)
         {
-            _preview.ApplyConfig(config);
+            _preview.ApplyConfig(config); // (while hidden too: it's current when shown again)
         }
     }
 }

@@ -141,7 +141,8 @@ public partial class App : Application
 
         // It comes back where it was (saved with the session), else over the window you're in;
         // during a run, on the section it was left on.
-        var settings = _settings = new SettingsWindow(_config, section ?? _settingsSection);
+        var settings = _settings = new SettingsWindow(_config, section ?? _settingsSection) { PreviewHidden = _settingsPreviewHidden };
+        settings.PreviewHiddenChanged += hidden => _settingsPreviewHidden = hidden;
         if (!WindowPlacement.Restore(settings, _settingsBounds))
         {
             if (_windows.LastOrDefault(w => w.AppWindow is { IsVisible: true }) is { } owner)
@@ -607,6 +608,9 @@ public partial class App : Application
 
     // The settings window's place (saved with the session) and, for this run, its section.
     private WindowBounds? _settingsBounds;
+
+    /// <summary>The settings window's preview is hidden (saved with the session).</summary>
+    private bool _settingsPreviewHidden;
     private string? _settingsSection;
     private string? _savedSession;
 
@@ -623,6 +627,7 @@ public partial class App : Application
         }
 
         _settingsBounds = saved?.Settings;
+        _settingsPreviewHidden = saved?.SettingsPreviewHidden ?? false;
     }
 
     // Held here: a DispatcherQueueTimer nothing references is garbage-collected and stops
@@ -721,7 +726,7 @@ public partial class App : Application
         try
         {
             SessionStore.Save(_sessionPath, SessionStore.Serialize(
-                new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds)));
+                new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds, _settingsPreviewHidden)));
             Log.Write("session: windows forgotten; the next start opens a new one");
         }
         catch (Exception ex)
@@ -745,7 +750,8 @@ public partial class App : Application
                 return;
             }
 
-            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds));
+            var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds,
+                _settingsPreviewHidden));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);

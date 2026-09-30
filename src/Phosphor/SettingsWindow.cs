@@ -1129,6 +1129,11 @@ internal sealed partial class SettingsWindow : Window
 
         scheme.Picked += _ => Changed();
         light.Picked += _ => Changed();
+        // Moving through a list previews each scheme (by itself, even while following light/dark).
+        scheme.Highlighted += name => PreviewScheme(path, name);
+        light.Highlighted += name => PreviewScheme(path, name);
+        scheme.HighlightEnded += RefreshPreview;
+        light.HighlightEnded += RefreshPreview;
         follow.Toggled += (_, _) =>
         {
             if (local || _updating)

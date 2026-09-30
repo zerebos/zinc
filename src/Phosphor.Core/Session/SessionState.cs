@@ -9,9 +9,10 @@ namespace Phosphor.Session;
 
 /// <summary>
 /// Everything to reopen: the normal windows (not the quick terminal), the command palette's recent
-/// commands, and where the settings window was.
+/// commands, where the settings window was, and whether its preview was hidden.
 /// </summary>
-public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null, WindowBounds? Settings = null)
+public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null, WindowBounds? Settings = null,
+    bool SettingsPreviewHidden = false)
 {
     public const int CurrentVersion = 1;
 }
