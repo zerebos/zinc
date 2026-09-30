@@ -59,10 +59,16 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Named after its folder, unless you named it yourself.
+        // Named after its folder, unless you named it yourself; with colors by folder, colored after
+        // it too, unless you colored it yourself (a color that's none or the old folder's is automatic).
         if (tab.CustomTitle == null || tab.CustomTitle == tab.Folder?.Name)
         {
             tab.CustomTitle = folder.Name;
+        }
+
+        if (_config.Global.WorkspaceColors == WorkspaceColorMode.Folder && (tab.Color == null || tab.Color == FolderColor(tab.Folder)))
+        {
+            SetTabColor(tab, FolderColor(folder));
         }
 
         tab.Folder = folder;
@@ -70,6 +76,10 @@ public sealed partial class MainWindow
         RefreshWorkspaceList();
         Log.Write($"workspace folder: {folder.Path}");
     }
+
+    /// <summary>A folder's color (<see cref="WorkspaceColors.ForFolder"/>); null without a folder.</summary>
+    private static Windows.UI.Color? FolderColor(WorkspaceFolder? folder) =>
+        folder == null ? null : WorkspaceLookPickers.ToColor(WorkspaceColors.All[WorkspaceColors.ForFolder(folder.Path)].Rgb);
 
     private void ClearWorkspaceFolder(WorkspaceTab tab)
     {
@@ -81,6 +91,11 @@ public sealed partial class MainWindow
         if (tab.CustomTitle == folder.Name)
         {
             tab.CustomTitle = null; // its shell names it again
+        }
+
+        if (_config.Global.WorkspaceColors == WorkspaceColorMode.Folder && tab.Color == FolderColor(folder))
+        {
+            SetTabColor(tab, null); // the folder's color goes with it (one you chose stays)
         }
 
         tab.Folder = null;

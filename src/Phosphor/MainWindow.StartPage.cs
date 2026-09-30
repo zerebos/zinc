@@ -175,7 +175,7 @@ public sealed partial class MainWindow
     /// </summary>
     private Windows.UI.Color? AutoColor(WorkspaceFolder? folder) => _config.Global.WorkspaceColors switch
     {
-        WorkspaceColorMode.Folder when folder != null => WorkspaceLookPickers.ToColor(WorkspaceColors.All[WorkspaceColors.ForFolder(folder.Path)].Rgb),
+        WorkspaceColorMode.Folder when folder != null => FolderColor(folder),
         WorkspaceColorMode.Cycle => WorkspaceLookPickers.ToColor(WorkspaceColors.All[App.Instance.NextWorkspaceColor() % WorkspaceColors.All.Count].Rgb),
         _ => null,
     };

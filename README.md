@@ -582,7 +582,8 @@ menu (and the palette's **Set workspace folder…** / **Clear workspace folder**
 folder after the fact: typed like "New tab in folder…", and the workspace takes the folder's name
 unless you named it yourself. `workspace-colors` in `[window]` colors new workspaces you don't color
 yourself: `"off"` (default), `"folder"` (a workspace started in a folder gets that folder's color, the
-same one every time) or `"cycle"` (each new workspace takes the next color).
+same one every time, and setting or clearing a folder later changes it too, unless you chose the
+color yourself) or `"cycle"` (each new workspace takes the next color).
 
 - `tab-groups = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces.
