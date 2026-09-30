@@ -47,7 +47,8 @@ public sealed partial class MainWindow : Window
     /// A workspace on its way to another window: its terminals keep running, detached from
     /// the old window's elements and events.
     /// </summary>
-    internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color);
+    internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color,
+        WorkspaceFolder? Folder = null, string? Icon = null);
 
     /// <summary>A title-bar tab and the workspace it shows.</summary>
     internal sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
@@ -79,6 +80,9 @@ public sealed partial class MainWindow : Window
 
         /// <summary>Its own folder (chosen on the new-workspace page): new tabs and splits start there.</summary>
         public WorkspaceFolder? Folder { get; set; }
+
+        /// <summary>Its own icon (a <see cref="WorkspaceIcons"/> name), shown instead of the active tab's profile icon.</summary>
+        public string? Icon { get; set; }
     }
 
     public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command, bool quick = false)
@@ -100,7 +104,7 @@ public sealed partial class MainWindow : Window
     internal MainWindow(ConfigFile config, Keybindings keybindings, WorkspaceTransfer adopt)
         : this(config, keybindings, quick: false)
     {
-        AddWorkspace(adopt.Workspace, adopt.CustomTitle, adopt.Color);
+        AddWorkspace(adopt.Workspace, adopt.CustomTitle, adopt.Color, folder: adopt.Folder, icon: adopt.Icon);
     }
 
     private MainWindow(ConfigFile config, Keybindings keybindings, bool quick)
@@ -492,17 +496,19 @@ public sealed partial class MainWindow : Window
 
     // ---------------------------------------------------------------- tabs
 
+    /// <summary>A new workspace running <paramref name="command"/> (colored per <c>workspace-colors</c>).</summary>
     private void OpenTab(Profile profile, string command, string workingDirectory) =>
-        AddWorkspace(new Workspace<TerminalTab>(CreatePane(profile, command, workingDirectory)));
+        AddWorkspace(new Workspace<TerminalTab>(CreatePane(profile, command, workingDirectory)), color: AutoColor(null));
 
     /// <summary>Shows a workspace (new, or moved from another window) as a new, selected tab.</summary>
     private WorkspaceTab AddWorkspace(Workspace<TerminalTab> workspace, string? customTitle = null, Windows.UI.Color? color = null,
-        int? index = null)
+        int? index = null, WorkspaceFolder? folder = null, string? icon = null)
     {
         // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
         // to its header, and Stretch pushed the label above the icon.
         var item = new TabViewItem();
-        var tab = new WorkspaceTab(item, workspace) { CustomTitle = customTitle, Color = color };
+        var tab = new WorkspaceTab(item, workspace) { CustomTitle = customTitle, Color = color, Folder = folder, Icon = icon };
+        tab.Header.SetIcon(WorkspaceIcons.Glyph(icon));
         if (_workspaceList == null)
         {
             item.Header = tab.Header; // with the list, the header is shown there instead
@@ -545,7 +551,7 @@ public sealed partial class MainWindow : Window
             pane.Unwire?.Invoke();
         }
 
-        var transfer = new WorkspaceTransfer(tab.Workspace, tab.CustomTitle, tab.Color);
+        var transfer = new WorkspaceTransfer(tab.Workspace, tab.CustomTitle, tab.Color, tab.Folder, tab.Icon);
         RemoveTab(tab, closeWhenEmpty: false);
         return transfer;
     }

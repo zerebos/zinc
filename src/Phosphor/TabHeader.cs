@@ -205,8 +205,12 @@ internal sealed partial class TabHeader : Grid
     private void UpdateToolTip() =>
         ToolTipService.SetToolTip(_owner, _attentionCount >= 2 ? $"{_title.Text}\n{_attentionCount} tabs need attention" : _title.Text);
 
+    private Profile? _profile;
+    private FontIcon? _workspaceIcon;
+
     public void SetProfile(Profile profile)
     {
+        _profile = profile;
         if (!_iconByProfile.ContainsKey(profile))
         {
             var icon = new IconSourceElement { IconSource = ProfileIcons.For(profile), Visibility = Visibility.Collapsed };
@@ -214,9 +218,36 @@ internal sealed partial class TabHeader : Grid
             _icons.Children.Insert(0, icon); // under the dot, when it's on the corner
         }
 
+        ShowIcon();
+    }
+
+    /// <summary>The workspace's own icon (a Segoe Fluent Icons glyph), shown instead of the profile's; null: the profile's.</summary>
+    public void SetIcon(char? glyph)
+    {
+        if (glyph is { } g)
+        {
+            if (_workspaceIcon == null)
+            {
+                _workspaceIcon = new FontIcon { FontSize = 15 };
+                _icons.Children.Insert(0, _workspaceIcon);
+            }
+
+            _workspaceIcon.Glyph = g.ToString();
+        }
+        else if (_workspaceIcon != null)
+        {
+            _icons.Children.Remove(_workspaceIcon);
+            _workspaceIcon = null;
+        }
+
+        ShowIcon();
+    }
+
+    private void ShowIcon()
+    {
         foreach (var (p, element) in _iconByProfile)
         {
-            var visibility = p == profile ? Visibility.Visible : Visibility.Collapsed;
+            var visibility = p == _profile && _workspaceIcon == null ? Visibility.Visible : Visibility.Collapsed;
             if (element.Visibility != visibility)
             {
                 element.Visibility = visibility;

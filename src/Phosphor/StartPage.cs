@@ -18,6 +18,13 @@ namespace Phosphor;
 /// in its usual folder, as a new workspace did before. A chosen folder becomes the workspace's own
 /// (<see cref="WorkspaceFolder"/>): its new tabs and splits start there.
 /// </summary>
+/// <summary>
+/// What the page starts: <see cref="Color"/> counts only when <see cref="ColorChosen"/> (else the
+/// automatic colors decide); a null <see cref="Icon"/> keeps the profile's icon.
+/// </summary>
+internal sealed record StartChoice(Profile Profile, WorkspaceFolder? Folder, string? Name, StartLayout Layout,
+    string? Icon, Windows.UI.Color? Color, bool ColorChosen);
+
 internal sealed partial class StartPage : UserControl
 {
     private readonly IReadOnlyList<Profile> _profiles;
@@ -32,6 +39,11 @@ internal sealed partial class StartPage : UserControl
     private readonly ListView _folderList = new() { SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _layoutList = new() { SelectionMode = ListViewSelectionMode.Single };
     private StartLayout _layout = StartLayout.One;
+    private string? _icon;
+    private Windows.UI.Color? _color;
+    private bool _colorChosen;
+    private readonly Button _iconButton = new() { Width = 36, Height = 32, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _colorButton = new() { Width = 36, Height = 32, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBox _name = new() { Width = 200, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _summary = new() { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly CheckBox _showPage = new() { Content = "Show this page for new workspaces", IsChecked = true };
@@ -100,17 +112,24 @@ internal sealed partial class StartPage : UserControl
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var nameLabel = new TextBlock { Text = "Name", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
         _summary.HorizontalAlignment = HorizontalAlignment.Right;
         footer.Children.Add(_showPage);
         Grid.SetColumn(_summary, 1);
         footer.Children.Add(_summary);
-        Grid.SetColumn(nameLabel, 2);
+        Grid.SetColumn(_iconButton, 2);
+        footer.Children.Add(_iconButton);
+        Grid.SetColumn(_colorButton, 3);
+        footer.Children.Add(_colorButton);
+        Grid.SetColumn(nameLabel, 4);
         footer.Children.Add(nameLabel);
-        Grid.SetColumn(_name, 3);
+        Grid.SetColumn(_name, 5);
         footer.Children.Add(_name);
-        Grid.SetColumn(start, 4);
+        Grid.SetColumn(start, 6);
         footer.Children.Add(start);
+        SetUpLookButtons();
 
         var root = new Grid { Padding = new Thickness(48, 28, 48, 16), RowSpacing = 14 };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -154,6 +173,7 @@ internal sealed partial class StartPage : UserControl
                 _profile = profile;
                 FillFolders();
                 UpdateSummary();
+                ShowLook(); // the icon button shows the profile's icon while none is chosen
             }
         };
         _folderList.SelectionChanged += async (_, _) =>
@@ -188,7 +208,7 @@ internal sealed partial class StartPage : UserControl
     }
 
     /// <summary>Start: the profile, the chosen folder (null: its usual one) and the name (null: from the folder, or the shell).</summary>
-    public event Action<Profile, WorkspaceFolder?, string?, StartLayout>? Started;
+    public event Action<StartChoice>? Started;
 
     /// <summary>A closed workspace's chip under Reopen: bring it back as it was.</summary>
     public event Action<ClosedWorkspace>? Reopen;
@@ -459,6 +479,51 @@ internal sealed partial class StartPage : UserControl
         return row;
     }
 
+    /// <summary>The icon and color buttons by the name: each opens its chooser (shared with the workspace menu).</summary>
+    private void SetUpLookButtons()
+    {
+        AutomationProperties.SetName(_iconButton, "Workspace icon");
+        AutomationProperties.SetName(_colorButton, "Workspace color");
+        var iconFlyout = new Flyout();
+        iconFlyout.Opening += (_, _) => iconFlyout.Content = WorkspaceLookPickers.Icons(_icon, name =>
+        {
+            _icon = name;
+            iconFlyout.Hide();
+            ShowLook();
+        });
+        _iconButton.Flyout = iconFlyout;
+        var colorFlyout = new Flyout();
+        colorFlyout.Opening += (_, _) => colorFlyout.Content = WorkspaceLookPickers.Colors(_colorChosen ? _color : null, color =>
+        {
+            (_color, _colorChosen) = (color, true);
+            colorFlyout.Hide();
+            ShowLook();
+        });
+        _colorButton.Flyout = colorFlyout;
+        ShowLook();
+    }
+
+    /// <summary>The buttons show the choices: the icon (or the profile's, dimmed), the color (or an empty ring: automatic or none).</summary>
+    private void ShowLook()
+    {
+        _iconButton.Content = _icon is { } name && Phosphor.Panes.WorkspaceIcons.Glyph(name) is { } glyph
+            ? new FontIcon { Glyph = glyph.ToString(), FontSize = 16 }
+            : new IconSourceElement { IconSource = ProfileIcons.For(_profile), Width = 16, Height = 16, Opacity = 0.6 };
+        ToolTipService.SetToolTip(_iconButton, _icon == null ? "Icon: the profile's" : $"Icon: {_icon}");
+        _colorButton.Content = new Border
+        {
+            Width = 16,
+            Height = 16,
+            CornerRadius = new CornerRadius(8),
+            BorderThickness = new Thickness(1),
+            BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"],
+            Background = _color is { } c ? new SolidColorBrush(c) : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+        };
+        ToolTipService.SetToolTip(_colorButton, _colorChosen
+            ? _color is { } chosen ? $"Color: {Phosphor.Panes.WorkspaceColors.All.FirstOrDefault(x => WorkspaceLookPickers.ToColor(x.Rgb) == chosen).Name}" : "Color: none"
+            : "Color: automatic (see Settings)");
+    }
+
     private static ListViewItem LayoutItem(StartLayout layout)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
@@ -525,7 +590,7 @@ internal sealed partial class StartPage : UserControl
     private void Start()
     {
         var name = _name.Text.Trim();
-        Started?.Invoke(_profile, _folder.Folder, name.Length > 0 ? name : null, _layout);
+        Started?.Invoke(new StartChoice(_profile, _folder.Folder, name.Length > 0 ? name : null, _layout, _icon, _color, _colorChosen));
     }
 
     private static string Ago(TimeSpan span) => span.TotalMinutes < 1 ? "just now"

@@ -155,6 +155,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ClosedWorkspaces` on App (session.json `closedWorkspaces`, 10, tested) → the page's Reopen chips /
   `reopen-workspace` → `ReopenWorkspace` via `SessionLayout.Restore` + `OpenSaved`). Later ideas are
   in .scratch/NOTES.md.
+- Workspace look: Core `Panes/WorkspaceLook.cs` (`WorkspaceIcons`: curated Segoe Fluent glyphs, saved by
+  name; `WorkspaceColors`: the 8 colors + `ForFolder` hash; `WorkspaceColorMode` = `workspace-colors`;
+  tested). `WorkspaceTab.Icon` → `TabHeader.SetIcon` (hides the profile icon; the sidebar shares the
+  header). `AddWorkspace(..., folder, icon)` is the one way in (restore, reopen, transfer, page).
+  Pickers: `WorkspaceLookPickers` (page + menu). `AutoColor` in MainWindow.StartPage.cs (page and
+  `OpenTab`; cycle counter on App). Set/Clear folder: `MainWindow.WorkspaceLook.cs`.
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,

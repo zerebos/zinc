@@ -304,6 +304,9 @@ public sealed record Config
     /// </summary>
     public bool NewWorkspacePage { get; init; } = true;
 
+    /// <summary>Colors for new workspaces you don't color yourself. Config: <c>[window] workspace-colors = off | folder | cycle</c>.</summary>
+    public Phosphor.Panes.WorkspaceColorMode WorkspaceColors { get; init; }
+
     /// <summary>Starting Phosphor when you sign in to Windows. Config: <c>[window] launch-at-login = off | tray | windows</c>.</summary>
     public LaunchAtLogin LaunchAtLogin { get; init; }
 
@@ -356,6 +359,7 @@ public sealed record Config
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var opacity) =>
                 this with { UnfocusedSplitOpacity = Math.Clamp(opacity, 0.15, 1.0) },
+            "workspace-colors" when TryMode<Phosphor.Panes.WorkspaceColorMode>(value, out var colors) => this with { WorkspaceColors = colors },
             "new-workspace-page" when bool.TryParse(value, out var page) => this with { NewWorkspacePage = page },
             "launch-at-login" when TryMode<LaunchAtLogin>(value, out var login) => this with { LaunchAtLogin = login },
             "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },

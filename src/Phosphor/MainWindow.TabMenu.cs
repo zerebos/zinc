@@ -13,12 +13,6 @@ namespace Phosphor;
 // The tab context menu: rename, color, duplicate, split, export, close.
 public sealed partial class MainWindow
 {
-    private static readonly (string Name, uint Rgb)[] TabColors =
-    [
-        ("Red", 0xC0392B), ("Orange", 0xD35400), ("Yellow", 0xB7950B), ("Green", 0x229954),
-        ("Teal", 0x148F77), ("Blue", 0x2471A3), ("Purple", 0x7D3C98), ("Pink", 0xB03A78),
-    ];
-
     private MenuFlyout BuildTabMenu(WorkspaceTab tab)
     {
         var menu = new MenuFlyout();
@@ -26,9 +20,9 @@ public sealed partial class MainWindow
         menu.Items.Add(Item("Rename workspace…", "", null, () => ShowRename(tab)));
 
         var colors = new MenuFlyoutSubItem { Text = "Workspace color", Icon = Glyph("") };
-        foreach (var (name, rgb) in TabColors)
+        foreach (var (name, rgb) in WorkspaceColors.All)
         {
-            var color = Windows.UI.Color.FromArgb(0xFF, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+            var color = WorkspaceLookPickers.ToColor(rgb);
             colors.Items.Add(new MenuFlyoutItem
             {
                 Text = name,
@@ -40,6 +34,21 @@ public sealed partial class MainWindow
         colors.Items.Add(new MenuFlyoutSeparator());
         colors.Items.Add(new MenuFlyoutItem { Text = "Reset", Command = Run(() => SetTabColor(tab, null)) });
         menu.Items.Add(colors);
+        menu.Items.Add(Item("Workspace icon…", ((char)0xE8B9).ToString(), null, () => ShowIconPicker(tab)));
+
+        // Its folder: what's set shows on the first line; Clear only while there's one.
+        var folder = new MenuFlyoutSubItem { Text = "Workspace folder", Icon = Glyph(((char)0xE8B7).ToString()) };
+        var current = new MenuFlyoutItem { IsEnabled = false };
+        var clear = new MenuFlyoutItem { Text = "Clear folder", Command = Run(() => ClearWorkspaceFolder(tab)) };
+        folder.Items.Add(current);
+        folder.Items.Add(new MenuFlyoutItem { Text = "Set folder…", Command = Run(() => AskWorkspaceFolder(tab)) });
+        folder.Items.Add(clear);
+        menu.Items.Add(folder);
+        menu.Opening += (_, _) =>
+        {
+            current.Text = tab.Folder is { } f ? f.Path : "None: tabs start in their profile's folder";
+            clear.IsEnabled = tab.Folder != null;
+        };
 
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Duplicate workspace", "", null, () =>

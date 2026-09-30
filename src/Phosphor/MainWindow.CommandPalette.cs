@@ -368,6 +368,13 @@ public sealed partial class MainWindow
             Custom("Move pane to new window", () => MovePaneToNewWindow(tab, tab.Active));
         }
 
+        commands.Add(new PaletteCommand("Workspace icon…", null, () => AskWorkspaceIcon(tab), AsksArgument: true));
+        commands.Add(new PaletteCommand("Set workspace folder…", null, () => AskWorkspaceFolder(tab), AsksArgument: true));
+        if (tab.Folder != null)
+        {
+            Custom("Clear workspace folder", () => ClearWorkspaceFolder(tab));
+        }
+
         Custom("Close other workspaces", () => CloseTabs(AllTabs().Where(t => t != tab)));
         Custom("Close workspaces to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action(TerminalAction.NextTab);
@@ -466,9 +473,9 @@ public sealed partial class MainWindow
         commands.AddRange(TabSwitcherCommands());
 
         // Workspace colors.
-        foreach (var (name, rgb) in TabColors)
+        foreach (var (name, rgb) in WorkspaceColors.All)
         {
-            var color = Windows.UI.Color.FromArgb(0xFF, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+            var color = WorkspaceLookPickers.ToColor(rgb);
             Custom($"Workspace color: {name}", () => SetTabColor(tab, color));
         }
 

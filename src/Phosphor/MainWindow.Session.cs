@@ -19,7 +19,7 @@ public sealed partial class MainWindow
         {
             if (SessionLayout.Restore(ws.Layout, OpenSaved) is { } workspace)
             {
-                AddWorkspace(workspace, ws.Title, ParseColor(ws.Color)).Folder = ws.Folder;
+                AddWorkspace(workspace, ws.Title, ParseColor(ws.Color), folder: ws.Folder, icon: ws.Icon);
             }
         }
 
@@ -68,7 +68,7 @@ public sealed partial class MainWindow
     {
         var tabs = AllTabs().ToList();
         var workspaces = tabs.Select(tab => new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color),
-            SessionLayout.Capture(tab.Workspace, DescribeTab), tab.Folder)).ToList();
+            SessionLayout.Capture(tab.Workspace, DescribeTab), tab.Folder, tab.Icon)).ToList();
         if (workspaces.Count == 0)
         {
             return null;

@@ -44,8 +44,9 @@ public sealed record WindowChrome(SidebarMode Sidebar, TitleBarMode TitleBar, Si
         ConfigSidebar == configSidebar && ConfigTitleBar == configTitleBar;
 }
 
-/// <summary>A workspace: its custom title and color (if set), its layout, and its own folder (if it has one).</summary>
-public sealed record WorkspaceState(string? Title, string? Color, LayoutNode Layout, Phosphor.Terminal.WorkspaceFolder? Folder = null);
+/// <summary>A workspace: its custom title and color (if set), its layout, its own folder and icon (if it has them).</summary>
+public sealed record WorkspaceState(string? Title, string? Color, LayoutNode Layout, Phosphor.Terminal.WorkspaceFolder? Folder = null,
+    string? Icon = null);
 
 /// <summary>A layout node: a split (<see cref="Orientation"/> set, <see cref="Ratio"/> = the first side's share) or a pane (<see cref="Pane"/>).</summary>
 public sealed record LayoutNode(SplitOrientation? Orientation = null, double? Ratio = null, LayoutNode? First = null, LayoutNode? Second = null,

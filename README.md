@@ -562,7 +562,8 @@ A **new workspace** (+, `Ctrl+Alt+T`, the sidebar's New workspace, the palette),
 (New window, `Ctrl+Shift+N`, the tray's New window), opens on a page for
 choosing how it starts: a profile, a folder (ones your shells were in lately, a typed path, or
 Browse…, which for a WSL profile opens in that distro), a layout (one pane, side by side, stacked,
-one big and two small, or a grid of four: every pane runs the profile in the folder) and a name.
+one big and two small, or a grid of four: every pane runs the profile in the folder), a name, and
+an icon and a color for the workspace (buttons by the name).
 Under **Reopen**, it lists the workspaces you closed lately (their tabs, splits, folders, name and
 color, as a restart would bring them back): a click reopens one at once. "Reopen closed workspace"
 in the palette (`reopen-workspace`, no key by default) brings back the last one. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
@@ -573,6 +574,15 @@ opens in PowerShell as `\\wsl.localhost\…`, a Windows one in WSL under `/mnt/c
 go anywhere, and Duplicate and "New tab in folder…" keep their own folder. "Show this page for new
 workspaces" at the bottom (`new-workspace-page` in `[window]`) turns the page off: + then starts the
 default at once. The ▾ menu and Phosphor's own start (with nothing to reopen) start at once, as before.
+
+A workspace's **icon** (a set of Windows' own icons: code, folder, globe, bug, cloud…) shows on its tab
+and in the sidebar instead of its active tab's profile icon; set it on the page, from the workspace's
+menu (**Workspace icon…**) or the palette (which previews each one). **Workspace folder** in the same
+menu (and the palette's **Set workspace folder…** / **Clear workspace folder**) sets or clears its
+folder after the fact: typed like "New tab in folder…", and the workspace takes the folder's name
+unless you named it yourself. `workspace-colors` in `[window]` colors new workspaces you don't color
+yourself: `"off"` (default), `"folder"` (a workspace started in a folder gets that folder's color, the
+same one every time) or `"cycle"` (each new workspace takes the next color).
 
 - `tab-groups = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces.

@@ -36,8 +36,7 @@ public sealed partial class MainWindow
             Tag = page,
             Content = page,
         };
-        page.Started += (profile, folder, name, layout) =>
-            Ui.Guard("starting a workspace", () => StartWorkspace(item, profile, folder, name, layout));
+        page.Started += choice => Ui.Guard("starting a workspace", () => StartWorkspace(item, choice));
         page.Cancelled += () => Ui.Guard("leaving the new workspace page", () => LeaveStartPage(item));
         page.ShowPageChanged += SetNewWorkspacePage;
         page.Reopen += closed => Ui.Guard("reopening a workspace", () => ReopenWorkspace(closed, item));
@@ -49,16 +48,17 @@ public sealed partial class MainWindow
     }
 
     /// <summary>The page's choice becomes a workspace in its place.</summary>
-    private void StartWorkspace(TabViewItem item, Profile profile, WorkspaceFolder? folder, string? name,
-        StartLayout layout = StartLayout.One)
+    private void StartWorkspace(TabViewItem item, StartChoice choice)
     {
+        var (profile, folder, name, layout) = (choice.Profile, choice.Folder, choice.Name, choice.Layout);
         var (command, directory) = StartIn(folder, profile);
         var index = Tabs.TabItems.IndexOf(item);
         // Every pane of the layout runs the profile in the folder. Named as asked, else after its
         // folder; without either, its shell names it (as before).
         var workspace = StartLayouts.Build(layout, () => CreatePane(profile, command, directory));
-        var tab = AddWorkspace(workspace, name ?? folder?.Name, index: index < 0 ? null : index);
-        tab.Folder = folder;
+        // Its color: the one chosen (even "none"), else the automatic one (workspace-colors).
+        var color = choice.ColorChosen ? choice.Color : AutoColor(folder);
+        var tab = AddWorkspace(workspace, name ?? folder?.Name, color, index < 0 ? null : index, folder, choice.Icon);
         Tabs.TabItems.Remove(item); // no longer selected: AddWorkspace selected the new one
         RefreshWorkspaceList();
         FocusActive(tab);
@@ -83,8 +83,8 @@ public sealed partial class MainWindow
         }
 
         var index = page != null ? Tabs.TabItems.IndexOf(page) : -1;
-        var tab = AddWorkspace(workspace, closed.State.Title, ParseColor(closed.State.Color), index < 0 ? null : index);
-        tab.Folder = closed.State.Folder;
+        var tab = AddWorkspace(workspace, closed.State.Title, ParseColor(closed.State.Color), index < 0 ? null : index,
+            closed.State.Folder, closed.State.Icon);
         if (page != null)
         {
             Tabs.TabItems.Remove(page);
@@ -100,7 +100,8 @@ public sealed partial class MainWindow
     {
         try
         {
-            var state = new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color), SessionLayout.Capture(tab.Workspace, DescribeTab), tab.Folder);
+            var state = new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color), SessionLayout.Capture(tab.Workspace, DescribeTab),
+                tab.Folder, tab.Icon);
             App.Instance.ClosedWorkspaces.Note(new ClosedWorkspace(tab.Header.Title, state, DateTimeOffset.UtcNow));
         }
         catch (Exception ex)
@@ -114,7 +115,7 @@ public sealed partial class MainWindow
     {
         if (Tabs.TabItems.Count == 1)
         {
-            StartWorkspace(item, _config.DefaultProfile, null, null);
+            StartWorkspace(item, new StartChoice(_config.DefaultProfile, null, null, StartLayout.One, null, null, false));
             return;
         }
 
@@ -167,6 +168,17 @@ public sealed partial class MainWindow
         Log.Write($"workspace folder {folder.Path} isn't reachable from {profile.Name}: its usual folder");
         return (command, usual);
     }
+
+    /// <summary>
+    /// The automatic color for a new workspace (<c>workspace-colors</c>): its folder's, or the next
+    /// in turn; null when they're off (or "by folder" without a folder).
+    /// </summary>
+    private Windows.UI.Color? AutoColor(WorkspaceFolder? folder) => _config.Global.WorkspaceColors switch
+    {
+        WorkspaceColorMode.Folder when folder != null => WorkspaceLookPickers.ToColor(WorkspaceColors.All[WorkspaceColors.ForFolder(folder.Path)].Rgb),
+        WorkspaceColorMode.Cycle => WorkspaceLookPickers.ToColor(WorkspaceColors.All[App.Instance.NextWorkspaceColor() % WorkspaceColors.All.Count].Rgb),
+        _ => null,
+    };
 
     /// <summary>The page's "Show this page for new workspaces" box, written to config.toml.</summary>
     private void SetNewWorkspacePage(bool show)

@@ -623,6 +623,11 @@ public partial class App : Application
     /// <summary>Folders shells reported lately, for the new-workspace page (saved with the session).</summary>
     internal RecentFolders RecentFolders { get; private set; } = new();
 
+    private int _nextWorkspaceColor;
+
+    /// <summary>For <c>workspace-colors = cycle</c>: the next color's turn (shared by every window).</summary>
+    internal int NextWorkspaceColor() => _nextWorkspaceColor++;
+
     /// <summary>Workspaces closed lately, for reopening (saved with the session).</summary>
     internal ClosedWorkspaces ClosedWorkspaces { get; private set; } = new();
 
