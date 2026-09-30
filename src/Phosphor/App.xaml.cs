@@ -166,6 +166,8 @@ public partial class App : Application
         }
 
         _welcome = new WelcomeWindow(_config, firstRun);
+        // Centered on the screen: the main one on first run, else the one your window is on.
+        WindowPlacement.CenterOnScreen(_welcome, 940, 720, _windows.LastOrDefault(w => w.AppWindow is { IsVisible: true }));
         _welcome.Finished += choices =>
         {
             _welcome = null;

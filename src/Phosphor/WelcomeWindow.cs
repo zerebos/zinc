@@ -61,7 +61,6 @@ internal sealed partial class WelcomeWindow : Window
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
-        WindowPlacement.Resize(this, 940, 720);
         _firstRun = firstRun;
 
         // Start from what's in force; on first run, workspaces in the sidebar (Phosphor at its most

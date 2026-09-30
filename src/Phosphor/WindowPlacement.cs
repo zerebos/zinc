@@ -39,6 +39,21 @@ internal static partial class WindowPlacement
         window.AppWindow.MoveAndResize(new RectInt32(x, y, w, h));
     }
 
+    /// <summary>
+    /// Sizes <paramref name="window"/> in DIPs and centers it on the screen <paramref name="owner"/>
+    /// is on (none: the main screen), as onboarding windows are.
+    /// </summary>
+    public static void CenterOnScreen(Window window, double width, double height, Window? owner = null)
+    {
+        var display = owner?.AppWindow is { } over
+            ? DisplayArea.GetFromWindowId(over.Id, DisplayAreaFallback.Primary)
+            : DisplayArea.Primary;
+        var area = display.WorkArea;
+        var scale = Scale(owner ?? window);
+        int w = Fit(width * scale, area.Width), h = Fit(height * scale, area.Height);
+        window.AppWindow.MoveAndResize(new RectInt32(area.X + (area.Width - w) / 2, area.Y + (area.Height - h) / 2, w, h));
+    }
+
     /// <summary>Puts <paramref name="window"/> back where it was saved, if that's still on a screen.</summary>
     public static bool Restore(Window window, WindowBounds? saved)
     {
