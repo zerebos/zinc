@@ -20,6 +20,51 @@ public sealed record DiscoverySettings(
 /// </summary>
 public static class ProfileDiscovery
 {
+    /// <summary>
+    /// The search a profile id belongs to (its <c>[discover]</c> key: "wsl", "ssh", "visual-studio"…),
+    /// or null for an id no search makes (a profile of your own).
+    /// </summary>
+    public static string? SourceOf(string id) => id switch
+    {
+        _ when id.StartsWith("wsl:", StringComparison.Ordinal) => "wsl",
+        _ when id.StartsWith("ssh:", StringComparison.Ordinal) => "ssh",
+        _ when id.StartsWith("vs:", StringComparison.Ordinal) => "visual-studio",
+        _ when id.StartsWith("msys2:", StringComparison.Ordinal) => "msys2",
+        "git-bash" => "git-bash",
+        "pwsh" or "powershell" => "powershell",
+        "cmd" => "cmd",
+        _ => null,
+    };
+
+    /// <summary>
+    /// The name a search would give profile <paramref name="id"/> ("SSH - homelab", "Fedora"), for
+    /// one it didn't find this time (not here any more, or its search is off).
+    /// </summary>
+    public static string NameFor(string id) => id switch
+    {
+        _ when id.StartsWith("ssh:", StringComparison.Ordinal) => $"SSH - {id[4..]}",
+        _ when id.StartsWith("wsl:", StringComparison.Ordinal) => id[4..],
+        "pwsh" => "PowerShell",
+        "powershell" => "Windows PowerShell",
+        "cmd" => "Command Prompt",
+        "git-bash" => "Git Bash",
+        "msys2:ucrt64" => "MSYS2 UCRT64",
+        _ => id,
+    };
+
+    /// <summary>Whether search <paramref name="source"/> (a <see cref="SourceOf"/> key) is on.</summary>
+    public static bool IsOn(DiscoverySettings settings, string source) => source switch
+    {
+        "wsl" => settings.Wsl,
+        "ssh" => settings.Ssh,
+        "visual-studio" => settings.VisualStudio,
+        "msys2" => settings.Msys2,
+        "git-bash" => settings.GitBash,
+        "powershell" => settings.PowerShell,
+        "cmd" => settings.Cmd,
+        _ => true,
+    };
+
     public static IReadOnlyList<DiscoveredProfile> Discover(DiscoverySettings settings)
     {
         var found = new List<DiscoveredProfile>();

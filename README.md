@@ -84,7 +84,9 @@ delete, or undo your changes to a found one), each one's name, command, folder, 
 folder button to browse for them) and visibility, and its
 own font, colors and padding: each shows what it inherits until you change it there, and the
 reset arrow makes it inherit again ("Inherited from Appearance" links to where it's set). Also which
-shells Phosphor looks for. Under **Keyboard**: every action with its keys, grouped (Clipboard, Tabs,
+shells Phosphor looks for, and what each search found. A found profile you changed that can't open
+any more (its shell is gone, or its search is turned off) stays in the list, saying why, with
+**Delete** or **Turn on** the search; it's left out of the menus meanwhile. Under **Keyboard**: every action with its keys, grouped (Clipboard, Tabs,
 Panes…) and filterable by name or key; click a key to take it away, **+** to add one
 by pressing it (it says if another action has that key, and takes it over), the reset arrow for
 the defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key

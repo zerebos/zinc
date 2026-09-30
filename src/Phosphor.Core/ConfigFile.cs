@@ -22,6 +22,28 @@ public sealed record Profile(string Id, string Name, Config Config, bool Hidden 
 
     /// <inheritdoc cref="FoundName"/>
     public string? FoundCommand { get; init; }
+
+    /// <summary>The search that finds this profile (<see cref="ProfileDiscovery.SourceOf"/>: "wsl", "ssh"…), or null for your own.</summary>
+    public string? Source { get; init; }
+
+    /// <summary>
+    /// Why this profile can't open, if it can't: changes you made to a found profile are kept after
+    /// its shell is gone, or while its search is turned off (it's hidden from menus then).
+    /// </summary>
+    public ProfileMissing Missing { get; init; }
+}
+
+/// <summary>Why a found profile you changed can't open any more.</summary>
+public enum ProfileMissing
+{
+    /// <summary>It can open.</summary>
+    None,
+
+    /// <summary>Its shell isn't on this PC any more (uninstalled, an ssh host removed).</summary>
+    NotFound,
+
+    /// <summary>Its search ("Find shells on this PC") is turned off.</summary>
+    SearchOff,
 }
 
 /// <summary>
@@ -479,17 +501,21 @@ public sealed class ConfigFile
                 var hidden = false;
                 var config = global;
                 DiscoveredProfile? foundAs = null;
+                var source = ProfileDiscovery.SourceOf(id);
+                var missing = ProfileMissing.None;
                 if (found.Remove(id, out var basis))
                 {
                     foundAs = basis;
                     name = basis.Name;
                     config = FromDiscovery(config, basis);
                 }
-                else if (id.Contains(':') && !entries.Any(e => e.Path is ["command"]))
+                else if (source != null && !entries.Any(e => e.Path is ["command"]))
                 {
-                    // Changes to a found profile that isn't installed (any more): nothing to run.
-                    Log.Write($"config: profile '{id}' wasn't found on this machine; hiding it");
-                    hidden = true;
+                    // Changes to a found profile that isn't here (any more), or whose search is
+                    // off: nothing to run. Kept, hidden from menus, and the settings say why.
+                    missing = ProfileDiscovery.IsOn(discovery, source) ? ProfileMissing.NotFound : ProfileMissing.SearchOff;
+                    name = ProfileDiscovery.NameFor(id); // what the search called it (a name of its own still wins below)
+                    Log.Write($"config: profile '{id}' {(missing == ProfileMissing.SearchOff ? $"is from the {source} search, which is off" : "wasn't found on this machine")}; hiding it");
                 }
 
                 foreach (var e in entries)
@@ -510,16 +536,20 @@ public sealed class ConfigFile
                 }
 
                 config = ApplyGroups(config, entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: true);
-                profiles.Add(new Profile(id, name, config, hidden)
+                profiles.Add(new Profile(id, name, config, hidden || missing != ProfileMissing.None)
                 {
                     Found = foundAs != null, InFile = true, FoundName = foundAs?.Name, FoundCommand = foundAs?.Command,
+                    Source = source, Missing = missing,
                 });
                 _profileValues[id] = entries.GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.Last().Value);
             }
 
             foreach (var d in discovered.Where(d => found.ContainsKey(d.Id)))
             {
-                profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d)) { Found = true, FoundName = d.Name, FoundCommand = d.Command });
+                profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d))
+                {
+                    Found = true, FoundName = d.Name, FoundCommand = d.Command, Source = ProfileDiscovery.SourceOf(d.Id),
+                });
             }
 
             if (listOrder != null)

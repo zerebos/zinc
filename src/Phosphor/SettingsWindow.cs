@@ -421,11 +421,107 @@ internal sealed partial class SettingsWindow : Window
         };
         _page.Children.Add(list);
 
-        AddGroup("Find shells on this PC", SettingsCatalog.Discovery);
+        _page.Children.Add(GroupTitle("Find shells on this PC"));
+        foreach (var search in SettingsCatalog.Discovery)
+        {
+            var card = Card(search);
+            _page.Children.Add(card);
+            if (card.Child is Grid { Children: [StackPanel text, ..] })
+            {
+                text.Children.Add(FoundBy(search.Path[1]));
+            }
+        }
     }
 
     private static List<(string Id, string Name, bool Hidden)> Listed(ConfigFile config) =>
         config.Profiles.Select(p => (p.Id, p.Name, p.Hidden)).ToList();
+
+    /// <summary>The name of search <paramref name="source"/> ("SSH hosts"), as its switch shows it.</summary>
+    private static string SearchLabel(string? source) =>
+        SettingsCatalog.Discovery.FirstOrDefault(d => d.Path[1] == source)?.Label ?? source ?? "";
+
+    /// <summary>What turns a profile that can't open back on: its search, or (gone for good) Delete, confirmed.</summary>
+    private Button? MissingFix(Profile profile)
+    {
+        if (profile.Missing == ProfileMissing.SearchOff && profile.Source is { } source)
+        {
+            var on = new Button { Content = $"Turn on “{SearchLabel(source)}”" };
+            on.Click += (_, _) => Write(["discover", source], null); // on is the default: the line goes
+            return on;
+        }
+
+        if (profile.Missing != ProfileMissing.NotFound)
+        {
+            return null;
+        }
+
+        var delete = new Button { Content = "Delete" };
+        AutomationProperties.SetName(delete, $"Delete {profile.Name}");
+        var confirm = new Button { Content = "Delete it", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        AutomationProperties.SetName(confirm, "Delete it");
+        var flyout = new Flyout
+        {
+            Content = new StackPanel
+            {
+                Spacing = 10,
+                MaxWidth = 300,
+                Children = { new TextBlock { Text = "Removes its section from config.toml, with your changes to it.", TextWrapping = TextWrapping.Wrap }, confirm },
+            },
+        };
+        delete.Flyout = flyout;
+        confirm.Click += (_, _) =>
+        {
+            flyout.Hide();
+            if (_config.HasErrors)
+            {
+                return;
+            }
+
+            Guard($"removing profile {profile.Id}", () =>
+            {
+                _writer.RemoveTable(["profile", profile.Id]);
+                Wrote?.Invoke();
+                UpdateChanges();
+            });
+            _editing = null;
+            Render();
+        };
+        return delete;
+    }
+
+    /// <summary>Under a search's switch: what it found (links to each profile), or what it keeps while it's off.</summary>
+    private FrameworkElement FoundBy(string source)
+    {
+        var mine = _config.Profiles.Where(p => p.Source == source).ToList();
+        var found = mine.Where(p => p.Found).ToList();
+        var kept = mine.Count(p => p.Missing == ProfileMissing.SearchOff);
+        var line = new WrapPanel { HorizontalSpacing = 10, VerticalSpacing = 2, Margin = new Thickness(0, 4, 0, 0) };
+        var label = new TextBlock
+        {
+            FontSize = 12,
+            VerticalAlignment = VerticalAlignment.Center,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+        };
+        line.Children.Add(label);
+        if (found.Count > 0)
+        {
+            label.Text = "Found:";
+            foreach (var profile in found)
+            {
+                var link = new HyperlinkButton { Content = profile.Name, FontSize = 12, Padding = new Thickness(0) };
+                link.Click += (_, _) => GoTo("profiles", profile.Id, null);
+                line.Children.Add(link);
+            }
+        }
+        else
+        {
+            label.Text = kept > 0
+                ? $"Off: {kept} profile{(kept == 1 ? "" : "s")} you changed {(kept == 1 ? "is" : "are")} kept, but can't open."
+                : _config.ValueOf($"discover.{source}") is not false ? "Nothing found on this PC." : "Off.";
+        }
+
+        return line;
+    }
 
     /// <summary>
     /// The profiles' order, as <c>profile-order</c> (every id, so profiles found later go after
@@ -450,8 +546,13 @@ internal sealed partial class SettingsWindow : Window
             what.Add("default");
         }
 
-        what.Add(profile.Found ? profile.InFile ? "found on this PC, with your changes" : "found on this PC" : "yours");
-        if (profile.Hidden)
+        what.Add(profile.Missing switch
+        {
+            ProfileMissing.NotFound => "not found on this PC any more",
+            ProfileMissing.SearchOff => $"“{SearchLabel(profile.Source)}” is turned off",
+            _ => profile.Found ? profile.InFile ? "found on this PC, with your changes" : "found on this PC" : "yours",
+        });
+        if (profile.Hidden && profile.Missing == ProfileMissing.None)
         {
             what.Add("hidden");
         }
@@ -513,7 +614,16 @@ internal sealed partial class SettingsWindow : Window
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var icon = new IconSourceElement { IconSource = ProfileIcons.For(profile), Width = 20, Height = 20, VerticalAlignment = VerticalAlignment.Center };
+        // A profile that can't open gets a warning, not the icon of the shell it would fall back to.
+        var icon = new IconSourceElement
+        {
+            IconSource = profile.Missing == ProfileMissing.None
+                ? ProfileIcons.For(profile)
+                : new FontIconSource { Glyph = ((char)0xE7BA).ToString(), FontSize = 18 },
+            Width = 20,
+            Height = 20,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
         var text = new StackPanel
         {
             Spacing = 1,
@@ -530,6 +640,11 @@ internal sealed partial class SettingsWindow : Window
             },
         };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { edit, more } };
+        if (MissingFix(profile) is { } fix)
+        {
+            fix.VerticalAlignment = VerticalAlignment.Center;
+            buttons.Children.Insert(0, fix);
+        }
         Grid.SetColumn(text, 1);
         Grid.SetColumn(buttons, 2);
         grid.Children.Add(icon);
@@ -614,16 +729,35 @@ internal sealed partial class SettingsWindow : Window
             Render();
         };
         _page.Children.Insert(0, back);
-        _page.Children.Add(Note(profile is { Found: true }
-            ? $"Found on this PC ({profile.FoundCommand}). What you change here is kept in its own section in config.toml."
-            : "Yours, in its own section in config.toml."));
+        if (profile is { Missing: not ProfileMissing.None })
+        {
+            var why = new InfoBar
+            {
+                IsOpen = true,
+                IsClosable = false,
+                Severity = InfoBarSeverity.Warning,
+                Title = "This profile can't open",
+                Message = profile.Missing == ProfileMissing.SearchOff
+                    ? $"It was found by “{SearchLabel(profile.Source)}”, which is turned off. Your changes to it are kept in config.toml."
+                    : "It was found on this PC, but isn't here any more. Your changes to it are kept in config.toml; delete it if it's gone for good.",
+                ActionButton = MissingFix(profile),
+                Margin = new Thickness(0, 0, 0, 8),
+            };
+            _page.Children.Add(why);
+        }
+        else
+        {
+            _page.Children.Add(Note(profile is { Found: true }
+                ? $"Found on this PC ({profile.FoundCommand}). What you change here is kept in its own section in config.toml."
+                : "Yours, in its own section in config.toml."));
+        }
 
         _page.Children.Add(GroupTitle("General"));
         foreach (var field in SettingsCatalog.ProfileFields)
         {
             var hint = field.Key switch
             {
-                "name" => profile?.FoundName ?? id,
+                "name" => profile?.FoundName ?? (profile is { Missing: not ProfileMissing.None } ? profile.Name : id),
                 "command" => profile?.FoundCommand ?? "The default shell",
                 _ => field.Placeholder,
             };
