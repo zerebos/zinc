@@ -28,6 +28,9 @@ public sealed partial class TerminalControl
     private bool _composing;
     private bool _clearingInput;
 
+    /// <summary>Between a composition's end and the box being emptied (see TextCompositionEnded).</summary>
+    private bool _settling;
+
     private bool IsFromInputMethodBox(object source) => _inputBox != null && ReferenceEquals(source, _inputBox);
 
     /// <summary>Moves focus into the input box (made on first use); false with input methods off.</summary>
@@ -102,7 +105,7 @@ public sealed partial class TerminalControl
         // sent to the program, and kept out of the box, which holds only what's being composed.
         box.BeforeTextChanging += (_, e) =>
         {
-            if (_composing || _clearingInput)
+            if (_composing || _clearingInput || _settling)
             {
                 return;
             }
@@ -129,14 +132,28 @@ public sealed partial class TerminalControl
             var text = e.Length > 0 && e.StartIndex + e.Length <= box.Text.Length ? box.Text.Substring(e.StartIndex, e.Length) : box.Text;
             _composing = false;
             box.Opacity = 0;
-            ClearInputBox();
-            PlaceInputBox();
-            Log.Write($"ime: committed {text.Length} char(s)");
+            Log.Write($"ime: committed {text.Length} char(s) (box held {box.Text.Length})");
             if (text.Length > 0 && _session is { } session)
             {
                 session.SendInput(text);
                 ResetBlink();
             }
+
+            // Emptied once the text services are done: a change made during this event doesn't take
+            // (the next composition then started after the old text). Until then the box's changes
+            // are theirs (the commit settling), not typing.
+            _settling = true;
+            DispatcherQueue.SafeEnqueue(() =>
+            {
+                _settling = false;
+                if (!_composing) // (Korean: the next syllable may be composing already; cleared after it)
+                {
+                    ClearInputBox();
+                    Log.Write($"ime: box cleared ({box.Text.Length} left)");
+                }
+
+                PlaceInputBox();
+            });
         };
 
         // Its clear button would show over the terminal; it has no use here.
