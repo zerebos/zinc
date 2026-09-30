@@ -71,6 +71,27 @@ public enum CloseOnExit
     Never,
 }
 
+/// <summary>Starting when you sign in. Config: <c>launch-at-login = off | tray | windows</c>.</summary>
+public enum LaunchAtLogin
+{
+    Off,
+
+    /// <summary>No window: the tray icon and the quick terminal's hotkey are ready.</summary>
+    Tray,
+
+    /// <summary>The windows you had open (or a new one).</summary>
+    Windows,
+}
+
+/// <summary>Programs reading the clipboard (OSC 52). Config: <c>clipboard-read = ask | allow | deny</c>.</summary>
+public enum ClipboardAccess
+{
+    /// <summary>Each read asks: allow once, for the tab, or deny.</summary>
+    Ask,
+    Allow,
+    Deny,
+}
+
 /// <summary>What the bell (BEL) does. Config: <c>bell = attention | flash | none</c>.</summary>
 public enum BellMode
 {
@@ -213,10 +234,10 @@ public sealed record Config
     public bool ProgramTitles { get; init; } = true;
 
     /// <summary>
-    /// Programs may read the clipboard with OSC 52 (off by default: anything running in the
-    /// terminal, e.g. over ssh, could read it). Config: <c>clipboard-read = allow | deny</c>.
+    /// Whether programs may read the clipboard with OSC 52: anything running in the terminal, e.g.
+    /// over ssh, could read it, so by default each read asks. Config: <c>clipboard-read = ask | allow | deny</c>.
     /// </summary>
-    public bool ClipboardRead { get; init; }
+    public ClipboardAccess ClipboardRead { get; init; } = ClipboardAccess.Ask;
 
     /// <summary>
     /// Whether closing the last window quits Phosphor (global only). Null (the default): keep
@@ -277,6 +298,9 @@ public sealed record Config
     /// </summary>
     public bool RestoreSession { get; init; } = true;
 
+    /// <summary>Starting Phosphor when you sign in to Windows. Config: <c>[window] launch-at-login = off | tray | windows</c>.</summary>
+    public LaunchAtLogin LaunchAtLogin { get; init; }
+
     /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
     public GhosttyColorRgb? UnfocusedSplitFill { get; init; }
 
@@ -326,6 +350,7 @@ public sealed record Config
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var opacity) =>
                 this with { UnfocusedSplitOpacity = Math.Clamp(opacity, 0.15, 1.0) },
+            "launch-at-login" when TryMode<LaunchAtLogin>(value, out var login) => this with { LaunchAtLogin = login },
             "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
@@ -356,7 +381,7 @@ public sealed record Config
             "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
             "selection-background" when TryColor(value, out var c) => this with { Theme = theme with { SelectionBackground = c } },
             "selection-foreground" when TryColor(value, out var c) => this with { Theme = theme with { SelectionForeground = c } },
-            "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
+            "clipboard-read" when TryMode<ClipboardAccess>(value, out var read) => this with { ClipboardRead = read },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
                 this with { QuickTerminal = QuickTerminal with { Position = position } },
             "quick-terminal-screen" when Enum.TryParse<QuickTerminalScreen>(value, true, out var screen) =>

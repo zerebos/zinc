@@ -154,14 +154,14 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void ClipboardWriteAllowedReadDenied()
+    public void ClipboardWriteAllowedReadAsks()
     {
         Assert.True(Load("").ClipboardWrite);
-        Assert.False(Load("").ClipboardRead);
+        Assert.Equal(ClipboardAccess.Ask, Load("").ClipboardRead);
         Assert.False(Load("[terminal]\nclipboard-write = \"deny\"").ClipboardWrite);
-        Assert.True(Load("[terminal]\nclipboard-read = \"allow\"").ClipboardRead);
-        Assert.True(Load("[terminal]\nclipboard-read = true").ClipboardRead);
-        Assert.False(Load("[terminal]\nclipboard-read = \"ask\"").ClipboardRead); // Ghostty's "ask" isn't supported (yet)
+        Assert.Equal(ClipboardAccess.Allow, Load("[terminal]\nclipboard-read = \"allow\"").ClipboardRead);
+        Assert.Equal(ClipboardAccess.Allow, Load("[terminal]\nclipboard-read = true").ClipboardRead);
+        Assert.Equal(ClipboardAccess.Deny, Load("[terminal]\nclipboard-read = false").ClipboardRead);
     }
 
     [Fact]

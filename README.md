@@ -180,9 +180,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   Unset, Ghostty's: ``'"│`|:;,()[]{}<>$``; e.g. add `/` to select one part of a path.
 - `clipboard-write`: `true` (default) or `false`, for programs copying with OSC 52 (tmux,
   neovim, remote shells over ssh).
-- `clipboard-read`: `false` (default) or `true`, for programs reading the clipboard with
-  OSC 52. Off by default because anything running in the terminal, including a remote host,
-  could read it.
+- `clipboard-read`: for programs reading the clipboard with OSC 52 (tmux, neovim, remote shells).
+  `"ask"` (default) asks each time, showing what's on the clipboard: allow once, allow in this tab,
+  or deny (the program waits for the answer); `"allow"` (or `true`), `"deny"` (or `false`).
+  Anything running in the terminal, including a remote host, could read it.
 - `command-marks`: `"failures"` (default), `"all"` or `"none"`: which commands get a bar beside
   them ([shell integration](#shell-integration)).
 - `shell-integration`: `"auto"` (default) loads Phosphor's [shell integration](#shell-integration)
@@ -306,8 +307,15 @@ tray with no window open, reopens the saved windows.
 
 Phosphor shows a notification-area icon while it runs. Clicking it brings back the most
 recently used window (or the saved windows); right-clicking offers New window, Show/Hide quick
-terminal, and Quit Phosphor, which closes every window, the hidden quick terminal included.
-Quit Phosphor is also in the command palette.
+terminal, Settings, Quit Phosphor, which closes every window, the hidden quick terminal
+included, and Quit and start fresh next time, which quits without keeping the windows (the next
+start opens a new one). Both are also in the command palette.
+
+`launch-at-login` in `[window]` starts Phosphor when you sign in to Windows: `"tray"` without a
+window (the quick terminal's hotkey works; the tray icon opens your windows), `"windows"` with
+your windows as you left them, `"off"` (default). Phosphor keeps a "Phosphor" entry in your
+startup apps (the Run key) in step with it, pointing at the installed version; switching it off
+in Windows' Startup apps page works too (Phosphor leaves that switch alone).
 
 When the last window closes, Phosphor keeps running in the tray while its quick terminal hotkey
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
@@ -503,6 +511,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `reload-config` | Read the config again. |
 | `open-settings` | Open the settings window (`Ctrl+,`). |
 | `quit` | Close every window and exit. |
+| `quit-fresh` | Close every window and exit without saving them: next time opens a new window. |
 
 Links are OSC 8 hyperlinks (e.g. `ls --hyperlink`) and plain `http(s)`,
 `ftp`, `mailto` and `file` URLs in the text. Hovering a hyperlink with Ctrl shows its

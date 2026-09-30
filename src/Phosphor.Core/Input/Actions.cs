@@ -83,6 +83,8 @@ public static class Actions
         new("reload-config", TerminalAction.ReloadConfig, Arg.None, "Reload config", "Read config.toml again."),
         new("open-settings", TerminalAction.OpenSettings, Arg.None, "Settings", "Open the settings window."),
         new("quit", TerminalAction.Quit, Arg.None, "Quit Phosphor", "Close every window and exit."),
+        new("quit-fresh", TerminalAction.QuitFresh, Arg.None, "Quit and start fresh next time",
+            "Close every window and exit without saving them: next time opens a new window."),
     ];
 
     /// <summary>Unbinds a chord in <c>[keys]</c>.</summary>
@@ -173,7 +175,7 @@ public static class Actions
         ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
         ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows",
         ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
-        ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor",
+        ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor", ["quit-fresh"] = "Phosphor",
     };
 
     private static readonly Dictionary<string, string> SearchWordsOf = new()

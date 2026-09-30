@@ -4,6 +4,14 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace Phosphor.Terminal;
 
+/// <summary>The answer to "Let a program read the clipboard?".</summary>
+public enum ClipboardReadAnswer
+{
+    Deny,
+    Once,
+    InThisTab,
+}
+
 /// <summary>Clipboard helpers, kept out of the unsafe control class so they can await.</summary>
 public static partial class ClipboardText
 {
@@ -134,11 +142,96 @@ public static partial class ClipboardText
     }
 
     /// <summary>
+    /// Asks whether a program in a pane may read the clipboard (<c>clipboard-read = ask</c>),
+    /// showing what it would get. Deny is the default; any failure (no window, another question
+    /// open) answers deny.
+    /// </summary>
+    public static async void AskToRead(Microsoft.UI.Xaml.XamlRoot? root, string who, TaskCompletionSource<ClipboardReadAnswer> answer)
+    {
+        try
+        {
+            if (root == null)
+            {
+                answer.TrySetResult(ClipboardReadAnswer.Deny);
+                return;
+            }
+
+            var text = ReadNow() ?? "";
+            var lines = text.Replace("\r\n", "\n").Split('\n');
+            var shown = string.Join('\n', lines.Take(6));
+            if (shown.Length > 400)
+            {
+                shown = shown[..400] + "…";
+            }
+
+            var content = new Microsoft.UI.Xaml.Controls.StackPanel { Spacing = 12 };
+            content.Children.Add(new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = $"{who} in this tab asked for what's on the clipboard. Anything running there could see it, " +
+                       "including a program on a remote host over ssh.",
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+            });
+            content.Children.Add(text.Length == 0
+                ? new Microsoft.UI.Xaml.Controls.TextBlock { Text = "The clipboard holds no text now.", Opacity = 0.7 }
+                : Preview(shown + (lines.Length > 6 ? "\n…" : "")));
+            var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+            {
+                XamlRoot = root,
+                RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
+                Title = "Let a program read the clipboard?",
+                Content = content,
+                PrimaryButtonText = "Allow once",
+                SecondaryButtonText = "Allow in this tab",
+                CloseButtonText = "Deny",
+                DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close,
+            };
+            var result = await dialog.ShowAsync();
+            answer.TrySetResult(result switch
+            {
+                Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary => ClipboardReadAnswer.Once,
+                Microsoft.UI.Xaml.Controls.ContentDialogResult.Secondary => ClipboardReadAnswer.InThisTab,
+                _ => ClipboardReadAnswer.Deny,
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"clipboard read question failed: {ex.Message}");
+            answer.TrySetResult(ClipboardReadAnswer.Deny);
+        }
+    }
+
+    /// <summary>Text as it would arrive, in the terminal's font, on a card.</summary>
+    private static Microsoft.UI.Xaml.Controls.Border Preview(string text) => new()
+    {
+        Child = new Microsoft.UI.Xaml.Controls.ScrollViewer
+        {
+            MaxHeight = 220,
+            HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
+            Content = new Microsoft.UI.Xaml.Controls.TextBlock
+            {
+                Text = text,
+                FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono, Consolas"),
+                FontSize = 12,
+                IsTextSelectionEnabled = true,
+            },
+        },
+        Padding = new Microsoft.UI.Xaml.Thickness(10, 8, 10, 8),
+        CornerRadius = new Microsoft.UI.Xaml.CornerRadius(4),
+        Background = (Microsoft.UI.Xaml.Media.Brush)Microsoft.UI.Xaml.Application.Current.Resources["CardBackgroundFillColorDefaultBrush"],
+    };
+
+    /// <summary>
     /// The clipboard's text, read synchronously on any thread (for OSC 52 reads, which must be
     /// answered before the terminal continues parsing). Null if it's unavailable or not text.
     /// </summary>
     public static string? ReadNow()
     {
+        // Tests stand in for the clipboard, so they never read (or show) the user's own.
+        if (Environment.GetEnvironmentVariable("PHOSPHOR_TEST_CLIPBOARD") is { } stand)
+        {
+            return stand;
+        }
+
         const uint CfUnicodeText = 13;
         // Another process may hold the clipboard open for a moment.
         for (var attempt = 0; attempt < 5; attempt++)

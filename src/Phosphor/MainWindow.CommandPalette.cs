@@ -390,6 +390,7 @@ public sealed partial class MainWindow
         }
 
         Action(TerminalAction.Quit);
+        Action(TerminalAction.QuitFresh);
         Action(TerminalAction.ReloadConfig);
         Action(TerminalAction.OpenSettings);
         Custom("Welcome…", () => App.Instance.ShowWelcome(firstRun: false));

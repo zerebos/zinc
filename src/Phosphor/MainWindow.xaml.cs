@@ -1303,6 +1303,9 @@ public sealed partial class MainWindow : Window
             case TerminalAction.Quit:
                 App.Instance.AskQuit();
                 return true;
+            case TerminalAction.QuitFresh:
+                App.Instance.AskQuit(fresh: true);
+                return true;
             case TerminalAction.ResizePane:
                 if (tab.Workspace.GroupOf(origin) is { } group &&
                     tab.Workspace.Resize(group, invocation.Direction, 0.05) is { } split &&

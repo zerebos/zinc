@@ -127,6 +127,16 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `test:drop:<path>|<path>` runs it without a drag (real drags can't be automated).
   WSL drive paths use `LinkContext.WslMountRoot` (Core `WslConf`: the distro's /etc/wsl.conf
   `[automount] root`, read once per pane through `\\wsl.localhost`; null = not mounted); links too.
+- `clipboard-read = ask` (default): OSC 52 reads are found in the output *before* libghostty
+  (`ClipboardReadRequest`, tested): `TerminalSession.Feed` feeds up to the request, calls
+  `ClipboardConsent` (blocking, on the reader thread, terminal unlocked), then feeds the request
+  with `_readConsented`; the callback denies anything not consented (split requests, OSC 5522).
+  App: `TerminalControl.ClipboardRead.cs` (waits on `ClipboardText.AskToRead`'s dialog; `_closing`
+  cancels it; "Allow in this tab" remembered per pane). `PHOSPHOR_TEST_CLIPBOARD` stands in for the
+  clipboard's text in tests. `launch-at-login`: `LoginStartup` keeps HKCU Run "Phosphor" =
+  `"<exe>" --at-login` in step (never with PHOSPHOR_CONFIG); `ShellResolver.LoginFlag` isn't a
+  command; "tray" opens no window; install.ps1 repoints/removes it. `quit-fresh` = `App.AskQuit(fresh)`
+  → `ForgetWindows` (session.json keeps recents and settings bounds, no windows).
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,

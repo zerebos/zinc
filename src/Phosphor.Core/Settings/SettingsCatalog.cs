@@ -159,6 +159,15 @@ public static class SettingsCatalog
                     new("Stay in the tray", false, "Click the tray icon to open a window again."),
                 ],
             },
+        new("layout", "When you come back", "window.launch-at-login", "When you sign in to Windows", "", SettingKind.Choice, "off")
+            {
+                Choices =
+                [
+                    new("Don't start Phosphor", "off"),
+                    new("Start in the tray", "tray", "No window: the quick terminal's hotkey works, and the tray icon opens your windows."),
+                    new("Open my windows", "windows", "As they were when you left, or a new one."),
+                ],
+            },
 
         // ---- Terminal
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
@@ -205,8 +214,16 @@ public static class SettingsCatalog
             SettingKind.Toggle, true),
         new("terminal", "Clipboard", "terminal.clipboard-write", "Programs may copy",
             "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle, true),
-        new("terminal", "Clipboard", "terminal.clipboard-read", "Programs may read the clipboard",
-            "Anything running, including a remote host, could read it.", SettingKind.Toggle, false),
+        new("terminal", "Clipboard", "terminal.clipboard-read", "Programs reading the clipboard",
+            "Anything running, including a remote host, could read it.", SettingKind.Choice, "ask")
+            {
+                Choices =
+                [
+                    new("Ask each time", "ask", "Allow once, for the tab, or not."),
+                    new("Allow", "allow"),
+                    new("Deny", "deny"),
+                ],
+            },
         new("terminal", "Bell", "terminal.bell", "Bell", "When a program rings it (the BEL character), e.g. at a failed tab completion.",
             SettingKind.Choice, "attention")
             {

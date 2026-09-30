@@ -7,7 +7,17 @@ public static class ShellResolver
 {
     /// <summary>Resolves the command for this process (its args, environment and PATH).</summary>
     public static string Resolve(Config config) =>
-        Resolve(config, Environment.GetCommandLineArgs().Skip(1).ToArray(), Environment.GetEnvironmentVariable);
+        Resolve(config, OwnArguments(), Environment.GetEnvironmentVariable);
+
+    /// <summary>Starting at sign-in (the Run entry Phosphor writes): not a command to run.</summary>
+    public const string LoginFlag = "--at-login";
+
+    /// <summary>Our command line after the executable, without <see cref="LoginFlag"/>.</summary>
+    public static string[] OwnArguments() =>
+        [.. Environment.GetCommandLineArgs().Skip(1).Where(a => a != LoginFlag)];
+
+    /// <summary>Whether this launch came from the sign-in entry.</summary>
+    public static bool LaunchedAtLogin => Environment.GetCommandLineArgs().Skip(1).Contains(LoginFlag);
 
     /// <param name="args">Our own arguments, excluding the executable.</param>
     /// <param name="getEnv">Environment lookup (injectable for tests).</param>

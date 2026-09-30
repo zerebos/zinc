@@ -67,6 +67,7 @@ if ($Uninstall) {
         throw 'Close all installed Phosphor windows first.'
     }
     if (Test-Path $shortcut) { Remove-Item $shortcut }
+    Remove-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Phosphor -ErrorAction SilentlyContinue
     if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
     Say 'Phosphor uninstalled (config in %APPDATA%\Phosphor is kept).'
     return
@@ -118,6 +119,13 @@ $lnk.WorkingDirectory = $env:USERPROFILE
 $lnk.Description = "Phosphor terminal ($name)"
 $lnk.Save()
 Say "Start Menu shortcut -> $target"
+
+# ---- sign-in entry (launch-at-login): follows the new version, if there is one ----
+$runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).Phosphor) {
+    Set-ItemProperty $runKey -Name Phosphor -Value "`"$(Join-Path $target 'Phosphor.exe')`" --at-login"
+    Say "Sign-in entry -> $target"
+}
 
 # ---- prune old versions (skip any still running) ----
 $running = @(Get-Process Phosphor -ErrorAction SilentlyContinue | ForEach-Object { try { Split-Path $_.Path } catch { } })

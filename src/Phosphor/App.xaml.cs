@@ -81,9 +81,15 @@ public partial class App : Application
         var profile = _config.DefaultProfile;
         // A command given on our command line (or PHOSPHOR_SHELL) is asked for explicitly: open
         // it rather than the saved session. Otherwise reopen what was open last time.
-        var explicitCommand = Environment.GetCommandLineArgs().Length > 1 ||
+        var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
                               Environment.GetEnvironmentVariable("PHOSPHOR_SHELL") is { Length: > 0 };
-        if (!explicitCommand && !File.Exists(_config.Path))
+        LoginStartup.Apply(_config.Global.LaunchAtLogin);
+        if (ShellResolver.LaunchedAtLogin && !explicitCommand && _config.Global.LaunchAtLogin == LaunchAtLogin.Tray)
+        {
+            // Signed in with "start in the tray": no window; the tray icon brings back the saved ones.
+            Log.Write("login: started in the tray");
+        }
+        else if (!explicitCommand && !File.Exists(_config.Path))
         {
             // First launch: the welcome page, then the first window, built the way it asks for.
             ShowWelcome(firstRun: true);
@@ -300,7 +306,13 @@ public partial class App : Application
 
     /// <summary>Closes every window (ending their shells) and exits.</summary>
     /// <summary>Quits when you ask to: first asks, in the front window, if commands are running.</summary>
-    internal async void AskQuit()
+    internal void AskQuit() => AskQuit(fresh: false);
+
+    /// <summary>
+    /// Quits (asking first if commands are running); <paramref name="fresh"/>: without saving the
+    /// windows, so the next start opens a new one.
+    /// </summary>
+    internal async void AskQuit(bool fresh)
     {
         if (_windows.LastOrDefault() is { } front && _windows.Any(w => w.RunningCommands().Any()))
         {
@@ -311,17 +323,27 @@ public partial class App : Application
             }
         }
 
-        Ui.Guard("quitting", Quit);
+        Ui.Guard("quitting", () => Quit(fresh));
     }
 
-    internal void Quit()
+    internal void Quit() => Quit(fresh: false);
+
+    private void Quit(bool fresh)
     {
         if (_quitting)
         {
             return;
         }
 
-        SaveSession(); // before the windows start closing (each close would drop one)
+        if (fresh)
+        {
+            ForgetWindows();
+        }
+        else
+        {
+            SaveSession(); // before the windows start closing (each close would drop one)
+        }
+
         _quitting = true;
         foreach (var window in _windows.ToList())
         {
@@ -567,6 +589,7 @@ public partial class App : Application
 
         var hotkeyChanged = fresh.Global.QuickTerminal.Hotkey != _config.Global.QuickTerminal.Hotkey;
         _config = fresh;
+        LoginStartup.Apply(fresh.Global.LaunchAtLogin);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
         _keybindings.CopyFrom(fresh.Keybindings);
         windows.ForEach(w => w.ApplyConfig(fresh));
@@ -687,6 +710,26 @@ public partial class App : Application
     /// Writes the open windows to session.json if they changed. With no windows open (the last
     /// one was closed, the app stays in the tray) the previous save stands, so that window comes back.
     /// </summary>
+    /// <summary>The saved windows go (recent commands and the settings window's place stay): the next start opens a new window.</summary>
+    private void ForgetWindows()
+    {
+        if (_sessionPath == null)
+        {
+            return;
+        }
+
+        try
+        {
+            SessionStore.Save(_sessionPath, SessionStore.Serialize(
+                new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds)));
+            Log.Write("session: windows forgotten; the next start opens a new one");
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"session: forgetting failed: {ex.Message}");
+        }
+    }
+
     private void SaveSession()
     {
         if (_sessionPath == null || _quitting || !_config.Global.RestoreSession)
@@ -737,6 +780,7 @@ public partial class App : Application
                 new TrayIcon.MenuItem("Settings", () => ShowSettings()),
                 null,
                 new TrayIcon.MenuItem("Quit Phosphor", AskQuit),
+                new TrayIcon.MenuItem("Quit and start fresh next time", () => AskQuit(fresh: true)),
             ];
         };
     }

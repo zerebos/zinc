@@ -322,7 +322,8 @@ public sealed partial class TerminalControl : UserControl
         // Writes arrive mid-parse on the reader thread: set the clipboard on the UI thread.
         var dq = DispatcherQueue;
         session.ClipboardWriter = _config.ClipboardWrite ? text => dq.SafeEnqueue(() => ClipboardText.Set(text)) : null;
-        session.ClipboardReader = _config.ClipboardRead ? ClipboardText.ReadNow : null;
+        session.ClipboardReader = _config.ClipboardRead != ClipboardAccess.Deny ? ClipboardText.ReadNow : null;
+        session.ClipboardConsent = _config.ClipboardRead == ClipboardAccess.Ask ? AskToReadClipboard : null;
     }
 
     /// <summary>
@@ -430,6 +431,7 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>Ends the session (killing the child if still running) and frees resources.</summary>
     public void Close()
     {
+        _closing.Cancel(); // a clipboard question still open: the answer is no
         _blinkTimer.Stop();
         var session = _session;
         if (session == null)

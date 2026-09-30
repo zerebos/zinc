@@ -59,6 +59,16 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// </summary>
     public Func<string?>? ClipboardReader { get; set; }
 
+    /// <summary>
+    /// With <c>clipboard-read = ask</c>: asked before each clipboard read a program sends, and it
+    /// may block for the answer (the program's output waits; the terminal isn't locked). It's called
+    /// on the thread feeding output. Null: <see cref="ClipboardReader"/> alone decides.
+    /// </summary>
+    public Func<bool>? ClipboardConsent { get; set; }
+
+    /// <summary>The read being fed now was allowed (set around its bytes by <see cref="Feed"/>).</summary>
+    private volatile bool _readConsented;
+
     public TerminalSession(ushort cols, ushort rows, TerminalTheme theme)
     {
         Check(Native.TerminalNew(0, out _terminal, cols, rows));
@@ -212,7 +222,43 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     private Timer? _flashTimer;
 
+    /// <summary>
+    /// Output from the program (or ours): with <see cref="ClipboardConsent"/>, each clipboard read
+    /// waits for its answer, and is then fed on its own, carrying it.
+    /// </summary>
     private void Feed(ReadOnlySpan<byte> data)
+    {
+        while (ClipboardConsent is { } consent && ClipboardReadRequest.TryFind(data, out var start, out var end))
+        {
+            FeedFiltered(data[..start]);
+            var allowed = false;
+            try
+            {
+                allowed = consent();
+            }
+            catch (Exception ex)
+            {
+                Log.Write($"clipboard read: asking failed: {ex.Message}");
+            }
+
+            Log.Write($"clipboard read: {(allowed ? "allowed" : "denied")}");
+            _readConsented = allowed;
+            try
+            {
+                FeedFiltered(data[start..end]);
+            }
+            finally
+            {
+                _readConsented = false;
+            }
+
+            data = data[end..];
+        }
+
+        FeedFiltered(data);
+    }
+
+    private void FeedFiltered(ReadOnlySpan<byte> data)
     {
         lock (_flashLock)
         {
@@ -1289,7 +1335,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
         try
         {
             var session = FromUserdata(userdata);
-            if (session.ClipboardReader is { } reader)
+            // Asking first: only a read the user just allowed (anything else, e.g. one split
+            // across reads or OSC 5522, is denied).
+            if (session.ClipboardReader is { } reader && (session.ClipboardConsent == null || session._readConsented))
             {
                 text = read->Location == ClipboardLocation.Standard ? reader() : null;
                 result = read->Location != ClipboardLocation.Standard ? ClipboardReadResult.Unsupported

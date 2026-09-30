@@ -58,6 +58,7 @@ public enum TerminalAction
 
     /// <summary>Close every window and exit.</summary>
     Quit,
+    QuitFresh,
 
     /// <summary>
     /// Switch the workspace list's mode: <see cref="ActionInvocation.Index"/> -1 cycles full → rail →
