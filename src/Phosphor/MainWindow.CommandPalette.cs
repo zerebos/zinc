@@ -348,6 +348,10 @@ public sealed partial class MainWindow
         // Tabs (terminals), workspaces (title-bar tabs) and windows.
         Action(TerminalAction.NewTab);
         Action(TerminalAction.NewWorkspace);
+        if (App.Instance.ClosedWorkspaces.All.Count > 0)
+        {
+            Action(TerminalAction.ReopenWorkspace);
+        }
         Action(TerminalAction.DuplicateTab);
         Action(TerminalAction.ClosePane);
         Custom("Close workspace", () => CloseTab(tab));

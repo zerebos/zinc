@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Phosphor.Panes;
+using Phosphor.Session;
 using Phosphor.Terminal;
 
 namespace Phosphor;
@@ -45,7 +46,8 @@ internal sealed partial class StartPage : UserControl
 
     private static readonly FolderChoice Usual = new("Its usual folder", null, null);
 
-    public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<string?, string?> browse)
+    public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<string?, string?> browse,
+        IReadOnlyList<ClosedWorkspace> closed)
     {
         (_profiles, _default, _recent, _browse) = (profiles, defaultProfile, recent, browse);
         _profile = defaultProfile;
@@ -115,6 +117,7 @@ internal sealed partial class StartPage : UserControl
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.Children.Add(new StackPanel
         {
             Spacing = 2,
@@ -133,7 +136,13 @@ internal sealed partial class StartPage : UserControl
         root.Children.Add(_filter);
         Grid.SetRow(columns, 2);
         root.Children.Add(columns);
-        Grid.SetRow(footer, 3);
+        if (ReopenRow(closed) is { } reopen)
+        {
+            Grid.SetRow(reopen, 3);
+            root.Children.Add(reopen);
+        }
+
+        Grid.SetRow(footer, 4);
         root.Children.Add(footer);
         Content = root;
 
@@ -180,6 +189,9 @@ internal sealed partial class StartPage : UserControl
 
     /// <summary>Start: the profile, the chosen folder (null: its usual one) and the name (null: from the folder, or the shell).</summary>
     public event Action<Profile, WorkspaceFolder?, string?, StartLayout>? Started;
+
+    /// <summary>A closed workspace's chip under Reopen: bring it back as it was.</summary>
+    public event Action<ClosedWorkspace>? Reopen;
 
     /// <summary>Esc: leave without starting.</summary>
     public event Action? Cancelled;
@@ -393,6 +405,58 @@ internal sealed partial class StartPage : UserControl
         var item = new ListViewItem { Content = row, Tag = choice };
         AutomationProperties.SetName(item, choice.Label);
         return item;
+    }
+
+    /// <summary>
+    /// "Reopen": a chip per workspace closed lately (the newest few). Unlike the lists above, a chip
+    /// doesn't select: it's a whole workspace already, so it reopens at once. Null without any.
+    /// </summary>
+    private WrapPanel? ReopenRow(IReadOnlyList<ClosedWorkspace> closed)
+    {
+        if (closed.Count == 0)
+        {
+            return null;
+        }
+
+        var row = new WrapPanel { HorizontalSpacing = 8, VerticalSpacing = 8 };
+        row.Children.Add(new TextBlock
+        {
+            Text = "Reopen",
+            FontWeight = FontWeights.SemiBold,
+            Opacity = 0.75,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0),
+        });
+        var now = DateTimeOffset.UtcNow;
+        foreach (var workspace in closed.Take(5))
+        {
+            var chip = new Button
+            {
+                CornerRadius = new CornerRadius(14),
+                Padding = new Thickness(12, 4, 12, 5),
+                Content = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 8,
+                    Children =
+                    {
+                        new TextBlock { Text = workspace.Name, MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis },
+                        new TextBlock
+                        {
+                            Text = $"{workspace.Summary} · closed {Ago(now - workspace.When)}",
+                            Opacity = 0.6,
+                            FontSize = 12,
+                            VerticalAlignment = VerticalAlignment.Center,
+                        },
+                    },
+                },
+            };
+            AutomationProperties.SetName(chip, $"Reopen {workspace.Name}");
+            chip.Click += (_, _) => Reopen?.Invoke(workspace);
+            row.Children.Add(chip);
+        }
+
+        return row;
     }
 
     private static ListViewItem LayoutItem(StartLayout layout)

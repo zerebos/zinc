@@ -59,6 +59,8 @@ public static class Actions
             "Open a tab (in the focused pane, with tab groups). With a profile: that profile, by id or menu position."),
         new("new-workspace", TerminalAction.NewWorkspace, Arg.None, "New workspace", "Open a workspace with the default profile."),
         new("new-window", TerminalAction.NewWindow, Arg.None, "New window", "Open a window with the default profile."),
+        new("reopen-workspace", TerminalAction.ReopenWorkspace, Arg.None, "Reopen closed workspace",
+            "Bring back the workspace closed last: its tabs, splits and folders."),
         new("duplicate-tab", TerminalAction.DuplicateTab, Arg.None, "Duplicate tab", "Open the focused tab's command again, next to it."),
         new("close-tab", TerminalAction.ClosePane, Arg.None, "Close tab", "Close the focused tab (its pane goes with its last tab)."),
         new("next-tab", TerminalAction.NextTab, Arg.None, "Next tab", "The pane's next tab, or the next workspace."),
@@ -173,7 +175,7 @@ public static class Actions
         ["new-tab"] = "Tabs", ["duplicate-tab"] = "Tabs", ["close-tab"] = "Tabs", ["next-tab"] = "Tabs", ["previous-tab"] = "Tabs",
         ["tab-switcher"] = "Tabs", ["next-attention"] = "Tabs", ["profile-menu"] = "Tabs",
         ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
-        ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows",
+        ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows", ["reopen-workspace"] = "Workspaces and windows",
         ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
         ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor", ["quit-fresh"] = "Phosphor",
     };

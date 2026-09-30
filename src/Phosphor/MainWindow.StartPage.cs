@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml.Controls;
 using Phosphor.Panes;
+using Phosphor.Session;
 using Phosphor.Terminal;
 
 namespace Phosphor;
@@ -26,7 +27,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        var page = new StartPage(_config.VisibleProfiles.ToList(), _config.DefaultProfile, App.Instance.RecentFolders, BrowseFolder);
+        var page = new StartPage(_config.VisibleProfiles.ToList(), _config.DefaultProfile, App.Instance.RecentFolders, BrowseFolder,
+            App.Instance.ClosedWorkspaces.All);
         var item = new TabViewItem
         {
             Header = "New workspace",
@@ -38,6 +40,7 @@ public sealed partial class MainWindow
             Ui.Guard("starting a workspace", () => StartWorkspace(item, profile, folder, name, layout));
         page.Cancelled += () => Ui.Guard("leaving the new workspace page", () => LeaveStartPage(item));
         page.ShowPageChanged += SetNewWorkspacePage;
+        page.Reopen += closed => Ui.Guard("reopening a workspace", () => ReopenWorkspace(closed, item));
         Tabs.TabItems.Add(item);
         Tabs.SelectedItem = item;
         RefreshWorkspaceList();
@@ -60,6 +63,50 @@ public sealed partial class MainWindow
         RefreshWorkspaceList();
         FocusActive(tab);
         Log.Write($"start page: {profile.Name} in {folder?.Path ?? "its usual folder"}, {layout}{(name != null ? $" as {name}" : "")}");
+    }
+
+    /// <summary>
+    /// A workspace you closed comes back as it was saved (tabs, splits, folders, name, color, its own
+    /// folder): in the page's place, or as a new workspace.
+    /// </summary>
+    private void ReopenWorkspace(ClosedWorkspace closed, TabViewItem? page = null)
+    {
+        if (!App.Instance.ClosedWorkspaces.Take(closed))
+        {
+            return; // reopened already (in another window)
+        }
+
+        if (SessionLayout.Restore(closed.State.Layout, OpenSaved) is not { } workspace)
+        {
+            Log.Write($"reopen: nothing of {closed.Name} could start");
+            return;
+        }
+
+        var index = page != null ? Tabs.TabItems.IndexOf(page) : -1;
+        var tab = AddWorkspace(workspace, closed.State.Title, ParseColor(closed.State.Color), index < 0 ? null : index);
+        tab.Folder = closed.State.Folder;
+        if (page != null)
+        {
+            Tabs.TabItems.Remove(page);
+        }
+
+        RefreshWorkspaceList();
+        FocusActive(tab);
+        Log.Write($"reopen: {closed.Name} ({closed.Summary})");
+    }
+
+    /// <summary>A workspace you closed goes on the Reopen list, as a session would save it.</summary>
+    private void RememberClosed(WorkspaceTab tab)
+    {
+        try
+        {
+            var state = new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color), SessionLayout.Capture(tab.Workspace, DescribeTab), tab.Folder);
+            App.Instance.ClosedWorkspaces.Note(new ClosedWorkspace(tab.Header.Title, state, DateTimeOffset.UtcNow));
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"reopen: couldn't keep a closed workspace: {ex.Message}");
+        }
     }
 
     /// <summary>Esc: the page goes (a window's only tab starts the default instead: a window is never empty).</summary>

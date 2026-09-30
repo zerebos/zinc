@@ -800,9 +800,10 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Closes every terminal in a workspace and removes its tab.</summary>
+    /// <summary>Closes every terminal in a workspace and removes its tab (it can be reopened: see <see cref="RememberClosed"/>).</summary>
     private void CloseTabNow(WorkspaceTab tab)
     {
+        RememberClosed(tab); // first: its shells' folders are read from them
         foreach (var pane in tab.Workspace.Tabs.ToList())
         {
             pane.Control.Close();
@@ -1301,6 +1302,13 @@ public sealed partial class MainWindow : Window
                 if (target < count)
                 {
                     Tabs.SelectedIndex = target;
+                }
+
+                return true;
+            case TerminalAction.ReopenWorkspace:
+                if (App.Instance.ClosedWorkspaces.All.FirstOrDefault() is { } last)
+                {
+                    ReopenWorkspace(last);
                 }
 
                 return true;

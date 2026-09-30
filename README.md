@@ -493,6 +493,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `new-tab` | A new tab (in the focused pane, with tab groups). `new-tab <profile>`: that profile, by id or menu position. |
 | `new-workspace` | A new workspace with the default profile. |
 | `new-window` | A new window with the default profile. |
+| `reopen-workspace` | Bring back the workspace closed last: its tabs, splits and folders. |
 | `duplicate-tab` | The focused tab's command again, next to it. |
 | `close-tab` | Close the focused tab (its pane goes with its last tab). |
 | `next-tab`, `previous-tab` | The pane's next or previous tab; with one tab there, the next or previous workspace. |
@@ -561,7 +562,10 @@ A **new workspace** (+, `Ctrl+Alt+T`, the sidebar's New workspace, the palette),
 (New window, `Ctrl+Shift+N`, the tray's New window), opens on a page for
 choosing how it starts: a profile, a folder (ones your shells were in lately, a typed path, or
 Browse…, which for a WSL profile opens in that distro), a layout (one pane, side by side, stacked,
-one big and two small, or a grid of four: every pane runs the profile in the folder) and a name. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
+one big and two small, or a grid of four: every pane runs the profile in the folder) and a name.
+Under **Reopen**, it lists the workspaces you closed lately (their tabs, splits, folders, name and
+color, as a restart would bring them back): a click reopens one at once. "Reopen closed workspace"
+in the palette (`reopen-workspace`, no key by default) brings back the last one. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
 Enter starts the default profile in its usual folder, as before. Esc leaves the page (in a window's
 only tab, it starts the default). A workspace started in a folder is named after it (or what you
 type) and keeps it: its new tabs and splits start there, in each shell's own terms (a WSL folder

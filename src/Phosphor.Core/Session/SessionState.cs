@@ -10,10 +10,11 @@ namespace Phosphor.Session;
 /// <summary>
 /// Everything to reopen: the normal windows (not the quick terminal), the command palette's recent
 /// commands, where the settings window was, whether its preview was hidden, and the folders shells
-/// reported lately (the new-workspace page lists them).
+/// reported lately and the workspaces closed lately (the new-workspace page lists both).
 /// </summary>
 public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null, WindowBounds? Settings = null,
-    bool SettingsPreviewHidden = false, List<Phosphor.Terminal.RecentFolder>? RecentFolders = null)
+    bool SettingsPreviewHidden = false, List<Phosphor.Terminal.RecentFolder>? RecentFolders = null,
+    List<ClosedWorkspace>? ClosedWorkspaces = null)
 {
     public const int CurrentVersion = 1;
 }

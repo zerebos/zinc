@@ -34,6 +34,7 @@ public enum TerminalAction
     /// <summary>Go to tab <see cref="ActionInvocation.Index"/> (0-based; -1 = last).</summary>
     SwitchToTab,
     NewWindow,
+    ReopenWorkspace,
 
     /// <summary>New pane with the default profile on side <see cref="ActionInvocation.Direction"/>.</summary>
     SplitPane,
