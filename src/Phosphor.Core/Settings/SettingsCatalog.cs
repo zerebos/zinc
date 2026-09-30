@@ -139,6 +139,8 @@ public static class SettingsCatalog
             { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window's left edge.")] },
         new("layout", "Workspaces", "window.title-bar", "Title bar", "With workspaces in a sidebar.", SettingKind.Choice, "show")
             { Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window's top edge.")] },
+        new("layout", "Workspaces", "window.new-workspace-page", "Start page for new workspaces",
+            "Choose a profile, a folder and a name when you open a workspace; Enter starts the default.", SettingKind.Toggle, true),
         new("layout", "Panes", "window.tab-groups", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
         new("layout", "Panes", "window.group-tab-strip", "Pane tab strip", "The row of tabs above a pane.", SettingKind.Choice, "auto")
             { Choices = [new("Automatic", "auto", "Shown when a pane has two or more tabs."), new("Always", "always")] },

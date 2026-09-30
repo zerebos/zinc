@@ -160,7 +160,8 @@ public static class ShellDirectory
         return "/" + string.Join('/', parts);
     }
 
-    private static bool IsWsl(string command) =>
+    /// <summary>Whether <paramref name="command"/> starts a WSL distro.</summary>
+    public static bool IsWsl(string command) =>
         Path.GetFileNameWithoutExtension(FirstToken(command).Trim('"')).Equals("wsl", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The executable part of a command line (quoted or not), as written.</summary>

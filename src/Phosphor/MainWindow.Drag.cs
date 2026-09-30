@@ -20,8 +20,14 @@ public sealed partial class MainWindow
 
     private void OnTabDragStarting(TabView sender, TabViewTabDragStartingEventArgs args)
     {
+        if (args.Tab.Tag is not WorkspaceTab dragged)
+        {
+            args.Cancel = true; // the new-workspace page stays where it is
+            return;
+        }
+
         args.Data.RequestedOperation = DataPackageOperation.Move;
-        App.Instance.Drag = new TabDrag(this, (WorkspaceTab)args.Tab.Tag);
+        App.Instance.Drag = new TabDrag(this, dragged);
     }
 
     private void OnTabDragCompleted(TabView sender, TabViewTabDragCompletedEventArgs args)

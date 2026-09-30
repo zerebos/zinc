@@ -668,6 +668,7 @@ public sealed class ConfigFile
             ["window.unfocused-split-fill"] = ("unfocused-split-fill", v => v as string),
             ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),
             ["window.quit-after-last-window-closed"] = ("quit-after-last-window-closed", v => Bool(v)),
+            ["window.new-workspace-page"] = ("new-workspace-page", v => Bool(v)),
             ["window.launch-at-login"] = ("launch-at-login", v => v is bool b ? (b ? "windows" : "off") : v as string),
             ["notify.command-finished"] = ("notify-command-finished", v => v as string),
             ["notify.programs"] = ("notify-programs", v => v as string),

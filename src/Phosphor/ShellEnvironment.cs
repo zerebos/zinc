@@ -69,6 +69,27 @@ internal static class ShellEnvironment
         }
     }
 
+    /// <summary>The distro a WSL command line runs (its -d/--distribution-id, else the default); null if it isn't WSL.</summary>
+    public static string? WslDistroOf(string commandLine)
+    {
+        try
+        {
+            var (exe, args) = ProfileIcons.SplitCommand(commandLine);
+            if (!Path.GetFileNameWithoutExtension(exe).Equals("wsl", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            using var key = WslDistroKey(args);
+            return key?.GetValue("DistributionName") as string;
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"wsl distro of {commandLine}: {ex.Message}");
+            return null;
+        }
+    }
+
     /// <summary>How a pane running <paramref name="commandLine"/> quotes paths (files dropped on it).</summary>
     public static PathQuoting QuotingFor(string commandLine, LinkContext context)
     {

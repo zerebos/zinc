@@ -617,6 +617,9 @@ public partial class App : Application
     /// <summary>The command palette's recently run commands, shared by every window; saved with the session.</summary>
     internal Phosphor.Commands.RecentCommands RecentCommands { get; private set; } = new();
 
+    /// <summary>Folders shells reported lately, for the new-workspace page (saved with the session).</summary>
+    internal RecentFolders RecentFolders { get; private set; } = new();
+
     /// <summary>Recent commands come back even when the windows don't (a launch with a command).</summary>
     private void LoadRecentCommands()
     {
@@ -627,6 +630,7 @@ public partial class App : Application
         }
 
         _settingsBounds = saved?.Settings;
+        RecentFolders = new RecentFolders(saved?.RecentFolders);
         _settingsPreviewHidden = saved?.SettingsPreviewHidden ?? false;
     }
 
@@ -726,7 +730,8 @@ public partial class App : Application
         try
         {
             SessionStore.Save(_sessionPath, SessionStore.Serialize(
-                new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds, _settingsPreviewHidden)));
+                new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds, _settingsPreviewHidden,
+                    [.. RecentFolders.All])));
             Log.Write("session: windows forgotten; the next start opens a new one");
         }
         catch (Exception ex)
@@ -751,7 +756,7 @@ public partial class App : Application
             }
 
             var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds,
-                _settingsPreviewHidden));
+                _settingsPreviewHidden, [.. RecentFolders.All]));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);

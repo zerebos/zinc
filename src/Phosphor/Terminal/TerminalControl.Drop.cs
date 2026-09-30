@@ -34,6 +34,9 @@ public sealed partial class TerminalControl
         };
     }
 
+    /// <summary>The WSL distro this pane runs, if it's WSL (as file links and drops see it).</summary>
+    internal string? WslDistro => (_linkContext ??= ShellEnvironment.LinkContextFor(_commandLine)).WslDistro;
+
     /// <summary>Types <paramref name="paths"/> (Windows paths) as this pane's shell names them.</summary>
     internal void PastePaths(IReadOnlyList<string> paths)
     {

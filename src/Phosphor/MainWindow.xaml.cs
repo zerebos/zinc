@@ -76,6 +76,9 @@ public sealed partial class MainWindow : Window
 
         /// <summary>The (tab color, pane background) last applied to the item's resources.</summary>
         public object? AppliedColors { get; set; }
+
+        /// <summary>Its own folder (chosen on the new-workspace page): new tabs and splits start there.</summary>
+        public WorkspaceFolder? Folder { get; set; }
     }
 
     public MainWindow(ConfigFile config, Keybindings keybindings, Profile profile, string command, bool quick = false)
@@ -168,7 +171,8 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    private IEnumerable<WorkspaceTab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => (WorkspaceTab)i.Tag);
+    /// <summary>The workspaces, in order (a new-workspace page among them isn't one).</summary>
+    private IEnumerable<WorkspaceTab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => i.Tag).OfType<WorkspaceTab>();
 
     private WorkspaceTab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as WorkspaceTab;
 
@@ -225,7 +229,11 @@ public sealed partial class MainWindow : Window
             UpdateFocusBorders(tab); // group strips show titles too
         };
         Action close = () => ClosePane(tab, pane);
-        Action directory = () => UpdateTitle(tab, fromShell: true); // the command center shows the folder
+        Action directory = () =>
+        {
+            UpdateTitle(tab, fromShell: true); // the command center shows the folder
+            NoteFolder(pane);
+        };
         Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
         Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
         Action bell = () => OnBell(tab, pane);
@@ -582,8 +590,11 @@ public sealed partial class MainWindow : Window
     private void NewTabInGroup(WorkspaceTab tab, TabGroup<TerminalTab> group, Profile profile,
         string? command = null, string? workingDirectory = null)
     {
-        var pane = CreatePane(profile, command ?? ShellResolver.ForProfile(profile.Config),
-            workingDirectory ?? profile.Config.ResolveWorkingDirectory());
+        // Given a command, it runs where asked; otherwise the profile starts in the workspace's folder.
+        var (start, directory) = command != null
+            ? (command, workingDirectory ?? profile.Config.ResolveWorkingDirectory())
+            : StartIn(tab.Folder, profile);
+        var pane = CreatePane(profile, start, directory);
         Wire(pane, tab);
         group.Add(pane);
         ShowGroupTab(tab, pane);
@@ -900,14 +911,28 @@ public sealed partial class MainWindow : Window
             UpdateFocusBorders(tab); // now in view: its dots clear
             FocusActive(tab);
         }
+        else if (Tabs.SelectedItem is TabViewItem { Tag: StartPage page })
+        {
+            Title = "New workspace";
+            page.FocusFilter();
+        }
 
         RefreshWorkspaceList();
     }
 
-    private void OnAddTabButtonClick(TabView sender, object args) => OpenTab(_config.DefaultProfile);
+    private void OnAddTabButtonClick(TabView sender, object args) => OpenNewWorkspace();
 
-    private void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args) =>
-        CloseTab((WorkspaceTab)args.Tab.Tag);
+    private void OnTabCloseRequested(TabView sender, TabViewTabCloseRequestedEventArgs args)
+    {
+        if (args.Tab.Tag is WorkspaceTab tab)
+        {
+            CloseTab(tab);
+        }
+        else
+        {
+            RemoveStartPage(args.Tab);
+        }
+    }
 
     private void BuildNewTabMenu()
     {
@@ -958,8 +983,8 @@ public sealed partial class MainWindow : Window
         {
             var pane = tab.Active;
             var where = PaneDirections.Auto(pane.Control.ActualWidth, pane.Control.ActualHeight);
-            SplitPane(tab, pane, where, profile, ShellResolver.ForProfile(profile.Config),
-                profile.Config.ResolveWorkingDirectory());
+            var (command, directory) = StartIn(tab.Folder, profile);
+            SplitPane(tab, pane, where, profile, command, directory);
         }
         else if (keys.Shift)
         {
@@ -1209,7 +1234,7 @@ public sealed partial class MainWindow : Window
                 return true;
             case TerminalAction.NewTab:
             case TerminalAction.NewWorkspace:
-                OpenTab(defaults);
+                OpenNewWorkspace();
                 return true;
             case TerminalAction.NewTabFromProfile:
                 var visible = _config.VisibleProfiles.ToList();
@@ -1276,9 +1301,10 @@ public sealed partial class MainWindow : Window
                 App.Instance.OpenWindow(defaults);
                 return true;
             case TerminalAction.SplitPane:
-                // A new pane opens with the focused tab's profile (splitting a Fedora pane gives Fedora).
-                SplitPane(tab, origin, invocation.Direction, origin.Profile, ShellResolver.ForProfile(origin.Profile.Config),
-                    origin.Profile.Config.ResolveWorkingDirectory());
+                // A new pane opens with the focused tab's profile (splitting a Fedora pane gives Fedora),
+                // in the workspace's folder if it has one.
+                var (splitCommand, splitDirectory) = StartIn(tab.Folder, origin.Profile);
+                SplitPane(tab, origin, invocation.Direction, origin.Profile, splitCommand, splitDirectory);
                 return true;
             case TerminalAction.DuplicatePane:
                 var where = PaneDirections.Auto(origin.Control.ActualWidth, origin.Control.ActualHeight);

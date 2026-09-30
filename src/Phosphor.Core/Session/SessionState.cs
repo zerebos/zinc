@@ -9,10 +9,11 @@ namespace Phosphor.Session;
 
 /// <summary>
 /// Everything to reopen: the normal windows (not the quick terminal), the command palette's recent
-/// commands, where the settings window was, and whether its preview was hidden.
+/// commands, where the settings window was, whether its preview was hidden, and the folders shells
+/// reported lately (the new-workspace page lists them).
 /// </summary>
 public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null, WindowBounds? Settings = null,
-    bool SettingsPreviewHidden = false)
+    bool SettingsPreviewHidden = false, List<Phosphor.Terminal.RecentFolder>? RecentFolders = null)
 {
     public const int CurrentVersion = 1;
 }
@@ -42,8 +43,8 @@ public sealed record WindowChrome(SidebarMode Sidebar, TitleBarMode TitleBar, Si
         ConfigSidebar == configSidebar && ConfigTitleBar == configTitleBar;
 }
 
-/// <summary>A workspace: its custom title and color (if set) and its layout.</summary>
-public sealed record WorkspaceState(string? Title, string? Color, LayoutNode Layout);
+/// <summary>A workspace: its custom title and color (if set), its layout, and its own folder (if it has one).</summary>
+public sealed record WorkspaceState(string? Title, string? Color, LayoutNode Layout, Phosphor.Terminal.WorkspaceFolder? Folder = null);
 
 /// <summary>A layout node: a split (<see cref="Orientation"/> set, <see cref="Ratio"/> = the first side's share) or a pane (<see cref="Pane"/>).</summary>
 public sealed record LayoutNode(SplitOrientation? Orientation = null, double? Ratio = null, LayoutNode? First = null, LayoutNode? Second = null,

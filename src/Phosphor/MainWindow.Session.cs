@@ -19,7 +19,7 @@ public sealed partial class MainWindow
         {
             if (SessionLayout.Restore(ws.Layout, OpenSaved) is { } workspace)
             {
-                AddWorkspace(workspace, ws.Title, ParseColor(ws.Color));
+                AddWorkspace(workspace, ws.Title, ParseColor(ws.Color)).Folder = ws.Folder;
             }
         }
 
@@ -66,8 +66,9 @@ public sealed partial class MainWindow
     /// <summary>This window's saved form; null if it has nothing to reopen.</summary>
     internal WindowState? CaptureState()
     {
-        var workspaces = AllTabs().Select(tab => new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color),
-            SessionLayout.Capture(tab.Workspace, DescribeTab))).ToList();
+        var tabs = AllTabs().ToList();
+        var workspaces = tabs.Select(tab => new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color),
+            SessionLayout.Capture(tab.Workspace, DescribeTab), tab.Folder)).ToList();
         if (workspaces.Count == 0)
         {
             return null;
@@ -78,7 +79,9 @@ public sealed partial class MainWindow
         // for its terminals to start (2026-09-27). Minimized windows come back restored.
         var b = _normalBounds;
         var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
-        return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, Tabs.SelectedIndex), workspaces, CaptureChrome());
+        // Which workspace was shown (a new-workspace page isn't saved: the one before it, then).
+        var shown = SelectedTab is { } selected ? tabs.IndexOf(selected) : tabs.Count - 1;
+        return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, shown), workspaces, CaptureChrome());
     }
 
     /// <summary>Where the window is when neither minimized nor maximized (what a session saves).</summary>

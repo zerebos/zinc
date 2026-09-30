@@ -557,6 +557,17 @@ of them (click to switch, middle-click or × to close, right-click to close othe
 tab to a new workspace or window, + for another tab). New tabs open in the focused pane with
 its current tab's profile; the title bar's + and ▾ open workspaces.
 
+A **new workspace** (+, `Ctrl+Alt+T`, the sidebar's New workspace, the palette) opens on a page for
+choosing how it starts: a profile, a folder (ones your shells were in lately, a typed path, or
+Browse…) and a name. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
+Enter starts the default profile in its usual folder, as before. Esc leaves the page (in a window's
+only tab, it starts the default). A workspace started in a folder is named after it (or what you
+type) and keeps it: its new tabs and splits start there, in each shell's own terms (a WSL folder
+opens in PowerShell as `\\wsl.localhost\…`, a Windows one in WSL under `/mnt/c/…`); shells can still
+go anywhere, and Duplicate and "New tab in folder…" keep their own folder. "Show this page for new
+workspaces" at the bottom (`new-workspace-page` in `[window]`) turns the page off: + then starts the
+default at once. The ▾ menu and a new window start at once, as before.
+
 - `tab-groups = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces.
 - In a split workspace the focused pane is marked by an accent line along its top (on the shown

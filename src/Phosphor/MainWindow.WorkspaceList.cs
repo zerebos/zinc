@@ -122,7 +122,7 @@ public sealed partial class MainWindow
         };
         AutomationProperties.SetName(add, "New workspace");
         ToolTipService.SetToolTip(add, "New workspace (Ctrl+Alt+T)");
-        add.Click += (_, _) => OpenTab(_config.DefaultProfile);
+        add.Click += (_, _) => OpenNewWorkspace();
 
         NewTabMenuButton.Height = 32;
         NewTabMenuButton.Margin = new Thickness(2, 0, 0, 0);
