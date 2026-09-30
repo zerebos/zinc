@@ -196,7 +196,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   failure on screen; `"always"` or `"never"` (any key then closes it).
 - `bell`: `"attention"` (default) puts a dot on the tab and flashes the taskbar button when you
   aren't looking at it; `"flash"` also flashes the pane; `"none"`. `bell-sound = true` plays
-  Windows' default sound too.
+  Windows' default sound too. A burst of bells (a held key the prompt refuses) rings once; the
+  bell rings again after half a second without one.
 - `program-titles`: `true` (default) lets shells and programs set the tab's title; `false` keeps the
   profile's name (a name you give a tab always wins).
 

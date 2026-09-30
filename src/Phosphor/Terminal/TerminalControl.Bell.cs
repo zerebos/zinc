@@ -8,14 +8,17 @@ namespace Phosphor.Terminal;
 
 /// <summary>
 /// The bell (BEL): per <c>bell</c>, the pane flashes and the window is told (a dot on the tab when
-/// you aren't looking); with <c>bell-sound</c>, Windows' default sound plays. Bells closer together
-/// than <see cref="BellGap"/> count as one (a held key at a prompt that refuses it rings on repeat).
+/// you aren't looking); with <c>bell-sound</c>, Windows' default sound plays. A burst rings once:
+/// after a bell, more bells stay quiet until none has come for <see cref="BellQuiet"/> (a held key at
+/// a prompt that refuses it rings on every repeat, and the shell may still be ringing after release).
 /// </summary>
 public sealed partial class TerminalControl
 {
-    private static readonly TimeSpan BellGap = TimeSpan.FromMilliseconds(150);
+    private static readonly TimeSpan BellQuiet = TimeSpan.FromMilliseconds(500);
 
-    private long _lastBell;
+    /// <summary>Until when bells are part of the last burst (each one moves it on).</summary>
+    private long _bellQuietUntil;
+
     private Border? _bellFlash;
 
     /// <summary>The bell rang and <c>bell</c> isn't "none" (the window marks the tab).</summary>
@@ -24,12 +27,13 @@ public sealed partial class TerminalControl
     private void OnBell()
     {
         var now = Environment.TickCount64;
-        if (now - _lastBell < BellGap.TotalMilliseconds)
+        var inBurst = now < _bellQuietUntil;
+        _bellQuietUntil = now + (long)BellQuiet.TotalMilliseconds;
+        if (inBurst)
         {
             return;
         }
 
-        _lastBell = now;
         Log.Write($"bell: {_config.Bell}{(_config.BellSound ? " + sound" : "")}");
         if (_config.BellSound)
         {
