@@ -119,17 +119,23 @@ public partial class App : Application
     private SettingsWindow? _settings;
 
     /// <summary>The settings window: opened, or brought forward if it's open.</summary>
-    internal void ShowSettings()
+    /// <summary>Opens (or brings back) the settings window, on <paramref name="section"/> if given.</summary>
+    internal void ShowSettings(string? section = null)
     {
         if (_settings != null)
         {
+            if (section != null)
+            {
+                _settings.ShowSection(section);
+            }
+
             _settings.Activate();
             return;
         }
 
         // It comes back where it was (saved with the session), else over the window you're in;
         // during a run, on the section it was left on.
-        var settings = _settings = new SettingsWindow(_config, _settingsSection);
+        var settings = _settings = new SettingsWindow(_config, section ?? _settingsSection);
         if (!WindowPlacement.Restore(settings, _settingsBounds))
         {
             if (_windows.LastOrDefault(w => w.AppWindow is { IsVisible: true }) is { } owner)
@@ -728,7 +734,7 @@ public partial class App : Application
             [
                 new TrayIcon.MenuItem("New window", () => OpenWindow(_config.DefaultProfile)),
                 new TrayIcon.MenuItem(quickLabel, ToggleQuickTerminalFromTray),
-                new TrayIcon.MenuItem("Settings", ShowSettings),
+                new TrayIcon.MenuItem("Settings", () => ShowSettings()),
                 null,
                 new TrayIcon.MenuItem("Quit Phosphor", AskQuit),
             ];

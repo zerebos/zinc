@@ -68,7 +68,7 @@ and dark mode), your default shell, and whether a long command finishing in the 
 a Windows notification, and writes your answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
 you change there and leaves the rest of the file as it is.
 
-**Settings** (`Ctrl+,`, the command palette or the tray menu) edits the settings below in a window
+**Settings** (`Ctrl+,`, the command palette, the ▾ menu or the tray menu) edits the settings below in a window
 of its own, next to your terminals: each change is written to `config.toml` right away and applied
 as you make it (only that line changes; choosing a default removes the line), and **Undo changes**
 (at the bottom while there are changes) puts the file back as it was when you opened the window.

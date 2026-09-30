@@ -23,6 +23,9 @@ internal sealed partial class SettingsWindow
     /// <summary>Set while the window changes section itself (not a selection by the user).</summary>
     private bool _navigating;
 
+    /// <summary>Shows section <paramref name="id"/> (the ▾ menu's "About Phosphor").</summary>
+    public void ShowSection(string id) => GoTo(id, null, null);
+
     private static string SectionTitle(string id) => SettingsCatalog.Sections.First(s => s.Id == id).Title;
 
     private void SearchResults(string query)

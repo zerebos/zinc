@@ -901,6 +901,24 @@ public sealed partial class MainWindow : Window
             index++;
         }
 
+        // Then Phosphor itself (as Windows Terminal's menu has): settings, the palette, about.
+        MenuFlyoutItem AppItem(string text, int glyph, TerminalAction? action, Action run)
+        {
+            var item = new MenuFlyoutItem { Text = text, Icon = new FontIcon { Glyph = ((char)glyph).ToString() } };
+            if (action is { } bound)
+            {
+                item.KeyboardAcceleratorTextOverride = Shortcut(new ActionInvocation(bound)) ?? "";
+            }
+
+            item.Click += (_, _) => run();
+            return item;
+        }
+
+        NewTabMenu.Items.Add(new MenuFlyoutSeparator());
+        NewTabMenu.Items.Add(AppItem("Settings", 0xE713, TerminalAction.OpenSettings, () => App.Instance.ShowSettings()));
+        NewTabMenu.Items.Add(AppItem("Command palette", 0xE721, TerminalAction.OpenCommandPalette, () => OpenCommandPalette()));
+        NewTabMenu.Items.Add(AppItem("About Phosphor", 0xE946, null, () => App.Instance.ShowSettings("about")));
+
     }
 
     /// <summary>
