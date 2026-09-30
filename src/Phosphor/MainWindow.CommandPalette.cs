@@ -367,7 +367,13 @@ public sealed partial class MainWindow
         Custom("Close workspaces to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action(TerminalAction.NextTab);
         Action(TerminalAction.PreviousTab);
-        Action(TerminalAction.TabSwitcher);
+        // From the palette, "Go to tab…" turns the palette itself into the tab switcher ("@"); run
+        // as an action it closed the palette, and reopening it lost to the focus going back.
+        commands.Add(new PaletteCommand(Actions.Title(TerminalAction.TabSwitcher), Keys(TerminalAction.TabSwitcher), () =>
+        {
+            PaletteQuery.Text = TabPrefix;
+            PaletteQuery.SelectionStart = TabPrefix.Length;
+        }, AsksArgument: true));
         Action(TerminalAction.NextAttention);
         Custom("Rename workspace…", () => ShowRename(tab));
         Custom("Export text…", () => _ = ExportText(tab));

@@ -88,6 +88,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ShellResolver.cs` (`Resolve` for the first tab: args > PHOSPHOR_SHELL > profile;
   `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
+  Bindings run in the terminal's OnKeyDown; with focus elsewhere (tab strip, sidebar, a button),
+  `MainWindow.OnWindowKeyDown` (Root.KeyDown, unhandled only) runs Ctrl/Alt chords through the
+  shown workspace's focused terminal (`Control.Invoke`).
 - `Input/Keybindings.cs` — `KeyChord.Parse("ctrl+shift+c")` (WT key names) → `TerminalAction`;
   defaults follow Windows Terminal; `Configure` applies config's `[keys]` on top; `CopyFrom`
   updates the one instance App shares with every window and pane (live reload). Key sequences

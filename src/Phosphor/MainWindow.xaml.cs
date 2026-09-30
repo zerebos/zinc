@@ -99,6 +99,7 @@ public sealed partial class MainWindow : Window
         _quick = quick;
         _focusBrush = new SolidColorBrush((Windows.UI.Color)Application.Current.Resources["SystemAccentColor"]);
         InitializeComponent();
+        Root.KeyDown += OnWindowKeyDown;
 
         if (quick)
         {
@@ -170,6 +171,28 @@ public sealed partial class MainWindow : Window
     private IEnumerable<WorkspaceTab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => (WorkspaceTab)i.Tag);
 
     private WorkspaceTab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as WorkspaceTab;
+
+    /// <summary>
+    /// Key bindings while focus is outside the terminals (the tab strip, the sidebar, a menu
+    /// button): a terminal runs its own bindings, so what bubbles up here unhandled comes from
+    /// elsewhere. Only chords with Ctrl or Alt: plain keys and Shift+key belong to the lists and
+    /// buttons. Pane actions (copy, find…) go to the focused terminal of the shown workspace.
+    /// </summary>
+    private void OnWindowKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Handled || _windowClosed || SelectedTab?.Active is not { } active)
+        {
+            return;
+        }
+
+        var state = Keyboard.State.Capture();
+        if ((state.Ctrl || state.Alt) && _keybindings.TryGet(new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift), out var invocation))
+        {
+            Log.Write($"keys: {invocation} from outside a terminal");
+            active.Control.Invoke(invocation);
+            e.Handled = true;
+        }
+    }
 
     // ---------------------------------------------------------------- panes
 
