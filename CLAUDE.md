@@ -245,7 +245,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   open: `Profile.Source` (`ProfileDiscovery.SourceOf(id)`: the [discover] key an id belongs to) and
   `Profile.Missing` (NotFound / SearchOff; hidden, named by `ProfileDiscovery.NameFor`; tested);
   settings show the reason + `MissingFix` (Delete, or turn the search on), and `FoundBy` lists each
-  search's profiles under its switch. The profile list re-renders only when the profiles
+  search's profiles under its switch. Keyboard families: `Actions.Family/FamilyTitle/TakesArgument/
+  ArgumentName/Variants/VariantLabel` (tested: every variant round-trips Format/Parse; variants are
+  built by Parse, which also fixed WithoutArguments' toggle-sidebar = cycle, Index -1) → `FamilyCard`
+  (variants with keys, in variant order, + "Add a key for another …" = `CaptureFlyout(..., variants)`
+  with a "For" chooser). The profile list re-renders only when the profiles
   differ from what it shows (`_profilesShown`; a drag already shows its order). Reset arrow =
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window

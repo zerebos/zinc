@@ -3,6 +3,9 @@ using Phosphor.Panes;
 
 namespace Phosphor.Input;
 
+/// <summary>One way to invoke an action that takes an argument ("Right" for split), or the action itself.</summary>
+public sealed record ActionVariant(string Label, ActionInvocation Invocation);
+
 /// <summary>
 /// Every action by name: what the <c>[keys]</c> table binds, what the command palette shows,
 /// and what the README lists. An action is a name plus at most one argument, written as one
@@ -91,7 +94,68 @@ public static class Actions
     /// <summary>Every action that needs no argument, as an invocation (for the settings' key list).</summary>
     public static IEnumerable<ActionInvocation> WithoutArguments =>
         Definitions.Where(d => d.Arg is Arg.None or Arg.OptionalProfile or Arg.CopyMode or Arg.OptionalSidebarMode)
-            .Select(d => new ActionInvocation(d.Action));
+            .Select(d => Parse(d.Name, out _)!.Value); // as the parser makes it: "toggle-sidebar" alone cycles (Index -1)
+
+    /// <summary>The registry name an invocation belongs to: "split" for "split right", "new-tab" for "new-tab wsl:Fedora".</summary>
+    public static string Family(ActionInvocation invocation) => Definitions[Math.Max(0, Order(invocation))].Name;
+
+    /// <summary>A family's title ("Split", "Go to workspace").</summary>
+    public static string FamilyTitle(string family) => DefinitionOf(family).Title;
+
+    /// <summary>Whether a family takes an argument (a direction, a workspace, a profile…).</summary>
+    public static bool TakesArgument(string family) => DefinitionOf(family).Arg != Arg.None;
+
+    /// <summary>What a family's argument is, in words ("direction", "workspace", "profile").</summary>
+    public static string ArgumentName(string family) => DefinitionOf(family).Arg switch
+    {
+        Arg.Direction or Arg.PromptDirection => "direction",
+        Arg.Workspace => "workspace",
+        Arg.OptionalProfile => "profile",
+        Arg.OptionalSidebarMode => "mode",
+        Arg.CopyMode => "way",
+        _ => "",
+    };
+
+    /// <summary>
+    /// Every way to invoke <paramref name="family"/>, labeled for a person ("Right", "The last one",
+    /// "Ubuntu"): directions, workspaces 1-9 and the last, the default profile and each of
+    /// <paramref name="profiles"/> (id, name). Each is what <see cref="Parse"/> makes of it, so it
+    /// writes and reads back the same.
+    /// </summary>
+    public static IReadOnlyList<ActionVariant> Variants(string family, IEnumerable<(string Id, string Name)> profiles)
+    {
+        var definition = DefinitionOf(family);
+        IEnumerable<(string Label, string Arg)> args = definition.Arg switch
+        {
+            Arg.Direction => [("Right", "right"), ("Down", "down"), ("Left", "left"), ("Up", "up")],
+            Arg.Workspace => Enumerable.Range(1, 9).Select(i => (i.ToString(CultureInfo.InvariantCulture), i.ToString(CultureInfo.InvariantCulture)))
+                .Append(("The last one", "last")),
+            Arg.OptionalProfile => profiles.Select(p => (p.Name, p.Id)).Prepend(("The default profile", "")),
+            Arg.CopyMode => [("Always", ""), ("Only when text is selected", "if-selection")],
+            Arg.OptionalSidebarMode => [("Full, icons only, auto-hide in turn", ""), ("Icons only", "rail"), ("Auto-hide", "auto-hide")],
+            Arg.PromptDirection => [("Previous", "previous"), ("Next", "next")],
+            _ => [(definition.Title, "")],
+        };
+        return
+        [
+            .. args.Select(a => Parse(a.Arg.Length == 0 ? family : $"{family} {a.Arg}", out _) is { } invocation
+                ? new ActionVariant(a.Label, invocation)
+                : null).OfType<ActionVariant>(),
+        ];
+    }
+
+    /// <summary>
+    /// <paramref name="invocation"/>'s label among its family's variants ("Right", "Ubuntu"); one that
+    /// isn't among them names its argument ("Profile 3 in the menu", or as written).
+    /// </summary>
+    public static string VariantLabel(ActionInvocation invocation, IEnumerable<(string Id, string Name)> profiles) =>
+        Variants(Family(invocation), profiles).FirstOrDefault(v => v.Invocation == invocation)?.Label
+        ?? (invocation is { Action: TerminalAction.NewTabFromProfile, Profile: null }
+            ? $"Profile {invocation.Index + 1} in the menu"
+            : Format(invocation));
+
+    private static Definition DefinitionOf(string family) =>
+        Definitions.FirstOrDefault(d => d.Name == family) ?? throw new ArgumentException($"unknown action '{family}'", nameof(family));
 
     /// <summary>The groups actions are listed under (the settings' Keyboard page), in order.</summary>
     public static IReadOnlyList<string> Categories { get; } =

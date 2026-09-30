@@ -110,6 +110,39 @@ public class KeyBindingEditorTests
     public void EveryArgumentlessActionIsListed() =>
         Assert.Contains(new ActionInvocation(TerminalAction.OpenSettings), Actions.WithoutArguments);
 
+    private static readonly (string Id, string Name)[] Profiles = [("wsl:Ubuntu", "Ubuntu"), ("pwsh", "PowerShell")];
+
+    [Fact]
+    public void ActionsWithArgumentsListTheirVariants()
+    {
+        Assert.Equal(["Right", "Down", "Left", "Up"], Actions.Variants("split", Profiles).Select(v => v.Label));
+        Assert.Equal("split left", Actions.Format(Actions.Variants("split", Profiles)[2].Invocation));
+        Assert.Equal(["The default profile", "Ubuntu", "PowerShell"], Actions.Variants("new-tab", Profiles).Select(v => v.Label));
+        Assert.Equal("go-to-workspace last", Actions.Format(Actions.Variants("go-to-workspace", Profiles)[^1].Invocation));
+        Assert.Equal("direction", Actions.ArgumentName("split"));
+        Assert.False(Actions.TakesArgument("paste"));
+
+        // Every variant of every action writes and reads back the same.
+        foreach (var family in Actions.WithoutArguments.Select(Actions.Family).Concat(["split", "focus", "resize", "go-to-workspace", "jump-to-prompt"]))
+        {
+            foreach (var variant in Actions.Variants(family, Profiles))
+            {
+                Assert.Equal(variant.Invocation, Actions.Parse(Actions.Format(variant.Invocation), out _));
+                Assert.Equal(family, Actions.Family(variant.Invocation));
+            }
+        }
+    }
+
+    [Fact]
+    public void AVariantIsLabeledByItsArgument()
+    {
+        Assert.Equal("Ubuntu", Actions.VariantLabel(new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: "wsl:Ubuntu"), Profiles));
+        Assert.Equal("Profile 3 in the menu", Actions.VariantLabel(new ActionInvocation(TerminalAction.NewTabFromProfile, 2), Profiles));
+        Assert.Equal("The last one", Actions.VariantLabel(new ActionInvocation(TerminalAction.SwitchToTab, -1), Profiles));
+        // The plain "toggle-sidebar" is the one that cycles, as the default key binds it.
+        Assert.Equal(Actions.Parse("toggle-sidebar", out _), Actions.WithoutArguments.Single(a => a.Action == TerminalAction.ToggleSidebar));
+    }
+
     [Fact]
     public void EveryActionHasAGroup()
     {

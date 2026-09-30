@@ -87,7 +87,9 @@ reset arrow makes it inherit again ("Inherited from Appearance" links to where i
 shells Phosphor looks for, and what each search found. A found profile you changed that can't open
 any more (its shell is gone, or its search is turned off) stays in the list, saying why, with
 **Delete** or **Turn on** the search; it's left out of the menus meanwhile. Under **Keyboard**: every action with its keys, grouped (Clipboard, Tabs,
-Panes…) and filterable by name or key; click a key to take it away, **+** to add one
+Panes…) and filterable by name or key; an action that takes an argument (split: a direction; new
+tab: a profile; go to workspace: a number) lists its variants that have keys, and **Add a key for
+another …** binds any other; click a key to take it away, **+** to add one
 by pressing it (it says if another action has that key, and takes it over), the reset arrow for
 the defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key
 sequences are listed but added in the file.
