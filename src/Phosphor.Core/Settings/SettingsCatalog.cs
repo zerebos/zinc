@@ -157,6 +157,9 @@ public static class SettingsCatalog
             "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle, true),
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs may read the clipboard",
             "Anything running, including a remote host, could read it.", SettingKind.Toggle, false),
+        new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
+            "Draws with the processor instead of the graphics card: for broken graphics drivers, some virtual machines and remote desktop glitches. Slower. Applies to terminals opened from now on.",
+            SettingKind.Toggle, false),
 
         // ---- Notifications
         new("notifications", "Long commands", "notify.command-finished", "Long command finishes",

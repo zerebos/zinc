@@ -53,18 +53,31 @@ internal sealed partial class SettingsWindow
         _keyRows.Children.Clear();
         var lines = KeyBindingEditor.Lines(_config);
         var query = _keyFilter.Trim();
-        foreach (var action in KeyActions())
+
+        // Grouped (Clipboard, Tabs, Panes…), each group in the registry's order; groups the
+        // filter leaves empty aren't shown.
+        foreach (var group in KeyActions().GroupBy(Actions.Category).OrderBy(g => IndexOf(Actions.Categories, g.Key)))
         {
-            var title = Actions.Title(action);
-            var chords = _config.Keybindings.All.Where(b => b.Action == action).Select(b => b.Chord).ToList();
-            var sequences = _config.Keybindings.Sequences.Where(s => s.Action == action).Select(s => s.Keys).ToList();
-            if (query.Length > 0 &&
-                !$"{title} {Actions.Format(action)} {string.Join(' ', chords)} {string.Join(' ', sequences)}".Contains(query, StringComparison.OrdinalIgnoreCase))
+            var rows = new List<Border>();
+            foreach (var action in group)
             {
-                continue;
+                var title = Actions.Title(action);
+                var chords = _config.Keybindings.All.Where(b => b.Action == action).Select(b => b.Chord).ToList();
+                var sequences = _config.Keybindings.Sequences.Where(s => s.Action == action).Select(s => s.Keys).ToList();
+                if (query.Length > 0 &&
+                    !$"{title} {Actions.Format(action)} {group.Key} {string.Join(' ', chords)} {string.Join(' ', sequences)}".Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                rows.Add(KeyRow(action, title, chords, sequences, lines));
             }
 
-            _keyRows.Children.Add(KeyRow(action, title, chords, sequences, lines));
+            if (rows.Count > 0)
+            {
+                _keyRows.Children.Add(GroupTitle(group.Key));
+                rows.ForEach(_keyRows.Children.Add);
+            }
         }
 
         if (_keyRows.Children.Count == 0)
@@ -72,6 +85,8 @@ internal sealed partial class SettingsWindow
             _keyRows.Children.Add(Note($"No action matches “{query}”."));
         }
     }
+
+    private static int IndexOf(IReadOnlyList<string> list, string item) => list.ToList().IndexOf(item);
 
     private Border KeyRow(ActionInvocation action, string title, List<KeyChord> chords, List<KeySequence> sequences,
         IReadOnlyDictionary<string, string> lines)
@@ -134,6 +149,39 @@ internal sealed partial class SettingsWindow
         return CardBorder(grid);
     }
 
+    /// <summary>
+    /// A chord as keycaps, one per key ("Ctrl" "Shift" "C"), the way Windows shows shortcuts; a
+    /// sequence's steps ("Ctrl+A > C") separated by an arrow.
+    /// </summary>
+    private static StackPanel Keycaps(string label)
+    {
+        var caps = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
+        var steps = label.Split(" > ");
+        for (var s = 0; s < steps.Length; s++)
+        {
+            if (s > 0)
+            {
+                caps.Children.Add(new TextBlock { Text = "›", Opacity = 0.7, Margin = new Thickness(2, 0, 2, 0), VerticalAlignment = VerticalAlignment.Center });
+            }
+
+            foreach (var key in steps[s].Split('+'))
+            {
+                caps.Children.Add(new Border
+                {
+                    Child = new TextBlock { Text = key, FontSize = 12 },
+                    MinWidth = 22,
+                    Padding = new Thickness(5, 1, 5, 2),
+                    CornerRadius = new CornerRadius(3),
+                    BorderThickness = new Thickness(1),
+                    BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDisabledBrush"],
+                    Background = (Brush)Application.Current.Resources["ControlFillColorSecondaryBrush"],
+                });
+            }
+        }
+
+        return caps;
+    }
+
     /// <summary>A key as a chip; clicking it removes the key.</summary>
     private static Button KeyChip(string label, string removeName, Action remove)
     {
@@ -146,7 +194,7 @@ internal sealed partial class SettingsWindow
                 Spacing = 6,
                 Children =
                 {
-                    new TextBlock { Text = label, FontFamily = new FontFamily("Cascadia Mono, Consolas"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
+                    Keycaps(label),
                     new FontIcon { Glyph = "", FontSize = 9, Opacity = 0.7 },
                 },
             },

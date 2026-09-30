@@ -74,14 +74,18 @@ as you make it (only that line changes; choosing a default removes the line), an
 (at the bottom while there are changes) puts the file back as it was when you opened the window.
 Each setting shows its key in the file; the arrow beside a changed setting's name resets it.
 Color schemes are shown in their own colors (type to filter the list), and a color setting offers
-the scheme's 16 colors, "use the scheme's", or any color.
+the scheme's 16 colors, "use the scheme's", or any color. **Find a setting** searches settings,
+key bindings and a profile's own settings ("font size ubuntu"), each under where it lives; "Show
+in …" (or Enter, for the first result) goes there and highlights it.
 While `config.toml` has an error, Settings says so and changes nothing. The window reopens where
 you left it. Under **Profiles**: the default profile, every profile in your order (drag them, or
-**⋯ → Move up/down**; the new-tab menu follows it), found on this PC or your own (add, delete, or
-undo your changes to a found one), each one's name, command, folder, icon and visibility, and its
+**⋯ → Move up/down**; the new-tab menu follows it), found on this PC or your own (add, duplicate,
+delete, or undo your changes to a found one), each one's name, command, folder, icon (with a
+folder button to browse for them) and visibility, and its
 own font, colors and padding: each shows what it inherits until you change it there, and the
-reset arrow makes it inherit again. Also which shells Phosphor looks for. Under **Keyboard**:
-every action with its keys (filter by name or key); click a key to take it away, **+** to add one
+reset arrow makes it inherit again ("Inherited from Appearance" links to where it's set). Also which
+shells Phosphor looks for. Under **Keyboard**: every action with its keys, grouped (Clipboard, Tabs,
+Panes…) and filterable by name or key; click a key to take it away, **+** to add one
 by pressing it (it says if another action has that key, and takes it over), the reset arrow for
 the defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key
 sequences are listed but added in the file.
@@ -166,7 +170,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
-features they control below.
+features they control below; and `software-rendering = true`, which draws with the processor
+instead of the graphics card (for broken graphics drivers, some virtual machines and remote desktop
+glitches; slower; applies to terminals opened after it's set).
 
 **`[notify]`**: `command-finished`, `command-finished-after` (see
 [Shell integration](#shell-integration)), and `programs`: notifications that programs send

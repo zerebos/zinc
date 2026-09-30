@@ -34,9 +34,15 @@ internal static class CanvasLifetime
     /// <summary>Canvases retired but still registered (kept alive by <see cref="States"/>).</summary>
     public static int Held => States.Values.Count(s => s.Retired);
 
+    /// <summary>
+    /// Canvases draw with the CPU (WARP) instead of the graphics card (<c>[window]
+    /// software-rendering</c>); set by the app on every config load, used by canvases created after.
+    /// </summary>
+    public static bool SoftwareRendering { get; set; }
+
     public static CanvasControl Create()
     {
-        var canvas = new CanvasControl();
+        var canvas = new CanvasControl { ForceSoftwareRenderer = SoftwareRendering };
         States[canvas] = new State();
         // Subscribed before the owner's handlers, so the owner sees the updated count.
         canvas.Loaded += OnLoaded;

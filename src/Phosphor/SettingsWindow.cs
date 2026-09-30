@@ -79,7 +79,15 @@ internal sealed partial class SettingsWindow : Window
 
         _search = new AutoSuggestBox { PlaceholderText = "Find a setting", QueryIcon = new SymbolIcon(Symbol.Find) };
         AutomationProperties.SetName(_search, "Find a setting");
-        _search.TextChanged += (_, _) => Render();
+        // Typing searches; the window clearing the box itself (going to a result) doesn't.
+        _search.TextChanged += (_, e) =>
+        {
+            if (e.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                Render();
+            }
+        };
+        _search.QuerySubmitted += (_, _) => _jumps.FirstOrDefault()?.Invoke();
 
         // The undo bar: floats at the bottom while there are changes to undo.
         ToolTipService.SetToolTip(_undo, "Puts config.toml back as it was when Settings opened");
@@ -145,7 +153,7 @@ internal sealed partial class SettingsWindow : Window
         _nav.SelectedItem = _nav.MenuItems.Concat(_nav.FooterMenuItems).OfType<NavigationViewItem>().First(i => (string)i.Tag == _section);
         _nav.SelectionChanged += (_, e) =>
         {
-            if (e.SelectedItem is NavigationViewItem { Tag: string id })
+            if (!_navigating && e.SelectedItem is NavigationViewItem { Tag: string id })
             {
                 _section = id;
                 _editing = null;
@@ -204,6 +212,8 @@ internal sealed partial class SettingsWindow : Window
     {
         _page.Children.Clear();
         _refreshers.Clear();
+        _cards.Clear();
+        _jumps.Clear();
         var query = _search.Text.Trim();
         _page.Children.Add(new TextBlock
         {
@@ -219,16 +229,7 @@ internal sealed partial class SettingsWindow : Window
 
         if (query.Length > 0)
         {
-            var hits = SettingsCatalog.All.Where(s => Matches(s, query)).ToList();
-            if (hits.Count == 0)
-            {
-                _page.Children.Add(Note($"No setting matches “{query}”."));
-            }
-
-            foreach (var section in hits.GroupBy(s => s.Section))
-            {
-                AddGroup(SettingsCatalog.Sections.First(s => s.Id == section.Key).Title, section);
-            }
+            SearchResults(query);
         }
         else if (_section == "about")
         {
@@ -263,9 +264,6 @@ internal sealed partial class SettingsWindow : Window
 
         _scroller.Content = _page;
     }
-
-    private static bool Matches(SettingDef s, string query) =>
-        $"{s.Label} {s.Description} {s.Key} {s.Group}".Contains(query, StringComparison.OrdinalIgnoreCase);
 
     private void UpdateBanners()
     {
@@ -477,6 +475,13 @@ internal sealed partial class SettingsWindow : Window
             WriteProfileOrder(ids);
         }
 
+        MenuFlyoutItem Duplicate()
+        {
+            var item = new MenuFlyoutItem { Text = "Duplicate" };
+            item.Click += (_, _) => DuplicateProfile(profile, order);
+            return item;
+        }
+
         MenuFlyoutItem MoveItem(string text, int to)
         {
             var item = new MenuFlyoutItem { Text = text, IsEnabled = to != at && to >= 0 && to < order.Count };
@@ -489,7 +494,17 @@ internal sealed partial class SettingsWindow : Window
             Content = new FontIcon { Glyph = "", FontSize = 14 },
             Padding = new Thickness(8, 8, 8, 8),
             VerticalAlignment = VerticalAlignment.Center,
-            Flyout = new MenuFlyout { Items = { MoveItem("Move up", at - 1), MoveItem("Move down", at + 1), MoveItem("Move to the top", 0) } },
+            Flyout = new MenuFlyout
+            {
+                Items =
+                {
+                    Duplicate(),
+                    new MenuFlyoutSeparator(),
+                    MoveItem("Move up", at - 1),
+                    MoveItem("Move down", at + 1),
+                    MoveItem("Move to the top", 0),
+                },
+            },
         };
         ToolTipService.SetToolTip(more, "More");
         AutomationProperties.SetName(more, $"More for {profile.Name}");
@@ -521,6 +536,55 @@ internal sealed partial class SettingsWindow : Window
         grid.Children.Add(text);
         grid.Children.Add(buttons);
         return CardBorder(grid);
+    }
+
+    /// <summary>
+    /// A copy of <paramref name="profile"/> as a profile of your own ("Ubuntu (copy)"): its own
+    /// values, plus what it runs, where it starts and its icon when those came from discovery.
+    /// Listed right after the original, and opened in the editor.
+    /// </summary>
+    private void DuplicateProfile(Profile profile, List<string> order)
+    {
+        if (_config.HasErrors)
+        {
+            return;
+        }
+
+        var n = 1;
+        while (_config.FindProfile($"profile-{n}") != null || _config.ProfileValues.ContainsKey($"profile-{n}"))
+        {
+            n++;
+        }
+
+        var id = $"profile-{n}";
+        var own = _config.ProfileValues.GetValueOrDefault(profile.Id) ?? new Dictionary<string, object>();
+        Write(["profile", id, "name"], $"{profile.Name} (copy)");
+        foreach (var (key, value) in own.Where(v => v.Key is not ("name" or "hidden")))
+        {
+            Write(["profile", id, .. key.Split('.')], value);
+        }
+
+        if (!own.ContainsKey("command"))
+        {
+            Write(["profile", id, "command"], profile.Config.Command ?? profile.FoundCommand ?? "pwsh.exe");
+        }
+
+        if (!own.ContainsKey("working-directory") && profile.Config.WorkingDirectory is { } folder)
+        {
+            Write(["profile", id, "working-directory"], folder);
+        }
+
+        if (!own.ContainsKey("icon") && profile.Config.Icon is { } icon)
+        {
+            Write(["profile", id, "icon"], icon);
+        }
+
+        var ids = order.ToList();
+        ids.Insert(ids.IndexOf(profile.Id) + 1, id);
+        WriteProfileOrder(ids);
+        _editing = id;
+        Render();
+        _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
 
     /// <summary>A profile of your own, named "New profile", running what the default profile runs; opened in the editor.</summary>
@@ -648,8 +712,7 @@ internal sealed partial class SettingsWindow : Window
         void State(object? own)
         {
             reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
-            var inherited = Describe(setting, Inherited());
-            SetText(description, own != null ? $"Its own. Everywhere else: {inherited}." : $"Inherited: {inherited}.");
+            InheritedText(description, setting, Describe(setting, Inherited()), own != null);
         }
 
         void Commit(object? value)
@@ -701,7 +764,9 @@ internal sealed partial class SettingsWindow : Window
         };
         _refreshers.Add(Refresh);
         Quietly(Refresh);
-        return CardLayout(new TextBlock { Text = setting.Label }, reset, description, $"profile.{id}.{setting.Key}", error, control);
+        var card = CardLayout(new TextBlock { Text = setting.Label }, reset, description, $"profile.{id}.{setting.Key}", error, control);
+        _cards[(id, setting.Key)] = (card, control);
+        return card;
     }
 
     /// <summary>Writes one key (null removes it), unless the file has an error.</summary>
@@ -799,8 +864,10 @@ internal sealed partial class SettingsWindow : Window
 
         _refreshers.Add(Refresh);
         Quietly(Refresh);
-        return CardLayout(new TextBlock { Text = setting.Label }, reset, description,
+        var card = CardLayout(new TextBlock { Text = setting.Label }, reset, description,
             profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", error, control);
+        _cards[(profile, setting.Key)] = (card, control);
+        return card;
     }
 
     /// <summary>
@@ -834,11 +901,14 @@ internal sealed partial class SettingsWindow : Window
             label.Text = pair ? "Dark scheme" : setting.Label;
             lightCard.Visibility = pair ? Visibility.Visible : Visibility.Collapsed;
             reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
-            SetText(description,
-                pair ? "While Windows is in dark mode."
-                : profile == null ? setting.Description
-                : own != null ? $"Its own. Everywhere else: {Describe(setting, Inherited())}."
-                : $"Inherited: {Describe(setting, Inherited())}.");
+            if (pair || profile == null)
+            {
+                SetText(description, pair ? "While Windows is in dark mode." : setting.Description);
+            }
+            else
+            {
+                InheritedText(description, setting, Describe(setting, Inherited()), own != null);
+            }
         }
 
         void Display(object? value, object? own)
@@ -933,6 +1003,7 @@ internal sealed partial class SettingsWindow : Window
         var followCard = CardLayout(new TextBlock { Text = "Follow Windows light/dark" }, null,
             DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followSwitch);
         var main = CardLayout(label, reset, description, profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", null, scheme);
+        _cards[(profile, setting.Key)] = (main, scheme);
         return [followCard, main, lightCard];
     }
 
@@ -1190,6 +1261,8 @@ internal sealed partial class SettingsWindow : Window
         SettingKind.Number => NumberControl(setting, commit),
         SettingKind.Color => ColorControl(setting, commit, profile),
         SettingKind.Font => FontControl(commit),
+        _ when profile != null && setting.Section == "profiles" && setting.Key is "command" or "working-directory" or "icon" =>
+            BrowseControl(setting, commit),
         _ => TextControl(setting, commit), // SettingKind.Scheme has cards of its own (SchemeCards)
     };
 
@@ -1288,6 +1361,57 @@ internal sealed partial class SettingsWindow : Window
                 box.Text = shown = Format(value);
             }
         });
+    }
+
+    /// <summary>A text box with a folder button beside it: a profile's command (a program), starting folder or icon (an image).</summary>
+    private (FrameworkElement, Action<object?>) BrowseControl(SettingDef setting, Action<object?> commit)
+    {
+        var (text, show) = TextControl(setting, commit);
+        var box = (TextBox)text;
+        box.Width = ControlWidth - 40 - 8;
+        var browse = new Button { Content = new FontIcon { Glyph = ((char)0xE838).ToString(), FontSize = 14 }, VerticalAlignment = VerticalAlignment.Center };
+        var what = setting.Key switch { "command" => "Browse for a program", "icon" => "Browse for an image", _ => "Browse for a folder" };
+        ToolTipService.SetToolTip(browse, what);
+        AutomationProperties.SetName(browse, what);
+        browse.Click += async (_, _) =>
+        {
+            // Code after an await resumes as queued work, where an exception would end the app.
+            try
+            {
+                if (await PickPath(setting.Key) is { } path)
+                {
+                    // A program's path with spaces is quoted, so arguments can follow it.
+                    box.Text = setting.Key == "command" && path.Contains(' ') ? '"' + path + '"' : path;
+                    commit(SettingsCatalog.FromText(setting, box.Text));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Crash("settings: browsing", ex);
+            }
+        };
+        return (new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { box, browse } }, show);
+    }
+
+    private async Task<string?> PickPath(string key)
+    {
+        var window = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        if (key == "working-directory")
+        {
+            var folders = new Windows.Storage.Pickers.FolderPicker();
+            folders.FileTypeFilter.Add("*");
+            WinRT.Interop.InitializeWithWindow.Initialize(folders, window);
+            return (await folders.PickSingleFolderAsync())?.Path;
+        }
+
+        var files = new Windows.Storage.Pickers.FileOpenPicker();
+        foreach (var type in key == "command" ? [".exe", ".cmd", ".bat", ".com"] : new[] { ".png", ".ico", ".jpg", ".jpeg", ".bmp" })
+        {
+            files.FileTypeFilter.Add(type);
+        }
+
+        WinRT.Interop.InitializeWithWindow.Initialize(files, window);
+        return (await files.PickSingleFileAsync())?.Path;
     }
 
     /// <summary>

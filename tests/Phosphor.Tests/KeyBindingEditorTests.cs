@@ -109,4 +109,13 @@ public class KeyBindingEditorTests
     [Fact]
     public void EveryArgumentlessActionIsListed() =>
         Assert.Contains(new ActionInvocation(TerminalAction.OpenSettings), Actions.WithoutArguments);
+
+    [Fact]
+    public void EveryActionHasAGroup()
+    {
+        Assert.Empty(Actions.Uncategorized);
+        Assert.Equal("Clipboard", Actions.Category(new ActionInvocation(TerminalAction.CopyIfSelection)));
+        Assert.Equal("Tabs", Actions.Category(new ActionInvocation(TerminalAction.NewTabFromProfile)));
+        Assert.All(Actions.WithoutArguments, a => Assert.Contains(Actions.Category(a), Actions.Categories));
+    }
 }

@@ -2,6 +2,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Phosphor.Input;
 using Phosphor.Session;
+using Phosphor.Terminal;
 
 namespace Phosphor;
 
@@ -69,6 +70,7 @@ public partial class App : Application
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
         WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
         _config = ConfigFile.Load();
+        CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
         LoadRecentCommands();
         _keybindings = _config.Keybindings;
         foreach (var warning in _config.Warnings)
@@ -192,6 +194,7 @@ public partial class App : Application
             if (firstRun)
             {
                 _config = ConfigFile.Load(path);
+                CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
                 _keybindings.CopyFrom(_config.Keybindings);
                 OpenWindow(_config.DefaultProfile);
                 WatchConfig(); // the folder exists now
@@ -558,6 +561,7 @@ public partial class App : Application
 
         var hotkeyChanged = fresh.Global.QuickTerminal.Hotkey != _config.Global.QuickTerminal.Hotkey;
         _config = fresh;
+        CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
         _keybindings.CopyFrom(fresh.Keybindings);
         windows.ForEach(w => w.ApplyConfig(fresh));
         if (hotkeyChanged)

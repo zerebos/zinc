@@ -93,6 +93,32 @@ public static class Actions
         Definitions.Where(d => d.Arg is Arg.None or Arg.OptionalProfile or Arg.CopyMode or Arg.OptionalSidebarMode)
             .Select(d => new ActionInvocation(d.Action));
 
+    /// <summary>The groups actions are listed under (the settings' Keyboard page), in order.</summary>
+    public static IReadOnlyList<string> Categories { get; } =
+        ["Clipboard", "Find and scroll", "Font size", "Tabs", "Panes", "Workspaces and windows", "Sidebar and title bar", "Phosphor"];
+
+    private static readonly Dictionary<string, string> CategoryOf = new()
+    {
+        ["copy"] = "Clipboard", ["paste"] = "Clipboard", ["copy-output"] = "Clipboard",
+        ["find"] = "Find and scroll", ["scroll-page-up"] = "Find and scroll", ["scroll-page-down"] = "Find and scroll",
+        ["scroll-to-top"] = "Find and scroll", ["scroll-to-bottom"] = "Find and scroll", ["jump-to-prompt"] = "Find and scroll",
+        ["select-output"] = "Find and scroll",
+        ["increase-font-size"] = "Font size", ["decrease-font-size"] = "Font size", ["reset-font-size"] = "Font size",
+        ["new-tab"] = "Tabs", ["duplicate-tab"] = "Tabs", ["close-tab"] = "Tabs", ["next-tab"] = "Tabs", ["previous-tab"] = "Tabs",
+        ["tab-switcher"] = "Tabs", ["next-attention"] = "Tabs", ["profile-menu"] = "Tabs",
+        ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
+        ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows",
+        ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
+        ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor",
+    };
+
+    /// <summary>The group <paramref name="invocation"/>'s action is listed under (one of <see cref="Categories"/>).</summary>
+    public static string Category(ActionInvocation invocation) =>
+        Order(invocation) is var at and >= 0 && CategoryOf.TryGetValue(Definitions[at].Name, out var category) ? category : "Phosphor";
+
+    /// <summary>Every action's name has a category (a test checks, so a new action isn't filed under "Phosphor" by accident).</summary>
+    internal static IEnumerable<string> Uncategorized => Definitions.Select(d => d.Name).Where(n => !CategoryOf.ContainsKey(n));
+
     /// <summary>Where <paramref name="invocation"/>'s action sits in the registry (for listing in its order).</summary>
     public static int Order(ActionInvocation invocation) =>
         Array.FindIndex(Definitions, d => d.Action == invocation.Action switch

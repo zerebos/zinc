@@ -165,6 +165,12 @@ public sealed record Config
     /// </summary>
     public bool TabGroups { get; init; } = true;
 
+    /// <summary>
+    /// Draw with the CPU (WARP) instead of the graphics card: for broken GPU drivers, some virtual
+    /// machines and remote desktop glitches. Config: <c>[window] software-rendering = true</c> (global).
+    /// </summary>
+    public bool SoftwareRendering { get; init; }
+
     /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
     public GroupTabStrip GroupTabStrip { get; init; }
 
@@ -248,6 +254,7 @@ public sealed record Config
             "quit-after-last-window-closed" when bool.TryParse(value, out var quit) =>
                 this with { QuitAfterLastWindowClosed = quit },
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
+            "software-rendering" when bool.TryParse(value, out var software) => this with { SoftwareRendering = software },
             "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
                 this with { GroupTabStrip = strip },
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,

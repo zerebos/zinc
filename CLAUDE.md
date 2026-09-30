@@ -234,7 +234,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   so it's a popup window that closes when the window isn't in front: automate it with
   `.scratch/tools/pick-in-flyout.ps1`); colour flyout = scheme's 16 chips (`TerminalTheme.BaseColors`,
   libghostty's built-ins via `TerminalSession.BuiltinBaseColors`) + "Use the scheme's color" + full
-  picker. The profile list re-renders only when the profiles
+  picker. Pass 5 part 2: `SettingsWindow.Search.cs` (results = settings + a named profile's own
+  settings + key bindings, words AND-matched; `_cards` registry → `GoTo` (sets section without the nav
+  handler via `_navigating`; search box re-renders only on `UserInput`) → `Reveal` (bring into view,
+  focus, `Flash` = accent border 2px with padding -1 so nothing moves, ColorAnimation back);
+  `InheritedText` = "Inherited from [section link]"). Keyboard groups = `Actions.Categories`/`Category`
+  (tested: every action has one); keycaps (`Keycaps`). `DuplicateProfile` (⋯ menu), `BrowseControl`
+  (pickers need `InitializeWithWindow`; async click body is try/caught). `[window] software-rendering`
+  → `CanvasLifetime.SoftwareRendering` → new canvases' `ForceSoftwareRenderer`. The profile list re-renders only when the profiles
   differ from what it shows (`_profilesShown`; a drag already shows its order). Reset arrow =
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window

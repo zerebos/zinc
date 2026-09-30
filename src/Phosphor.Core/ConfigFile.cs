@@ -608,6 +608,7 @@ public sealed class ConfigFile
             ["window.title-bar"] = ("title-bar", v => v as string),
             ["window.sidebar"] = ("sidebar", v => v as string),
             ["window.tab-groups"] = ("tab-groups", v => Bool(v)),
+            ["window.software-rendering"] = ("software-rendering", v => Bool(v)),
             ["window.group-tab-strip"] = ("group-tab-strip", v => v as string),
             ["window.unfocused-split-opacity"] = ("unfocused-split-opacity", v => Number(v)),
             ["window.unfocused-split-fill"] = ("unfocused-split-fill", v => v as string),
