@@ -324,6 +324,31 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     private readonly GhosttyColorRgb[] _builtinPalette = new GhosttyColorRgb[256];
 
+    private static readonly Lazy<GhosttyColorRgb[]> BuiltinBase = new(() =>
+    {
+        // Read from a throwaway terminal: libghostty's own palette, before any theme.
+        var palette = new GhosttyColorRgb[256];
+        if (Native.TerminalNew(0, out var terminal, 1, 1) == GhosttyResult.Success)
+        {
+            try
+            {
+                fixed (GhosttyColorRgb* p = palette)
+                {
+                    Native.TerminalGet(terminal, TerminalData.ColorPaletteDefault, p);
+                }
+            }
+            finally
+            {
+                Native.TerminalFree(terminal);
+            }
+        }
+
+        return palette[..16];
+    });
+
+    /// <summary>libghostty's built-in 16 base colors (what a scheme that doesn't set them shows).</summary>
+    public static IReadOnlyList<GhosttyColorRgb> BuiltinBaseColors => BuiltinBase.Value;
+
     private void ApplyTheme(TerminalTheme theme)
     {
         var fg = theme.Foreground;

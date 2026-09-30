@@ -12,4 +12,8 @@ public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb F
 
     /// <summary>Overrides for palette entries (0-255); the rest keep libghostty's defaults.</summary>
     public IReadOnlyDictionary<int, GhosttyColorRgb> Palette { get; init; } = new Dictionary<int, GhosttyColorRgb>();
+
+    /// <summary>The 16 base colors as a terminal shows them: this theme's, else libghostty's built-in ones.</summary>
+    public IReadOnlyList<GhosttyColorRgb> BaseColors =>
+        [.. Enumerable.Range(0, 16).Select(i => Palette.TryGetValue(i, out var c) ? c : TerminalSession.BuiltinBaseColors[i])];
 }

@@ -331,7 +331,8 @@ internal sealed partial class WelcomeWindow : Window
         schemes.AddRange(names);
         var list = new ListView { Height = 390, SelectionMode = ListViewSelectionMode.Single };
         AutomationProperties.SetName(list, "Color schemes");
-        var search = new TextBox { PlaceholderText = "Search 650 color schemes" };
+        SchemeTiles.ShowAsTiles(list, _config.Themes, DefaultSchemeLabel); // each scheme drawn in its own colors
+        var search = new TextBox { PlaceholderText = $"Search {names.Count} color schemes" };
         AutomationProperties.SetName(search, "Search color schemes");
         void Fill()
         {
@@ -383,19 +384,22 @@ internal sealed partial class WelcomeWindow : Window
 
         // Follow Windows light/dark: the list above picks the dark side, this one the light side.
         var listLabel = new TextBlock { Text = _follow ? "When Windows is dark" : "Scheme", Opacity = 0.8 };
-        var lightBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Stretch, Header = "When Windows is light" };
-        AutomationProperties.SetName(lightBox, "When Windows is light");
-        foreach (var name in names)
+        var lightPicker = new SchemePicker(_config.Themes, names, null, "When Windows is light")
         {
-            lightBox.Items.Add(name);
-        }
-
-        lightBox.SelectedItem = _light;
-        lightBox.Visibility = _follow ? Visibility.Visible : Visibility.Collapsed;
-        lightBox.SelectionChanged += (_, _) =>
+            Width = double.NaN,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+        };
+        lightPicker.Show(_light, _light != null);
+        lightPicker.Picked += name =>
         {
-            _light = lightBox.SelectedItem as string;
+            _light = name;
             UpdatePreview();
+        };
+        var lightBox = new StackPanel
+        {
+            Spacing = 8,
+            Visibility = _follow ? Visibility.Visible : Visibility.Collapsed,
+            Children = { new TextBlock { Text = "When Windows is light" }, lightPicker },
         };
         var follow = new ToggleSwitch { Header = "Follow Windows light/dark", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
         AutomationProperties.SetName(follow, "Follow Windows light/dark");
@@ -414,7 +418,8 @@ internal sealed partial class WelcomeWindow : Window
                     list.ScrollIntoView(mocha);
                 }
 
-                lightBox.SelectedItem = _light ?? ThemeLibrary.LightCounterpart(_scheme, names);
+                _light ??= ThemeLibrary.LightCounterpart(_scheme, names);
+                lightPicker.Show(_light, _light != null);
             }
 
             listLabel.Text = _follow ? "When Windows is dark" : "Scheme";

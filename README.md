@@ -73,6 +73,8 @@ of its own, next to your terminals: each change is written to `config.toml` righ
 as you make it (only that line changes; choosing a default removes the line), and **Undo changes**
 (at the bottom while there are changes) puts the file back as it was when you opened the window.
 Each setting shows its key in the file; the arrow beside a changed setting's name resets it.
+Color schemes are shown in their own colors (type to filter the list), and a color setting offers
+the scheme's 16 colors, "use the scheme's", or any color.
 While `config.toml` has an error, Settings says so and changes nothing. The window reopens where
 you left it. Under **Profiles**: the default profile, every profile in your order (drag them, or
 **⋯ → Move up/down**; the new-tab menu follows it), found on this PC or your own (add, delete, or

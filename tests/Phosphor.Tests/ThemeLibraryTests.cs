@@ -1,3 +1,5 @@
+using Phosphor.Terminal;
+
 namespace Phosphor.Tests;
 
 public sealed class ThemeLibraryTests : IDisposable
@@ -40,5 +42,21 @@ public sealed class ThemeLibraryTests : IDisposable
         Assert.Null(_library.Apply(new Config(), "Nope"));
         Assert.Null(_library.Apply(new Config(), "../user/Mine"));
         Assert.Null(_library.Apply(new Config(), ""));
+    }
+}
+
+public class BaseColorTests
+{
+    [Fact]
+    public void ASchemesOwnColorsWinTheRestAreLibghosttys()
+    {
+        var builtin = TerminalSession.BuiltinBaseColors;
+        Assert.Equal(16, builtin.Count);
+        Assert.Contains(builtin, c => c.R + c.G + c.B > 0); // read from libghostty, not left zeroed
+
+        var theme = new Config().Apply("palette", "1=#ff0000")!.Theme;
+        var colors = theme.BaseColors;
+        Assert.Equal((255, 0, 0), (colors[1].R, colors[1].G, colors[1].B));
+        Assert.Equal((builtin[2].R, builtin[2].G, builtin[2].B), (colors[2].R, colors[2].G, colors[2].B));
     }
 }

@@ -359,7 +359,7 @@ internal sealed partial class SettingsWindow : Window
     {
         _page.Children.Add(GroupTitle("Default"));
         var visible = _config.VisibleProfiles.ToList();
-        var defaults = new ComboBox { MinWidth = 260 };
+        var defaults = new ComboBox { Width = ControlWidth };
         AutomationProperties.SetName(defaults, "Default profile");
         foreach (var profile in visible)
         {
@@ -679,7 +679,7 @@ internal sealed partial class SettingsWindow : Window
             State(value);
         }
 
-        var (control, show) = Control(setting, Commit);
+        var (control, show) = Control(setting, Commit, id);
 
         void Refresh()
         {
@@ -690,6 +690,7 @@ internal sealed partial class SettingsWindow : Window
 
         reset.Click += (_, _) =>
         {
+            FocusAfterReset(reset, control);
             Write(path, null);
             error.Visibility = Visibility.Collapsed;
             Quietly(() =>
@@ -781,9 +782,10 @@ internal sealed partial class SettingsWindow : Window
             });
         }
 
-        var (control, show) = Control(setting, Commit);
+        var (control, show) = Control(setting, Commit, profile);
         reset.Click += (_, _) =>
         {
+            FocusAfterReset(reset, control);
             Commit(null);
             Quietly(() => show(null));
         };
@@ -810,28 +812,12 @@ internal sealed partial class SettingsWindow : Window
     {
         IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
         var names = _config.Themes.Names();
-        ComboBox Box(string name, bool withDefault)
-        {
-            var box = new ComboBox { MinWidth = 240 };
-            AutomationProperties.SetName(box, name);
-            if (withDefault)
-            {
-                box.Items.Add(DefaultSchemeLabel);
-            }
 
-            foreach (var n in names)
-            {
-                box.Items.Add(n);
-            }
-
-            return box;
-        }
-
-        // A profile has no "Phosphor's own" to pick: without a scheme of its own it inherits.
-        var scheme = Box("Color scheme", withDefault: profile == null);
-        var light = Box("Light scheme", withDefault: false);
-        var follow = new ToggleSwitch { OnContent = "On", OffContent = "Off", MinWidth = 0 };
-        AutomationProperties.SetName(follow, "Follow Windows light/dark");
+        // Pickers showing each scheme as a tile. A profile has no "Phosphor's own" to pick:
+        // without a scheme of its own it inherits.
+        var scheme = new SchemePicker(_config.Themes, names, profile == null ? DefaultSchemeLabel : null, "Color scheme");
+        var light = new SchemePicker(_config.Themes, names, null, "Light scheme");
+        var (followSwitch, follow) = Switch("Follow Windows light/dark");
         var label = new TextBlock { Text = setting.Label };
         var description = DescriptionText();
         var reset = ResetArrow(setting.Label, profile == null
@@ -863,15 +849,20 @@ internal sealed partial class SettingsWindow : Window
             follow.IsOn = pair;
             if (pair && ThemeLibrary.TryParsePair(text!, out var l, out var d))
             {
-                scheme.SelectedItem = scheme.Items.Contains(d) ? d : null;
-                light.SelectedItem = light.Items.Contains(l) ? l : null;
+                scheme.Show(d, scheme.Contains(d));
+                light.Show(l, light.Contains(l));
+            }
+            else if (text != null)
+            {
+                scheme.Show(text, scheme.Contains(text));
             }
             else
             {
-                scheme.SelectedItem = text != null && scheme.Items.Contains(text) ? text : profile == null ? DefaultSchemeLabel : null;
+                scheme.Show(null, selected: profile == null); // Phosphor's own; a profile: placeholder
             }
 
-            scheme.PlaceholderText = scheme.SelectedItem == null ? Describe(setting, value) : "";
+            scheme.Placeholder = Describe(setting, value);
+            light.Placeholder = "Choose a scheme";
             Layout(pair, own);
             local = false;
         }
@@ -891,19 +882,19 @@ internal sealed partial class SettingsWindow : Window
 
             if (follow.IsOn)
             {
-                if (light.SelectedItem is string l && scheme.SelectedItem is string d && d != DefaultSchemeLabel)
+                if (light.Selected is { } l && scheme.Selected is { } d)
                 {
                     Commit($"light:{l},dark:{d}");
                 }
             }
-            else if (scheme.SelectedItem is string s)
+            else if (scheme.HasSelection)
             {
-                Commit(s == DefaultSchemeLabel ? null : s);
+                Commit(scheme.Selected); // null: Phosphor's own
             }
         }
 
-        scheme.SelectionChanged += (_, _) => Changed();
-        light.SelectionChanged += (_, _) => Changed();
+        scheme.Picked += _ => Changed();
+        light.Picked += _ => Changed();
         follow.Toggled += (_, _) =>
         {
             if (local || _updating)
@@ -916,12 +907,9 @@ internal sealed partial class SettingsWindow : Window
                 // The scheme in use becomes the dark side (Phosphor's own: Catppuccin Mocha), and
                 // the light side starts from its counterpart.
                 local = true;
-                var current = scheme.SelectedItem as string;
-                var dark = current != null && current != DefaultSchemeLabel
-                    ? current
-                    : names.FirstOrDefault(n => n == "Catppuccin Mocha") ?? names.FirstOrDefault();
-                scheme.SelectedItem = dark;
-                light.SelectedItem = ThemeLibrary.LightCounterpart(dark, names);
+                var dark = scheme.Selected ?? names.FirstOrDefault(n => n == "Catppuccin Mocha") ?? names.FirstOrDefault();
+                scheme.Show(dark);
+                light.Show(ThemeLibrary.LightCounterpart(dark, names));
                 local = false;
             }
 
@@ -929,6 +917,7 @@ internal sealed partial class SettingsWindow : Window
         };
         reset.Click += (_, _) =>
         {
+            FocusAfterReset(reset, scheme);
             Write(path, null);
             Display(Inherited(), null);
         };
@@ -942,7 +931,7 @@ internal sealed partial class SettingsWindow : Window
         _refreshers.Add(Refresh);
         Quietly(Refresh);
         var followCard = CardLayout(new TextBlock { Text = "Follow Windows light/dark" }, null,
-            DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, follow);
+            DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followSwitch);
         var main = CardLayout(label, reset, description, profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", null, scheme);
         return [followCard, main, lightCard];
     }
@@ -1088,22 +1077,74 @@ internal sealed partial class SettingsWindow : Window
             text.Children.Add(error);
         }
 
+        return CardBorder(TextAndControl(text, control));
+    }
+
+    /// <summary>Below this width a card's control goes under its text (Windows Terminal's threshold for its cards, less their padding).</summary>
+    private const double NarrowCard = 440;
+
+    /// <summary>One width for dropdowns, text boxes and pickers, so their left edges line up down the page.</summary>
+    private const double ControlWidth = 280;
+
+    /// <summary>Text on the left, the control on the right; on a narrow card, the control under the text.</summary>
+    private static Grid TextAndControl(FrameworkElement text, FrameworkElement control)
+    {
         control.VerticalAlignment = VerticalAlignment.Center;
-        var grid = new Grid { ColumnSpacing = 24 };
+        var grid = new Grid { ColumnSpacing = 24, RowSpacing = 8 };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         Grid.SetColumn(control, 1);
         grid.Children.Add(text);
         grid.Children.Add(control);
-        return CardBorder(grid);
+        var align = control.HorizontalAlignment;
+        grid.SizeChanged += (_, e) =>
+        {
+            var narrow = e.NewSize.Width < NarrowCard;
+            Grid.SetColumn(control, narrow ? 0 : 1);
+            Grid.SetRow(control, narrow ? 1 : 0);
+            grid.ColumnSpacing = narrow ? 0 : 24;
+            control.HorizontalAlignment = narrow ? HorizontalAlignment.Left : align;
+        };
+        return grid;
+    }
+
+    /// <summary>
+    /// A switch with its On/Off label on its left, so switches line up at the cards' right edge
+    /// (WinUI puts the label on the right, where it pushes the switch in by its width).
+    /// </summary>
+    private static (FrameworkElement Panel, ToggleSwitch Toggle) Switch(string name)
+    {
+        var toggle = new ToggleSwitch { OnContent = "", OffContent = "", MinWidth = 0, Margin = new Thickness(0, 0, -12, 0) };
+        AutomationProperties.SetName(toggle, name);
+        var state = new TextBlock { Text = "Off", VerticalAlignment = VerticalAlignment.Center };
+        toggle.Toggled += (_, _) => state.Text = toggle.IsOn ? "On" : "Off";
+        return (new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { state, toggle } }, toggle);
+    }
+
+    /// <summary>
+    /// After a reset its arrow disappears, taking keyboard focus with it: hand focus to the
+    /// setting's control instead (as Windows Terminal does).
+    /// </summary>
+    private static void FocusAfterReset(Button reset, FrameworkElement control)
+    {
+        if (reset.FocusState == FocusState.Unfocused)
+        {
+            return;
+        }
+
+        var how = reset.FocusState == FocusState.Keyboard ? FocusState.Keyboard : FocusState.Programmatic;
+        control.DispatcherQueue.SafeEnqueue(() =>
+        {
+            var target = control as Control ?? Microsoft.UI.Xaml.Input.FocusManager.FindFirstFocusableElement(control) as Control;
+            target?.Focus(how);
+        });
     }
 
     private static Border Row(string title, string detail, FrameworkElement? control)
     {
-        var grid = new Grid { ColumnSpacing = 24 };
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        grid.Children.Add(new StackPanel
+        var text = new StackPanel
         {
             Spacing = 2,
             Children =
@@ -1118,15 +1159,8 @@ internal sealed partial class SettingsWindow : Window
                     Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
                 },
             },
-        });
-        if (control != null)
-        {
-            control.VerticalAlignment = VerticalAlignment.Center;
-            Grid.SetColumn(control, 1);
-            grid.Children.Add(control);
-        }
-
-        return CardBorder(grid);
+        };
+        return CardBorder(control != null ? TextAndControl(text, control) : text);
     }
 
     private static Border CardBorder(UIElement child) => new()
@@ -1149,27 +1183,26 @@ internal sealed partial class SettingsWindow : Window
     /// The control for <paramref name="setting"/>, calling <paramref name="commit"/> with each new
     /// value (null: the default), and how to show a value from the file in it.
     /// </summary>
-    private (FrameworkElement Control, Action<object?> Show) Control(SettingDef setting, Action<object?> commit) => setting.Kind switch
+    private (FrameworkElement Control, Action<object?> Show) Control(SettingDef setting, Action<object?> commit, string? profile = null) => setting.Kind switch
     {
         SettingKind.Toggle => ToggleControl(setting, commit),
         SettingKind.Choice => ChoiceControl(setting, commit),
         SettingKind.Number => NumberControl(setting, commit),
-        SettingKind.Color => ColorControl(commit),
+        SettingKind.Color => ColorControl(setting, commit, profile),
         SettingKind.Font => FontControl(commit),
         _ => TextControl(setting, commit), // SettingKind.Scheme has cards of its own (SchemeCards)
     };
 
     private static (FrameworkElement, Action<object?>) ToggleControl(SettingDef setting, Action<object?> commit)
     {
-        var toggle = new ToggleSwitch { OnContent = "On", OffContent = "Off", MinWidth = 0 };
-        AutomationProperties.SetName(toggle, setting.Label);
+        var (panel, toggle) = Switch(setting.Label);
         toggle.Toggled += (_, _) => commit(toggle.IsOn);
-        return (toggle, value => toggle.IsOn = value as bool? ?? setting.Default as bool? ?? false);
+        return (panel, value => toggle.IsOn = value as bool? ?? setting.Default as bool? ?? false);
     }
 
     private static (FrameworkElement, Action<object?>) ChoiceControl(SettingDef setting, Action<object?> commit)
     {
-        var box = new ComboBox { MinWidth = 200 };
+        var box = new ComboBox { Width = ControlWidth };
         AutomationProperties.SetName(box, setting.Label);
         foreach (var choice in setting.Choices)
         {
@@ -1227,7 +1260,7 @@ internal sealed partial class SettingsWindow : Window
 
     private static (FrameworkElement, Action<object?>) TextControl(SettingDef setting, Action<object?> commit)
     {
-        var box = new TextBox { Width = 220, PlaceholderText = setting.Placeholder ?? Format(setting.Default) };
+        var box = new TextBox { Width = ControlWidth, PlaceholderText = setting.Placeholder ?? Format(setting.Default) };
         AutomationProperties.SetName(box, setting.Label);
         string? shown = null;
         void Apply()
@@ -1257,21 +1290,89 @@ internal sealed partial class SettingsWindow : Window
         });
     }
 
-    /// <summary>A color: typed as #rrggbb, or picked (applied live while you drag, a few times a second).</summary>
-    private static (FrameworkElement, Action<object?>) ColorControl(Action<object?> commit)
+    /// <summary>
+    /// A color: typed as #rrggbb, or picked from the scheme's 16 colors (named on hover), "use the
+    /// scheme's" (a visible choice, with a swatch of what that is), or any color with the full
+    /// picker, applied live while you drag (a few times a second).
+    /// </summary>
+    private (FrameworkElement, Action<object?>) ColorControl(SettingDef setting, Action<object?> commit, string? profile)
     {
+        // What "none" means for this setting, and its color under the scheme in force.
+        var nullLabel = setting.Key == "window.unfocused-split-fill" ? "Use each pane's background" : "Use the scheme's color";
+        Color NullColor()
+        {
+            var theme = SchemeTheme(profile);
+            return SchemeTiles.ToColor(setting.Key switch
+            {
+                "colors.foreground" => theme.Foreground,
+                "colors.cursor" => theme.Cursor,
+                _ => theme.Background,
+            });
+        }
+
         var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1) };
         swatch.BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-        var box = new TextBox { Width = 120, PlaceholderText = "The scheme's" };
-        var picker = new ColorPicker { IsAlphaEnabled = false, IsMoreButtonVisible = true, ColorSpectrumShape = ColorSpectrumShape.Ring };
-        var flyout = new Flyout { Content = picker };
-        var pick = new Button { Content = new FontIcon { Glyph = "", FontSize = 14 }, Flyout = flyout };
-        AutomationProperties.SetName(pick, "Pick a color");
+        var box = new TextBox { Width = ControlWidth - 22 - 8 - 40 - 8, PlaceholderText = setting.Key == "window.unfocused-split-fill" ? "The pane's" : "The scheme's" };
+        AutomationProperties.SetName(box, setting.Label);
+
+        // The flyout: the scheme's colors as chips, "use the scheme's", and the full picker below.
+        var chips = new Grid { ColumnSpacing = 4, RowSpacing = 4 };
+        var chipButtons = new Button[16];
+        for (var i = 0; i < 4; i++)
+        {
+            chips.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            chips.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        }
+
+        for (var i = 0; i < 16; i++)
+        {
+            var chip = new Button
+            {
+                Width = 30,
+                Height = 30,
+                Padding = new Thickness(0),
+                CornerRadius = new CornerRadius(4),
+                BorderThickness = new Thickness(2),
+            };
+            Grid.SetColumn(chip, i % 4);
+            Grid.SetRow(chip, i / 4);
+            chips.Children.Add(chip);
+            chipButtons[i] = chip;
+        }
+
+        var nullSwatch = new Border { Width = 16, Height = 16, CornerRadius = new CornerRadius(3), BorderThickness = new Thickness(1) };
+        nullSwatch.BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
+        var useScheme = new ToggleButton
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Left,
+            Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { nullSwatch, new TextBlock { Text = nullLabel } } },
+        };
+        AutomationProperties.SetName(useScheme, nullLabel);
+        var more = new Button { Content = "More colors…", HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Left };
+        var picker = new ColorPicker
+        {
+            IsAlphaEnabled = false,
+            IsMoreButtonVisible = true,
+            ColorSpectrumShape = ColorSpectrumShape.Ring,
+            Visibility = Visibility.Collapsed,
+        };
+        var top = new Grid { ColumnSpacing = 16 };
+        top.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var side = new StackPanel { Spacing = 8, MinWidth = 200, Children = { useScheme, more } };
+        Grid.SetColumn(side, 1);
+        top.Children.Add(chips);
+        top.Children.Add(side);
+        var flyout = new Flyout { Content = new StackPanel { Spacing = 16, Children = { top, picker } } };
+        var pick = new Button { Content = new FontIcon { Glyph = ((char)0xE790).ToString(), FontSize = 14 }, Flyout = flyout };
+        AutomationProperties.SetName(pick, $"Pick a color for {setting.Label}");
+        ToolTipService.SetToolTip(pick, "Pick a color");
+
         string? shown = null;
-        var picking = false;
-        void Paint(string? hex) => swatch.Background = hex != null && TryHex(hex, out var c)
-            ? new SolidColorBrush(c)
-            : (Brush)Application.Current.Resources["SubtleFillColorTransparentBrush"];
+        var open = false;      // the flyout is open
+        var dragging = false;  // the full picker is out: its changes are written as they settle
+        void Paint(string? hex) => swatch.Background = new SolidColorBrush(hex != null && TryHex(hex, out var c) ? c : NullColor());
         void Apply(string text)
         {
             if (!string.Equals(text, shown, StringComparison.OrdinalIgnoreCase))
@@ -1280,30 +1381,71 @@ internal sealed partial class SettingsWindow : Window
                 Paint(text);
                 commit(text.Trim().Length == 0 ? null : text.Trim());
             }
+
+            Mark();
         }
 
-        void Picked()
+        // Which choice is current: a chip with the same color, or "use the scheme's".
+        void Mark()
         {
-            var c = picker.Color;
-            box.Text = $"#{c.R:x2}{c.G:x2}{c.B:x2}";
-            Apply(box.Text);
+            var has = TryHex(box.Text, out var current);
+            var colors = SchemeTheme(profile).BaseColors;
+            for (var i = 0; i < 16; i++)
+            {
+                var chip = SchemeTiles.ToColor(colors[i]);
+                var selected = has && chip == current;
+                chipButtons[i].BorderBrush = selected
+                    ? (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
+                    : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            }
+
+            useScheme.IsChecked = box.Text.Trim().Length == 0;
         }
 
-        // While the picker is open, each change is written once it settles for a moment: live,
-        // without a config reload per pixel of a drag.
+        for (var i = 0; i < 16; i++)
+        {
+            var index = i;
+            chipButtons[i].Click += (_, _) =>
+            {
+                box.Text = SchemeTiles.Hex(SchemeTiles.ToColor(SchemeTheme(profile).BaseColors[index]));
+                Apply(box.Text);
+            };
+        }
+
+        useScheme.Click += (_, _) =>
+        {
+            box.Text = "";
+            Apply("");
+        };
+        more.Click += (_, _) =>
+        {
+            picker.Color = TryHex(box.Text, out var c) ? c : NullColor();
+            picker.Visibility = Visibility.Visible;
+            more.Visibility = Visibility.Collapsed;
+            dragging = true;
+        };
+
+        // While the full picker is out, each change is written once it settles for a moment:
+        // live, without a config reload per pixel of a drag.
         var settle = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
         settle.Interval = TimeSpan.FromMilliseconds(150);
         settle.IsRepeating = false;
+        void Picked()
+        {
+            box.Text = SchemeTiles.Hex(picker.Color);
+            Apply(box.Text);
+        }
+
         settle.OnTick(_ =>
         {
-            if (picking)
+            if (open && dragging)
             {
                 Picked();
             }
         });
         picker.ColorChanged += (_, _) =>
         {
-            if (picking)
+            if (open && dragging)
             {
                 settle.Stop();
                 settle.Start();
@@ -1321,32 +1463,58 @@ internal sealed partial class SettingsWindow : Window
         };
         flyout.Opening += (_, _) =>
         {
-            if (TryHex(box.Text, out var c))
+            // The chips show the scheme in force now (it may have changed since the page opened).
+            var colors = SchemeTheme(profile).BaseColors;
+            for (var i = 0; i < 16; i++)
             {
-                picker.Color = c;
+                var color = SchemeTiles.ToColor(colors[i]);
+                chipButtons[i].Background = new SolidColorBrush(color);
+                var name = $"{SchemeTiles.ColorNames[i]} {SchemeTiles.Hex(color)}";
+                ToolTipService.SetToolTip(chipButtons[i], name);
+                AutomationProperties.SetName(chipButtons[i], name);
             }
+
+            nullSwatch.Background = new SolidColorBrush(NullColor());
+            picker.Visibility = Visibility.Collapsed;
+            more.Visibility = Visibility.Visible;
+            dragging = false;
+            Mark();
         };
-        flyout.Opened += (_, _) => picking = true;
+        flyout.Opened += (_, _) => open = true;
         flyout.Closed += (_, _) =>
         {
-            picking = false;
+            open = false;
             settle.Stop();
-            Picked();
+            if (dragging)
+            {
+                Picked(); // the last movement, if it hadn't settled yet
+            }
+
+            dragging = false;
         };
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { swatch, box, pick } };
         return (panel, value =>
         {
-            if (box.FocusState == FocusState.Unfocused && !picking)
+            if (box.FocusState == FocusState.Unfocused && !open)
             {
                 box.Text = shown = value as string ?? "";
-                Paint(shown);
+                Paint(shown.Length == 0 ? null : shown);
             }
         });
     }
 
+    /// <summary>The colors of the scheme in force for <paramref name="profile"/> (null: the defaults), on today's Windows mode.</summary>
+    private TerminalTheme SchemeTheme(string? profile)
+    {
+        var name = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme");
+        return name is string n
+            ? SchemeTiles.ThemeOf(_config.Themes, ThemeLibrary.Resolve(n, ConfigFile.SystemScheme)) ?? TerminalTheme.Default
+            : TerminalTheme.Default;
+    }
+
     private static (FrameworkElement, Action<object?>) FontControl(Action<object?> commit)
     {
-        var box = new ComboBox { MinWidth = 260 };
+        var box = new ComboBox { Width = ControlWidth };
         AutomationProperties.SetName(box, "Font");
         box.Items.Add(BundledFontLabel);
         foreach (var family in WelcomeWindow.MonospaceFamilies())

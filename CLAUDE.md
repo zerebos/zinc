@@ -225,7 +225,16 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   position on LayoutUpdated (WinUI still animates its invisible pill, starting it at the old item,
   and TransformToVisual sees that: reading it mid-animation sent ours back) and slides
   (composition Translation.Y from `this.StartingValue`, 250 ms). Undo bar counts settings
-  (`SettingsWriter.ChangeCount`, tested). The profile list re-renders only when the profiles
+  (`SettingsWriter.ChangeCount`, tested). Pass 5 (from the WT study, 2026-09-30): `TextAndControl` (control
+  wraps under the text below 440 px card width), `ControlWidth` 280 for dropdowns/text/pickers,
+  `Switch` (On/Off label left of a content-less ToggleSwitch), `FocusAfterReset`; `SchemeTiles`
+  (`Tile`, `ShowAsTiles` = ItemTemplate of an empty ContentPresenter filled in
+  ContainerContentChanging; setting ItemContainer.Content directly showed blank rows) +
+  `SchemePicker` (tile button + filterable tile list; flyout `ShouldConstrainToRootBounds=false`,
+  so it's a popup window that closes when the window isn't in front: automate it with
+  `.scratch/tools/pick-in-flyout.ps1`); colour flyout = scheme's 16 chips (`TerminalTheme.BaseColors`,
+  libghostty's built-ins via `TerminalSession.BuiltinBaseColors`) + "Use the scheme's color" + full
+  picker. The profile list re-renders only when the profiles
   differ from what it shows (`_profilesShown`; a drag already shows its order). Reset arrow =
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
