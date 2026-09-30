@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Phosphor.Settings;
 
 namespace Phosphor;
@@ -70,31 +71,76 @@ internal sealed partial class SettingsWindow
         var fold = CardBorder(panel);
         fold.Padding = new Thickness(1); // (room for Flash's thicker border)
 
-        void Show(bool show)
+        var isOpen = false;
+        Storyboard? sliding = null;
+
+        // Opening slides the rows down (the cards below move with them), closing slides them up.
+        void Show(bool show, bool animate = true)
         {
             if (show) _openFolds.Add(id);
             else _openFolds.Remove(id);
-            bodyFrame.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            isOpen = show;
             chevron.Rotation = show ? 180 : 0;
             ToolTipService.SetToolTip(toggle, show ? "Fewer settings" : "More settings");
             AutomationProperties.SetItemStatus(toggle, show ? "Open" : "Closed");
+
+            // From wherever it is now (a slide may be under way).
+            var from = bodyFrame.Visibility == Visibility.Visible ? bodyFrame.ActualHeight : 0;
+            sliding?.Stop();
+            sliding = null;
+            if (!animate || !fold.IsLoaded)
+            {
+                bodyFrame.Height = double.NaN;
+                bodyFrame.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+                return;
+            }
+
+            bodyFrame.Visibility = Visibility.Visible;
+            body.Measure(new Windows.Foundation.Size(panel.ActualWidth, double.PositiveInfinity));
+            var to = show ? body.DesiredSize.Height : 0;
+            bodyFrame.Height = from;
+            var slide = new DoubleAnimation
+            {
+                From = from,
+                To = to,
+                Duration = TimeSpan.FromMilliseconds(show ? 250 : 180),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+                EnableDependentAnimation = true, // (height: the page reflows as it goes)
+            };
+            Storyboard.SetTarget(slide, bodyFrame);
+            Storyboard.SetTargetProperty(slide, "Height");
+            var story = new Storyboard { Children = { slide } };
+            story.Completed += (_, _) =>
+            {
+                if (sliding != story)
+                {
+                    return;
+                }
+
+                story.Stop();
+                sliding = null;
+                bodyFrame.Height = double.NaN;
+                bodyFrame.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+            };
+            sliding = story;
+            story.Begin();
         }
 
-        toggle.Click += (_, _) => Show(bodyFrame.Visibility != Visibility.Visible);
+        toggle.Click += (_, _) => Show(!isOpen);
         top.Tapped += (_, e) =>
         {
             // Controls in the header (its switch or dropdown, the reset arrow, the chevron) work as
             // usual; a click anywhere else folds.
             if (e.OriginalSource is DependencyObject source && !InControl(source, top))
             {
-                Show(bodyFrame.Visibility != Visibility.Visible);
+                Show(!isOpen);
             }
         };
 
-        Show(open || _openFolds.Contains(id));
+        Show(open || _openFolds.Contains(id), animate: false);
         foreach (var row in rows.OfType<Border>())
         {
-            _foldOf[row] = () => Show(true);
+            _foldOf[row] = () => Show(true, animate: false); // (search scrolls to it right away)
         }
 
         return fold;
