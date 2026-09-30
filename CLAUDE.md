@@ -197,7 +197,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   both tested — a test requires every `ConfigFile.SettingKeys` key (the reader's `Mappings`
   table) to be in the catalog or `FileOnly`, and every default to equal an empty config's. App
   `SettingsWindow.cs` (code-only, NavigationView, cards generated per kind, `Refresh` on every
-  reload, read-only while HasErrors); `App.ShowSettings` (one instance; writes reach windows via
+  reload, read-only while HasErrors; **UI text follows `docs/ux-writing.md`**); `App.ShowSettings` (one instance; writes reach windows via
   the config watcher). Open: `open-settings` (Ctrl+,), palette, tray. Profiles (session 2): list
   + editor (`_editing`), `Profile.Found/InFile/FoundName/FoundCommand`, `ConfigFile.ProfileValues`
   / `ValueOf(id, key)`, catalog `ProfileFields` + `Discovery`, `OverrideCard` (inherit ↔ own value
