@@ -1123,6 +1123,13 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord.StartsWith("test:paste:"))
+            {
+                // A paste through the real path ("|" for line breaks), without the clipboard.
+                tab.Active.Control.PasteForTest(chord["test:paste:".Length..].Replace('|', '\n'));
+                return;
+            }
+
             if (chord.StartsWith("menu:"))
             {
                 // "menu:Split pane/Split right" runs that tab context menu item's command.

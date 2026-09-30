@@ -162,6 +162,15 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `padding-x`, `padding-y`: points; one number, or `[left, right]` / `[top, bottom]`.
 - `mouse-pointer`: `"arrow"` (default, like Windows Terminal) or `"text"` (an I-beam over text,
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
+- `copy-on-select`: `false` (default) or `true`: selecting text with the mouse copies it (the
+  selection stays).
+- `paste-warning`: when to ask before a paste of more than one line. `"auto"` (default) asks when
+  each line would run as a command: the program hasn't turned on bracketed paste, so line breaks
+  arrive as Enter (cmd, old shells, a plain `cat`). `"multiline"` asks for every multi-line paste,
+  `"never"` never asks. The question shows the paste's first lines.
+- `large-paste-warning`: `true` (default) asks before pasting more than 5 KB.
+- `word-boundaries`: the characters that end a word when double-clicking, besides spaces and tabs.
+  Unset, Ghostty's: ``'"│`|:;,()[]{}<>$``; e.g. add `/` to select one part of a path.
 - `clipboard-write`: `true` (default) or `false`, for programs copying with OSC 52 (tmux,
   neovim, remote shells over ssh).
 - `clipboard-read`: `false` (default) or `true`, for programs reading the clipboard with
@@ -174,7 +183,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
-features they control below; and `software-rendering = true`, which draws with the processor
+features they control below; `focus-follows-mouse = true`, which focuses a pane when the pointer
+enters it (only while focus is in another pane, not in the palette or a find box); and `software-rendering = true`, which draws with the processor
 instead of the graphics card (for broken graphics drivers, some virtual machines and remote desktop
 glitches; slower; applies to terminals opened after it's set).
 
@@ -371,7 +381,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | Right click | Copy the selection if there is one, otherwise paste |
 | Drag / double-click / triple-click | Select cells / word / line |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
-| `Ctrl+=`, `Ctrl+-`, `Ctrl+0` | Font size bigger / smaller / reset |
+| `Ctrl+=`, `Ctrl+-`, `Ctrl+0`, `Ctrl`+wheel | Font size bigger / smaller / reset (the wheel zooms even when a program uses the mouse) |
 | `Ctrl+Shift+P` | Command palette: every action, profile and workspace, fuzzy-searchable; recently used first. Type `@` to search this window's tabs instead |
 | `Ctrl+Shift+O` | Go to tab: the palette's `@` (title, running command, folder, workspace; tabs with a dot first) |
 

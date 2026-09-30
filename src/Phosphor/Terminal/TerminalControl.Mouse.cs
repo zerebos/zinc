@@ -104,6 +104,12 @@ public sealed partial class TerminalControl
         {
             _selecting = false;
             Select(GesturePhase.Release, e.GetCurrentPoint(_canvas).Position);
+
+            // Copy on select: the text goes to the clipboard, and stays selected.
+            if (_config.CopyOnSelect && session.GetSelectionText() is { } selected)
+            {
+                ClipboardText.Set(selected);
+            }
         }
         else if (_reportedButton is { } button)
         {
@@ -122,6 +128,23 @@ public sealed partial class TerminalControl
 
         e.Handled = true;
         var delta = e.GetCurrentPoint(_canvas).Properties.MouseWheelDelta;
+
+        // Ctrl+wheel zooms (before programs' mouse reporting, as in Windows Terminal). A precision
+        // touchpad sends small steps: they add up to a notch (120) per point of font size.
+        if ((e.KeyModifiers & VirtualKeyModifiers.Control) != 0)
+        {
+            _zoomDelta += delta;
+            while (Math.Abs(_zoomDelta) >= 120)
+            {
+                var step = Math.Sign(_zoomDelta);
+                SetFontSize(_renderer.FontSize + step);
+                _zoomDelta -= step * 120;
+            }
+
+            return;
+        }
+
+        _zoomDelta = 0;
         var notches = Math.Max(1, Math.Abs(delta) / 120);
         var up = delta > 0;
 
@@ -158,6 +181,44 @@ public sealed partial class TerminalControl
         session.ScrollLines((up ? -3 : 3) * notches);
         UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0); // new text under the pointer
         _canvas.Invalidate();
+    }
+
+    /// <summary>
+    /// Focus follows the pointer (<c>focus-follows-mouse</c>): entering a pane focuses it, but only
+    /// when focus is in another terminal (not the palette, a find box or a menu) and no button is
+    /// held (a drag passing through).
+    /// </summary>
+    protected override void OnPointerEntered(PointerRoutedEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        if (!_config.FocusFollowsMouse || XamlRoot == null || e.GetCurrentPoint(this).Properties is { IsLeftButtonPressed: true } or
+            { IsRightButtonPressed: true } or { IsMiddleButtonPressed: true })
+        {
+            return;
+        }
+
+        if (Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(XamlRoot) is DependencyObject focused &&
+            TerminalOf(focused) is { } other && other != this)
+        {
+            Focus(FocusState.Pointer);
+        }
+    }
+
+    /// <summary>Ctrl+wheel movement not yet a whole notch (precision touchpads send small steps).</summary>
+    private int _zoomDelta;
+
+    /// <summary>The terminal <paramref name="element"/> is part of, if any.</summary>
+    private static TerminalControl? TerminalOf(DependencyObject element)
+    {
+        for (DependencyObject? at = element; at != null; at = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(at))
+        {
+            if (at is TerminalControl terminal)
+            {
+                return terminal;
+            }
+        }
+
+        return null;
     }
 
     protected override void OnPointerExited(PointerRoutedEventArgs e)

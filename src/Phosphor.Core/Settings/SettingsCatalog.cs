@@ -153,6 +153,25 @@ public static class SettingsCatalog
             { Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")] },
         new("terminal", "Mouse", "terminal.mouse-pointer", "Pointer over text", "", SettingKind.Choice, "arrow")
             { Choices = [new("Arrow", "arrow", "Like Windows Terminal."), new("Text I-beam", "text", "Like Ghostty.")] },
+        new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
+            "Characters that end a word when you double-click (space and tab always do). Empty: Ghostty's set.", SettingKind.Text, null)
+            { Placeholder = "'\"│`|:;,()[]{}<>$" },
+        new("terminal", "Mouse", "window.focus-follows-mouse", "Focus follows the pointer",
+            "Moving the pointer into a pane focuses it.", SettingKind.Toggle, false),
+        new("terminal", "Clipboard", "terminal.copy-on-select", "Copy on select",
+            "Copies text as soon as you select it; the selection stays.", SettingKind.Toggle, false),
+        new("terminal", "Clipboard", "terminal.paste-warning", "Paste warning", "Ask before pasting text with more than one line.",
+            SettingKind.Choice, "auto")
+            {
+                Choices =
+                [
+                    new("Automatic", "auto", "When the program would take each line as Enter and run it; not when it marks pastes (bracketed paste)."),
+                    new("Always", "multiline", "Whenever a paste has more than one line."),
+                    new("Never", "never"),
+                ],
+            },
+        new("terminal", "Clipboard", "terminal.large-paste-warning", "Large pastes", "Ask before pasting more than 5 KB.",
+            SettingKind.Toggle, true),
         new("terminal", "Clipboard", "terminal.clipboard-write", "Programs may copy",
             "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle, true),
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs may read the clipboard",

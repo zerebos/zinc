@@ -363,6 +363,14 @@ public struct GhosttySelectionGestureGeometry
     public uint ScreenHeight;
 }
 
+/// <summary>A list of Unicode scalar values (word boundaries), borrowed for the call that takes it.</summary>
+[StructLayout(LayoutKind.Sequential)]
+public unsafe struct GhosttyCodepoints
+{
+    public uint* Ptr;
+    public nuint Len;
+}
+
 [StructLayout(LayoutKind.Sequential)]
 public struct GhosttySurfacePosition
 {
@@ -683,6 +691,9 @@ public enum SelectionGestureEventOption : int
     RepeatDistance = 2,
     TimeNs = 3,
     RepeatIntervalNs = 4,
+
+    /// <summary>Characters that end a word (GhosttyCodepoints*); unset: Ghostty's defaults.</summary>
+    WordBoundaryCodepoints = 5,
     Geometry = 8,
 }
 

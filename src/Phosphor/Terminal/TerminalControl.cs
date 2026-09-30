@@ -229,6 +229,7 @@ public sealed partial class TerminalControl : UserControl
         session.SetColorScheme(_config.IsDark);
         session.Resize(cols, rows, m.WidthPx, m.HeightPx);
         _selection = new SelectionGesture(session);
+        _selection.SetWordBoundaries(SelectionGesture.Boundaries(_config.WordBoundaries));
 
         var dq = DispatcherQueue;
         session.OutputProcessed += RequestRedraw;
@@ -308,6 +309,11 @@ public sealed partial class TerminalControl : UserControl
             session.SetTheme(config.Theme);
             session.SetColorScheme(config.IsDark); // tells programs that asked to hear of it
             ApplyClipboardPermissions(session);
+        }
+
+        if (old.WordBoundaries != config.WordBoundaries)
+        {
+            _selection?.SetWordBoundaries(SelectionGesture.Boundaries(config.WordBoundaries));
         }
 
         if (_renderer.HasResources)

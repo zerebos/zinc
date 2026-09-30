@@ -146,6 +146,24 @@ public sealed record Config
     /// <summary>Programs may set the clipboard with OSC 52. Config: <c>clipboard-write = allow | deny</c>.</summary>
     public bool ClipboardWrite { get; init; } = true;
 
+    /// <summary>A selection is copied as soon as it's made (and stays selected). Config: <c>copy-on-select = true</c>.</summary>
+    public bool CopyOnSelect { get; init; }
+
+    /// <summary>When a paste asks first. Config: <c>paste-warning = auto | multiline | never</c>.</summary>
+    public Phosphor.Terminal.PasteWarning PasteWarning { get; init; }
+
+    /// <summary>A paste over 5 KB asks first. Config: <c>large-paste-warning = true | false</c>.</summary>
+    public bool LargePasteWarning { get; init; } = true;
+
+    /// <summary>
+    /// Characters that end a word when you double-click (space and tab always do); null: Ghostty's
+    /// own set. Config: <c>word-boundaries = "'\"|:;,()[]{}&lt;&gt;$"</c>.
+    /// </summary>
+    public string? WordBoundaries { get; init; }
+
+    /// <summary>Moving the pointer into a pane focuses it. Config: <c>[window] focus-follows-mouse = true</c> (global).</summary>
+    public bool FocusFollowsMouse { get; init; }
+
     /// <summary>
     /// Programs may read the clipboard with OSC 52 (off by default: anything running in the
     /// terminal, e.g. over ssh, could read it). Config: <c>clipboard-read = allow | deny</c>.
@@ -272,6 +290,12 @@ public sealed record Config
             "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
+            "copy-on-select" when bool.TryParse(value, out var copyOnSelect) => this with { CopyOnSelect = copyOnSelect },
+            "paste-warning" when Enum.TryParse<Phosphor.Terminal.PasteWarning>(value, true, out var paste) && !int.TryParse(value, out _) =>
+                this with { PasteWarning = paste },
+            "large-paste-warning" when bool.TryParse(value, out var large) => this with { LargePasteWarning = large },
+            "word-boundaries" => this with { WordBoundaries = value.Length > 0 ? value : null },
+            "focus-follows-mouse" when bool.TryParse(value, out var follows) => this with { FocusFollowsMouse = follows },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
                 this with { QuickTerminal = QuickTerminal with { Position = position } },

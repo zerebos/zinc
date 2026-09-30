@@ -304,11 +304,20 @@ public sealed partial class TerminalControl
         _canvas.Invalidate();
     }
 
+    /// <summary>Pastes <paramref name="text"/> as if it came from the clipboard (test hook).</summary>
+    internal void PasteForTest(string text)
+    {
+        if (_session is { } session)
+        {
+            ClipboardText.PasteForTest(session, _config, XamlRoot, text);
+        }
+    }
+
     private void PasteFromClipboard()
     {
         if (_session is { } session)
         {
-            ClipboardText.PasteInto(session);
+            ClipboardText.PasteInto(session, _config, XamlRoot);
         }
     }
 }

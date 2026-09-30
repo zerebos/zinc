@@ -102,7 +102,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   wsl:Fedora"), palette titles. **A new action needs an entry there (and the README table:
   a test checks it), plus a handler** in TerminalControl.RunAction (pane) or
   MainWindow.HandleAction (window).
-- `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#).
+- `Terminal/SelectionGesture.cs` — drag/double/triple-click selection (tested in C#);
+  `word-boundaries` → `SetWordBoundaries` (gesture option 5, a `GhosttyCodepoints` list; setting
+  it replaces Ghostty's whole default set, so `Boundaries` spells that set out).
+- `Terminal/PasteCheck.cs` — whether a paste asks first (`paste-warning`, `large-paste-warning`;
+  Ghostty's rule: unsafe = a line break while bracketed paste is off; tested). App side:
+  `ClipboardText.Paste` (ContentDialog with a preview). `test:paste:<text>` (`|` = line break)
+  pastes without touching the real clipboard. Ctrl+wheel zoom, copy-on-select and
+  focus-follows-mouse (`OnPointerEntered`) live in `TerminalControl.Mouse.cs`.
 - Kitty graphics: `Terminal/KittyImages.cs` (the process-wide PNG decoder libghostty calls —
   WIC via WinRT, blocking is fine on the MTA reader thread; premultiplied RGBA conversion),
   `TerminalSession.CollectImages` (per-frame placement snapshot, pixels copied only for images

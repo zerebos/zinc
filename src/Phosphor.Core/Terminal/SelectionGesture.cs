@@ -31,6 +31,36 @@ public sealed unsafe class SelectionGesture : IDisposable
         Check(Native.SelectionGestureEventNew(0, out _release, SelectionGestureEventType.Release));
     }
 
+    /// <summary>Ghostty's own word boundaries (its <c>selection-word-chars</c> default), spelled out so "back to the default" is exact.</summary>
+    public const string GhosttyWordBoundaries = "\t '\"│`|:;,()[]{}<>$";
+
+    /// <summary>
+    /// The characters that end a word on double-click for config <c>word-boundaries</c>: space
+    /// and tab, and each of <paramref name="text"/>'s; Ghostty's own set when it's null.
+    /// </summary>
+    public static uint[] Boundaries(string? text) =>
+        [.. (text == null ? GhosttyWordBoundaries : " \t" + text).EnumerateRunes().Select(r => (uint)r.Value).Distinct()];
+
+    /// <summary>Sets the characters that end a word on double-click (<see cref="Boundaries"/>).</summary>
+    public void SetWordBoundaries(uint[] codepoints)
+    {
+        lock (_session.Lock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            // Copied by libghostty into each event (word selection happens on press and drag).
+            fixed (uint* p = codepoints)
+            {
+                var list = new GhosttyCodepoints { Ptr = p, Len = (nuint)codepoints.Length };
+                Native.SelectionGestureEventSet(_press, SelectionGestureEventOption.WordBoundaryCodepoints, &list);
+                Native.SelectionGestureEventSet(_drag, SelectionGestureEventOption.WordBoundaryCodepoints, &list);
+            }
+        }
+    }
+
     /// <summary>
     /// Feeds one pointer event at viewport cell (<paramref name="col"/>, <paramref name="row"/>)
     /// and applies the resulting selection to the terminal.

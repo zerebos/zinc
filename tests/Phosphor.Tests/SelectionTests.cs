@@ -30,6 +30,35 @@ public class SelectionTests
     }
 
     [Fact]
+    public void WordBoundariesDecideWhereADoubleClickedWordEnds()
+    {
+        var session = new TerminalSession(40, 5, TerminalTheme.Default);
+        session.WriteToScreen("src/app-main.cs next");
+        using (session)
+        using (var g = new SelectionGesture(session))
+        {
+            const ulong t = 9_000_000_000;
+
+            // Ghostty's set: '/' and '-' are part of the word.
+            Click(g, 5, 0, t);
+            Click(g, 5, 0, t + 100_000_000);
+            Assert.Equal("src/app-main.cs", session.GetSelectionText());
+
+            // With "/-" as boundaries, only "app".
+            g.SetWordBoundaries(SelectionGesture.Boundaries("/-"));
+            Click(g, 5, 0, t + 2_000_000_000);
+            Click(g, 5, 0, t + 2_100_000_000);
+            Assert.Equal("app", session.GetSelectionText());
+
+            // And back.
+            g.SetWordBoundaries(SelectionGesture.Boundaries(null));
+            Click(g, 5, 0, t + 4_000_000_000);
+            Click(g, 5, 0, t + 4_100_000_000);
+            Assert.Equal("src/app-main.cs", session.GetSelectionText());
+        }
+    }
+
+    [Fact]
     public void DragSelectsAcrossLines()
     {
         var (session, g) = Create();
