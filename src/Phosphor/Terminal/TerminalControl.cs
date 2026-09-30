@@ -77,6 +77,7 @@ public sealed partial class TerminalControl : UserControl
     {
         _previewScript = script,
         IsTabStop = false,
+        AllowDrop = false,
         IsHitTestVisible = false,
     };
 
@@ -98,6 +99,7 @@ public sealed partial class TerminalControl : UserControl
         AddHandler(PointerMovedEvent, new PointerEventHandler(TrackScrollBarProximity), handledEventsToo: true);
 
         _canvas = CreateCanvas();
+        EnableFileDrop();
         // The scrollbar overlays the canvas's right edge (inside the padding when idle).
         Content = _root = new Grid { Children = { _canvas, CreateScrollBar() } };
 

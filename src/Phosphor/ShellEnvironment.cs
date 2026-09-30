@@ -49,6 +49,20 @@ internal static class ShellEnvironment
         return null;
     }
 
+    /// <summary>How a pane running <paramref name="commandLine"/> quotes paths (files dropped on it).</summary>
+    public static PathQuoting QuotingFor(string commandLine, LinkContext context)
+    {
+        if (context.WslDistro != null || context.PosixRoot != null)
+        {
+            return PathQuoting.Posix;
+        }
+
+        var exe = Path.GetFileNameWithoutExtension(ProfileIcons.SplitCommand(commandLine).Item1);
+        return exe.Equals("pwsh", StringComparison.OrdinalIgnoreCase) || exe.Equals("powershell", StringComparison.OrdinalIgnoreCase)
+            ? PathQuoting.PowerShell
+            : PathQuoting.Windows;
+    }
+
     /// <summary>How file links printed in a pane running <paramref name="commandLine"/> map to Windows paths.</summary>
     public static LinkContext LinkContextFor(string commandLine)
     {

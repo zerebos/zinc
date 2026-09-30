@@ -1133,6 +1133,13 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord.StartsWith("test:drop:"))
+            {
+                // Files dropped on the focused pane ("|" between paths), without a real drag.
+                tab.Active.Control.PastePaths(chord["test:drop:".Length..].Split('|'));
+                return;
+            }
+
             if (chord.StartsWith("menu:"))
             {
                 // "menu:Split pane/Split right" runs that tab context menu item's command.

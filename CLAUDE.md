@@ -120,6 +120,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   output under `_flashLock`, holds `CSI ? 5 h` 250 ms; `l` in time = bell, else applied late by
   `_flashTimer` → `ExpireFlash`; ConPTY passes both through, often in one read), `program-titles`
   (`TerminalControl.Title` is "" while off).
+- File drops: Core `Terminal/DroppedPaths.cs` (Windows path → the pane's shell path via its
+  `LinkContext`, the reverse of `LinkTarget.Classify`; `PathQuoting` Posix/PowerShell/Windows;
+  tested) ← `TerminalControl.Drop.cs` (DragOver/Drop for StorageItems only, marked Handled, so tab
+  drags still reach the pane host; `ShellEnvironment.QuotingFor`; pasted via `session.Paste`).
+  `test:drop:<path>|<path>` runs it without a drag (real drags can't be automated).
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,
