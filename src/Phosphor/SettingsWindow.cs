@@ -142,7 +142,7 @@ internal sealed partial class SettingsWindow : Window
             IsPaneToggleButtonVisible = false,
             OpenPaneLength = 250,
             AutoSuggestBox = _search,
-            Content = new Grid { Children = { _scroller, _snackbar } },
+            Content = PageArea(),
         };
         foreach (var section in SettingsCatalog.Sections)
         {
@@ -179,6 +179,21 @@ internal sealed partial class SettingsWindow : Window
         Render();
     }
 
+    /// <summary>The page: the pinned area (heading and preview, on some pages) over the scrolling settings, and the undo bar.</summary>
+    private Grid PageArea()
+    {
+        var area = new Grid();
+        area.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        area.RowDefinitions.Add(new RowDefinition());
+        Grid.SetRow(_scroller, 1);
+        Grid.SetRowSpan(_snackbar, 2);
+        area.Children.Add(_pinned);
+        area.Children.Add(_scroller);
+        area.Children.Add(_snackbar);
+        area.SizeChanged += (_, _) => FitPreview();
+        return area;
+    }
+
     /// <summary>The config was read again (after our write, or an edit elsewhere): show what's in force.</summary>
     public void Refresh(ConfigFile config)
     {
@@ -199,6 +214,7 @@ internal sealed partial class SettingsWindow : Window
         try
         {
             UpdateBanners();
+            RefreshPreview();
             foreach (var refresh in _refreshers)
             {
                 refresh();
@@ -220,7 +236,7 @@ internal sealed partial class SettingsWindow : Window
         _foldOf.Clear();
         _jumps.Clear();
         var query = _search.Text.Trim();
-        _page.Children.Add(new TextBlock
+        var heading = new TextBlock
         {
             Text = query.Length > 0 ? "Results"
                 : _section == "profiles" && _editing is { } editing ? _config.FindProfile(editing)?.Name ?? editing
@@ -228,7 +244,8 @@ internal sealed partial class SettingsWindow : Window
             FontSize = 28,
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 8, 0, 12),
-        });
+        };
+        _page.Children.Add(heading);
         _page.Children.Add(_problems);
         UpdateBanners();
 
@@ -267,6 +284,7 @@ internal sealed partial class SettingsWindow : Window
             }
         }
 
+        PlacePreview(heading);
         _scroller.Content = _page;
     }
 

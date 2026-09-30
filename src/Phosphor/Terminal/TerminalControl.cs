@@ -63,6 +63,20 @@ public sealed partial class TerminalControl : UserControl
     {
     }
 
+    /// <summary>For a preview: what it shows instead of running a program (text with VT sequences).</summary>
+    private string? _previewScript;
+
+    /// <summary>
+    /// A terminal that runs nothing and shows <paramref name="script"/> (the settings' preview):
+    /// drawn like any pane, cursor as if focused, not interactive. <see cref="ApplyConfig"/> updates it.
+    /// </summary>
+    public static TerminalControl Preview(Config config, string script) => new(config, "", null)
+    {
+        _previewScript = script,
+        IsTabStop = false,
+        IsHitTestVisible = false,
+    };
+
     public TerminalControl(Config config, Keybindings keybindings, string commandLine, string? workingDirectory)
     {
         _config = config;
@@ -256,6 +270,12 @@ public sealed partial class TerminalControl : UserControl
         session.ProcessExited += code => dq.SafeEnqueue(() => OnProcessExited(code));
         ApplyClipboardPermissions(session);
         _session = session;
+        if (_previewScript is { } script)
+        {
+            session.WriteToScreen(script);
+            return;
+        }
+
         try
         {
             var launch = new ShellLaunch(_commandLine, new Dictionary<string, string?>());
@@ -409,7 +429,7 @@ public sealed partial class TerminalControl : UserControl
         }
 
         // Test captures draw every cursor as focused: whether a new window gets focus varies.
-        var presentation = new CursorPresentation(_focused || TestHooks.Deterministic, _blinkOn);
+        var presentation = new CursorPresentation(_focused || TestHooks.Deterministic || _previewScript != null, _blinkOn);
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
         DrawCommandMarks(args.DrawingSession, session);
         DrawSearchTicks(args.DrawingSession, session);

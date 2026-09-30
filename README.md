@@ -76,7 +76,11 @@ Each setting shows its key in the file; the arrow beside a changed setting's nam
 Color schemes are shown in their own colors (type to filter the list), and a color setting offers
 the scheme's 16 colors, "use the scheme's", or any color. **Find a setting** searches settings,
 key bindings and a profile's own settings ("font size ubuntu"), each under where it lives; "Show
-in …" (or Enter, for the first result) goes there and highlights it.
+in …" (or Enter, for the first result) goes there and highlights it. **Appearance** and each
+profile's page keep a small preview terminal at the top, showing that page's font, colors and
+padding as you change them (hidden when the window is too short for it). Settings that depend on
+another fold under it, and a profile's groups fold into one line each that says what the profile
+changes.
 While `config.toml` has an error, Settings says so and changes nothing. The window reopens where
 you left it. Under **Profiles**: the default profile, every profile in your order (drag them, or
 **⋯ → Move up/down**; the new-tab menu follows it), found on this PC or your own (add, duplicate,
