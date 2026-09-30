@@ -42,6 +42,20 @@ public class WorkspaceFolderTests
         Assert.Null(new WorkspaceFolder("~", "Fedora").LaunchFor(Pwsh, null)); // WSL's home isn't known from Windows
     }
 
+    [Theory]
+    [InlineData(@"\\wsl.localhost\Fedora\home\zack", "Fedora", "/home/zack", "Fedora")]
+    [InlineData(@"\\wsl$\fedora\etc", "Fedora", "/etc", "Fedora")]
+    [InlineData(@"\\wsl.localhost\Fedora", "Fedora", "/", "Fedora")]
+    [InlineData(@"\\wsl.localhost\Ubuntu\home", "Fedora", @"\\wsl.localhost\Ubuntu\home", null)] // another distro's: a Windows path
+    [InlineData(@"\\wsl.localhost\FedoraX\home", "Fedora", @"\\wsl.localhost\FedoraX\home", null)]
+    [InlineData(@"C:\dev", "Fedora", @"C:\dev", null)]
+    [InlineData(@"C:\dev", null, @"C:\dev", null)]
+    public void AFolderChosenInWindowsIsTheDistrosOwnOnItsShare(string chosen, string? distro, string path, string? owner)
+    {
+        var folder = WorkspaceFolder.FromWindows(chosen, distro);
+        Assert.Equal((path, owner), (folder.Path, folder.WslDistro));
+    }
+
     [Fact]
     public void RecentFoldersOfferWhatAProfileCanReach()
     {

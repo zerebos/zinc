@@ -223,6 +223,9 @@ public partial class App : Application
     internal void OpenWindow(Profile profile, string? command = null) =>
         Track(new MainWindow(_config, _keybindings, profile, command ?? ShellResolver.ForProfile(profile.Config)));
 
+    /// <summary>A new window, as you ask for one (New window): on the new-workspace page when it's on.</summary>
+    internal void OpenNewWindow() => Track(new MainWindow(_config, _keybindings));
+
     /// <summary>Opens a window for a workspace moved out of another one.</summary>
     internal MainWindow OpenWindow(MainWindow.WorkspaceTransfer transfer) =>
         Track(new MainWindow(_config, _keybindings, transfer));
@@ -786,7 +789,7 @@ public partial class App : Application
 
             return
             [
-                new TrayIcon.MenuItem("New window", () => OpenWindow(_config.DefaultProfile)),
+                new TrayIcon.MenuItem("New window", OpenNewWindow),
                 new TrayIcon.MenuItem(quickLabel, ToggleQuickTerminalFromTray),
                 new TrayIcon.MenuItem("Settings", () => ShowSettings()),
                 null,

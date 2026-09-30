@@ -21,7 +21,8 @@ internal sealed partial class StartPage : UserControl
     private readonly IReadOnlyList<Profile> _profiles;
     private readonly Profile _default;
     private readonly RecentFolders _recent;
-    private readonly Func<Task<string?>> _browse;
+    /// <summary>A folder dialog starting in the given folder (null: its own choice); returns the choice or null.</summary>
+    private readonly Func<string?, string?> _browse;
     private readonly Dictionary<Profile, string?> _distros = [];
 
     private readonly TextBox _filter = new() { PlaceholderText = "Filter profiles and folders, or type a folder", Width = 520, HorizontalAlignment = HorizontalAlignment.Left };
@@ -41,7 +42,7 @@ internal sealed partial class StartPage : UserControl
 
     private static readonly FolderChoice Usual = new("Its usual folder", null, null);
 
-    public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<Task<string?>> browse)
+    public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<string?, string?> browse)
     {
         (_profiles, _default, _recent, _browse) = (profiles, defaultProfile, recent, browse);
         _profile = defaultProfile;
@@ -132,7 +133,9 @@ internal sealed partial class StartPage : UserControl
 
             if (choice.Browse)
             {
-                await BrowseAsync();
+                // (Once this selection change has settled: the dialog is modal.)
+                await Task.Yield();
+                Ui.Guard("browsing for a folder", Browse);
                 return;
             }
 
@@ -308,12 +311,21 @@ internal sealed partial class StartPage : UserControl
         return new FolderChoice($"Use {text}", "typed", new WorkspaceFolder(text, windows ? null : distro));
     }
 
-    private async Task BrowseAsync()
+    /// <summary>
+    /// Browse: for a WSL profile the dialog opens in that distro (its share, at the folder last used
+    /// there, else its root), and a folder chosen there comes back as the distro's own path.
+    /// </summary>
+    private void Browse()
     {
         string? path = null;
+        var distro = DistroOf(_profile);
         try
         {
-            path = await _browse();
+            var start = distro == null ? _profile.Config.ResolveWorkingDirectory()
+                : _recent.For(_profile.Id, distro).FirstOrDefault(f => f.WslDistro == distro && f.Path.StartsWith('/')) is { } last
+                    ? $@"\\wsl.localhost\{distro}{last.Path.Replace('/', '\\')}"
+                    : $@"\\wsl.localhost\{distro}\";
+            path = _browse(start);
         }
         catch (Exception ex)
         {
@@ -322,7 +334,8 @@ internal sealed partial class StartPage : UserControl
 
         if (path != null)
         {
-            _browsed = new FolderChoice(path, "chosen", new WorkspaceFolder(path));
+            var folder = WorkspaceFolder.FromWindows(path, distro);
+            _browsed = new FolderChoice(folder.Path, "chosen", folder);
             _folder = _browsed;
         }
 

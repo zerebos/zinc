@@ -132,13 +132,9 @@ public sealed partial class MainWindow
         }
     }
 
-    private async Task<string?> BrowseFolder()
-    {
-        var picker = new Windows.Storage.Pickers.FolderPicker();
-        picker.FileTypeFilter.Add("*");
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
-        return (await picker.PickSingleFolderAsync())?.Path;
-    }
+    /// <summary>The page's Browse: Windows' folder dialog, which (unlike FolderPicker) can open in a WSL distro's share.</summary>
+    private string? BrowseFolder(string? startIn) =>
+        FolderDialog.Pick(WinRT.Interop.WindowNative.GetWindowHandle(this), startIn, "Folder for the new workspace");
 
     /// <summary>A shell reported a folder: it goes on the recent list the page offers.</summary>
     private static void NoteFolder(TerminalTab pane)

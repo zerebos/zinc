@@ -147,7 +147,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   any shell its start there, tested) → `StartIn` for new tabs in a group, splits and Alt+profile;
   saved in `WorkspaceState.Folder`. Recent folders: Core `RecentFolders` on `App` (session.json
   `recentFolders`), noted from each pane's DirectoryChanged (`NoteFolder`). TabView's + is named
-  "Add New Tab" for UIA. Steps 3-4 (layouts, reopen closed workspaces) are in .scratch/NOTES.md.
+  "Add New Tab" for UIA. New windows (`App.OpenNewWindow`: New window action, tray) open on it too.
+  Browse = `FolderDialog` (IFileOpenDialog via ComImport: can start in `\\wsl.localhost\<distro>\…`;
+  the WinRT FolderPicker can't), result through `WorkspaceFolder.FromWindows` (tested). Steps 3-4
+  (layouts, reopen closed workspaces) are in .scratch/NOTES.md.
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,

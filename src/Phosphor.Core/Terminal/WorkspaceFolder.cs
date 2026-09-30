@@ -64,6 +64,29 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
         return ShellDirectory.ResolveTyped(Path, command, "") is { } resolved ? ShellDirectory.LaunchIn(command, resolved) : null;
     }
 
+    /// <summary>
+    /// A folder chosen in Windows (a folder dialog) for a shell: on <paramref name="distro"/>'s share
+    /// (<c>\\wsl.localhost\Fedora\home\zack</c>) it's that distro's own path (<c>/home/zack</c>);
+    /// otherwise the Windows path as is.
+    /// </summary>
+    public static WorkspaceFolder FromWindows(string path, string? distro)
+    {
+        if (distro != null)
+        {
+            foreach (var share in new[] { $@"\\wsl.localhost\{distro}", $@"\\wsl$\{distro}" })
+            {
+                if (path.StartsWith(share, StringComparison.OrdinalIgnoreCase) &&
+                    (path.Length == share.Length || path[share.Length] == '\\'))
+                {
+                    var rest = path[share.Length..].Replace('\\', '/');
+                    return new WorkspaceFolder(rest.Length == 0 ? "/" : rest, distro);
+                }
+            }
+        }
+
+        return new WorkspaceFolder(path);
+    }
+
     private static bool IsWindowsPath(string path) =>
         path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':' || path.StartsWith(@"\\", StringComparison.Ordinal);
 }

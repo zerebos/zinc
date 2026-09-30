@@ -88,6 +88,14 @@ public sealed partial class MainWindow : Window
         ReplayTestKeys();
     }
 
+    /// <summary>A new window, opening on the new-workspace page (or the default profile, with the page turned off).</summary>
+    internal MainWindow(ConfigFile config, Keybindings keybindings)
+        : this(config, keybindings, quick: false)
+    {
+        OpenNewWorkspace();
+        ReplayTestKeys();
+    }
+
     /// <summary>A window that takes over a workspace moved from another window.</summary>
     internal MainWindow(ConfigFile config, Keybindings keybindings, WorkspaceTransfer adopt)
         : this(config, keybindings, quick: false)
@@ -1223,7 +1231,6 @@ public sealed partial class MainWindow : Window
     private bool HandleAction(ActionInvocation invocation, WorkspaceTab tab, TerminalTab origin)
     {
         var count = Tabs.TabItems.Count;
-        var defaults = _config.DefaultProfile;
         // With tab groups, new tabs open in the focused pane (with the focused tab's profile);
         // without, a new tab is a new workspace, as in Windows Terminal.
         var tabGroup = _config.Global.TabGroups ? tab.Workspace.GroupOf(origin) : null;
@@ -1298,7 +1305,7 @@ public sealed partial class MainWindow : Window
 
                 return true;
             case TerminalAction.NewWindow:
-                App.Instance.OpenWindow(defaults);
+                App.Instance.OpenNewWindow();
                 return true;
             case TerminalAction.SplitPane:
                 // A new pane opens with the focused tab's profile (splitting a Fedora pane gives Fedora),
