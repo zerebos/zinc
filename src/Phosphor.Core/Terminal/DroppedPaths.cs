@@ -38,7 +38,8 @@ public static partial class DroppedPaths
                     : path;
             }
 
-            return DrivePath(path, "/mnt/") ?? path;
+            // Drives where its wsl.conf mounts them; a Windows path where it doesn't.
+            return context.WslMountRoot is { } mounts ? WslConf.DrivePath(path, mounts) ?? path : path;
         }
 
         if (context.PosixRoot is { } root)

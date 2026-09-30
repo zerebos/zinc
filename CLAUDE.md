@@ -125,6 +125,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   tested) ← `TerminalControl.Drop.cs` (DragOver/Drop for StorageItems only, marked Handled, so tab
   drags still reach the pane host; `ShellEnvironment.QuotingFor`; pasted via `session.Paste`).
   `test:drop:<path>|<path>` runs it without a drag (real drags can't be automated).
+  WSL drive paths use `LinkContext.WslMountRoot` (Core `WslConf`: the distro's /etc/wsl.conf
+  `[automount] root`, read once per pane through `\\wsl.localhost`; null = not mounted); links too.
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,

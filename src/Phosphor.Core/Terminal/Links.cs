@@ -91,9 +91,12 @@ public enum LinkAction
 /// <summary>
 /// Where a pane's file links point. Shells name this machine as the host but use their own
 /// paths: Git Bash/MSYS2 write <c>/c/Users/..</c> (and <c>/usr/..</c> under
-/// <see cref="PosixRoot"/>); WSL writes Linux paths inside <see cref="WslDistro"/>.
+/// <see cref="PosixRoot"/>); WSL writes Linux paths inside <see cref="WslDistro"/>, with Windows
+/// drives under <see cref="WslMountRoot"/> (<see cref="WslConf.MountRoot"/>: <c>/mnt/</c> unless its
+/// wsl.conf says otherwise; null when it doesn't mount them).
 /// </summary>
-public sealed record LinkContext(string MachineName, string? WslDistro = null, string? PosixRoot = null)
+public sealed record LinkContext(string MachineName, string? WslDistro = null, string? PosixRoot = null,
+    string? WslMountRoot = WslConf.DefaultMountRoot)
 {
     public static LinkContext Windows { get; } = new(Environment.MachineName);
 }
@@ -102,12 +105,9 @@ public static partial class LinkTarget
 {
     private static readonly string[] OpenSchemes = ["http", "https", "mailto", "ftp"];
 
-    // "/c", "/c/rest" (MSYS, Git Bash) or "/cygdrive/c/rest"; with WSL, "/mnt/c/rest".
+    // "/c", "/c/rest" (MSYS, Git Bash) or "/cygdrive/c/rest". (WSL's drives: WslConf.WindowsPath.)
     [GeneratedRegex("^(?:/cygdrive)?/([a-zA-Z])(/.*)?$")]
     private static partial Regex MsysDrive();
-
-    [GeneratedRegex("^/mnt/([a-zA-Z])(/.*)?$")]
-    private static partial Regex WslDrive();
 
     /// <summary>
     /// What Ctrl+click on <paramref name="uri"/> may do. Links come from whatever a program
@@ -147,9 +147,8 @@ public static partial class LinkTarget
 
         if (context.WslDistro is { } distro)
         {
-            target = WslDrive().Match(path) is { Success: true } m
-                ? DrivePath(m)
-                : $@"\\wsl.localhost\{distro}{path.Replace('/', '\\')}";
+            target = (context.WslMountRoot is { } mounts ? WslConf.WindowsPath(path, mounts) : null)
+                     ?? $@"\\wsl.localhost\{distro}{path.Replace('/', '\\')}";
             return LinkAction.Reveal;
         }
 

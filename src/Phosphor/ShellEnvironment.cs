@@ -49,6 +49,26 @@ internal static class ShellEnvironment
         return null;
     }
 
+    /// <summary>
+    /// Where <paramref name="distro"/> mounts Windows drives, from its /etc/wsl.conf (read through
+    /// its share; the pane asking is running it). Unreadable: the default.
+    /// </summary>
+    private static string? MountRoot(string distro)
+    {
+        var conf = $@"\\wsl.localhost\{distro}\etc\wsl.conf";
+        try
+        {
+            var root = WslConf.MountRoot(File.Exists(conf) ? File.ReadAllText(conf) : null);
+            Log.Write($"wsl: {distro} mounts drives at {root ?? "(nowhere)"}");
+            return root;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Write($"wsl: couldn't read {conf}: {ex.Message}");
+            return WslConf.DefaultMountRoot;
+        }
+    }
+
     /// <summary>How a pane running <paramref name="commandLine"/> quotes paths (files dropped on it).</summary>
     public static PathQuoting QuotingFor(string commandLine, LinkContext context)
     {
@@ -72,7 +92,8 @@ internal static class ShellEnvironment
             if (Path.GetFileNameWithoutExtension(exe).Equals("wsl", StringComparison.OrdinalIgnoreCase))
             {
                 using var key = WslDistroKey(args);
-                return LinkContext.Windows with { WslDistro = key?.GetValue("DistributionName") as string };
+                var distro = key?.GetValue("DistributionName") as string;
+                return LinkContext.Windows with { WslDistro = distro, WslMountRoot = distro == null ? WslConf.DefaultMountRoot : MountRoot(distro) };
             }
 
             // Git for Windows and MSYS2 keep their POSIX root (usr\bin, etc) at or above the shell.

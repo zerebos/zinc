@@ -402,7 +402,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
 | `Ctrl+V`, `Ctrl+Shift+V`, `Shift+Insert` | Paste (bracketed when the app enables it) |
 | Right click | Copy the selection if there is one, otherwise paste |
 | Drag / double-click / triple-click | Select cells / word / line |
-| Drop files on a pane | Types their paths at the prompt as its shell writes them (WSL: `/mnt/c/…`, its own files as `/home/…`; Git Bash and MSYS2: `/c/…`), quoted where needed |
+| Drop files on a pane | Types their paths at the prompt as its shell writes them (WSL: `/mnt/c/…`, or where its `/etc/wsl.conf` mounts drives, and its own files as `/home/…`; Git Bash and MSYS2: `/c/…`), quoted where needed |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
 | `Ctrl+=`, `Ctrl+-`, `Ctrl+0`, `Ctrl`+wheel | Zoom in / out / reset (this pane, in steps of 10% of the configured font size; the wheel zooms even when a program uses the mouse). A badge shows the zoom and the size in points |
 | `Ctrl+Shift+P` | Command palette: every action, profile and workspace, fuzzy-searchable; recently used first. Type `@` to search this window's tabs instead |
