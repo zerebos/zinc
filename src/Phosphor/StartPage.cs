@@ -80,7 +80,7 @@ internal sealed partial class StartPage : UserControl
         var columns = new Grid { ColumnSpacing = 40 };
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 340 });
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star), MaxWidth = 460 });
-        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.8, GridUnitType.Star), MaxWidth = 260 });
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // layouts: as wide as their names
         columns.Children.Add(Column("Profile", _profileList));
         var folders = Column("Folder", _folderList);
         Grid.SetColumn(folders, 1);
@@ -115,19 +115,30 @@ internal sealed partial class StartPage : UserControl
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var nameLabel = new TextBlock { Text = "Name", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
+        // What Start starts, on a line of its own above the controls (so a narrow page keeps it whole).
+        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        footer.RowSpacing = 8;
         _summary.HorizontalAlignment = HorizontalAlignment.Right;
-        footer.Children.Add(_showPage);
-        Grid.SetColumn(_summary, 1);
+        _summary.Opacity = 0.8;
+        Grid.SetColumnSpan(_summary, 7);
         footer.Children.Add(_summary);
+        Grid.SetRow(_showPage, 1);
+        footer.Children.Add(_showPage);
         Grid.SetColumn(_iconButton, 2);
+        Grid.SetRow(_iconButton, 1);
         footer.Children.Add(_iconButton);
         Grid.SetColumn(_colorButton, 3);
+        Grid.SetRow(_colorButton, 1);
         footer.Children.Add(_colorButton);
         Grid.SetColumn(nameLabel, 4);
+        Grid.SetRow(nameLabel, 1);
         footer.Children.Add(nameLabel);
         Grid.SetColumn(_name, 5);
+        Grid.SetRow(_name, 1);
         footer.Children.Add(_name);
         Grid.SetColumn(start, 6);
+        Grid.SetRow(start, 1);
         footer.Children.Add(start);
         SetUpLookButtons();
 

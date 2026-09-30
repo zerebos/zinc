@@ -196,17 +196,28 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void OnWindowKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
-        if (e.Handled || _windowClosed || SelectedTab?.Active is not { } active)
+        if (e.Handled || _windowClosed)
         {
             return;
         }
 
         var state = Keyboard.State.Capture();
-        if ((state.Ctrl || state.Alt) && _keybindings.TryGet(new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift), out var invocation))
+        if (!(state.Ctrl || state.Alt) || !_keybindings.TryGet(new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift), out var invocation))
+        {
+            return;
+        }
+
+        if (SelectedTab?.Active is { } active)
         {
             Log.Write($"keys: {invocation} from outside a terminal");
             active.Control.Invoke(invocation);
             e.Handled = true;
+        }
+        else if (StartPageItem() is { } page && ReferenceEquals(Tabs.SelectedItem, page))
+        {
+            // The new-workspace page: the window's own shortcuts (it has no pane to act on).
+            e.Handled = HandlePageAction(invocation, page);
+            Log.Write($"keys: {invocation} on the new-workspace page{(e.Handled ? "" : ": nothing to do there")}");
         }
     }
 
@@ -902,6 +913,14 @@ public sealed partial class MainWindow : Window
             list.ItemContainerTransitions = [];
             Log.Write($"tab strip: cleared transitions on {list.Name}");
         }
+
+        // TabView's + says "Add New Tab"; here it opens a workspace (screen readers, UIA, tooltip).
+        if (VisualDescendants(Tabs).OfType<Button>().FirstOrDefault(b => b.Name == "AddButton") is { } add)
+        {
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(add, "New workspace");
+            var keys = Shortcut(new ActionInvocation(TerminalAction.NewWorkspace));
+            ToolTipService.SetToolTip(add, keys != null ? $"New workspace ({keys})" : "New workspace");
+        }
     }
 
     private static IEnumerable<DependencyObject> VisualDescendants(DependencyObject root)
@@ -1031,7 +1050,21 @@ public sealed partial class MainWindow : Window
         timer.Interval = TimeSpan.FromSeconds(1);
         timer.Tick += (_, _) =>
         {
-            if (!queue.TryDequeue(out var chord) || SelectedTab is not { } tab)
+            if (!queue.TryDequeue(out var chord))
+            {
+                timer.Stop();
+                return;
+            }
+
+            // On the new-workspace page: a key goes to the page's own shortcuts, as a real press would.
+            if (SelectedTab == null && StartPageItem() is { } page && ReferenceEquals(Tabs.SelectedItem, page) && !chord.Contains(':'))
+            {
+                var handled = _keybindings.TryGet(KeyChord.Parse(chord), out var onPage) && HandlePageAction(onPage, page);
+                Log.Write($"test key {chord} on the new-workspace page: {(handled ? onPage.ToString() : "nothing")}");
+                return;
+            }
+
+            if (SelectedTab is not { } tab)
             {
                 timer.Stop();
                 return;

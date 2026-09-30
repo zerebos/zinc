@@ -1,4 +1,5 @@
 using Microsoft.UI.Xaml.Controls;
+using Phosphor.Input;
 using Phosphor.Panes;
 using Phosphor.Session;
 using Phosphor.Terminal;
@@ -20,7 +21,7 @@ public sealed partial class MainWindow
         }
 
         // One page per window: asking again goes back to it.
-        if (Tabs.TabItems.OfType<TabViewItem>().FirstOrDefault(i => i.Tag is StartPage) is { Tag: StartPage open } existing)
+        if (StartPageItem() is { Tag: StartPage open } existing)
         {
             Tabs.SelectedItem = existing;
             open.FocusFilter();
@@ -46,6 +47,74 @@ public sealed partial class MainWindow
         page.FocusFilter();
         Log.Write("start page: opened");
     }
+
+    /// <summary>
+    /// A window shortcut pressed on the page: switching and closing tabs, new workspaces and windows,
+    /// reopening, settings, quitting, the sidebar and title bar. Pane actions (and the palette, whose
+    /// commands act on a workspace) have nothing to act on here.
+    /// </summary>
+    private bool HandlePageAction(ActionInvocation invocation, TabViewItem page)
+    {
+        var count = Tabs.TabItems.Count;
+        switch (invocation.Action)
+        {
+            case TerminalAction.ClosePane:
+                RemoveStartPage(page);
+                return true;
+            case TerminalAction.NextTab:
+                Tabs.SelectedIndex = (Tabs.SelectedIndex + 1) % count;
+                return true;
+            case TerminalAction.PreviousTab:
+                Tabs.SelectedIndex = (Tabs.SelectedIndex - 1 + count) % count;
+                return true;
+            case TerminalAction.SwitchToTab:
+                var target = invocation.Index < 0 ? count - 1 : invocation.Index;
+                if (target < count)
+                {
+                    Tabs.SelectedIndex = target;
+                }
+
+                return true;
+            case TerminalAction.NewTab or TerminalAction.NewWorkspace:
+                OpenNewWorkspace();
+                return true;
+            case TerminalAction.NewWindow:
+                App.Instance.OpenNewWindow();
+                return true;
+            case TerminalAction.ReopenWorkspace:
+                if (App.Instance.ClosedWorkspaces.All.FirstOrDefault() is { } last)
+                {
+                    ReopenWorkspace(last, page);
+                }
+
+                return true;
+            case TerminalAction.NextAttention:
+                GoToNextAttention();
+                return true;
+            case TerminalAction.OpenNewTabMenu:
+                NewTabMenu.ShowAt(NewTabMenuButton);
+                return true;
+            case TerminalAction.OpenSettings:
+                App.Instance.ShowSettings();
+                return true;
+            case TerminalAction.ReloadConfig:
+                App.Instance.ReloadConfig();
+                return true;
+            case TerminalAction.Quit:
+                App.Instance.AskQuit();
+                return true;
+            case TerminalAction.QuitFresh:
+                App.Instance.AskQuit(fresh: true);
+                return true;
+            case TerminalAction.ToggleSidebar or TerminalAction.ToggleTitleBar or TerminalAction.FocusMode:
+                return HandleChromeAction(invocation);
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>This window's new-workspace page's tab item, if it's open.</summary>
+    private TabViewItem? StartPageItem() => Tabs.TabItems.OfType<TabViewItem>().FirstOrDefault(i => i.Tag is StartPage);
 
     /// <summary>The page's choice becomes a workspace in its place.</summary>
     private void StartWorkspace(TabViewItem item, StartChoice choice)

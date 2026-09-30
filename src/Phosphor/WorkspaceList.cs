@@ -90,6 +90,14 @@ internal sealed partial class WorkspaceList : Grid
     public event Action<MainWindow.WorkspaceTab>? ItemClicked;
     public event Action<MainWindow.WorkspaceTab>? ItemCloseClicked;
 
+    /// <summary>The new-workspace page's entry was clicked (show it) or closed.</summary>
+    public event Action? PageClicked;
+    public event Action? PageCloseClicked;
+
+    /// <summary>The new-workspace page's entry, at the end of the list while the page is open.</summary>
+    private PageItem? _page;
+    private bool _pageSelected;
+
     /// <summary>An item starts being dragged (the handler fills in the drag's data).</summary>
     public event Action<MainWindow.WorkspaceTab, DragStartingEventArgs>? ItemDragStarting;
 
@@ -116,6 +124,11 @@ internal sealed partial class WorkspaceList : Grid
             {
                 item.Compact = value;
             }
+
+            if (_page != null)
+            {
+                _page.Compact = value;
+            }
         }
     }
 
@@ -126,8 +139,9 @@ internal sealed partial class WorkspaceList : Grid
     /// Shows the workspaces in order with the selected one highlighted; <paramref name="colors"/>
     /// gives each one's tab color (if set) and its focused pane's background.
     /// </summary>
+    /// <param name="page">Whether the new-workspace page is open (its entry goes last), and <paramref name="pageSelected"/> shown.</param>
     public void Update(IReadOnlyList<MainWindow.WorkspaceTab> tabs, MainWindow.WorkspaceTab? selected,
-        Func<MainWindow.WorkspaceTab, (Color? Color, Color Pane)> colors)
+        Func<MainWindow.WorkspaceTab, (Color? Color, Color Pane)> colors, bool page = false, bool pageSelected = false)
     {
         foreach (var gone in _byTab.Keys.Where(t => !tabs.Contains(t)).ToList())
         {
@@ -135,7 +149,29 @@ internal sealed partial class WorkspaceList : Grid
             _byTab.Remove(gone);
         }
 
-        var order = tabs.Select(ItemFor).ToList();
+        var order = tabs.Select(ItemFor).Cast<UIElement>().ToList();
+        if (page)
+        {
+            if (_page == null)
+            {
+                _page = new PageItem { Compact = _compact };
+                _page.Tapped += (_, e) =>
+                {
+                    e.Handled = true;
+                    PageClicked?.Invoke();
+                };
+                _page.CloseClicked += () => PageCloseClicked?.Invoke();
+            }
+
+            order.Add(_page);
+            _page.Show(pageSelected);
+        }
+        else
+        {
+            _page = null;
+        }
+
+        _pageSelected = page && pageSelected;
         if (!_items.Children.SequenceEqual(order))
         {
             _items.Children.Clear();
@@ -203,9 +239,10 @@ internal sealed partial class WorkspaceList : Grid
     /// <summary>The pill at the selected item's left edge, centered on it (as each item's own pill was).</summary>
     private void PlacePill()
     {
-        if (_selected == null || !_byTab.TryGetValue(_selected, out var item) || item.ActualHeight <= 0)
+        FrameworkElement? item = _pageSelected ? _page : _selected != null ? _byTab.GetValueOrDefault(_selected) : null;
+        if (item == null || item.ActualHeight <= 0)
         {
-            if (_selected == null)
+            if (item == null)
             {
                 _pill.Hide();
             }
@@ -226,7 +263,7 @@ internal sealed partial class WorkspaceList : Grid
         var y = (float)Math.Round(row.Y + (item.ActualHeight - 16) / 2);
         if (_pill.MoveTo(new Vector2((float)row.X, y), 3, 16))
         {
-            Log.Write($"workspace pill: {_shown.IndexOf(_selected) + 1} at {y}");
+            Log.Write($"workspace pill: {(_pageSelected ? "the new-workspace page" : (_shown.IndexOf(_selected!) + 1).ToString())} at {y}");
         }
     }
 
@@ -287,6 +324,88 @@ internal sealed partial class WorkspaceList : Grid
     }
 
     /// <summary>One workspace: icon + title, close button (the list draws the selection pill).</summary>
+    /// <summary>The new-workspace page's entry: + and "New workspace", highlighted while shown, with a close button.</summary>
+    private sealed partial class PageItem : Grid
+    {
+        private readonly StackPanel _label;
+        private readonly TextBlock _text = new() { Text = "New workspace", VerticalAlignment = VerticalAlignment.Center };
+        private readonly Button _close;
+        private bool _selected, _hovered, _compact;
+
+        public PageItem()
+        {
+            Height = 36;
+            CornerRadius = new CornerRadius(4);
+            ColumnDefinitions.Add(new ColumnDefinition());
+            ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            _label = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 10,
+                Margin = new Thickness(12, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { new FontIcon { Glyph = ((char)0xE710).ToString(), FontSize = 14 }, _text },
+            };
+            Children.Add(_label);
+            _close = new Button
+            {
+                Content = new FontIcon { Glyph = ((char)0xE711).ToString(), FontSize = 10 },
+                Padding = new Thickness(6),
+                Margin = new Thickness(0, 0, 4, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
+                BorderThickness = new Thickness(0),
+                IsTabStop = false,
+            };
+            AutomationProperties.SetName(_close, "Close the new workspace page");
+            AutomationProperties.SetName(this, "New workspace");
+            ToolTipService.SetToolTip(this, "New workspace");
+            _close.Click += (_, _) => CloseClicked?.Invoke();
+            SetColumn(_close, 1);
+            Children.Add(_close);
+            PointerEntered += (_, _) =>
+            {
+                _hovered = true;
+                Restyle();
+            };
+            PointerExited += (_, _) =>
+            {
+                _hovered = false;
+                Restyle();
+            };
+            Restyle();
+        }
+
+        public event Action? CloseClicked;
+
+        public bool Compact
+        {
+            set
+            {
+                _compact = value;
+                _text.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+                _label.Margin = new Thickness(value ? 0 : 12, 0, 0, 0);
+                _label.HorizontalAlignment = value ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+                SetColumnSpan(_label, value ? 2 : 1);
+                Restyle();
+            }
+        }
+
+        public void Show(bool selected)
+        {
+            _selected = selected;
+            Restyle();
+        }
+
+        private void Restyle()
+        {
+            Background = _selected || _hovered
+                ? (Brush)Application.Current.Resources[_selected ? "SubtleFillColorTertiaryBrush" : "SubtleFillColorSecondaryBrush"]
+                : new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            _close.Visibility = !_compact && (_selected || _hovered) ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
     private sealed partial class Item : Grid
     {
         private readonly Button _close;

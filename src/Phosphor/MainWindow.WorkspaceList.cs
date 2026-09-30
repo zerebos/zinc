@@ -69,6 +69,20 @@ public sealed partial class MainWindow
 
         list.ItemClicked += tab => Tabs.SelectedItem = tab.Item;
         list.ItemCloseClicked += CloseTab;
+        list.PageClicked += () =>
+        {
+            if (StartPageItem() is { } page)
+            {
+                Tabs.SelectedItem = page;
+            }
+        };
+        list.PageCloseClicked += () =>
+        {
+            if (StartPageItem() is { } page)
+            {
+                RemoveStartPage(page);
+            }
+        };
         list.ItemDragStarting += (tab, e) =>
         {
             e.AllowedOperations = DataPackageOperation.Move;
@@ -163,9 +177,13 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Brings the list (if shown) up to date with the TabView's workspaces.</summary>
-    private void RefreshWorkspaceList() =>
+    private void RefreshWorkspaceList()
+    {
+        var page = StartPageItem();
         _workspaceList?.Update(AllTabs().ToList(), SelectedTab,
-            tab => (tab.Color, TerminalRenderer.ToColor(tab.Active.Profile.Config.Theme.Background)));
+            tab => (tab.Color, TerminalRenderer.ToColor(tab.Active.Profile.Config.Theme.Background)),
+            page != null, page != null && ReferenceEquals(Tabs.SelectedItem, page));
+    }
 
     /// <summary>What shows a workspace, for flyouts to point at.</summary>
     private FrameworkElement AnchorOf(WorkspaceTab tab) => _workspaceList?.ElementFor(tab) ?? tab.Item;
