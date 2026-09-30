@@ -182,12 +182,16 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>The config was read again (after our write, or an edit elsewhere): show what's in force.</summary>
     public void Refresh(ConfigFile config)
     {
-        var listed = _config.Profiles.Select(p => (p.Id, p.Name, p.Hidden)).ToList();
+        // The profile being edited, as the page shows it: a change in whether it can open (its
+        // search turned back on), its name or where it came from rebuilds the page.
+        static object? Shape(Profile? p) => p is null ? null : (p.Name, p.Missing, p.Found, p.Source);
+        var editedBefore = _editing is { } id ? Shape(_config.Profiles.FirstOrDefault(p => p.Id == id)) : null;
         _config = config;
+        var editedNow = _editing is { } id2 ? Shape(_config.Profiles.FirstOrDefault(p => p.Id == id2)) : null;
         if (_section == "profiles" && _search.Text.Trim().Length == 0 &&
-            (_editing == null ? !_profilesShown.SequenceEqual(Listed(config)) : listed.All(p => p.Id != _editing)))
+            (_editing == null ? !_profilesShown.SequenceEqual(Listed(config)) : !Equals(editedBefore, editedNow)))
         {
-            Render(); // the list changed (or its order, or the profile being edited just appeared)
+            Render(); // the list changed (or its order), or the profile being edited appeared or changed state
             return;
         }
 

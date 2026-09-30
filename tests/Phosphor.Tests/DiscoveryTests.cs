@@ -81,7 +81,7 @@ public class DiscoveryTests
     }
 
     [Fact]
-    public void ASectionChangesAFoundProfileAndKeepsItsPlace()
+    public void ASectionChangesAFoundProfileWhereItWasFound()
     {
         var config = Parse("""
             [profile.pwsh]
@@ -95,20 +95,21 @@ public class DiscoveryTests
             hidden = true
             """);
 
-        Assert.Equal(["pwsh", "wsl:Fedora", "ssh:homelab"], config.Profiles.Select(p => p.Id));
-        var pwsh = config.Profiles[0];
+        // Changes don't move a found profile: they stay in the order the searches found them.
+        Assert.Equal(["wsl:Fedora", "pwsh", "ssh:homelab"], config.Profiles.Select(p => p.Id));
+        var pwsh = config.Profiles[1];
         Assert.Equal("PowerShell", pwsh.Name);                 // from discovery
         Assert.Equal("pwsh.exe", pwsh.Config.Command);
         Assert.Equal(13f, pwsh.Config.FontSize);               // from the file
-        var fedora = config.Profiles[1];
+        var fedora = config.Profiles[0];
         Assert.Equal("Fedora 42", fedora.Name);
         Assert.Equal("wsl.exe --distribution-id {2} --cd ~", fedora.Config.Command);
         Assert.Equal(new Phosphor.Ghostty.GhosttyColorRgb(0x10, 0x10, 0x10), fedora.Config.Theme.Background);
-        Assert.Equal(["pwsh", "wsl:Fedora"], config.VisibleProfiles.Select(p => p.Id));
+        Assert.Equal(["wsl:Fedora", "pwsh"], config.VisibleProfiles.Select(p => p.Id));
     }
 
     [Fact]
-    public void EmptySectionsPlaceFoundProfiles()
+    public void YourOwnProfilesComeFirstThenFoundOnesInSearchOrder()
     {
         var config = Parse("""
             [profile."ssh:homelab"]
@@ -118,8 +119,9 @@ public class DiscoveryTests
 
             [profile.pwsh]
             """);
-        Assert.Equal(["ssh:homelab", "work", "pwsh", "wsl:Fedora"], config.Profiles.Select(p => p.Id));
-        Assert.Equal("ssh.exe homelab", config.Profiles[0].Config.Command);
+        // Empty sections no longer place found profiles (profile-order does that).
+        Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:homelab"], config.Profiles.Select(p => p.Id));
+        Assert.Equal("ssh.exe homelab", config.Profiles.Single(p => p.Id == "ssh:homelab").Config.Command);
         Assert.Empty(config.Warnings);
     }
 
@@ -127,7 +129,7 @@ public class DiscoveryTests
     public void AnExplicitCommandWinsOverTheFoundOne()
     {
         var config = Parse("[profile.\"ssh:homelab\"]\ncommand = \"ssh.exe -p 2222 homelab\"");
-        Assert.Equal("ssh.exe -p 2222 homelab", config.Profiles[0].Config.Command);
+        Assert.Equal("ssh.exe -p 2222 homelab", config.Profiles.Single(p => p.Id == "ssh:homelab").Config.Command);
     }
 
     [Fact]

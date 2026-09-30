@@ -552,6 +552,15 @@ public sealed class ConfigFile
                 });
             }
 
+            // Your own profiles first, in file order; then found ones in the order the searches
+            // found them, changed or not (a section of changes mustn't move one to the top, and so
+            // make it the default); then the ones that can't open.
+            var searchOrder = discovered.Select((d, i) => (d.Id, i)).ToDictionary(x => x.Id, x => x.i);
+            profiles = profiles.Select((p, i) => (p, i))
+                .OrderBy(x => x.p.Missing != ProfileMissing.None ? 2 : x.p.Found ? 1 : 0)
+                .ThenBy(x => x.p.Found ? searchOrder[x.p.Id] : x.i)
+                .Select(x => x.p).ToList();
+
             if (listOrder != null)
             {
                 // profile-order (the settings window's drag order) first; the rest keep their places after it.

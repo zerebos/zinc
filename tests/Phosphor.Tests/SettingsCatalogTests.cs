@@ -228,6 +228,19 @@ public class ProfileSettingsTests
     }
 
     [Fact]
+    public void ChangingAFoundProfileDoesntMoveIt()
+    {
+        // Changes to cmd (found last) leave it last, and leave the default alone.
+        var changed = ConfigFile.Parse("[profile.cmd]\nfont.size = 14\n", discover: Three);
+        Assert.Equal(["wsl:Fedora", "pwsh", "cmd"], changed.Profiles.Select(p => p.Id));
+        Assert.Equal("wsl:Fedora", changed.DefaultProfile.Id);
+
+        // Your own profiles come first, in file order.
+        var mine = ConfigFile.Parse("[profile.cmd]\nfont.size = 14\n\n[profile.b]\ncommand = \"b.exe\"\n\n[profile.a]\ncommand = \"a.exe\"\n", discover: Three);
+        Assert.Equal(["b", "a", "wsl:Fedora", "pwsh", "cmd"], mine.Profiles.Select(p => p.Id));
+    }
+
+    [Fact]
     public void ProfileOrderIsWrittenAtTheTop()
     {
         var text = ConfigEditor.Set("[profile.mine]\ncommand = \"x.exe\"\n", ["profile-order"], new List<object> { "pwsh", "mine" });

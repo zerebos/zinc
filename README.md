@@ -192,7 +192,9 @@ relative to this one. Settings in the including file win.
 
 Each `[profile.<id>]` section is a profile, starting from the settings above and overriding
 `[font]`, `[colors]` and `[terminal]` for itself (as subsections, or dotted keys like
-`font.size = 12`). Profiles appear in the new-tab menu in file order. The id is what
+`font.size = 12`). Profiles appear in the new-tab menu with yours first (in file order), then the
+ones found on this PC in the order they're found; `profile-order` (or dragging them in Settings)
+sets any order you like. The id is what
 `default-profile` and saved sessions refer to, so renaming a profile (`name`) breaks nothing;
 quote ids with spaces or colons: `[profile."ssh:homelab"]`.
 
@@ -230,8 +232,8 @@ Windows Terminal does, and lists them after your own profiles:
 | Visual Studio installs | `vs:<instance>:pwsh`, `vs:<instance>:cmd` | Developer PowerShell / Command Prompt for … |
 | Hosts in `~/.ssh/config` (not patterns like `*`; `Include`s are followed) | `ssh:<host>` | SSH - &lt;host&gt; |
 
-A `[profile]` section with a found profile's id changes it, starting from what was found, and
-places it where the section is (an empty section only places it); `hidden = true` hides it. A section for a found profile that
+A `[profile]` section with a found profile's id changes it, starting from what was found, without
+moving it (use `profile-order` for that); `hidden = true` hides it. A section for a found profile that
 isn't installed any more is hidden too. `[discover]` turns sources off:
 
 ```toml
