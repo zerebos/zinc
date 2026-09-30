@@ -160,6 +160,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   force (with a single scheme: whether its background is dark), and those that subscribe (mode
   2031, e.g. neovim) hear of each change, so they can switch their own colors too.
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.
+- `selection-background`, `selection-foreground`: `"#rrggbb"`, instead of the scheme's (most
+  schemes set them). With neither, selection inverts the colors; with only a background, selected
+  text keeps its color.
 - `palette`: an array of up to 256 colors from index 0, or single entries: `palette.1 = "#AC4242"`.
 
 **`[terminal]`**
@@ -184,6 +187,18 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   them ([shell integration](#shell-integration)).
 - `shell-integration`: `"auto"` (default) loads Phosphor's [shell integration](#shell-integration)
   into PowerShell, bash and zsh; `"off"` starts shells as they are.
+- `cursor-style`: `"block"` (default), `"bar"`, `"underline"` or `"block-hollow"`, and
+  `cursor-blink`: `false` (default) or `true`: the cursor until a program picks its own (DECSCUSR)
+  and after it resets it.
+- `scrollback-lines`: how many lines you can scroll back through, `10000` by default (0 to
+  100,000; libghostty prunes a page at a time, so it keeps about that many).
+- `close-on-exit`: `"success"` (default) closes a tab whose program ended cleanly and keeps a
+  failure on screen; `"always"` or `"never"` (any key then closes it).
+- `bell`: `"attention"` (default) puts a dot on the tab and flashes the taskbar button when you
+  aren't looking at it; `"flash"` also flashes the pane; `"none"`. `bell-sound = true` plays
+  Windows' default sound too.
+- `program-titles`: `true` (default) lets shells and programs set the tab's title; `false` keeps the
+  profile's name (a name you give a tab always wins).
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the

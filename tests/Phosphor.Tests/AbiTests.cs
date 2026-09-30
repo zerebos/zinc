@@ -22,6 +22,7 @@ public unsafe partial class AbiTests
         [typeof(GhosttyResult)] = "GhosttyResult",
         [typeof(GhosttyKey)] = "GhosttyKey",
         [typeof(CursorVisualStyle)] = "GhosttyRenderStateCursorVisualStyle",
+        [typeof(TerminalCursorStyle)] = "GhosttyTerminalCursorStyle",
         [typeof(ScrollViewportTag)] = "GhosttyTerminalScrollViewportTag",
         [typeof(PointTag)] = "GhosttyPointTag",
         [typeof(KeyAction)] = "GhosttyKeyAction",

@@ -39,6 +39,8 @@ public sealed class ThemeLibraryTests : IDisposable
     public void AppliesOnlyColorsAndRejectsWhatIsNotAScheme()
     {
         Assert.Equal(0x10, _library.Apply(new Config(), "Mine")!.Theme.Background.R);
+        Assert.Equal((byte)0xFF, _library.Apply(new Config(), "Mine")!.Theme.SelectionBackground?.R); // schemes' selection colors count
+        Assert.Null(_library.Apply(new Config(), "Mine")!.Theme.SelectionForeground);
         Assert.Null(_library.Apply(new Config(), "Nope"));
         Assert.Null(_library.Apply(new Config(), "../user/Mine"));
         Assert.Null(_library.Apply(new Config(), ""));

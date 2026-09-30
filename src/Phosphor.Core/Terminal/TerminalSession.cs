@@ -103,7 +103,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             Native.TerminalSet(_terminal, TerminalOption.ModeDefault, &grapheme);
         }
 
-        nuint scrollback = 10_000;
+        nuint scrollback = Config.DefaultScrollbackLines;
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &scrollback);
         // libghostty prunes at whichever limit comes first, and its default byte limit kept
         // only ~700 rows of history at 120 columns. Lines are the limit users think in.
@@ -269,6 +269,36 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// background, cursor and palette. Colors a program set itself (OSC 4/10/11) stay.
     /// </summary>
     private bool _dark = true;
+
+    /// <summary>How many lines are kept above the screen (fewer prunes the oldest at the next write).</summary>
+    public void SetScrollback(int lines)
+    {
+        lock (Lock)
+        {
+            if (!_disposed)
+            {
+                nuint value = (nuint)Math.Max(0, lines);
+                Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &value);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The cursor programs get until they choose one (DECSCUSR) and after they reset it; applies
+    /// at once while the cursor is still the default.
+    /// </summary>
+    public void SetCursorDefaults(TerminalCursorStyle style, bool blink)
+    {
+        lock (Lock)
+        {
+            if (!_disposed)
+            {
+                var b = (byte)(blink ? 1 : 0);
+                Native.TerminalSet(_terminal, TerminalOption.DefaultCursorStyle, &style);
+                Native.TerminalSet(_terminal, TerminalOption.DefaultCursorBlink, &b);
+            }
+        }
+    }
 
     /// <summary>
     /// Whether this pane's colors are dark, as programs are told: they ask (CSI ? 996 n), or

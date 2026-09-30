@@ -228,6 +228,7 @@ public sealed partial class MainWindow : Window
         Action directory = () => UpdateTitle(tab, fromShell: true); // the command center shows the folder
         Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
         Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
+        Action bell = () => OnBell(tab, pane);
         Action progress = () => OnProgress(tab);
         RoutedEventHandler focus = (_, _) =>
         {
@@ -242,6 +243,7 @@ public sealed partial class MainWindow : Window
         control.CommandsChanged += directory; // and the running command
         control.CommandFinished += finished;
         control.Notified += notified;
+        control.BellRang += bell;
         control.ProgressChanged += progress;
         control.CloseRequested += close;
         control.GotFocus += focus;
@@ -253,6 +255,7 @@ public sealed partial class MainWindow : Window
             control.CommandsChanged -= directory;
             control.CommandFinished -= finished;
             control.Notified -= notified;
+            control.BellRang -= bell;
             control.ProgressChanged -= progress;
             control.CloseRequested -= close;
             control.GotFocus -= focus;

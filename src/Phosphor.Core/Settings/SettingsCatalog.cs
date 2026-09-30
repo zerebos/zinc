@@ -117,6 +117,16 @@ public static class SettingsCatalog
         new("appearance", "Colors", "colors.background", "Background", "Instead of the scheme's.", SettingKind.Color, null),
         new("appearance", "Colors", "colors.foreground", "Text", "Instead of the scheme's.", SettingKind.Color, null),
         new("appearance", "Colors", "colors.cursor", "Cursor", "Instead of the scheme's.", SettingKind.Color, null),
+        new("appearance", "Colors", "colors.selection-background", "Selection",
+            "Behind selected text, instead of the scheme's (without either, selection inverts the colors).", SettingKind.Color, null),
+        new("appearance", "Colors", "colors.selection-foreground", "Selected text",
+            "Instead of the scheme's (without either, the text keeps its color).", SettingKind.Color, null),
+        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim's insert mode often does).",
+            SettingKind.Choice, "block")
+            {
+                Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
+            },
+        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Until a program says otherwise.", SettingKind.Toggle, false),
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)
@@ -157,6 +167,21 @@ public static class SettingsCatalog
             { Choices = [new("On", "auto"), new("Off", "off")] },
         new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command's output.", SettingKind.Choice, "failures")
             { Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")] },
+        new("terminal", "Shell", "terminal.close-on-exit", "When the program ends", "", SettingKind.Choice, "success")
+            {
+                Choices =
+                [
+                    new("Close if it succeeded", "success", "A failure stays on screen so you can read why; any key closes it."),
+                    new("Always close", "always"),
+                    new("Keep it open", "never", "Any key closes it."),
+                ],
+            },
+        new("terminal", "Shell", "terminal.program-titles", "Programs name the tab",
+            "Shells and programs set the tab's title (often the folder or the running command). Off: the profile's name.",
+            SettingKind.Toggle, true),
+        new("terminal", "Scrollback", "terminal.scrollback-lines", "Scrollback lines", "How far back you can scroll.",
+            SettingKind.Number, (long)Config.DefaultScrollbackLines)
+            { Minimum = 0, Maximum = Config.MaxScrollbackLines, Step = 1000 },
         new("terminal", "Mouse", "terminal.mouse-pointer", "Pointer over text", "", SettingKind.Choice, "arrow")
             { Choices = [new("Arrow", "arrow", "Like Windows Terminal."), new("Text I-beam", "text", "Like Ghostty.")] },
         new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
@@ -182,6 +207,17 @@ public static class SettingsCatalog
             "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle, true),
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs may read the clipboard",
             "Anything running, including a remote host, could read it.", SettingKind.Toggle, false),
+        new("terminal", "Bell", "terminal.bell", "Bell", "When a program rings it (the BEL character), e.g. at a failed tab completion.",
+            SettingKind.Choice, "attention")
+            {
+                Choices =
+                [
+                    new("Mark the tab", "attention", "A dot on its tab, and the taskbar button flashes, when you aren't looking at it."),
+                    new("Flash the pane", "flash", "Marks the tab too."),
+                    new("Nothing", "none"),
+                ],
+            },
+        new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows' default sound too.", SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
             "Draws with the processor instead of the graphics card: for broken graphics drivers, some virtual machines and remote desktop glitches. Slower. Applies to terminals opened from now on.",
             SettingKind.Toggle, false),
@@ -247,8 +283,8 @@ public static class SettingsCatalog
     public static IReadOnlyList<SettingFold> Folds { get; } =
     [
         new(null, null, "font.builtin-glyphs", ["font.adjust-box-thickness"]),
-        new("Background, text and cursor", "The scheme's, unless you pick your own.", null,
-            ["colors.background", "colors.foreground", "colors.cursor"]),
+        new("Background, text, cursor and selection", "The scheme's, unless you pick your own.", null,
+            ["colors.background", "colors.foreground", "colors.cursor", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
         new(null, null, "window.tab-groups", ["window.group-tab-strip"]),
         new(null, null, "window.unfocused-split-opacity", ["window.unfocused-split-fill"]),

@@ -186,6 +186,15 @@ public struct GhosttyRenderStateCursor
     [FieldOffset(20)] public CursorVisualStyle VisualStyle;
 }
 
+/// <summary>The cursor programs get until they pick one (DECSCUSR), and after they reset it.</summary>
+public enum TerminalCursorStyle : int
+{
+    Bar = 0,
+    Block = 1,
+    Underline = 2,
+    BlockHollow = 3,
+}
+
 public enum CursorVisualStyle : int
 {
     Bar = 0,
@@ -487,6 +496,8 @@ public enum TerminalOption : int
     KittyImageMediumTempFile = 17,
     KittyImageMediumSharedMem = 18,
     Selection = 21,
+    DefaultCursorStyle = 22,
+    DefaultCursorBlink = 23,
     PwdChanged = 25,
     ClipboardWrite = 26,
     ScrollbackMaxBytes = 27,

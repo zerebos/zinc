@@ -62,6 +62,26 @@ public enum NotifyMode
     Never,
 }
 
+/// <summary>What happens to a pane when its program ends. Config: <c>close-on-exit = success | always | never</c>.</summary>
+public enum CloseOnExit
+{
+    /// <summary>Closes after a clean exit (code 0); a failure stays on screen so it can be read.</summary>
+    Success,
+    Always,
+    Never,
+}
+
+/// <summary>What the bell (BEL) does. Config: <c>bell = attention | flash | none</c>.</summary>
+public enum BellMode
+{
+    /// <summary>A dot on the tab (and the taskbar button flashes) when you aren't looking at it.</summary>
+    Attention,
+
+    /// <summary>The pane flashes too.</summary>
+    Flash,
+    None,
+}
+
 /// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
 public enum TitleBarMode
 {
@@ -163,6 +183,31 @@ public sealed record Config
 
     /// <summary>Moving the pointer into a pane focuses it. Config: <c>[window] focus-follows-mouse = true</c> (global).</summary>
     public bool FocusFollowsMouse { get; init; }
+
+    /// <summary>The cursor until a program picks its own. Config: <c>cursor-style = block | bar | underline | block-hollow</c>.</summary>
+    public Phosphor.Ghostty.TerminalCursorStyle CursorStyle { get; init; } = Phosphor.Ghostty.TerminalCursorStyle.Block;
+
+    /// <summary>Whether that cursor blinks. Config: <c>cursor-blink = true</c>.</summary>
+    public bool CursorBlink { get; init; }
+
+    /// <summary>Lines kept above the screen. Config: <c>scrollback-lines = 10000</c>.</summary>
+    public int ScrollbackLines { get; init; } = DefaultScrollbackLines;
+
+    public const int DefaultScrollbackLines = 10_000;
+
+    public const int MaxScrollbackLines = 100_000;
+
+    /// <summary>What happens when the program ends. Config: <c>close-on-exit</c>.</summary>
+    public CloseOnExit CloseOnExit { get; init; }
+
+    /// <summary>What the bell does. Config: <c>bell</c>.</summary>
+    public BellMode Bell { get; init; }
+
+    /// <summary>The bell also plays Windows' default sound. Config: <c>bell-sound = true</c>.</summary>
+    public bool BellSound { get; init; }
+
+    /// <summary>Programs may set the tab's title (OSC 0/2); off: the profile's name. Config: <c>program-titles = false</c>.</summary>
+    public bool ProgramTitles { get; init; } = true;
 
     /// <summary>
     /// Programs may read the clipboard with OSC 52 (off by default: anything running in the
@@ -296,6 +341,17 @@ public sealed record Config
             "large-paste-warning" when bool.TryParse(value, out var large) => this with { LargePasteWarning = large },
             "word-boundaries" => this with { WordBoundaries = value.Length > 0 ? value : null },
             "focus-follows-mouse" when bool.TryParse(value, out var follows) => this with { FocusFollowsMouse = follows },
+            "cursor-style" when TryMode<Phosphor.Ghostty.TerminalCursorStyle>(value.Replace('_', '-'), out var cursorStyle) =>
+                this with { CursorStyle = cursorStyle },
+            "cursor-blink" when bool.TryParse(value, out var blink) => this with { CursorBlink = blink },
+            "scrollback-lines" when int.TryParse(value, out var lines) && lines is >= 0 and <= MaxScrollbackLines =>
+                this with { ScrollbackLines = lines },
+            "close-on-exit" when TryMode<CloseOnExit>(value, out var close) => this with { CloseOnExit = close },
+            "bell" when TryMode<BellMode>(value, out var bell) => this with { Bell = bell },
+            "bell-sound" when bool.TryParse(value, out var sound) => this with { BellSound = sound },
+            "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
+            "selection-background" when TryColor(value, out var c) => this with { Theme = theme with { SelectionBackground = c } },
+            "selection-foreground" when TryColor(value, out var c) => this with { Theme = theme with { SelectionForeground = c } },
             "clipboard-read" when value is "allow" or "deny" => this with { ClipboardRead = value == "allow" },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
                 this with { QuickTerminal = QuickTerminal with { Position = position } },

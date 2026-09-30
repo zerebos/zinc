@@ -110,6 +110,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ClipboardText.Paste` (ContentDialog with a preview). `test:paste:<text>` (`|` = line break)
   pastes without touching the real clipboard. Ctrl+wheel zoom, copy-on-select and
   focus-follows-mouse (`OnPointerEntered`) live in `TerminalControl.Mouse.cs`.
+- Terminal settings (2026-09-30): `cursor-style`/`cursor-blink` → `TerminalSession.SetCursorDefaults`
+  (libghostty's DEFAULT_CURSOR_STYLE/BLINK: apply at once while the cursor is default, a program's
+  DECSCUSR wins; tested via DECRQSS), `scrollback-lines` → `SetScrollback` (live), selection colors
+  on `TerminalTheme` (schemes' `selection-*` now read; renderer uses them, else inverse),
+  `close-on-exit` (`OnProcessExited`), `bell` + `bell-sound` (`TerminalControl.Bell.cs`: flash overlay,
+  MessageBeep, `BellRang` → `MainWindow.OnBell` = Notified dot + taskbar flash), `program-titles`
+  (`TerminalControl.Title` is "" while off).
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,

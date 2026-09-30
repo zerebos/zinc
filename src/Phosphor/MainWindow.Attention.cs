@@ -38,6 +38,26 @@ public sealed partial class MainWindow
             $"{command.Text ?? "A command"}", $"{char.ToUpperInvariant(result[0])}{result[1..]} after {Elapsed(took)} · {tab.Header.Title}");
     }
 
+    /// <summary>The bell rang (per <c>bell</c>): a dot on the tab where you weren't looking, and a taskbar flash from the background.</summary>
+    private void OnBell(WorkspaceTab tab, TerminalTab pane)
+    {
+        if (IsLookingAt(tab, pane))
+        {
+            return;
+        }
+
+        if (Attention.Notified > pane.Attention)
+        {
+            pane.Attention = Attention.Notified;
+        }
+
+        UpdateFocusBorders(tab);
+        if (!_active)
+        {
+            FlashTaskbarButton();
+        }
+    }
+
     /// <summary>A program asked for a notification (OSC 9 / OSC 777).</summary>
     private void OnProgramNotified(WorkspaceTab tab, TerminalTab pane, string title, string body)
     {

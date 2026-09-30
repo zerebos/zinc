@@ -392,6 +392,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         var sel = new GhosttyRenderStateRowSelection { Size = (nuint)sizeof(GhosttyRenderStateRowSelection) };
         var hasSelection = Native.RowGet(_rowIterator, RenderStateRowData.Selection, &sel) == GhosttyResult.Success;
+        var theme = Config.Theme;
+        Color? selectionBg = hasSelection && theme.SelectionBackground is { } sb ? ToColor(sb) : null;
+        Color? selectionFg = hasSelection && theme.SelectionForeground is { } sf ? ToColor(sf) : null;
 
         var x = 0;
         var cp = 0;
@@ -469,8 +472,16 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 cell.HasBg = true;
             }
 
-            // Selection renders as inverse video, so it works with any theme.
-            if (hasSelection && x >= sel.StartX && x <= sel.EndX)
+            // Selection: the scheme's (or config's) selection colors, else inverse video, which
+            // works with any theme.
+            var selected = hasSelection && x >= sel.StartX && x <= sel.EndX;
+            if (selected && selectionBg is { } selBg)
+            {
+                inverse = false;
+                cell.Bg = selBg;
+                cell.HasBg = true;
+            }
+            else if (selected)
             {
                 inverse = !inverse;
             }
@@ -481,6 +492,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 cell.Bg = cell.Fg;
                 cell.Fg = bg;
                 cell.HasBg = true;
+            }
+
+            if (selected && selectionFg is { } selFg)
+            {
+                cell.Fg = selFg;
             }
 
             if ((cell.Flags & CellFlags.Faint) != 0)

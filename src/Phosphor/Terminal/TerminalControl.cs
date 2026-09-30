@@ -50,7 +50,10 @@ public sealed partial class TerminalControl : UserControl
     public Func<ActionInvocation, bool>? ActionHandler { get; set; }
 
     /// <summary>The last title the app set (OSC 0/2), or "" if none.</summary>
-    public string Title { get; private set; } = "";
+    /// <summary>The title the program set, or "" (also while <c>program-titles</c> is off).</summary>
+    public string Title => _config.ProgramTitles ? _programTitle : "";
+
+    private string _programTitle = "";
 
     /// <summary>The working directory the shell last reported, as sent (see <see cref="TerminalSession.ReportedDirectory"/>).</summary>
     public string? ReportedDirectory => _session?.ReportedDirectory;
@@ -241,6 +244,8 @@ public sealed partial class TerminalControl : UserControl
         var m = _renderer.Metrics;
         var session = new TerminalSession(cols, rows, _config.Theme);
         session.SetColorScheme(_config.IsDark);
+        session.SetScrollback(_config.ScrollbackLines);
+        session.SetCursorDefaults(_config.CursorStyle, _config.CursorBlink);
         session.Resize(cols, rows, m.WidthPx, m.HeightPx);
         _selection = new SelectionGesture(session);
         _selection.SetWordBoundaries(SelectionGesture.Boundaries(_config.WordBoundaries));
@@ -261,9 +266,13 @@ public sealed partial class TerminalControl : UserControl
         });
         session.TitleChanged += title => dq.SafeEnqueue(() =>
         {
-            Title = title;
-            TitleChanged?.Invoke(title);
+            _programTitle = title;
+            if (_config.ProgramTitles)
+            {
+                TitleChanged?.Invoke(title);
+            }
         });
+        session.Bell += () => dq.SafeEnqueue(OnBell);
         session.DirectoryChanged += () => dq.SafeEnqueue(() => DirectoryChanged?.Invoke());
         session.CommandsChanged += () => dq.SafeEnqueue(OnCommandsChanged);
         ForwardProgramNotifications(session);
@@ -329,6 +338,20 @@ public sealed partial class TerminalControl : UserControl
             session.SetTheme(config.Theme);
             session.SetColorScheme(config.IsDark); // tells programs that asked to hear of it
             ApplyClipboardPermissions(session);
+            if (old.ScrollbackLines != config.ScrollbackLines)
+            {
+                session.SetScrollback(config.ScrollbackLines);
+            }
+
+            if (old.CursorStyle != config.CursorStyle || old.CursorBlink != config.CursorBlink)
+            {
+                session.SetCursorDefaults(config.CursorStyle, config.CursorBlink);
+            }
+        }
+
+        if (old.ProgramTitles != config.ProgramTitles && _programTitle.Length > 0)
+        {
+            TitleChanged?.Invoke(Title);
         }
 
         if (old.WordBoundaries != config.WordBoundaries)
@@ -358,7 +381,7 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        if (code == 0)
+        if (_config.CloseOnExit == CloseOnExit.Always || (code == 0 && _config.CloseOnExit == CloseOnExit.Success))
         {
             CloseRequested?.Invoke();
             return;
@@ -366,7 +389,9 @@ public sealed partial class TerminalControl : UserControl
 
         // Like Windows Terminal: keep a failed session on screen so its output can be read.
         _exited = true;
-        _session.WriteToScreen($"\r\n\x1b[0;2m[process exited with code {code} (0x{code:X8}); press any key to close]\x1b[0m");
+        _session.WriteToScreen(code == 0
+            ? "\r\n\x1b[0;2m[process exited; press any key to close]\x1b[0m"
+            : $"\r\n\x1b[0;2m[process exited with code {code} (0x{code:X8}); press any key to close]\x1b[0m");
     }
 
     // Held in a field: a timer only a local references is collected and stops firing.
