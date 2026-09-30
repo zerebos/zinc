@@ -55,6 +55,15 @@ public sealed partial class TerminalControl
 
     protected override void OnKeyDown(KeyRoutedEventArgs e)
     {
+        if (!IsFromInputMethodBox(e.OriginalSource)) // (the box's keys were handled before it saw them)
+        {
+            HandleKeyDown(e);
+        }
+    }
+
+    /// <summary>A key press, from the pane or (with input methods on) its input box, before the box sees it.</summary>
+    private void HandleKeyDown(KeyRoutedEventArgs e)
+    {
         // Pressed (or auto-repeating) here now: from this press on, the key is ours.
         _foreignKeys.Remove(e.Key);
 
@@ -146,6 +155,14 @@ public sealed partial class TerminalControl
 
     protected override void OnKeyUp(KeyRoutedEventArgs e)
     {
+        if (!IsFromInputMethodBox(e.OriginalSource))
+        {
+            HandleKeyUp(e);
+        }
+    }
+
+    private void HandleKeyUp(KeyRoutedEventArgs e)
+    {
         // A key's WM_CHAR is always retrieved before its WM_KEYUP, so suppression
         // ends here; later chars without a KeyDown (on-screen keyboards, voice
         // typing, automation) must not be swallowed.
@@ -185,6 +202,14 @@ public sealed partial class TerminalControl
     }
 
     protected override void OnCharacterReceived(CharacterReceivedRoutedEventArgs e)
+    {
+        if (!IsFromInputMethodBox(e.OriginalSource))
+        {
+            HandleCharacter(e);
+        }
+    }
+
+    private void HandleCharacter(CharacterReceivedRoutedEventArgs e)
     {
         var session = _session;
         if (session == null || IsFromSearch(e.OriginalSource))

@@ -203,6 +203,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   bell rings again after 0.3 s without one. `screen-flash-bell`: `true` (default) turns a program's
   own screen flash (reverse video on and straight off, readline's `bell-style visible`, which Git
   Bash sets) into this bell; reverse video a program keeps on shows a quarter second late.
+- `input-method`: `true` (default): Windows' input methods (IME: Japanese, Chinese, Korean…) type
+  into the terminal. What you're composing shows at the cursor, in the terminal's font, with the
+  candidate window beside it; the committed text goes to the program. `false` sends keys straight
+  to the terminal (the way it worked before), should anything about typing misbehave.
 - `program-titles`: `true` (default) lets shells and programs set the tab's title; `false` keeps the
   profile's name (a name you give a tab always wins).
 

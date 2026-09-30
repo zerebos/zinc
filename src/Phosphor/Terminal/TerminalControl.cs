@@ -462,6 +462,7 @@ public sealed partial class TerminalControl : UserControl
         // Test captures draw every cursor as focused: whether a new window gets focus varies.
         var presentation = new CursorPresentation(_focused || TestHooks.Deterministic || _previewScript != null, _blinkOn);
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
+        PlaceInputBox(); // follows the cursor
         DrawCommandMarks(args.DrawingSession, session);
         DrawSearchTicks(args.DrawingSession, session);
         UpdateBlinkTimer(blinking);
@@ -499,8 +500,19 @@ public sealed partial class TerminalControl : UserControl
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {
+        // With input methods on, typing goes through the pane's input box: focus lands there.
+        if (ReferenceEquals(e.OriginalSource, this) && FocusInputMethodBox())
+        {
+            return;
+        }
+
+        NoteForeignKeys(); // a key held as focus arrives (Enter in a popup, Escape in the find box)
+        if (_focused)
+        {
+            return; // from the pane to its input box: still the same focus for the program
+        }
+
         _focused = true;
-        NoteForeignKeys();
         ResetBlink();
         SendFocusEvent(true);
         _canvas.Invalidate();
@@ -508,11 +520,21 @@ public sealed partial class TerminalControl : UserControl
 
     protected override void OnLostFocus(RoutedEventArgs e)
     {
+        if (FocusIsWithin())
+        {
+            return; // still inside the pane: not a focus change for the program
+        }
+
         _focused = false;
         CancelSequence();
         SendFocusEvent(false);
         _canvas.Invalidate();
     }
+
+    /// <summary>Whether keyboard focus is on the pane itself or its input box (the find box counts as elsewhere, as before).</summary>
+    private bool FocusIsWithin() =>
+        XamlRoot != null && Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(XamlRoot) is { } focused &&
+        (ReferenceEquals(focused, this) || ReferenceEquals(focused, _inputBox));
 
     private void SendFocusEvent(bool focused)
     {

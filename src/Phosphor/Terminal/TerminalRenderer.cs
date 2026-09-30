@@ -96,6 +96,12 @@ public sealed unsafe class TerminalRenderer : IDisposable
     /// <summary>Current font size in DIPs.</summary>
     public float FontSize => _fontSize;
 
+    /// <summary>The regular face's family as XAML text can name it (the bundled font by its file), for the IME's box.</summary>
+    public string TextFontFamily { get; private set; } = "Consolas";
+
+    /// <summary>The cursor's cell in the viewport at the last frame (null: off screen), where input methods compose.</summary>
+    public (int Column, int Row)? CursorCell { get; private set; }
+
     public bool HasResources => _brush != null && Metrics.Width > 0;
 
     private float PadLeft => _config.PaddingLeft;
@@ -156,6 +162,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         Log.Write($"font: {_fontFamily}{(bundled ? " (bundled)" : "")}");
+        TextFontFamily = bundled ? BundledFonts.FormatFamily(italic: false) : _fontFamily;
         for (var v = 0; v < 4; v++)
         {
             var weight = (v & 1) != 0 ? FontWeights.Bold : FontWeights.Normal;
@@ -338,6 +345,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         DrawImages(ds, rows, belowText: false);
         Native.RenderStateClean(_renderState);
+        CursorCell = cursor.ViewportHasValue != 0 ? ((int)cursor.ViewportX, (int)cursor.ViewportY) : null;
         return cursor.Blinking != 0 && cursor.Visible != 0;
     }
 

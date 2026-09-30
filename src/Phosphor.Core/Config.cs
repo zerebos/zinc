@@ -230,6 +230,12 @@ public sealed record Config
     /// <summary>A program's screen flash (a "visible bell") rings the bell instead. Config: <c>screen-flash-bell = false</c>.</summary>
     public bool ScreenFlashBell { get; init; } = true;
 
+    /// <summary>
+    /// Input methods (IME) type into the terminal: a focused pane's keys pass through a hidden text box
+    /// Windows' input methods work with. Config: <c>input-method = false</c> sends keys straight to the terminal.
+    /// </summary>
+    public bool InputMethod { get; init; } = true;
+
     /// <summary>Programs may set the tab's title (OSC 0/2); off: the profile's name. Config: <c>program-titles = false</c>.</summary>
     public bool ProgramTitles { get; init; } = true;
 
@@ -389,6 +395,7 @@ public sealed record Config
             "bell" when TryMode<BellMode>(value, out var bell) => this with { Bell = bell },
             "bell-sound" when bool.TryParse(value, out var sound) => this with { BellSound = sound },
             "screen-flash-bell" when bool.TryParse(value, out var screenFlash) => this with { ScreenFlashBell = screenFlash },
+            "input-method" when bool.TryParse(value, out var ime) => this with { InputMethod = ime },
             "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
             "selection-background" when TryColor(value, out var c) => this with { Theme = theme with { SelectionBackground = c } },
             "selection-foreground" when TryColor(value, out var c) => this with { Theme = theme with { SelectionForeground = c } },

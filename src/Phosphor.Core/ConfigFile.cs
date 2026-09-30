@@ -646,6 +646,7 @@ public sealed class ConfigFile
             ["terminal.bell-sound"] = ("bell-sound", v => Bool(v)),
             ["terminal.screen-flash-bell"] = ("screen-flash-bell", v => Bool(v)),
             ["terminal.program-titles"] = ("program-titles", v => Bool(v)),
+            ["terminal.input-method"] = ("input-method", v => Bool(v)),
             ["terminal.padding-x"] = ("window-padding-x", v => Pair(v)),
             ["terminal.padding-y"] = ("window-padding-y", v => Pair(v)),
             ["terminal.mouse-pointer"] = ("mouse-pointer", v => v as string),
