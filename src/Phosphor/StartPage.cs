@@ -45,7 +45,6 @@ internal sealed partial class StartPage : UserControl
     private readonly Button _iconButton = new() { Width = 36, Height = 32, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
     private readonly Button _colorButton = new() { Width = 36, Height = 32, Padding = new Thickness(0), VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBox _name = new() { Width = 200, VerticalAlignment = VerticalAlignment.Center };
-    private readonly TextBlock _summary = new() { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly CheckBox _showPage = new() { Content = "Show this page for new workspaces", IsChecked = true };
 
     private Profile _profile;
@@ -100,7 +99,7 @@ internal sealed partial class StartPage : UserControl
             if (_layoutList.SelectedItem is ListViewItem { Tag: StartLayout layout })
             {
                 _layout = layout;
-                UpdateSummary();
+                UpdateNameHint();
             }
         };
         _layoutList.DoubleTapped += (_, _) => Start();
@@ -115,30 +114,16 @@ internal sealed partial class StartPage : UserControl
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var nameLabel = new TextBlock { Text = "Name", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
-        // What Start starts, on a line of its own above the controls (so a narrow page keeps it whole).
-        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        footer.RowSpacing = 8;
-        _summary.HorizontalAlignment = HorizontalAlignment.Right;
-        _summary.Opacity = 0.8;
-        Grid.SetColumnSpan(_summary, 7);
-        footer.Children.Add(_summary);
-        Grid.SetRow(_showPage, 1);
         footer.Children.Add(_showPage);
         Grid.SetColumn(_iconButton, 2);
-        Grid.SetRow(_iconButton, 1);
         footer.Children.Add(_iconButton);
         Grid.SetColumn(_colorButton, 3);
-        Grid.SetRow(_colorButton, 1);
         footer.Children.Add(_colorButton);
         Grid.SetColumn(nameLabel, 4);
-        Grid.SetRow(nameLabel, 1);
         footer.Children.Add(nameLabel);
         Grid.SetColumn(_name, 5);
-        Grid.SetRow(_name, 1);
         footer.Children.Add(_name);
         Grid.SetColumn(start, 6);
-        Grid.SetRow(start, 1);
         footer.Children.Add(start);
         SetUpLookButtons();
 
@@ -183,7 +168,7 @@ internal sealed partial class StartPage : UserControl
             {
                 _profile = profile;
                 FillFolders();
-                UpdateSummary();
+                UpdateNameHint();
                 ShowLook(); // the icon button shows the profile's icon while none is chosen
             }
         };
@@ -203,7 +188,7 @@ internal sealed partial class StartPage : UserControl
             }
 
             _folder = choice;
-            UpdateSummary();
+            UpdateNameHint();
         };
         _profileList.DoubleTapped += (_, _) => Start();
         _folderList.DoubleTapped += (_, e) =>
@@ -300,7 +285,7 @@ internal sealed partial class StartPage : UserControl
                 _profile = shown[0];
             }
 
-            _profileList.SelectedItem = _profileList.Items.OfType<ListViewItem>().First(i => i.Tag == _profile);
+            _profileList.SelectedItem = _profileList.Items.OfType<ListViewItem>().First(i => ReferenceEquals(i.Tag, _profile));
         }
         finally
         {
@@ -308,7 +293,7 @@ internal sealed partial class StartPage : UserControl
         }
 
         FillFolders();
-        UpdateSummary();
+        UpdateNameHint();
     }
 
     private void FillFolders()
@@ -352,7 +337,7 @@ internal sealed partial class StartPage : UserControl
                          ?? choices.FirstOrDefault(c => !c.Browse && c.Folder?.Path == _folder.Folder?.Path)
                          ?? choices[0];
             _folder = keep.Browse ? Usual : keep;
-            _folderList.SelectedItem = _folderList.Items.OfType<ListViewItem>().First(i => i.Tag == keep);
+            _folderList.SelectedItem = _folderList.Items.OfType<ListViewItem>().First(i => ReferenceEquals(i.Tag, keep));
         }
         finally
         {
@@ -406,7 +391,7 @@ internal sealed partial class StartPage : UserControl
         }
 
         FillFolders();
-        UpdateSummary();
+        UpdateNameHint();
     }
 
     private ListViewItem ProfileItem(Profile profile)
@@ -591,10 +576,9 @@ internal sealed partial class StartPage : UserControl
         return grid;
     }
 
-    private void UpdateSummary()
+    /// <summary>The name box's hint: the name the workspace gets if you type none (the folder's, else the shell's).</summary>
+    private void UpdateNameHint()
     {
-        _summary.Text = (_folder.Folder is { } folder ? $"{_profile.Name} in {folder.Path}" : $"{_profile.Name} in its usual folder") +
-                        (_layout == StartLayout.One ? "" : $", {StartLayouts.Title(_layout).ToLowerInvariant()}");
         _name.PlaceholderText = _folder.Folder?.Name ?? "From the shell";
     }
 
