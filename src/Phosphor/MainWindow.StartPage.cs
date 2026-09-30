@@ -34,7 +34,8 @@ public sealed partial class MainWindow
             Tag = page,
             Content = page,
         };
-        page.Started += (profile, folder, name) => Ui.Guard("starting a workspace", () => StartWorkspace(item, profile, folder, name));
+        page.Started += (profile, folder, name, layout) =>
+            Ui.Guard("starting a workspace", () => StartWorkspace(item, profile, folder, name, layout));
         page.Cancelled += () => Ui.Guard("leaving the new workspace page", () => LeaveStartPage(item));
         page.ShowPageChanged += SetNewWorkspacePage;
         Tabs.TabItems.Add(item);
@@ -45,18 +46,20 @@ public sealed partial class MainWindow
     }
 
     /// <summary>The page's choice becomes a workspace in its place.</summary>
-    private void StartWorkspace(TabViewItem item, Profile profile, WorkspaceFolder? folder, string? name)
+    private void StartWorkspace(TabViewItem item, Profile profile, WorkspaceFolder? folder, string? name,
+        StartLayout layout = StartLayout.One)
     {
         var (command, directory) = StartIn(folder, profile);
         var index = Tabs.TabItems.IndexOf(item);
-        // Named as asked, else after its folder; without either, its shell names it (as before).
-        var tab = AddWorkspace(new Workspace<TerminalTab>(CreatePane(profile, command, directory)), name ?? folder?.Name,
-            index: index < 0 ? null : index);
+        // Every pane of the layout runs the profile in the folder. Named as asked, else after its
+        // folder; without either, its shell names it (as before).
+        var workspace = StartLayouts.Build(layout, () => CreatePane(profile, command, directory));
+        var tab = AddWorkspace(workspace, name ?? folder?.Name, index: index < 0 ? null : index);
         tab.Folder = folder;
         Tabs.TabItems.Remove(item); // no longer selected: AddWorkspace selected the new one
         RefreshWorkspaceList();
         FocusActive(tab);
-        Log.Write($"start page: {profile.Name} in {folder?.Path ?? "its usual folder"}{(name != null ? $" as {name}" : "")}");
+        Log.Write($"start page: {profile.Name} in {folder?.Path ?? "its usual folder"}, {layout}{(name != null ? $" as {name}" : "")}");
     }
 
     /// <summary>Esc: the page goes (a window's only tab starts the default instead: a window is never empty).</summary>

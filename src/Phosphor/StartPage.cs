@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Phosphor.Panes;
 using Phosphor.Terminal;
 
 namespace Phosphor;
@@ -28,6 +29,8 @@ internal sealed partial class StartPage : UserControl
     private readonly TextBox _filter = new() { PlaceholderText = "Filter profiles and folders, or type a folder", Width = 520, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly ListView _profileList = new() { SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _folderList = new() { SelectionMode = ListViewSelectionMode.Single };
+    private readonly ListView _layoutList = new() { SelectionMode = ListViewSelectionMode.Single };
+    private StartLayout _layout = StartLayout.One;
     private readonly TextBox _name = new() { Width = 200, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _summary = new() { VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly CheckBox _showPage = new() { Content = "Show this page for new workspaces", IsChecked = true };
@@ -61,12 +64,32 @@ internal sealed partial class StartPage : UserControl
         _showPage.Unchecked += (_, _) => ShowPageChanged?.Invoke(false);
 
         var columns = new Grid { ColumnSpacing = 40 };
-        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 380 });
-        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star), MaxWidth = 520 });
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 340 });
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star), MaxWidth = 460 });
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.8, GridUnitType.Star), MaxWidth = 260 });
         columns.Children.Add(Column("Profile", _profileList));
         var folders = Column("Folder", _folderList);
         Grid.SetColumn(folders, 1);
         columns.Children.Add(folders);
+        foreach (var layout in StartLayouts.All)
+        {
+            _layoutList.Items.Add(LayoutItem(layout));
+        }
+
+        _layoutList.SelectedIndex = 0;
+        AutomationProperties.SetName(_layoutList, "Layout");
+        var layouts = Column("Layout", _layoutList);
+        Grid.SetColumn(layouts, 2);
+        columns.Children.Add(layouts);
+        _layoutList.SelectionChanged += (_, _) =>
+        {
+            if (_layoutList.SelectedItem is ListViewItem { Tag: StartLayout layout })
+            {
+                _layout = layout;
+                UpdateSummary();
+            }
+        };
+        _layoutList.DoubleTapped += (_, _) => Start();
 
         var footer = new Grid { ColumnSpacing = 12, Padding = new Thickness(0, 12, 0, 0), BorderThickness = new Thickness(0, 1, 0, 0),
             BorderBrush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"] };
@@ -156,7 +179,7 @@ internal sealed partial class StartPage : UserControl
     }
 
     /// <summary>Start: the profile, the chosen folder (null: its usual one) and the name (null: from the folder, or the shell).</summary>
-    public event Action<Profile, WorkspaceFolder?, string?>? Started;
+    public event Action<Profile, WorkspaceFolder?, string?, StartLayout>? Started;
 
     /// <summary>Esc: leave without starting.</summary>
     public event Action? Cancelled;
@@ -372,16 +395,73 @@ internal sealed partial class StartPage : UserControl
         return item;
     }
 
+    private static ListViewItem LayoutItem(StartLayout layout)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
+        row.Children.Add(Picture(layout));
+        row.Children.Add(new TextBlock { Text = StartLayouts.Title(layout), VerticalAlignment = VerticalAlignment.Center });
+        var item = new ListViewItem { Content = row, Tag = layout };
+        AutomationProperties.SetName(item, StartLayouts.Title(layout));
+        return item;
+    }
+
+    /// <summary>A small drawing of the layout's panes.</summary>
+    private static Grid Picture(StartLayout layout)
+    {
+        var grid = new Grid { Width = 34, Height = 24, ColumnSpacing = 2, RowSpacing = 2, VerticalAlignment = VerticalAlignment.Center };
+        var (columns, rows) = layout switch
+        {
+            StartLayout.One => (1, 1),
+            StartLayout.SideBySide => (2, 1),
+            StartLayout.Stacked => (1, 2),
+            _ => (2, 2),
+        };
+        for (var i = 0; i < columns; i++)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+        }
+
+        for (var i = 0; i < rows; i++)
+        {
+            grid.RowDefinitions.Add(new RowDefinition());
+        }
+
+        void Pane(int row, int column, int rowSpan = 1)
+        {
+            var pane = new Border
+            {
+                CornerRadius = new CornerRadius(2),
+                Background = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+            };
+            Grid.SetRow(pane, row);
+            Grid.SetColumn(pane, column);
+            Grid.SetRowSpan(pane, rowSpan);
+            grid.Children.Add(pane);
+        }
+
+        switch (layout)
+        {
+            case StartLayout.One: Pane(0, 0); break;
+            case StartLayout.SideBySide: Pane(0, 0); Pane(0, 1); break;
+            case StartLayout.Stacked: Pane(0, 0); Pane(1, 0); break;
+            case StartLayout.BigAndTwo: Pane(0, 0, rowSpan: 2); Pane(0, 1); Pane(1, 1); break;
+            default: Pane(0, 0); Pane(0, 1); Pane(1, 0); Pane(1, 1); break;
+        }
+
+        return grid;
+    }
+
     private void UpdateSummary()
     {
-        _summary.Text = _folder.Folder is { } folder ? $"{_profile.Name} in {folder.Path}" : $"{_profile.Name} in its usual folder";
+        _summary.Text = (_folder.Folder is { } folder ? $"{_profile.Name} in {folder.Path}" : $"{_profile.Name} in its usual folder") +
+                        (_layout == StartLayout.One ? "" : $", {StartLayouts.Title(_layout).ToLowerInvariant()}");
         _name.PlaceholderText = _folder.Folder?.Name ?? "From the shell";
     }
 
     private void Start()
     {
         var name = _name.Text.Trim();
-        Started?.Invoke(_profile, _folder.Folder, name.Length > 0 ? name : null);
+        Started?.Invoke(_profile, _folder.Folder, name.Length > 0 ? name : null, _layout);
     }
 
     private static string Ago(TimeSpan span) => span.TotalMinutes < 1 ? "just now"

@@ -137,8 +137,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `"<exe>" --at-login` in step (never with PHOSPHOR_CONFIG); `ShellResolver.LoginFlag` isn't a
   command; "tray" opens no window; install.ps1 repoints/removes it. `quit-fresh` (palette/keys only, not the tray: the user's call) = `App.AskQuit(fresh)`
   → `ForgetWindows` (session.json keeps recents and settings bounds, no windows).
-- New-workspace page (design: claude.ai/artifact/Vw21Hh3F1zEYbUTshQ4E9d, option E; steps 1-2 built):
-  `StartPage.cs` (code-only: filter, Profile/Folder lists, name, "Show this page" = `new-workspace-page`)
+- New-workspace page (design: claude.ai/artifact/Vw21Hh3F1zEYbUTshQ4E9d, option E; steps 1-3 built):
+  `StartPage.cs` (code-only: filter, Profile/Folder/Layout lists, name, "Show this page" = `new-workspace-page`;
+  layouts = Core `Panes/StartLayout.cs`, `StartLayouts.Build` splits a Workspace, tested)
   lives in a TabViewItem whose Tag is the page, *not* a WorkspaceTab: `AllTabs()` is `OfType`,
   `SelectedTab` is null while it's shown, drags of it cancel, × / Esc go through `RemoveStartPage` /
   `LeaveStartPage` (`MainWindow.StartPage.cs`). `OpenNewWorkspace` (+, sidebar, NewWorkspace/NewTab
@@ -150,7 +151,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   "Add New Tab" for UIA. New windows (`App.OpenNewWindow`: New window action, tray) open on it too.
   Browse = `FolderDialog` (IFileOpenDialog via ComImport: can start in `\\wsl.localhost\<distro>\…`;
   the WinRT FolderPicker can't), result through `WorkspaceFolder.FromWindows` (tested). Steps 3-4
-  (layouts, reopen closed workspaces) are in .scratch/NOTES.md.
+  (reopen closed workspaces, and later ideas) are in .scratch/NOTES.md.
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size
   change keeps the level). Actions `zoom-in`/`zoom-out`/`reset-zoom`. The palette matches titles,

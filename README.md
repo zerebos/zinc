@@ -560,7 +560,8 @@ its current tab's profile; the title bar's + and ▾ open workspaces.
 A **new workspace** (+, `Ctrl+Alt+T`, the sidebar's New workspace, the palette), and a new window
 (New window, `Ctrl+Shift+N`, the tray's New window), opens on a page for
 choosing how it starts: a profile, a folder (ones your shells were in lately, a typed path, or
-Browse…, which for a WSL profile opens in that distro) and a name. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
+Browse…, which for a WSL profile opens in that distro), a layout (one pane, side by side, stacked,
+one big and two small, or a grid of four: every pane runs the profile in the folder) and a name. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
 Enter starts the default profile in its usual folder, as before. Esc leaves the page (in a window's
 only tab, it starts the default). A workspace started in a folder is named after it (or what you
 type) and keeps it: its new tabs and splits start there, in each shell's own terms (a WSL folder
