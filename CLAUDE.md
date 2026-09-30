@@ -155,6 +155,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ClosedWorkspaces` on App (session.json `closedWorkspaces`, 10, tested) → the page's Reopen chips /
   `reopen-workspace` → `ReopenWorkspace` via `SessionLayout.Restore` + `OpenSaved`). Later ideas are
   in .scratch/NOTES.md.
+- **All the workspace rules in one place (name, icon, color, folder, page, reopen): `.scratch/workspaces.md`.**
 - Workspace look: Core `Panes/WorkspaceLook.cs` (`WorkspaceIcons`: curated Segoe Fluent glyphs, saved by
   name; `WorkspaceColors`: the 8 colors + `ForFolder` hash; `WorkspaceColorMode` = `workspace-colors`;
   tested). `WorkspaceTab.Icon` → `TabHeader.SetIcon` (hides the profile icon; the sidebar shares the
