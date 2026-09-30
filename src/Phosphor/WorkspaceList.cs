@@ -1,3 +1,4 @@
+using System.Numerics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
@@ -24,6 +25,12 @@ internal sealed partial class WorkspaceList : Grid
     private readonly StackPanel _items = new() { Spacing = 2, Padding = new Thickness(6, 6, 6, 6) };
     private readonly Dictionary<MainWindow.WorkspaceTab, Item> _byTab = new();
 
+    // The selection pill: one for the list, sliding to the selected workspace when the selection
+    // changes (and jumping when the list itself does). It lives in the scrolled content.
+    private readonly SlidingPill _pill = new((Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"]);
+    private MainWindow.WorkspaceTab? _selected;
+    private List<MainWindow.WorkspaceTab> _shown = [];
+
     private readonly Border _marker = new()
     {
         Height = 2,
@@ -45,13 +52,15 @@ internal sealed partial class WorkspaceList : Grid
 
         var scroll = new ScrollViewer
         {
-            Content = _items,
+            Content = new Grid { Children = { _items, _pill.Layer } },
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollMode = ScrollMode.Disabled,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
         };
         Children.Add(scroll);
         Children.Add(_marker);
+
+        LayoutUpdated += (_, _) => PlacePill();
 
         // The whole column takes drops (below the last item = at the end).
         Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
@@ -142,6 +151,16 @@ internal sealed partial class WorkspaceList : Grid
             _byTab[tab].Show(tab == selected, color, pane);
         }
 
+        // Another workspace in the same list: slide. Workspaces added, closed or moved: jump.
+        if (selected != _selected && _selected != null && _shown.SequenceEqual(tabs))
+        {
+            _pill.SlideNext();
+        }
+
+        _selected = selected;
+        _shown = [.. tabs];
+        PlacePill();
+
         if (selected != null && _byTab.TryGetValue(selected, out var shown))
         {
             DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => shown.StartBringIntoView());
@@ -175,6 +194,36 @@ internal sealed partial class WorkspaceList : Grid
         }
 
         return item;
+    }
+
+    /// <summary>The pill at the selected item's left edge, centered on it (as each item's own pill was).</summary>
+    private void PlacePill()
+    {
+        if (_selected == null || !_byTab.TryGetValue(_selected, out var item) || item.ActualHeight <= 0)
+        {
+            if (_selected == null)
+            {
+                _pill.Hide();
+            }
+
+            return;
+        }
+
+        Point row;
+        try
+        {
+            row = item.TransformToVisual(_pill.Layer).TransformPoint(new Point(0, 0));
+        }
+        catch (ArgumentException)
+        {
+            return; // not in the tree yet
+        }
+
+        var y = (float)Math.Round(row.Y + (item.ActualHeight - 16) / 2);
+        if (_pill.MoveTo(new Vector2((float)row.X, y), 3, 16))
+        {
+            Log.Write($"workspace pill: {_shown.IndexOf(_selected) + 1} at {y}");
+        }
     }
 
     /// <summary>The drop position under the pointer: how many items lie above it.</summary>
@@ -233,19 +282,9 @@ internal sealed partial class WorkspaceList : Grid
         _marker.Visibility = Visibility.Visible;
     }
 
-    /// <summary>One workspace: accent pill when selected, icon + title, close button.</summary>
+    /// <summary>One workspace: icon + title, close button (the list draws the selection pill).</summary>
     private sealed partial class Item : Grid
     {
-        private readonly Border _pill = new()
-        {
-            Width = 3,
-            Height = 16,
-            CornerRadius = new CornerRadius(1.5),
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Center,
-            Background = (Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"],
-        };
-
         private readonly Button _close;
 
         // The close button and the attention dot share one slot: hovering swaps them, so nothing
@@ -291,7 +330,6 @@ internal sealed partial class WorkspaceList : Grid
             _slot.Children.Add(_slotDot);
             SetColumn(_slot, 1);
             Children.Add(_slot);
-            Children.Add(_pill);
             tab.Header.DotElsewhere = true;
             tab.Header.AttentionChanged += Restyle;
             tab.Header.PulseRequested += _slotDot.PulseIfShown;
@@ -360,7 +398,6 @@ internal sealed partial class WorkspaceList : Grid
             {
                 _close.ClearValue(Control.ForegroundProperty);
             }
-            _pill.Visibility = _selected ? Visibility.Visible : Visibility.Collapsed;
             // The rail has no room for either (its dot sits on the icon): middle click and the
             // context menu still close.
             _slotDot.Show(_compact ? Attention.None : _header.Attention, _header.AttentionCount);

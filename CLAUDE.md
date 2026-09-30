@@ -216,7 +216,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   (`WrapPanel`). `WindowPlacement`: sizes in DIPs for every window; Settings reopens at its
   saved bounds (session.json `settings`, only with save-state on) or centered over the last main
   window, on its last section during a run (`App._settingsSection`). The sidebar's selection
-  pill is ours (`SettingsWindow.Indicator.cs`): NavigationView's is made transparent via
+  pill is a `SlidingPill` (shared with `WorkspaceList`, which slides it only when the selection
+  changes within an unchanged list and jumps otherwise; `.scratch/tools/pill-test.ps1` logs its moves)
+  (`SettingsWindow.Indicator.cs`): NavigationView's is made transparent via
   `NavigationViewSelectionIndicatorForeground` (its own animation is a fixed 600 ms stretch-and-jump,
   see .scratch/NOTES.md); ours takes the SelectionIndicator's *size* but the item's row for its
   position on LayoutUpdated (WinUI still animates its invisible pill, starting it at the old item,
