@@ -1318,6 +1318,7 @@ internal sealed partial class SettingsWindow : Window
         // The flyout: the scheme's colors as chips, "use the scheme's", and the full picker below.
         var chips = new Grid { ColumnSpacing = 4, RowSpacing = 4 };
         var chipButtons = new Button[16];
+        var chipFills = new SolidColorBrush[16];
         for (var i = 0; i < 4; i++)
         {
             chips.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -1334,6 +1335,18 @@ internal sealed partial class SettingsWindow : Window
                 CornerRadius = new CornerRadius(4),
                 BorderThickness = new Thickness(2),
             };
+
+            // The chip keeps its color in every state (a button's hover and press fills would hide
+            // it); hovering shows a ring instead. One brush per chip, recolored for each scheme.
+            var fill = chipFills[i] = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+            chip.Background = fill;
+            foreach (var key in new[] { "ButtonBackground", "ButtonBackgroundPointerOver", "ButtonBackgroundPressed" })
+            {
+                chip.Resources[key] = fill;
+            }
+
+            chip.Resources["ButtonBorderBrushPointerOver"] = Application.Current.Resources["TextFillColorPrimaryBrush"];
+            chip.Resources["ButtonBorderBrushPressed"] = Application.Current.Resources["TextFillColorSecondaryBrush"];
             Grid.SetColumn(chip, i % 4);
             Grid.SetRow(chip, i / 4);
             chips.Children.Add(chip);
@@ -1402,11 +1415,24 @@ internal sealed partial class SettingsWindow : Window
             useScheme.IsChecked = box.Text.Trim().Length == 0;
         }
 
+        var settle = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        settle.Interval = TimeSpan.FromMilliseconds(150);
+        settle.IsRepeating = false;
+
+        void PutPickerAway()
+        {
+            dragging = false;
+            settle.Stop();
+            picker.Visibility = Visibility.Collapsed;
+            more.Visibility = Visibility.Visible;
+        }
+
         for (var i = 0; i < 16; i++)
         {
             var index = i;
             chipButtons[i].Click += (_, _) =>
             {
+                PutPickerAway();
                 box.Text = SchemeTiles.Hex(SchemeTiles.ToColor(SchemeTheme(profile).BaseColors[index]));
                 Apply(box.Text);
             };
@@ -1414,6 +1440,7 @@ internal sealed partial class SettingsWindow : Window
 
         useScheme.Click += (_, _) =>
         {
+            PutPickerAway();
             box.Text = "";
             Apply("");
         };
@@ -1427,9 +1454,6 @@ internal sealed partial class SettingsWindow : Window
 
         // While the full picker is out, each change is written once it settles for a moment:
         // live, without a config reload per pixel of a drag.
-        var settle = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
-        settle.Interval = TimeSpan.FromMilliseconds(150);
-        settle.IsRepeating = false;
         void Picked()
         {
             box.Text = SchemeTiles.Hex(picker.Color);
@@ -1468,7 +1492,7 @@ internal sealed partial class SettingsWindow : Window
             for (var i = 0; i < 16; i++)
             {
                 var color = SchemeTiles.ToColor(colors[i]);
-                chipButtons[i].Background = new SolidColorBrush(color);
+                chipFills[i].Color = color;
                 var name = $"{SchemeTiles.ColorNames[i]} {SchemeTiles.Hex(color)}";
                 ToolTipService.SetToolTip(chipButtons[i], name);
                 AutomationProperties.SetName(chipButtons[i], name);
