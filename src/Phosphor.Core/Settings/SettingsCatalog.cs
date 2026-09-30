@@ -218,6 +218,8 @@ public static class SettingsCatalog
                 ],
             },
         new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows' default sound too.", SettingKind.Toggle, false),
+        new("terminal", "Bell", "terminal.screen-flash-bell", "Screen flashes ring the bell",
+            "Programs that flash the whole screen instead of ringing (Git Bash does) get the bell above.", SettingKind.Toggle, true),
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
             "Draws with the processor instead of the graphics card: for broken graphics drivers, some virtual machines and remote desktop glitches. Slower. Applies to terminals opened from now on.",
             SettingKind.Toggle, false),

@@ -199,7 +199,69 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>Parses output, then acts on what it changed (title, directory, bell).</summary>
+    /// <summary>
+    /// Programs' screen flashes (reverse video on and straight off) ring the bell instead of
+    /// inverting the screen (<see cref="ScreenFlashFilter"/>). Config: <c>screen-flash-bell</c>.
+    /// </summary>
+    public bool CatchScreenFlash { get; set; }
+
+    private readonly ScreenFlashFilter _flash = new();
+
+    /// <summary>Guards <see cref="_flash"/> and keeps output in order between reads and its expiry timer.</summary>
+    private readonly object _flashLock = new();
+
+    private Timer? _flashTimer;
+
     private void Feed(ReadOnlySpan<byte> data)
+    {
+        lock (_flashLock)
+        {
+            if (!CatchScreenFlash && !_flash.Waiting)
+            {
+                Process(data, flashBell: false);
+                return;
+            }
+
+            var now = Environment.TickCount64;
+            var flashes = 0;
+            // (Turned off while something is held: let it go first, then as usual.)
+            var filtered = CatchScreenFlash ? _flash.Filter(data, now, out flashes) : [.. _flash.TakeExpired(long.MaxValue), .. data];
+            Process(filtered, flashBell: flashes > 0);
+            if (_flash.Waiting)
+            {
+                _flashTimer ??= new Timer(_ => ExpireFlash());
+                _flashTimer.Change(ScreenFlashFilter.FlashMs + 10, Timeout.Infinite);
+            }
+        }
+    }
+
+    /// <summary>The flash filter's wait is over: apply what it held (reverse video after all, a partial sequence).</summary>
+    private void ExpireFlash()
+    {
+        try
+        {
+            lock (_flashLock)
+            {
+                var due = _flash.TakeExpired(Environment.TickCount64);
+                if (due.Length > 0 && !_disposed)
+                {
+                    Process(due, flashBell: false);
+                }
+
+                if (_flash.Waiting)
+                {
+                    _flashTimer?.Change(ScreenFlashFilter.FlashMs, Timeout.Infinite);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // A thread-pool callback: an escaped exception would end the process.
+            Log.Write($"screen flash: {ex.Message}");
+        }
+    }
+
+    private void Process(ReadOnlySpan<byte> data, bool flashBell)
     {
         string? title = null;
         var directoryChanged = false;
@@ -232,7 +294,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 ReportedDirectory = reported;
             }
 
-            bell = _bell;
+            bell = _bell || flashBell;
             _bell = false;
             hold = _holdChanged;
             _holdChanged = null;
@@ -1276,6 +1338,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public void Dispose()
     {
         _pty?.Dispose();
+        _flashTimer?.Dispose();
         lock (Lock)
         {
             if (_disposed)

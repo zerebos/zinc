@@ -115,7 +115,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   DECSCUSR wins; tested via DECRQSS), `scrollback-lines` → `SetScrollback` (live), selection colors
   on `TerminalTheme` (schemes' `selection-*` now read; renderer uses them, else inverse),
   `close-on-exit` (`OnProcessExited`), `bell` + `bell-sound` (`TerminalControl.Bell.cs`: flash overlay,
-  MessageBeep, `BellRang` → `MainWindow.OnBell` = Notified dot + taskbar flash), `program-titles`
+  MessageBeep, `BellRang` → `MainWindow.OnBell` = Notified dot + taskbar flash; a burst rings once:
+  0.3 s of quiet re-arms it), `screen-flash-bell` (Core `ScreenFlashFilter`, tested: `Feed` filters
+  output under `_flashLock`, holds `CSI ? 5 h` 250 ms; `l` in time = bell, else applied late by
+  `_flashTimer` → `ExpireFlash`; ConPTY passes both through, often in one read), `program-titles`
   (`TerminalControl.Title` is "" while off).
 - Zoom (per pane): Core `Terminal/ZoomSteps.cs` (levels = 10% of the configured size, clamped to
   sizes that fit; tested) → `TerminalControl.Zoom.cs` (`_zoomLevel`, badge; a config font-size

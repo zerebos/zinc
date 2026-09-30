@@ -206,6 +206,9 @@ public sealed record Config
     /// <summary>The bell also plays Windows' default sound. Config: <c>bell-sound = true</c>.</summary>
     public bool BellSound { get; init; }
 
+    /// <summary>A program's screen flash (a "visible bell") rings the bell instead. Config: <c>screen-flash-bell = false</c>.</summary>
+    public bool ScreenFlashBell { get; init; } = true;
+
     /// <summary>Programs may set the tab's title (OSC 0/2); off: the profile's name. Config: <c>program-titles = false</c>.</summary>
     public bool ProgramTitles { get; init; } = true;
 
@@ -349,6 +352,7 @@ public sealed record Config
             "close-on-exit" when TryMode<CloseOnExit>(value, out var close) => this with { CloseOnExit = close },
             "bell" when TryMode<BellMode>(value, out var bell) => this with { Bell = bell },
             "bell-sound" when bool.TryParse(value, out var sound) => this with { BellSound = sound },
+            "screen-flash-bell" when bool.TryParse(value, out var screenFlash) => this with { ScreenFlashBell = screenFlash },
             "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
             "selection-background" when TryColor(value, out var c) => this with { Theme = theme with { SelectionBackground = c } },
             "selection-foreground" when TryColor(value, out var c) => this with { Theme = theme with { SelectionForeground = c } },

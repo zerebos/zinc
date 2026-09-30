@@ -197,7 +197,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `bell`: `"attention"` (default) puts a dot on the tab and flashes the taskbar button when you
   aren't looking at it; `"flash"` also flashes the pane; `"none"`. `bell-sound = true` plays
   Windows' default sound too. A burst of bells (a held key the prompt refuses) rings once; the
-  bell rings again after half a second without one.
+  bell rings again after 0.3 s without one. `screen-flash-bell`: `true` (default) turns a program's
+  own screen flash (reverse video on and straight off, readline's `bell-style visible`, which Git
+  Bash sets) into this bell; reverse video a program keeps on shows a quarter second late.
 - `program-titles`: `true` (default) lets shells and programs set the tab's title; `false` keeps the
   profile's name (a name you give a tab always wins).
 

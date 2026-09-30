@@ -246,6 +246,7 @@ public sealed partial class TerminalControl : UserControl
         session.SetColorScheme(_config.IsDark);
         session.SetScrollback(_config.ScrollbackLines);
         session.SetCursorDefaults(_config.CursorStyle, _config.CursorBlink);
+        session.CatchScreenFlash = _config.ScreenFlashBell;
         session.Resize(cols, rows, m.WidthPx, m.HeightPx);
         _selection = new SelectionGesture(session);
         _selection.SetWordBoundaries(SelectionGesture.Boundaries(_config.WordBoundaries));
@@ -338,6 +339,7 @@ public sealed partial class TerminalControl : UserControl
             session.SetTheme(config.Theme);
             session.SetColorScheme(config.IsDark); // tells programs that asked to hear of it
             ApplyClipboardPermissions(session);
+            session.CatchScreenFlash = config.ScreenFlashBell;
             if (old.ScrollbackLines != config.ScrollbackLines)
             {
                 session.SetScrollback(config.ScrollbackLines);

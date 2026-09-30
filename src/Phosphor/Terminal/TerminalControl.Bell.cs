@@ -14,7 +14,7 @@ namespace Phosphor.Terminal;
 /// </summary>
 public sealed partial class TerminalControl
 {
-    private static readonly TimeSpan BellQuiet = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan BellQuiet = TimeSpan.FromMilliseconds(300);
 
     /// <summary>Until when bells are part of the last burst (each one moves it on).</summary>
     private long _bellQuietUntil;

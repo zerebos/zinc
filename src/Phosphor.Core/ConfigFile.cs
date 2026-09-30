@@ -644,6 +644,7 @@ public sealed class ConfigFile
             ["terminal.close-on-exit"] = ("close-on-exit", v => v as string),
             ["terminal.bell"] = ("bell", v => v as string),
             ["terminal.bell-sound"] = ("bell-sound", v => Bool(v)),
+            ["terminal.screen-flash-bell"] = ("screen-flash-bell", v => Bool(v)),
             ["terminal.program-titles"] = ("program-titles", v => Bool(v)),
             ["terminal.padding-x"] = ("window-padding-x", v => Pair(v)),
             ["terminal.padding-y"] = ("window-padding-y", v => Pair(v)),
