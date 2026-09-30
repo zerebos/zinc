@@ -157,14 +157,17 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ClosedWorkspaces` on App (session.json `closedWorkspaces`, 10, tested) → the page's Reopen chips /
   `reopen-workspace` → `ReopenWorkspace` via `SessionLayout.Restore` + `OpenSaved`). Later ideas are
   in .scratch/NOTES.md.
-- IME (`input-method`, default on): `TerminalControl.InputMethod.cs`. A focused pane's keyboard focus sits in
-  a hidden TextBox at the cursor (`OnGotFocus` redirects; `FocusIsWithin` = pane or box, so moving
-  between them isn't a focus change for programs; the find box counts as elsewhere, as before). Its
-  PreviewKeyDown runs `HandleKeyDown` and marks keys handled (no Tab navigation), except VK_PROCESSKEY
-  (229) and anything while composing; characters come through `HandleCharacter` as before and the box
-  is cleared; TextComposition* events show the box (styled as the terminal) while composing and send
-  the committed text. The box must be `IsTabStop = true` or `Focus()` refuses it. Logs `ime: …`.
-  Real composition can't be automated here (TSF; no SendInput): the user tests it.
+- IME (`input-method`, **off by default** until the user confirms it): `TerminalControl.InputMethod.cs`. A
+  focused pane's keyboard focus sits in a hidden TextBox at the cursor (`OnGotFocus` redirects;
+  `FocusIsWithin` = pane or box, so moving between them isn't a focus change for programs; the find
+  box counts as elsewhere). Its PreviewKeyDown runs `HandleKeyDown`, which marks encoded keys and
+  shortcuts handled (no Tab navigation); keys that type text are left to the box: **real keystrokes
+  reach a focused TextBox as TSF text, not as CharacterReceived** (the first version dropped every
+  letter for the user; posted WM_CHAR hid it), so text is taken in `BeforeTextChanging` (sent, then
+  cancelled: the box stays empty); CharacterReceived passes only control characters. VK_PROCESSKEY
+  (229) and anything while composing go to the input method; TextComposition* show the box (styled as
+  the terminal) and send the committed text. The box must be `IsTabStop = true` or `Focus()` refuses
+  it. Logs `ime: …`. Real keystrokes can't be automated here (TSF; no SendInput): the user tests.
 - **All the workspace rules in one place (name, icon, color, folder, page, reopen): `.scratch/workspaces.md`.**
 - Workspace look: Core `Panes/WorkspaceLook.cs` (`WorkspaceIcons`: curated Segoe Fluent glyphs, saved by
   name; `WorkspaceColors`: the 8 colors + `ForFolder` hash; `WorkspaceColorMode` = `workspace-colors`;

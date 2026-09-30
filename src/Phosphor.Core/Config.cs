@@ -232,9 +232,9 @@ public sealed record Config
 
     /// <summary>
     /// Input methods (IME) type into the terminal: a focused pane's keys pass through a hidden text box
-    /// Windows' input methods work with. Config: <c>input-method = false</c> sends keys straight to the terminal.
+    /// Windows' input methods work with. Off by default while it's new. Config: <c>input-method = true</c>.
     /// </summary>
-    public bool InputMethod { get; init; } = true;
+    public bool InputMethod { get; init; }
 
     /// <summary>Programs may set the tab's title (OSC 0/2); off: the profile's name. Config: <c>program-titles = false</c>.</summary>
     public bool ProgramTitles { get; init; } = true;

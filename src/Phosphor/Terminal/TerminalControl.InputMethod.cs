@@ -76,32 +76,43 @@ public sealed partial class TerminalControl
                 return; // the input method's
             }
 
+            // Keys the pane encodes or runs (Enter, Tab, arrows, shortcuts) are marked handled there,
+            // so the box never acts on them (its Tab would move focus). Keys that type text are left
+            // to it: Windows' text services put that text in the box (real keystrokes don't come as
+            // characters to a focused text box), and BeforeTextChanging takes it from there.
             HandleKeyDown(e);
-            e.Handled = true; // never the box's (its Tab would move focus, its Enter nothing)
         }), handledEventsToo: true);
         box.AddHandler(PreviewKeyUpEvent, new KeyEventHandler((_, e) =>
         {
             if (!_composing && (int)e.Key != ProcessKey)
             {
                 HandleKeyUp(e);
-                e.Handled = true;
             }
         }), handledEventsToo: true);
         box.AddHandler(CharacterReceivedEvent, new TypedEventHandler<UIElement, CharacterReceivedRoutedEventArgs>((_, e) =>
         {
-            if (!_composing)
+            // Text arrives as the box's text (below); only control characters are taken here.
+            if (!_composing && (e.Character < ' ' || e.Character == '\x7f'))
             {
                 HandleCharacter(e);
             }
         }), handledEventsToo: true);
 
-        // Typed characters went through the character path already: the box keeps nothing but
-        // what an input method is composing.
-        box.TextChanged += (_, _) =>
+        // Text typed into the box (keys, an input method's direct mode, dead keys, posted characters):
+        // sent to the program, and kept out of the box, which holds only what's being composed.
+        box.BeforeTextChanging += (_, e) =>
         {
-            if (!_composing && !_clearingInput && box.Text.Length > 0)
+            if (_composing || _clearingInput)
             {
-                ClearInputBox();
+                return;
+            }
+
+            e.Cancel = true;
+            var text = e.NewText;
+            if (text.Length > 0 && !_charHandledByKeyDown && _session is { } session)
+            {
+                session.SendInput(text);
+                ResetBlink();
             }
         };
         box.TextCompositionStarted += (_, _) =>
