@@ -246,7 +246,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   exist (p10k's `POWERLEVEL9K_TERM_SHELL_INTEGRATION`, `133;`/`]7;` in prompt/hook text).
   `ShellInjectionTests` run real pwsh, WinPS, Git Bash, MSYS2 zsh (skipped if absent);
   `.scratch/tools/si-live.ps1 -Command ...` checks a shell in the app (log + trace marks).
-  fish/nushell: not yet (fish isn't installed in the user's distros).
+  fish 4.x and nushell send their own marks (traced 2026-10-01; nu's C has no cmdline, the text is
+  read back): nothing loaded. `docs/shell-integration.md` = how all this differs from Ghostty's.
 - Palette recents: `RecentCommands` (Core/Commands, by title; one instance on `App`, saved in
   session.json's `recentCommands`) — `CommandFilter.Filter(..., recent)` puts the 5 newest first
   on an empty query and boosts them a little otherwise. Entries that come and go (workspaces,

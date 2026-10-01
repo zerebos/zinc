@@ -402,8 +402,10 @@ marks don't follow; the scripts in `ShellIntegration\` show what to send from th
 **cmd** can mark prompts (for jumping), but not commands or exit codes:
 `setx PROMPT "$e]133;D$e\$e]133;A$e\$P$G$e]133;B$e\"`.
 
-Other shells (fish, nushell and more) aren't covered yet. Recent fish versions send the prompt
-marks on their own. For anything else, the scripts in `ShellIntegration\` show what to send.
+**fish** (recent versions: 4.3 checked) and **nushell** send the marks and folder reports on their own, so
+Phosphor loads nothing into them: jumping, selecting output and the command list work as they
+are. For other shells, the scripts in `ShellIntegration\` show what to send.
+[docs/shell-integration.md](docs/shell-integration.md) compares all this with Ghostty's.
 
 ## Choosing a shell
 
