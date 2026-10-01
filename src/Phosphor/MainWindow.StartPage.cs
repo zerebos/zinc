@@ -50,8 +50,8 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// A window shortcut pressed on the page: switching and closing tabs, new workspaces and windows,
-    /// reopening, settings, quitting, the sidebar and title bar. Pane actions (and the palette, whose
-    /// commands act on a workspace) have nothing to act on here.
+    /// reopening, settings, quitting, the sidebar and title bar, and the palette (with the window's
+    /// commands: <see cref="BuildPageCommands"/>). Pane actions have nothing to act on here.
     /// </summary>
     private bool HandlePageAction(ActionInvocation invocation, TabViewItem page)
     {
@@ -99,6 +99,12 @@ public sealed partial class MainWindow
                 return true;
             case TerminalAction.OpenSettings:
                 App.Instance.ShowSettings();
+                return true;
+            case TerminalAction.OpenCommandPalette:
+                OpenCommandPalette();
+                return true;
+            case TerminalAction.TabSwitcher:
+                OpenCommandPalette(TabPrefix);
                 return true;
             case TerminalAction.ReloadConfig:
                 App.Instance.ReloadConfig();

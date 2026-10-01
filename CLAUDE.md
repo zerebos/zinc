@@ -151,7 +151,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   saved in `WorkspaceState.Folder`. Recent folders: Core `RecentFolders` on `App` (session.json
   `recentFolders`), noted from each pane's DirectoryChanged (`NoteFolder`). TabView's + is named
   "New workspace" for UIA (named in `DisableTabAnimations`). Keys on the page: `OnWindowKeyDown` →
-  `HandlePageAction` (window actions only; no palette); test keys replay there too. Sidebar: the list's
+  `HandlePageAction` (window actions only); the palette there = `BuildPageCommands` (window commands run
+  through HandlePageAction, profiles via `StartWorkspace` in the page's place); test keys, `palette:` and
+  `test:palette-open:` replay there too. Sidebar: the list's
   `PageItem` (+ "New workspace", pill, ×; `Update(..., page, pageSelected)`). New windows (`App.OpenNewWindow`: New window action, tray) open on it too.
   Browse = `FolderDialog` (IFileOpenDialog via ComImport: can start in `\\wsl.localhost\<distro>\…`;
   the WinRT FolderPicker can't), result through `WorkspaceFolder.FromWindows` (tested). Steps 3-4

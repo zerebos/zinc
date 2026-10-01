@@ -50,7 +50,16 @@ public sealed partial class MainWindow
 
     private void OpenCommandPalette(string prefix = "")
     {
-        if (SelectedTab is not { } tab)
+        List<PaletteCommand> commands;
+        if (SelectedTab is { } tab)
+        {
+            commands = BuildPaletteCommands(tab);
+        }
+        else if (Tabs.SelectedItem is TabViewItem { Tag: StartPage } page)
+        {
+            commands = BuildPageCommands(page);
+        }
+        else
         {
             return;
         }
@@ -63,7 +72,7 @@ public sealed partial class MainWindow
             PaletteQuery.PlaceholderText = DefaultPalettePrompt;
         }
 
-        _paletteCommands = BuildPaletteCommands(tab);
+        _paletteCommands = commands;
         PaletteQuery.Text = prefix;
         PaletteQuery.SelectionStart = prefix.Length;
         RefreshPalette();
@@ -89,6 +98,10 @@ public sealed partial class MainWindow
         if (SelectedTab is { } tab)
         {
             FocusActive(tab);
+        }
+        else if (Tabs.SelectedItem is TabViewItem { Tag: StartPage startPage })
+        {
+            startPage.FocusFilter();
         }
     }
 
@@ -328,6 +341,77 @@ public sealed partial class MainWindow
     }
 
     // ---------------------------------------------------------------- commands
+
+    /// <summary>
+    /// The commands while the new-workspace page is shown: the window's (no terminal to act on),
+    /// run as the page runs their keys, and each profile started in the page's place.
+    /// </summary>
+    private List<PaletteCommand> BuildPageCommands(TabViewItem page)
+    {
+        var commands = new List<PaletteCommand>();
+        string? Keys(ActionInvocation action) => _keybindings.ShortcutFor(action);
+        void Action(ActionInvocation action) =>
+            commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => HandlePageAction(action, page),
+                SearchWords: Actions.SearchWords(action)));
+
+        if (App.Instance.ClosedWorkspaces.All.Count > 0)
+        {
+            Action(TerminalAction.ReopenWorkspace);
+        }
+
+        if (App.Instance.ClosedWindows.All.Count > 0)
+        {
+            Action(TerminalAction.ReopenWindow);
+        }
+
+        Action(TerminalAction.NewWindow);
+        Action(TerminalAction.ClosePane);
+        if (Tabs.TabItems.Count > 1)
+        {
+            Action(TerminalAction.NextTab);
+            Action(TerminalAction.PreviousTab);
+            commands.Add(new PaletteCommand(Actions.Title(TerminalAction.TabSwitcher), Keys(TerminalAction.TabSwitcher), () =>
+            {
+                PaletteQuery.Text = TabPrefix;
+                PaletteQuery.SelectionStart = TabPrefix.Length;
+            }, AsksArgument: true));
+            Action(TerminalAction.NextAttention);
+        }
+
+        if (_workspaceList != null)
+        {
+            Action(new ActionInvocation(TerminalAction.ToggleSidebar, -1));
+            Action(new ActionInvocation(TerminalAction.ToggleSidebar, (int)SidebarMode.Rail));
+            Action(new ActionInvocation(TerminalAction.ToggleSidebar, (int)SidebarMode.AutoHide));
+            Action(TerminalAction.ToggleTitleBar);
+            Action(TerminalAction.FocusMode);
+        }
+
+        Action(TerminalAction.Quit);
+        Action(TerminalAction.QuitFresh);
+        Action(TerminalAction.ReloadConfig);
+        Action(TerminalAction.OpenSettings);
+        commands.Add(new PaletteCommand("Welcome…", null, () => App.Instance.ShowWelcome(firstRun: false)));
+
+        // Profiles: a workspace in the page's place (as picking it on the page does), or a window.
+        var profiles = _config.VisibleProfiles.ToList();
+        foreach (var profile in profiles)
+        {
+            commands.Add(new PaletteCommand($"New workspace: {profile.Name}", null,
+                () => StartWorkspace(page, new StartChoice(profile, null, null, StartLayout.One, null, null, false)), Icon: profile));
+            commands.Add(new PaletteCommand($"New window: {profile.Name}", null, () => App.Instance.OpenWindow(profile), Icon: profile));
+        }
+
+        foreach (var t in AllTabs())
+        {
+            var target = t;
+            commands.Add(new PaletteCommand($"Switch to workspace: {t.Header.Title}", null,
+                () => Tabs.SelectedItem = target.Item, Remember: false, Icon: target.Active.Profile));
+        }
+
+        commands.AddRange(TabSwitcherCommands());
+        return commands;
+    }
 
     /// <summary>Every command, in the order shown for an empty query.</summary>
     private List<PaletteCommand> BuildPaletteCommands(WorkspaceTab tab)

@@ -602,7 +602,8 @@ color, as a restart would bring them back): a click reopens one at once. "Reopen
 in the palette (`reopen-workspace`, no key by default) brings back the last one. Typing filters both lists, and a typed path is used as is. Enter starts it; untouched,
 Enter starts the default profile in its usual folder, as before. Esc leaves the page (in a window's
 only tab, it starts the default). While it's shown, the window's own shortcuts work (switching tabs,
-closing it, new windows, settings…); with the sidebar, it has an entry at the end of the list. A workspace started in a folder is named after it (or what you
+closing it, new windows, settings…), and so does the command palette, with the window's commands
+and *New workspace: …* for each profile, which starts it in the page's place; with the sidebar, it has an entry at the end of the list. A workspace started in a folder is named after it (or what you
 type) and keeps it: its new tabs and splits start there, in each shell's own terms (a WSL folder
 opens in PowerShell as `\\wsl.localhost\…`, a Windows one in WSL under `/mnt/c/…`); shells can still
 go anywhere, and Duplicate and "New tab in folder…" keep their own folder. "Show this page for new

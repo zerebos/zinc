@@ -1070,6 +1070,27 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            // The palette on the page: its commands, and opening it with a query typed.
+            if (SelectedTab == null && StartPageItem() is { } shownPage && ReferenceEquals(Tabs.SelectedItem, shownPage) &&
+                (chord.StartsWith("palette:") || chord.StartsWith("test:palette-open:")))
+            {
+                if (chord.StartsWith("test:palette-open:"))
+                {
+                    OpenCommandPalette(chord["test:palette-open:".Length..]);
+                    Log.Write($"test {chord} on the new-workspace page: done");
+                    return;
+                }
+
+                var command = BuildPageCommands(shownPage).FirstOrDefault(c => c.Title == chord["palette:".Length..]);
+                Log.Write($"test {chord} on the new-workspace page: {(command != null ? "found" : "missing")}");
+                if (command != null)
+                {
+                    RunPaletteCommand(command);
+                }
+
+                return;
+            }
+
             if (SelectedTab is not { } tab)
             {
                 timer.Stop();
