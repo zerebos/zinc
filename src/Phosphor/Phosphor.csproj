@@ -37,6 +37,9 @@
     <!-- The default font, Cascadia Mono NF (Microsoft's Nerd Font build), used without installing it. -->
     <Content Include="..\..\assets\fonts\*" Link="Fonts\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- License texts of the open-source software Phosphor ships (Settings > About; OpenSourceNotices.cs). -->
+    <Content Include="..\..\assets\licenses\*" Link="Licenses\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Shell integration scripts, loaded into the shells Phosphor starts (ShellIntegration.cs). -->
     <Content Include="..\..\assets\shell-integration\**\*" Link="ShellIntegration\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

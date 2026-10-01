@@ -247,7 +247,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ShellInjectionTests` run real pwsh, WinPS, Git Bash, MSYS2 zsh (skipped if absent);
   `.scratch/tools/si-live.ps1 -Command ...` checks a shell in the app (log + trace marks).
   fish 4.x and nushell send their own marks (traced 2026-10-01; nu's C has no cmdline, the text is
-  read back): nothing loaded. `docs/shell-integration.md` = how all this differs from Ghostty's.
+  read back): nothing loaded; elvish sends nothing (not covered yet). `docs/shell-integration.md` =
+  how all this differs from Ghostty's.
+- About's open-source list: Core `OpenSourceNotices` (name, version, use, license, URL, license file)
+  + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
+  `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every
+  license file and the pinned Ghostty commit to match — a new dependency needs an entry + text.
 - Palette recents: `RecentCommands` (Core/Commands, by title; one instance on `App`, saved in
   session.json's `recentCommands`) — `CommandFilter.Filter(..., recent)` puts the 5 newest first
   on an empty query and boosts them a little otherwise. Entries that come and go (workspaces,

@@ -14,7 +14,7 @@ not as a to-do list.
 | PowerShell (pwsh, Windows PowerShell) | `-NoExit -Command` running our script as text | none: Ghostty doesn't run on Windows |
 | fish | **nothing to load**: fish 4.x sends its own marks (see below) | `vendor_conf.d` script through an `XDG_DATA_DIRS` prepend |
 | nushell | **nothing to load**: nushell sends its own marks | `vendor/autoload` module through `XDG_DATA_DIRS` + `--execute 'use ghostty *'`, for ssh/sudo only (no marks) |
-| elvish | none | `lib/ghostty-integration.elv` through `XDG_DATA_DIRS` |
+| elvish | none (elvish sends no marks itself; traced 2026-10-01) | `lib/ghostty-integration.elv`, found through `XDG_DATA_DIRS` but **opt-in**: the user adds `use ghostty-integration` to rc.elv. A, C, D, OSC 7; no B (elvish draws prompts on a background thread) |
 
 What fish and nushell send by themselves, traced in Phosphor (`PHOSPHOR_TRACE`) on 2026-10-01:
 

@@ -682,3 +682,10 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
   (libghostty has no sixel API); kitty graphics animation shows the current frame only.
 - Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own
   line break (e.g. to fit a fixed width) is cut there.
+
+## Open-source software
+
+Phosphor ships Ghostty's terminal core (libghostty-vt, with simdutf, Highway, uucode and the Zig
+standard library compiled in), z2d (in the built-in glyphs), Cascadia Mono NF, iTerm2-Color-Schemes,
+the Windows App SDK, Win2D, ConPTY/OpenConsole, .NET, Tomlyn and a Heroicons shape. Settings > About
+lists them with their licenses; the texts are in `Licenses\` next to `Phosphor.exe`.

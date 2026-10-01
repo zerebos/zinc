@@ -360,12 +360,13 @@ internal sealed partial class SettingsWindow : Window
     private void AboutPage()
     {
         _page.Children.Add(Row(TerminalSession.Version.Replace("phosphor", "Phosphor"),
-            "Terminal emulation and the built-in glyphs by Ghostty (MIT). Cascadia Mono NF by Microsoft (OFL). Color schemes from iTerm2-Color-Schemes.",
+            "Terminal emulation by Ghostty. The open-source software Phosphor ships is listed below.",
             null));
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
         _page.Children.Add(Row("Crash log", Log.CrashPath, ButtonRow(("Open folder", () => Reveal(Log.CrashPath)))));
         _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
             ButtonRow(("Open", () => App.Instance.ShowWelcome(firstRun: false)))));
+        OpenSourceList();
     }
 
     private static StackPanel ButtonRow(params (string Label, Action Run)[] buttons)
