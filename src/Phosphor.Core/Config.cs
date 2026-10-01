@@ -331,6 +331,33 @@ public sealed record Config
     /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
     public GhosttyColorRgb? UnfocusedSplitFill { get; init; }
 
+    /// <summary>The line between split panes; null: Phosphor's grey. Config: <c>[window] divider-color</c> (global).</summary>
+    public GhosttyColorRgb? SplitDividerColor { get; init; }
+
+    /// <summary>
+    /// The least contrast text may have against its background (WCAG ratio, 1 = any, 21 = black on
+    /// white); below it, text turns black or white. Config: <c>[colors] minimum-contrast</c>.
+    /// </summary>
+    public double MinimumContrast { get; init; } = 1;
+
+    /// <summary>Bold text in the default color takes this one; null: the same. Config: <c>[colors] bold</c>.</summary>
+    public GhosttyColorRgb? BoldColor { get; init; }
+
+    /// <summary>Bold text in palette colors 0-7 shows their bright versions (8-15). Config: <c>[colors] bold-is-bright</c>.</summary>
+    public bool BoldIsBright { get; init; }
+
+    /// <summary>How much of faint text's color shows over its background (0.1-1). Config: <c>[colors] faint-opacity</c> (Ghostty's 0.5).</summary>
+    public double FaintOpacity { get; init; } = 0.5;
+
+    /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
+    public double CursorOpacity { get; init; } = 1;
+
+    /// <summary>Find's highlights, the current match's apart; null: Phosphor's yellow and orange. Config: <c>[colors] find-highlight</c>, <c>find-highlight-current</c>.</summary>
+    public GhosttyColorRgb? SearchBackground { get; init; }
+
+    /// <inheritdoc cref="SearchBackground"/>
+    public GhosttyColorRgb? SearchSelectedBackground { get; init; }
+
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
@@ -382,6 +409,15 @@ public sealed record Config
             "launch-at-login" when TryMode<LaunchAtLogin>(value, out var login) => this with { LaunchAtLogin = login },
             "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
+            "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },
+            "minimum-contrast" when TryFloat(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
+            "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
+            "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
+            "faint-opacity" when TryFloat(value, out var faint) && faint is >= 0.1f and <= 1 => this with { FaintOpacity = faint },
+            "cursor-opacity" when TryFloat(value, out var cursorOpacity) && cursorOpacity is >= 0.1f and <= 1 =>
+                this with { CursorOpacity = cursorOpacity },
+            "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },
+            "search-selected-background" when TryColor(value, out var current) => this with { SearchSelectedBackground = current },
             "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
                 this with { WorkspaceTabs = tabs },
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },

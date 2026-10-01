@@ -18,7 +18,10 @@ public sealed partial class MainWindow : Window
 {
     private ConfigFile _config; // replaced on a config reload (ApplyConfig)
     private readonly Keybindings _keybindings;
-    private readonly Brush _dividerBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A));
+    /// <summary>Phosphor's line between split panes, unless <c>divider-color</c> says otherwise.</summary>
+    private static readonly Windows.UI.Color DefaultDividerColor = Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A);
+
+    private readonly SolidColorBrush _dividerBrush = new(DefaultDividerColor);
     private readonly Brush _focusBrush;
 
     /// <summary>One terminal tab: the profile/command it was opened with, and its control.</summary>
@@ -160,6 +163,7 @@ public sealed partial class MainWindow : Window
 
         BuildNewTabMenu();
         SetUpConfigNotice();
+        ApplyDividerColor();
 
         Closed += (_, _) =>
         {

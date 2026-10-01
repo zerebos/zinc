@@ -231,6 +231,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
     public static readonly Color MatchColor = Color.FromArgb(0x60, 0xFF, 0xD5, 0x4A);
     public static readonly Color CurrentMatchColor = Color.FromArgb(0xC0, 0xFF, 0x96, 0x1A);
 
+    /// <summary>A Find highlight: <c>find-highlight</c> / <c>find-highlight-current</c> (solid), else Phosphor's own (see-through).</summary>
+    public static Color MatchColorFor(Config config, bool current) =>
+        (current ? config.SearchSelectedBackground : config.SearchBackground) is { } chosen
+            ? ToColor(chosen)
+            : current ? CurrentMatchColor : MatchColor;
+
+    /// <summary>The palette's colors 8-15 this frame (bold-is-bright).</summary>
+    private readonly Color[] _bright = new Color[8];
+
     /// <summary>The link under the pointer while Ctrl is held; drawn underlined.</summary>
     public LinkMatch? HoverLink { get; set; }
 
@@ -309,6 +318,17 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var defaultFg = ToColor(colors.Foreground);
         var defaultBg = ToColor(colors.Background);
         var cursorColor = colors.CursorHasValue != 0 ? ToColor(colors.Cursor) : defaultFg;
+        if (Config.CursorOpacity < 1)
+        {
+            cursorColor.A = (byte)(255 * Config.CursorOpacity);
+        }
+
+        // The palette's bright colors as programs left them (OSC 4), for bold-is-bright.
+        for (var i = 0; i < 8; i++)
+        {
+            _bright[i] = Color.FromArgb(255, colors.Palette[(i + 8) * 3], colors.Palette[(i + 8) * 3 + 1], colors.Palette[(i + 8) * 3 + 2]);
+        }
+
         ds.Clear(defaultBg);
         DrawImages(ds, rows, belowText: true);
 
@@ -451,6 +471,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             _placeholders[x] = null;
             var inverse = false;
             uint fgId = 0, underlineId = 0;
+            var (fgTag, fgValue) = (0, 0UL);
             byte hasStyling = 0;
             Native.RowCellsGet(_rowCells, RenderStateRowCellsData.HasStyling, &hasStyling);
             if (hasStyling != 0)
@@ -466,6 +487,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 cell.Underline = style.Underline;
                 inverse = style.Inverse != 0;
                 fgId = KittyPlaceholders.ColorId(style.FgColorTag, style.FgColorValue);
+                (fgTag, fgValue) = (style.FgColorTag, style.FgColorValue);
                 underlineId = KittyPlaceholders.ColorId(style.UnderlineColorTag, style.UnderlineColorValue);
             }
 
@@ -484,6 +506,19 @@ public sealed unsafe class TerminalRenderer : IDisposable
             {
                 cell.Bg = ToColor(rgb);
                 cell.HasBg = true;
+            }
+
+            // Bold: palette colors 0-7 in their bright versions, the default color in bold-color.
+            if ((cell.Flags & CellFlags.Bold) != 0)
+            {
+                if (fgTag == 1 && (fgValue & 0xFF) < 8 && Config.BoldIsBright)
+                {
+                    cell.Fg = _bright[fgValue & 0xFF];
+                }
+                else if (fgTag == 0 && Config.BoldColor is { } bold)
+                {
+                    cell.Fg = ToColor(bold);
+                }
             }
 
             // Selection: the scheme's (or config's) selection colors, else inverse video, which
@@ -513,9 +548,16 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 cell.Fg = selFg;
             }
 
+            if (Config.MinimumContrast > 1)
+            {
+                var (r, g, b) = MinimumContrast.Ensure((cell.Fg.R, cell.Fg.G, cell.Fg.B),
+                    cell.HasBg ? (cell.Bg.R, cell.Bg.G, cell.Bg.B) : (defaultBg.R, defaultBg.G, defaultBg.B), Config.MinimumContrast);
+                cell.Fg = Color.FromArgb(255, r, g, b);
+            }
+
             if ((cell.Flags & CellFlags.Faint) != 0)
             {
-                cell.Fg = Blend(cell.Fg, cell.HasBg ? cell.Bg : defaultBg, 0.5f);
+                cell.Fg = Blend(cell.Fg, cell.HasBg ? cell.Bg : defaultBg, 1 - (float)Config.FaintOpacity);
             }
 
             x++;
@@ -875,7 +917,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var start = match.Row == row ? match.StartCol : 0;
             var end = match.EndRow == row ? match.EndCol : count - 1;
             var rect = new Rect(PadLeft + start * m.Width, top, (end - start + 1) * m.Width, m.Height);
-            ds.FillRectangle(rect, i == CurrentMatch ? CurrentMatchColor : MatchColor);
+            ds.FillRectangle(rect, MatchColorFor(Config, i == CurrentMatch));
         }
     }
 
@@ -971,7 +1013,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 break;
             default:
                 ds.FillRectangle(left, top, width, m.Height, color);
-                if (x < count && _cells[x].CpLen > 0)
+                if (x < count && _cells[x].CpLen > 0 && color.A == 255) // see-through: the character shows as it is
                 {
                     // Redraw the covered glyph in the cursor-text color, else the cell's background.
                     ref var cell = ref _cells[x];

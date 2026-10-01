@@ -29,9 +29,14 @@ public sealed partial class MainWindow
     /// and updates its colors, font and padding; strips, dimming and menus follow. Where the
     /// workspace tabs sit (top or left) applies to windows opened from now on.
     /// </summary>
+    /// <summary>The line between split panes: <c>divider-color</c>, else Phosphor's grey (every divider shares the brush).</summary>
+    private void ApplyDividerColor() =>
+        _dividerBrush.Color = _config.Global.SplitDividerColor is { } color ? Phosphor.Terminal.TerminalRenderer.ToColor(color) : DefaultDividerColor;
+
     internal void ApplyConfig(ConfigFile config)
     {
         _config = config;
+        ApplyDividerColor();
         foreach (var tab in AllTabs())
         {
             foreach (var pane in tab.Workspace.Tabs)

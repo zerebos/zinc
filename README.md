@@ -172,6 +172,14 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   Programs that ask whether the terminal is light or dark (`CSI ? 996 n`) are told the side in
   force (with a single scheme: whether its background is dark), and those that subscribe (mode
   2031, e.g. neovim) hear of each change, so they can switch their own colors too.
+- `minimum-contrast`: `1` (default: off) to `21`: text that reads worse than this against its
+  background (the WCAG contrast ratio; `4.5` is the usual accessibility level) turns black or white.
+- `bold`: `"#rrggbb"` for bold text in the default text color; `bold-is-bright`: `true` shows bold
+  text in the first eight colors in their bright versions (as older terminals did).
+- `faint-opacity`: how much of faint (dim) text's color shows, `0.1` to `1` (default `0.5`).
+- `cursor-opacity`: `0.1` to `1` (default): below 1 a block cursor lets its character show.
+- `find-highlight`, `find-highlight-current`: `"#rrggbb"` behind Find's matches and the current one
+  (default: see-through yellow and orange).
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.
 - `cursor-text`: `"#rrggbb"`, the character under a block cursor, instead of the scheme's (without
   either, the background color). It stays when a program recolors the cursor.
@@ -631,6 +639,7 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   tab when the pane has a strip), and the others are dimmed. `unfocused-split-opacity` (in `[window]`,
   0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-split-fill`
   what they fade toward (default: each pane's background).
+  `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes.
 - `group-tab-strip = "always"` (in `[window]`) shows the strip on every pane, even with one tab
   (default `"auto"`: only with two or more).
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain

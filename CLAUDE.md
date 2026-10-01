@@ -281,6 +281,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   SIGWINCH) only after 100 ms without another (`PtyResizeSettle`, a threadpool Timer): a drag's many
   sizes made p10k redraw its full-width frame each time and stale copies piled up (Windows Terminal does
   the same). Tests that check the child's size must wait for the settle.
+- Color settings (settings, not scheme keys: `ApplyFile` ignores them; Settings > Appearance > Readability):
+  `[colors] minimum-contrast` (Core `MinimumContrast`: WCAG ratio, below it black/white; tested), `bold`,
+  `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`
+  (a see-through block skips the glyph redraw), `find-highlight(-current)` (`MatchColorFor`), all applied in
+  `TerminalRenderer.ReadRow`/`DrawCursor`; `[window] divider-color` (`ApplyDividerColor`, shared brush).
 - `cursor-style-at-prompt`: `SetCursorDefaults(style, blink, atPrompt)` stores them; `ApplyCursorDefaults`
   switches libghostty's DEFAULT_CURSOR_STYLE when the marks' prompt state enters/leaves Prompt|Input
   (`NotePromptState`), so a program's DECSCUSR still wins. Command text read-back

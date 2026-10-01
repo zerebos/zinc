@@ -220,7 +220,7 @@ public sealed partial class TerminalControl
             var y = MathF.Round(height * _matches[i].Row / total);
             if (y != lastY || i == _currentMatch)
             {
-                ds.FillRectangle(x, y, 4, 2, i == _currentMatch ? TerminalRenderer.CurrentMatchColor : TerminalRenderer.MatchColor);
+                ds.FillRectangle(x, y, 4, 2, TerminalRenderer.MatchColorFor(_config, i == _currentMatch));
                 lastY = y;
             }
         }
