@@ -640,6 +640,7 @@ public sealed class ConfigFile
             ["colors.selection-background"] = ("selection-background", v => v as string),
             ["colors.selection-foreground"] = ("selection-foreground", v => v as string),
             ["terminal.cursor-style"] = ("cursor-style", v => v as string),
+            ["terminal.cursor-style-at-prompt"] = ("cursor-style-at-prompt", v => v as string),
             ["terminal.cursor-blink"] = ("cursor-blink", v => Bool(v)),
             ["terminal.scrollback-lines"] = ("scrollback-lines", v => Number(v)),
             ["terminal.close-on-exit"] = ("close-on-exit", v => v as string),

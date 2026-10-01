@@ -259,27 +259,48 @@ public sealed unsafe partial class TerminalSession
         ushort cols = 0;
         Native.TerminalGet(_terminal, TerminalData.Cols, &cols);
         var last = to.X == 0 && to.Y > from.Y ? to.Y - 1 : to.Y;
-        var text = new System.Text.StringBuilder();
-        for (var row = from.Y; row <= last && row - from.Y < 16; row++)
-        {
-            // Input cells only (a right-hand prompt, zsh's RPROMPT, shares the row), from where
-            // typing started.
-            var read = RowText.Read(_terminal, PointTag.Screen, row, cols, inputOnly: true);
-            text.Append(row == from.Y ? read.Text[read.IndexOf(Math.Min((int)from.X, cols))..] : read.Text);
-        }
 
         // Some prompts draw decoration after marking input (powerlevel10k's frame corner "─╯" at
         // the far right). Typing starts where the prompt ends, so text far from there, or across
-        // a wide gap from the command (which commands rarely have), is decoration.
+        // a wide gap from the command (which commands rarely have), is decoration. Row by row: a
+        // command of several lines (bash's "\" continuations, an open quote) has the rest of each
+        // row blank, which is no gap in the command.
         const string Gap = "        ";
-        var line = text.ToString();
-        if (line.StartsWith(Gap, StringComparison.Ordinal))
+        var text = new System.Text.StringBuilder();
+        var wrapped = false;
+        for (var row = from.Y; row <= last && row - from.Y < 16; row++)
         {
-            return null;
+            // Input cells only (a right-hand prompt, zsh's RPROMPT, shares the row; marked
+            // continuation prompts, bash's "> ", are prompt), from where typing started.
+            var read = RowText.Read(_terminal, PointTag.Screen, row, cols, inputOnly: true);
+            var part = row == from.Y ? read.Text[read.IndexOf(Math.Min((int)from.X, cols))..] : read.Text;
+            if (row == from.Y && part.StartsWith(Gap, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            if (!wrapped)
+            {
+                part = part.TrimStart();
+            }
+
+            var cut = part.IndexOf(Gap, StringComparison.Ordinal);
+            if (cut >= 0)
+            {
+                part = part[..cut];
+            }
+
+            // Across a soft wrap the row goes on; across a line break, a space.
+            if (!wrapped && text.Length > 0 && part.Length > 0)
+            {
+                text.Append(' ');
+            }
+
+            wrapped = IsWrapped(row);
+            text.Append(wrapped ? part : part.TrimEnd());
         }
 
-        var cut = line.IndexOf(Gap, StringComparison.Ordinal);
-        var result = (cut < 0 ? line : line[..cut]).Trim();
+        var result = text.ToString().Trim();
         return result.Length == 0 ? null : result.Length > 300 ? result[..300] : result;
     }
 

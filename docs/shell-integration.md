@@ -48,7 +48,7 @@ Gaps:
 | | Phosphor | Ghostty |
 |---|---|---|
 | Prompt start | `133;A;aid=<pid>` | `133;A;cl=line` (zsh), `133;A;redraw=last;cl=line;aid=<pid>` (bash); fish/elvish add `click_events=1`/`aid` |
-| Continuation prompts (PS2) | not marked | `133;P;k=s` (and bash marks each line of a multi-line PS1 with `P;k=s`) |
+| Continuation prompts (PS2) | `133;P;k=s` … `B` around bash's PS2 (zsh's C carries the text, so not needed there) | `133;P;k=s` (and bash marks each line of a multi-line PS1 with `P;k=s`) |
 | Input start | `133;B` | `133;B` (bash, zsh); not in fish/elvish |
 | Command start | `133;C;cmdline_url=<percent-encoded>` (zsh, pwsh); plain `133;C` (bash: sent from PS0, which can't see the line) | `133;C`, no command text |
 | Command end | `133;D;<status>`, only after a prompt was shown | `133;D;<status>` (+ `aid` in bash) |
@@ -75,16 +75,20 @@ Ideas from Ghostty's side:
     input). Ghostty counts every input cell.
   - Click events go out as press and release, aimed at the text when the click missed it.
     Ghostty sends only the press, and nushell then ignored every later click.
-- **`redraw=last`** (bash): tells the terminal the shell redraws the prompt's last line on
-  resize, so the terminal can clear it rather than reflow it. Ghostty's docs credit
-  integration with "resizing the window with a complex prompt usually paints much better".
+- **`redraw=last`** (bash): tells the terminal the shell redraws only the prompt's last line on
+  resize. libghostty already clears prompt lines on resize (its default assumes a full redraw).
+  **Checked 2026-10-01, not needed under ConPTY:** pwsh, Git Bash (two-line prompt) and a long
+  wrapped command all came through narrow/wide resizes intact: ConPTY repaints the screen itself
+  after a resize. powerlevel10k's two-line frame leaves a stale copy while narrowed (gone when
+  widened again); to compare with Windows Terminal, which also sits on ConPTY.
 - **`aid=<pid>`**: separates nested shells' marks. **Done differently (2026-10-01)**: Phosphor tracks
   shells by their prompt mark's options as a whole, since the shells that nest most (fish,
   nushell, powerlevel10k) send no aid but differ anyway. Our scripts send `aid=<pid>` on A so
   they always differ. Ghostty doesn't track nesting ("We don't currently do explicit command
   tracking").
-- **Secondary prompts (`P;k=s`)**: lets "select output" and jump-to-prompt treat a multi-line
-  command as input, not output.
+- **Secondary prompts (`P;k=s`)**: **done for bash (2026-10-01)**. Also fixed reading a command of
+  several lines back from the screen: it kept only the first line (the blank rest of each row
+  looked like a decoration gap); rows are now read one by one.
 - **Writing marks to a dedicated TTY descriptor** (zsh: `sysopen -o cloexec /dev/tty`), so they
   still reach the terminal when the user redirects stdout in a hook. We print to stdout.
 - **Not sending D from zle-invoked precmd** (zsh plugins that re-run precmd to refresh the
@@ -96,7 +100,7 @@ Ghostty's `shell-integration-features` (defaults in brackets) and where Phosphor
 
 | Feature | What it does | Phosphor |
 |---|---|---|
-| `cursor` [on] | bar cursor at the prompt (DECSCUSR 5/6), reset before a command runs | not done. Our `cursor-style` setting is the default shape everywhere |
+| `cursor` [on] | bar cursor at the prompt (DECSCUSR 5/6), reset before a command runs | **done terminal-side** (2026-10-01): `cursor-style-at-prompt` (default "same"), from the marks, so it works for every marking shell without scripts; a program's DECSCUSR still wins |
 | `title` [on] | title = folder at the prompt, command while running | not done; titles come from the shell/prompt itself |
 | `sudo` [off] | `sudo` wrapper keeping `TERMINFO`, so Ghostty's terminfo works as root | not needed: we use `TERM=xterm-256color` |
 | `ssh-env` [off] | `ssh` wrapper: TERM fallback, forwards COLORTERM/TERM_PROGRAM | partly moot (no custom TERM); forwarding `TERM_PROGRAM` could matter once we set it |

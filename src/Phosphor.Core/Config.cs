@@ -217,6 +217,12 @@ public sealed record Config
     /// <summary>Whether that cursor blinks. Config: <c>cursor-blink = true</c>.</summary>
     public bool CursorBlink { get; init; }
 
+    /// <summary>
+    /// The cursor while a shell waits at its prompt (needs shell integration's marks); null: the
+    /// same as elsewhere. Config: <c>cursor-style-at-prompt = same | block | bar | underline | block-hollow</c>.
+    /// </summary>
+    public Phosphor.Ghostty.TerminalCursorStyle? CursorStyleAtPrompt { get; init; }
+
     /// <summary>Lines kept above the screen. Config: <c>scrollback-lines = 10000</c>.</summary>
     public int ScrollbackLines { get; init; } = DefaultScrollbackLines;
 
@@ -396,6 +402,9 @@ public sealed record Config
             "cursor-style" when TryMode<Phosphor.Ghostty.TerminalCursorStyle>(value.Replace('_', '-'), out var cursorStyle) =>
                 this with { CursorStyle = cursorStyle },
             "cursor-blink" when bool.TryParse(value, out var blink) => this with { CursorBlink = blink },
+            "cursor-style-at-prompt" when value.Equals("same", StringComparison.OrdinalIgnoreCase) => this with { CursorStyleAtPrompt = null },
+            "cursor-style-at-prompt" when TryMode<Phosphor.Ghostty.TerminalCursorStyle>(value.Replace('_', '-'), out var promptStyle) =>
+                this with { CursorStyleAtPrompt = promptStyle },
             "scrollback-lines" when int.TryParse(value, out var lines) && lines is >= 0 and <= MaxScrollbackLines =>
                 this with { ScrollbackLines = lines },
             "close-on-exit" when TryMode<CloseOnExit>(value, out var close) => this with { CloseOnExit = close },

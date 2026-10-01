@@ -208,6 +208,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   them ([shell integration](#shell-integration)).
 - `shell-integration`: `"auto"` (default) loads Phosphor's [shell integration](#shell-integration)
   into PowerShell, bash and zsh; `"off"` starts shells as they are.
+- `cursor-style-at-prompt`: `"same"` (default) or a shape as for `cursor-style`: the cursor while
+  a shell waits at its prompt ([shell integration](#shell-integration) says when), e.g. `"bar"`, as
+  in a text box (Ghostty's default). A shell or program that sets its own shape still does.
 - `cursor-style`: `"block"` (default), `"bar"`, `"underline"` or `"block-hollow"`, and
   `cursor-blink`: `false` (default) or `true`: the cursor until a program picks its own (DECSCUSR)
   and after it resets it.

@@ -141,6 +141,20 @@ public class ShellIntegrationTests
     }
 
     [Fact]
+    public void ReadsACommandOfSeveralLines()
+    {
+        // bash with a trailing "\": Phosphor's script marks the continuation prompt "> " (P;k=s ... B).
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        session.WriteToScreen("\e]133;A\a$ \e]133;B\aecho one \\\r\n\e]133;P;k=s\a> \e]133;B\atwo \\\r\n\e]133;P;k=s\a> \e]133;B\athree\r\n\e]133;C\a");
+        Assert.Equal("echo one \\ two \\ three", session.Commands()[0].Text);
+
+        // A long line the terminal wrapped is still one line: no space where it wrapped.
+        using var narrow = new TerminalSession(20, 24, TerminalTheme.Default);
+        narrow.WriteToScreen("\e]133;A\a$ \e]133;B\aecho abcdefghijklmnopqrstuvwxyz\r\n\e]133;C\a");
+        Assert.Equal("echo abcdefghijklmnopqrstuvwxyz", narrow.Commands()[0].Text);
+    }
+
+    [Fact]
     public void KnowsARunningCommand()
     {
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);

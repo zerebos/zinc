@@ -247,7 +247,7 @@ public sealed partial class TerminalControl : UserControl
         var session = new TerminalSession(cols, rows, _config.Theme);
         session.SetColorScheme(_config.IsDark);
         session.SetScrollback(_config.ScrollbackLines);
-        session.SetCursorDefaults(_config.CursorStyle, _config.CursorBlink);
+        session.SetCursorDefaults(_config.CursorStyle, _config.CursorBlink, _config.CursorStyleAtPrompt);
         session.CatchScreenFlash = _config.ScreenFlashBell;
         session.Resize(cols, rows, m.WidthPx, m.HeightPx);
         _selection = new SelectionGesture(session);
@@ -348,9 +348,9 @@ public sealed partial class TerminalControl : UserControl
                 session.SetScrollback(config.ScrollbackLines);
             }
 
-            if (old.CursorStyle != config.CursorStyle || old.CursorBlink != config.CursorBlink)
+            if (old.CursorStyle != config.CursorStyle || old.CursorBlink != config.CursorBlink || old.CursorStyleAtPrompt != config.CursorStyleAtPrompt)
             {
-                session.SetCursorDefaults(config.CursorStyle, config.CursorBlink);
+                session.SetCursorDefaults(config.CursorStyle, config.CursorBlink, config.CursorStyleAtPrompt);
             }
         }
 

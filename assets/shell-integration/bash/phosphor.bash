@@ -64,6 +64,7 @@ __phosphor_si_folder_report() {
 __phosphor_si_status() { __phosphor_si_last=$?; return "$__phosphor_si_last"; }
 
 __phosphor_si_b='\[\e]133;B\a\]'
+__phosphor_si_ps2='\[\e]133;P;k=s\a\]'
 __phosphor_si_c=$'\e]133;C\a'
 __phosphor_si_suffix=
 
@@ -83,6 +84,8 @@ __phosphor_si_prompt() {
         __phosphor_si_prompted=1
         builtin printf '\e]133;A;aid=%s\a' "$$"
         [[ "${PS0-}" == *"$__phosphor_si_c"* ]] || PS0+=$__phosphor_si_c
+        # The continuation prompt ("> " after a trailing \) is prompt, and typing goes on after it.
+        [[ "${PS2-}" == "$__phosphor_si_ps2"* ]] || PS2=$__phosphor_si_ps2${PS2-}$__phosphor_si_b
         suffix+=$__phosphor_si_b
     fi
 

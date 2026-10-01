@@ -129,6 +129,16 @@ public static class SettingsCatalog
                 Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
             },
         new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Until a program says otherwise.", SettingKind.Toggle, false),
+        new("appearance", "Cursor", "terminal.cursor-style-at-prompt", "Cursor at the prompt",
+            "While the shell waits for a command (needs shell integration). Programs and shell modes that pick their own still do.",
+            SettingKind.Choice, "same")
+            {
+                Choices =
+                [
+                    new("Same as above", "same"), new("Bar", "bar", "Like a text box: Ghostty's default."), new("Block", "block"),
+                    new("Underline", "underline"), new("Hollow block", "block-hollow"),
+                ],
+            },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)

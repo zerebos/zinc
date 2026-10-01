@@ -395,17 +395,34 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// The cursor programs get until they choose one (DECSCUSR) and after they reset it; applies
     /// at once while the cursor is still the default.
     /// </summary>
-    public void SetCursorDefaults(TerminalCursorStyle style, bool blink)
+    /// <param name="atPrompt">The shape while the shell waits at its prompt (shell integration's marks say when); null: the same.</param>
+    public void SetCursorDefaults(TerminalCursorStyle style, bool blink, TerminalCursorStyle? atPrompt = null)
     {
         lock (Lock)
         {
-            if (!_disposed)
-            {
-                var b = (byte)(blink ? 1 : 0);
-                Native.TerminalSet(_terminal, TerminalOption.DefaultCursorStyle, &style);
-                Native.TerminalSet(_terminal, TerminalOption.DefaultCursorBlink, &b);
-            }
+            _cursorDefaults = (style, blink, atPrompt);
+            ApplyCursorDefaults();
         }
+    }
+
+    private (TerminalCursorStyle Style, bool Blink, TerminalCursorStyle? AtPrompt) _cursorDefaults = (TerminalCursorStyle.Block, false, null);
+
+    /// <summary>
+    /// The default cursor for now: the prompt's while the shell waits at one, else the usual. A
+    /// program's own choice (DECSCUSR: vim, a shell's vi mode) wins over either. Hold the lock.
+    /// </summary>
+    private void ApplyCursorDefaults()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        var (usual, blinking, atPrompt) = _cursorDefaults;
+        var style = _promptState is PromptState.Prompt or PromptState.Input && atPrompt is { } prompt ? prompt : usual;
+        var b = (byte)(blinking ? 1 : 0);
+        Native.TerminalSet(_terminal, TerminalOption.DefaultCursorStyle, &style);
+        Native.TerminalSet(_terminal, TerminalOption.DefaultCursorBlink, &b);
     }
 
     /// <summary>

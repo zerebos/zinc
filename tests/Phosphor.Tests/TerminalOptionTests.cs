@@ -46,6 +46,32 @@ public class TerminalOptionTests
     }
 
     [Fact]
+    public void ThePromptCanHaveItsOwnCursor()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var replies = new List<byte[]>();
+        session.PtyReplyObserver = replies.Add;
+        string CursorReport()
+        {
+            replies.Clear();
+            session.WriteToScreen("\x1bP$q q\x1b\\");
+            return Joined(replies);
+        }
+
+        session.SetCursorDefaults(Phosphor.Ghostty.TerminalCursorStyle.Block, blink: false, atPrompt: Phosphor.Ghostty.TerminalCursorStyle.Bar);
+        Assert.Contains("2 q", CursorReport()); // no prompt yet: the usual block
+
+        session.WriteToScreen("\x1b]133;A\a$ \x1b]133;B\a");
+        Assert.Contains("6 q", CursorReport()); // at the prompt: a steady bar
+
+        session.WriteToScreen("ls\r\n\x1b]133;C\a");
+        Assert.Contains("2 q", CursorReport()); // running: the block again
+
+        session.WriteToScreen("\x1b]133;D;0\a\x1b]133;A\a$ \x1b]133;B\a\x1b[4 q"); // a vi mode picks its own
+        Assert.Contains("4 q", CursorReport());
+    }
+
+    [Fact]
     public void ScrollbackKeepsAboutTheLinesAskedFor()
     {
         static ulong Kept(int? lines)

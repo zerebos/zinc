@@ -29,6 +29,7 @@ public sealed unsafe partial class TerminalSession
             _announcedClick = mark.Click;
         }
 
+        var was = _promptState;
         _promptState = mark.Kind switch
         {
             'A' or 'N' or 'P' => PromptState.Prompt,
@@ -37,6 +38,12 @@ public sealed unsafe partial class TerminalSession
             'D' => PromptState.None,
             _ => _promptState,
         };
+
+        if ((was is PromptState.Prompt or PromptState.Input) != (_promptState is PromptState.Prompt or PromptState.Input) &&
+            _cursorDefaults.AtPrompt != null)
+        {
+            ApplyCursorDefaults(); // at the prompt, or a command started
+        }
     }
 
     /// <summary>

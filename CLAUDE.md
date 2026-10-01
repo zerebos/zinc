@@ -277,6 +277,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   first with a press alone (Ghostty/kitty send only the press). App: plain left click (no modifiers,
   no drag, no selection, pane already focused) in `TerminalControl.Mouse.cs`; `test:click:col:row`;
   `.scratch/tools/click-test.ps1 -Shell ... -Clicks "c:r",...` types a marker after each click.
+- `cursor-style-at-prompt`: `SetCursorDefaults(style, blink, atPrompt)` stores them; `ApplyCursorDefaults`
+  switches libghostty's DEFAULT_CURSOR_STYLE when the marks' prompt state enters/leaves Prompt|Input
+  (`NotePromptState`), so a program's DECSCUSR still wins. Command text read-back
+  (`ReadCommandLine`) goes row by row (decoration gap cut per row; soft wraps joined, line breaks a space).
 - About's open-source list: Core `OpenSourceNotices` (name, version, use, license, URL, license file)
   + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
   `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every
