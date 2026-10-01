@@ -452,7 +452,30 @@ public sealed partial class TerminalControl : UserControl
 
     // ------------------------------------------------------------ rendering
 
+    private FramePerf? _perf;
+
+    /// <summary>Frames that failed to draw (only the first is logged).</summary>
+    private int _drawFailures;
+
     private void OnDraw(CanvasControl sender, CanvasDrawEventArgs args)
+    {
+        // An exception leaving the Draw event leaves Win2D's drawing session open, and every frame
+        // after fails ("The last drawing session ... must be disposed"): a pane that never draws
+        // again. Catching it costs this frame only.
+        try
+        {
+            DrawFrame(args);
+        }
+        catch (Exception ex)
+        {
+            if (_drawFailures++ == 0)
+            {
+                Log.Crash("draw", ex);
+            }
+        }
+    }
+
+    private void DrawFrame(CanvasDrawEventArgs args)
     {
         if (_session is not { } session)
         {
@@ -461,10 +484,18 @@ public sealed partial class TerminalControl : UserControl
 
         // Test captures draw every cursor as focused: whether a new window gets focus varies.
         var presentation = new CursorPresentation(_focused || TestHooks.Deterministic || _previewScript != null, _blinkOn);
+        var started = FramePerf.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
         PlaceInputBox(); // follows the cursor
         DrawCommandMarks(args.DrawingSession, session);
         DrawSearchTicks(args.DrawingSession, session);
+        if (FramePerf.Enabled)
+        {
+            var drawn = System.Diagnostics.Stopwatch.GetTimestamp();
+            args.DrawingSession.Flush(); // rasterize now, to time it (else it happens after this returns)
+            (_perf ??= new()).Add(System.Diagnostics.Stopwatch.GetElapsedTime(started, drawn).TotalMilliseconds,
+                System.Diagnostics.Stopwatch.GetElapsedTime(drawn).TotalMilliseconds);
+        }
         UpdateBlinkTimer(blinking);
         UpdateScrollBar(session);
     }
