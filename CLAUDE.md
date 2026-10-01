@@ -288,6 +288,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   untouched, `palette.N`; tested); the config watcher reloads, and the page updates in place via `_refreshers`
   (never re-render: an open picker would close). Base colors reuse `ColorControl` (`SettingDef.NullLabel`);
   palette chips have their own picker flyout (150 ms settle). Phosphor's own → "Lit Cell" written to the config.
+  New schemes: `NewSchemeFlyout` (card and editor) → `ThemeLibrary.Create(name, from)` (`NameProblem`; tested) →
+  `UseScheme` (replaces one side of a light/dark pair) → editor; `DeleteScheme` (ContentDialog; user-only schemes).
+  Glass: `[window] backdrop-tint` → `GlassBackdrop` (DesktopAcrylicController, tint = terminal bg, kept active) /
+  `ClearBackdrop(tint)`.
 - Color settings (settings, not scheme keys: `ApplyFile` ignores them; Settings > Appearance > Readability):
   `[colors] minimum-contrast` (Core `MinimumContrast`: WCAG ratio, below it black/white; tested), `bold`,
   `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`

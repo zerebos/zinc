@@ -166,7 +166,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   cursor, selection and 16 palette colors, each with a color picker. A bundled scheme is copied into
   your `themes\` folder first and the copy is used instead of it everywhere ("Back to the original"
   deletes the copy); your own are edited in place. Every pane using the scheme changes as you edit,
-  and "Undo changes" puts the file back as it was when you opened it.
+  and "Undo changes" puts the file back as it was when you opened it. **New scheme…** (there, and
+  "Save as a new scheme…" in the editor) starts a scheme of your own as a copy, under a name you give;
+  "Delete scheme" removes one of yours (where it was chosen, Phosphor's own colors take its place).
   Without a theme, Phosphor's own colors: "Lit Cell", phosphor green on near-black (it and its
   light partner come with Phosphor by name: `theme = "light:Lit Cell Light,dark:Lit Cell"` follows
   Windows' mode). A scheme

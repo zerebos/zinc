@@ -62,6 +62,7 @@ internal sealed partial class SettingsWindow
         }
 
         _editingScheme = name;
+        _schemeThemePath = themePath;
         _schemeOriginal = ReadScheme(file);
         Render();
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
@@ -145,6 +146,13 @@ internal sealed partial class SettingsWindow
         var open = new Button { Content = "Open file" };
         open.Click += (_, _) => OpenInEditor(file);
         buttons.Children.Add(open);
+        buttons.Children.Add(new Button { Content = "Save as a new scheme…", Flyout = NewSchemeFlyout(() => name, () => name, _schemeThemePath) });
+        if (!replaces)
+        {
+            var delete = new Button { Content = "Delete scheme" };
+            delete.Click += (_, _) => DeleteScheme(name);
+            buttons.Children.Add(delete);
+        }
         _page.Children.Add(buttons);
         _refreshers.Add(() => undo.IsEnabled = Current() != _schemeOriginal);
         undo.IsEnabled = Current() != _schemeOriginal;
@@ -166,6 +174,143 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(GroupTitle("Palette"));
         _page.Children.Add(Note("The 16 colors programs choose from. Click one to change it."));
         _page.Children.Add(CardBorder(PaletteGrid(Current, Save)));
+    }
+
+    /// <summary>Where the scheme being edited is chosen (the global <c>colors.theme</c>, or a profile's).</summary>
+    private IReadOnlyList<string> _schemeThemePath = ["colors", "theme"];
+
+    /// <summary>
+    /// A name for a new scheme, copied from <paramref name="from"/> (the scheme in use, or the one being
+    /// edited); with "Use it now", it replaces <paramref name="replacing"/> where it's chosen. Then the editor opens on it.
+    /// </summary>
+    private Flyout NewSchemeFlyout(Func<string> from, Func<string?> replacing, IReadOnlyList<string> themePath)
+    {
+        var name = new TextBox { PlaceholderText = "Name", Width = 260 };
+        AutomationProperties.SetName(name, "New scheme's name");
+        var problem = new TextBlock
+        {
+            Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
+            TextWrapping = TextWrapping.Wrap,
+            MaxWidth = 260,
+            Visibility = Visibility.Collapsed,
+        };
+        var use = new CheckBox { Content = "Use it now", IsChecked = true };
+        var create = new Button { Content = "Create", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        var intro = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
+        var flyout = new Flyout { Content = new StackPanel { Spacing = 8, Children = { intro, name, problem, use, create } } };
+        flyout.Opening += (_, _) =>
+        {
+            intro.Text = $"A copy of {from()} to change as you like, yours in the themes folder.";
+            name.Text = "";
+            problem.Visibility = Visibility.Collapsed;
+        };
+
+        void Create()
+        {
+            if (_config.Themes.NameProblem(name.Text) is { } why)
+            {
+                problem.Text = why;
+                problem.Visibility = Visibility.Visible;
+                return;
+            }
+
+            var created = name.Text.Trim();
+            try
+            {
+                if (_config.Themes.Create(created, from()) == null)
+                {
+                    return;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                problem.Text = $"Couldn't save it: {ex.Message}";
+                problem.Visibility = Visibility.Visible;
+                return;
+            }
+
+            flyout.Hide();
+            if (use.IsChecked == true)
+            {
+                UseScheme(themePath, replacing(), created);
+            }
+
+            CustomizeScheme(created, themePath);
+        }
+
+        create.Click += (_, _) => Create();
+        name.KeyDown += (_, e) =>
+        {
+            if (e.Key == Windows.System.VirtualKey.Enter)
+            {
+                e.Handled = true;
+                Create();
+            }
+        };
+        return flyout;
+    }
+
+    /// <summary>
+    /// Scheme <paramref name="name"/> in <paramref name="replacing"/>'s place where schemes are chosen
+    /// (a light/dark pair keeps its other side); <paramref name="name"/> null: back to Phosphor's own.
+    /// </summary>
+    private void UseScheme(IReadOnlyList<string> themePath, string? replacing, string? name)
+    {
+        var profile = themePath.Count > 2 ? themePath[1] : null;
+        var value = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme");
+        if (value is string text && ThemeLibrary.TryParsePair(text, out var light, out var dark))
+        {
+            // The side it replaces (else the dark one); gone (null), Lit Cell's side takes its place.
+            if (string.Equals(light, replacing, StringComparison.OrdinalIgnoreCase))
+            {
+                light = name ?? "Lit Cell Light";
+            }
+            else
+            {
+                dark = name ?? "Lit Cell";
+            }
+
+            Write(themePath, $"light:{light},dark:{dark}");
+        }
+        else
+        {
+            Write(themePath, name);
+        }
+    }
+
+    /// <summary>Deletes one of the user's own schemes, after asking; if it was in use, Phosphor's own colors take its place.</summary>
+    private async void DeleteScheme(string name)
+    {
+        try
+        {
+            var dialog = new ContentDialog
+            {
+                XamlRoot = Content.XamlRoot,
+                Title = $"Delete {name}?",
+                Content = "Its file goes from the themes folder. Where it's chosen, Phosphor's own colors take its place.",
+                PrimaryButtonText = "Delete",
+                CloseButtonText = "Cancel",
+                DefaultButton = ContentDialogButton.Close,
+            };
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            bool Same(string other) => string.Equals(other, name, StringComparison.OrdinalIgnoreCase);
+            if (_config.ValueOf("colors.theme") is string used &&
+                (Same(used) || ThemeLibrary.TryParsePair(used, out var light, out var dark) && (Same(light) || Same(dark))))
+            {
+                UseScheme(["colors", "theme"], name, null);
+            }
+
+            _config.Themes.Delete(name);
+            LeaveSchemeEditor();
+        }
+        catch (Exception ex)
+        {
+            Log.Crash("settings: deleting a scheme", ex);
+        }
     }
 
     private void LeaveSchemeEditor()

@@ -90,4 +90,27 @@ public sealed class CustomizeSchemeTests : IDisposable
         Assert.Equal(Path.Combine(_root, "bundled", "Dracula"), _themes.Find("Dracula"));
         Assert.Null(_themes.Customize("Nope"));
     }
+
+    [Fact]
+    public void ANewSchemeStartsAsACopyAndCanBeDeleted()
+    {
+        Assert.Equal("Give it a name.", _themes.NameProblem("  "));
+        Assert.NotNull(_themes.NameProblem("a/b"));
+        Assert.NotNull(_themes.NameProblem("light:x"));
+        Assert.Equal("There's a scheme called dracula already.", _themes.NameProblem("dracula"));
+
+        var file = _themes.Create(" Night Shift ", "Dracula")!;
+        Assert.Equal(Path.Combine(_root, "themes", "Night Shift"), file);
+        Assert.Contains("background = #282a36", File.ReadAllText(file));
+        Assert.Equal(file, _themes.Find("Night Shift"));
+        Assert.Null(_themes.Create("Night Shift", "Dracula")); // taken now
+        Assert.Null(_themes.Create("Other", "Nope"));
+
+        _themes.Delete("Night Shift");
+        Assert.Null(_themes.Find("Night Shift"));
+
+        _themes.Customize("Dracula");
+        _themes.Delete("Dracula"); // a copy of a bundled one: Back to the original, not Delete
+        Assert.True(_themes.ReplacesBundled("Dracula"));
+    }
 }

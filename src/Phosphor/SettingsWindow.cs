@@ -1221,8 +1221,9 @@ internal sealed partial class SettingsWindow : Window
 
         _refreshers.Add(ShowCustomize);
         ShowCustomize();
+        var newScheme = new Button { Content = "New scheme…", Flyout = NewSchemeFlyout(() => darkName ?? "Lit Cell", () => darkName, path) };
         var customizeCard = CardLayout(new TextBlock { Text = "Edit colors" }, null, customizeText, null, null,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { customizeDark, customizeLight } });
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { customizeDark, customizeLight, newScheme } });
         return [followCard, main, lightCard, customizeCard];
     }
 

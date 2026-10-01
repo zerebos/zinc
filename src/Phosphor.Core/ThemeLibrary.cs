@@ -154,6 +154,50 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         return copy;
     }
 
+    /// <summary>Why <paramref name="name"/> can't be a new scheme's name ("Name it", "taken", a character a file name can't have), or null.</summary>
+    public string? NameProblem(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0)
+        {
+            return "Give it a name.";
+        }
+
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains(':') || name.Contains(','))
+        {
+            return "A name can't have \\ / : * ? \" < > | or a comma.";
+        }
+
+        return Find(name) != null ? $"There's a scheme called {name} already." : null;
+    }
+
+    /// <summary>
+    /// A new scheme of the user's, <paramref name="name"/>, starting as a copy of scheme
+    /// <paramref name="from"/>; its file, or null if the name won't do or there's no such scheme.
+    /// </summary>
+    public string? Create(string name, string from)
+    {
+        name = name.Trim();
+        if (NameProblem(name) != null || Find(from) is not { } source)
+        {
+            return null;
+        }
+
+        Directory.CreateDirectory(userFolder);
+        var file = Path.Combine(userFolder, name);
+        File.WriteAllText(file, $"# {name}, made from {from}{Environment.NewLine}" + File.ReadAllText(source));
+        return file;
+    }
+
+    /// <summary>Deletes one of the user's own schemes (not a copy of a bundled one: see <see cref="BackToOriginal"/>).</summary>
+    public void Delete(string name)
+    {
+        if (!ReplacesBundled(name) && In(userFolder, name) is { } own)
+        {
+            File.Delete(own);
+        }
+    }
+
     /// <summary>Removes the user's copy of a bundled scheme, so the bundled one is used again.</summary>
     public void BackToOriginal(string name)
     {
