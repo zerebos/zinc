@@ -48,7 +48,7 @@ public static class Log
             }
 
             Append(CrashPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{Environment.CurrentManagedThreadId}] {message}{Environment.NewLine}" +
-                $"  process {Environment.ProcessId}, {AppContext.BaseDirectory}");
+                $"  process {Environment.ProcessId}, {Phosphor.Terminal.TerminalSession.Version}, {AppContext.BaseDirectory}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

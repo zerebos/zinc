@@ -91,9 +91,15 @@ nohup pwsh -NoProfile -File scripts/install.ps1 -Quiet > "`$log" 2>&1 &
 }
 
 # ---- build ----
-$rev = (git -C $repo rev-parse --short HEAD).Trim()
+$rev = (git -C $repo rev-parse --short=7 HEAD).Trim()
 if (git -C $repo status --porcelain --untracked-files=no) { $rev += '-dirty' }
-$name = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$rev"
+# The version as Directory.Build.props computes it: the tagged release, else a dev build numbered by
+# commit count. The folder name starts with a timestamp, which sorts (versions as text don't).
+$base = [regex]::Match((Get-Content (Join-Path $repo 'Directory.Build.props') -Raw), '<PhosphorVersion>(.+?)</PhosphorVersion>').Groups[1].Value
+$commits = (git -C $repo rev-list --count HEAD).Trim()
+git -C $repo describe --exact-match --tags --match "v$base" HEAD 2>$null | Out-Null
+$version = if ($LASTEXITCODE -eq 0) { "$base+$rev" } else { "$base-dev.$commits+$rev" }
+$name = "$(Get-Date -Format 'yyyyMMdd-HHmmss')-$version"
 $target = Join-Path $versions $name
 
 if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {

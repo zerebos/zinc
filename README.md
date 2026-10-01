@@ -59,6 +59,12 @@ Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Phosphor\v
 and repoints the Start Menu shortcut, so open windows are never disturbed; the three
 newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundled).
 
+**Versions.** `PhosphorVersion` in `Directory.Build.props` is the release being worked toward. A build
+of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
+build numbered by the repository's commit count (`0.1.0-dev.812+a1b2c3d`). It's shown in Settings >
+About, answered to programs asking the terminal's version (XTVERSION: `phosphor 0.1.0-dev.812+a1b2c3d`),
+in the exe's file properties, and in install folder names (after a timestamp, which keeps them in order).
+
 ## Configuration
 
 The first time Phosphor starts, a welcome page asks how you like to work (**Simple**: tabs along

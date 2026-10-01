@@ -65,7 +65,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   the COLOR_SCHEME callback, sends CSI ? 997 on change when mode 2031 is set. Chrome surfaces
   colored like the pane (selected tab, sidebar item, pane strip) get dark text when light (`Contrast`).
   Options worth knowing: `RESIZE_PULL_SCROLLBACK` off (ConPTY has no scrollback; libghostty's
-  docs name it), `XTVERSION` → "phosphor <InformationalVersion, short hash>", `RENDER_HOLD`
+  docs name it), `XTVERSION` → "phosphor <InformationalVersion>" (`Directory.Build.props`: `PhosphorVersion` +
+  `-dev.<commit count>` unless the commit is tagged v<version>, + `+<7-char hash>`; About and the
+  crash log show it too), `RENDER_HOLD`
   (synchronized output, mode 2026): the callback captures the renderer's snapshot at hold start
   (`RenderHoldBegan` → `TerminalRenderer.CaptureHeldFrame`, under the renderer's `_stateLock`,
   which guards the snapshot read outside the terminal lock); Draw skips updates while held and
@@ -485,7 +487,8 @@ and read state after the write (see `_titleDirty`).
   not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
   metapackage release they came from.
-- Installed copies live in `%LOCALAPPDATA%\Programs\Phosphor\versions\<stamp>-<rev>`; the
+- Installed copies live in `%LOCALAPPDATA%\Programs\Phosphor\versions\<stamp>-<version>` (install.ps1
+  computes the version like Directory.Build.props; the timestamp keeps names sortable); the
   user's Start Menu shortcut points at the newest. A post-commit hook (if installed)
   reinstalls in the background after every commit — including Claude's; log at
   `.git/phosphor-install.log`. Installed Phosphor.exe processes are the user's own
