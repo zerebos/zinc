@@ -6,12 +6,12 @@ using Microsoft.UI.Xaml.Media;
 namespace Phosphor;
 
 /// <summary>
-/// <c>backdrop = none</c>: a window backdrop that's a fully transparent brush, so the windows behind
-/// show as they are (WinUI ships Mica and Acrylic only). The brush must come from the system
+/// <c>backdrop = none</c> ("Clear glass"): a window backdrop that's a see-through color brush (the tint,
+/// at <c>backdrop-tint</c>'s opacity), so the windows behind show as they are (WinUI ships Mica and Acrylic only). The brush must come from the system
 /// compositor (Windows.UI.Composition), which needs a Windows.System dispatcher queue on this
 /// thread: WinUI's own (Microsoft.UI.Dispatching) isn't one, so one is made the first time.
 /// </summary>
-internal sealed class ClearBackdrop : SystemBackdrop
+internal sealed class ClearBackdrop(Windows.UI.Color tint) : SystemBackdrop
 {
     private static Windows.UI.Composition.Compositor? _compositor;
     private static object? _queueController;
@@ -24,7 +24,7 @@ internal sealed class ClearBackdrop : SystemBackdrop
         {
             EnsureDispatcherQueue();
             _compositor ??= new Windows.UI.Composition.Compositor();
-            _brush = _compositor.CreateColorBrush(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+            _brush = _compositor.CreateColorBrush(tint); // see-through as its alpha says (backdrop-tint)
             connectedTarget.SystemBackdrop = _brush;
         }
         catch (Exception ex)

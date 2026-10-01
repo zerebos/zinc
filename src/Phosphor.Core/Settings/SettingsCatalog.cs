@@ -160,20 +160,24 @@ public static class SettingsCatalog
                     new("Underline", "underline"), new("Hollow block", "block-hollow"),
                 ],
             },
-        new("appearance", "Background", "colors.background-opacity", "Background opacity",
-            "Below 1, what's behind the window shows through the terminal's background (see Backdrop). Colored cells stay solid.",
-            SettingKind.Number, 1.0)
-            { Minimum = 0.1, Maximum = 1, Step = 0.05 },
-        new("appearance", "Background", "window.backdrop", "Backdrop", "What windows show behind their tabs and sidebar, and through a see-through background.",
+        new("appearance", "Background", "window.backdrop", "Window glass", "What's behind everything in the window: tabs, sidebar and terminal.",
             SettingKind.Choice, "mica")
             {
                 Choices =
                 [
-                    new("Mica", "mica", "Your wallpaper's tint, as Windows apps use."),
-                    new("Acrylic", "acrylic", "The windows behind, blurred."),
-                    new("None", "none", "The windows behind, as they are."),
+                    new("Solid (Mica)", "mica", "Not see-through: your wallpaper's tint, as Windows apps use."),
+                    new("Frosted glass", "acrylic", "The windows behind show, blurred."),
+                    new("Clear glass", "none", "The windows behind show as they are."),
                 ],
             },
+        new("appearance", "Background", "window.backdrop-tint", "Glass tint",
+            "How much color frosted or clear glass carries, in the terminal's background color: lower is more see-through.",
+            SettingKind.Number, 0.3)
+            { Minimum = 0, Maximum = 1, Step = 0.05 },
+        new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
+            "How much of the window glass shows through the terminal (1: none). Colored cells stay solid.",
+            SettingKind.Number, 1.0)
+            { Minimum = 0.1, Maximum = 1, Step = 0.05 },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)

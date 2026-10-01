@@ -184,9 +184,12 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `faint-opacity`: how much of faint (dim) text's color shows, `0.1` to `1` (default `0.5`).
 - `cursor-opacity`: `0.1` to `1` (default): below 1 a block cursor lets its character show.
 - `background-opacity`: `0.1` to `1` (default): below 1 the terminal's background is see-through and
-  the window's backdrop shows (cells with a background color of their own stay solid). The backdrop is
-  `[window] backdrop`: `"mica"` (default: your wallpaper's tint), `"acrylic"` (the windows behind,
-  blurred) or `"none"` (the windows behind, as they are).
+  the window glass shows through it (cells with a background color of their own stay solid). The glass
+  is `[window] backdrop`: `"mica"` (default: solid, your wallpaper's tint), `"acrylic"` (frosted: the
+  windows behind, blurred) or `"none"` (clear: the windows behind, as they are), tinted with the
+  terminal's background by `[window] backdrop-tint` (`0` to `1`, default `0.3`; lower is more
+  see-through; Mica isn't tinted). Settings > Appearance > Background calls them Window glass, Glass tint
+  and Terminal background opacity.
 - `find-highlight`, `find-highlight-current`: `"#rrggbb"` behind Find's matches and the current one
   (default: see-through yellow and orange).
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.

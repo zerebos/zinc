@@ -29,21 +29,26 @@ public sealed partial class MainWindow
     /// and updates its colors, font and padding; strips, dimming and menus follow. Where the
     /// workspace tabs sit (top or left) applies to windows opened from now on.
     /// </summary>
-    private WindowBackdrop? _backdrop;
+    private (WindowBackdrop, double, Windows.UI.Color)? _backdrop;
 
-    /// <summary>The window's backdrop (<c>[window] backdrop</c>): set again only when it changes (each set restarts it).</summary>
+    /// <summary>
+    /// The window's glass (<c>[window] backdrop</c>, <c>backdrop-tint</c>), tinted with the terminal's
+    /// background: set again only when one of them changes (each set restarts it).
+    /// </summary>
     private void ApplyBackdrop()
     {
-        if (TestHooks.Deterministic || _backdrop == _config.Global.Backdrop)
+        var tint = Phosphor.Terminal.TerminalRenderer.ToColor(_config.Global.Theme.Background);
+        var wanted = (_config.Global.Backdrop, _config.Global.BackdropTint, tint);
+        if (TestHooks.Deterministic || _backdrop == wanted)
         {
             return;
         }
 
-        _backdrop = _config.Global.Backdrop;
+        _backdrop = wanted;
         SystemBackdrop = _config.Global.Backdrop switch
         {
-            WindowBackdrop.Acrylic => new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop(),
-            WindowBackdrop.None => new ClearBackdrop(),
+            WindowBackdrop.Acrylic => new GlassBackdrop(tint, _config.Global.BackdropTint),
+            WindowBackdrop.None => new ClearBackdrop(Windows.UI.Color.FromArgb((byte)(255 * _config.Global.BackdropTint), tint.R, tint.G, tint.B)),
             _ => new Microsoft.UI.Xaml.Media.MicaBackdrop(),
         };
     }

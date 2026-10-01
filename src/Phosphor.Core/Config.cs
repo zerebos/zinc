@@ -371,6 +371,12 @@ public sealed record Config
     /// <summary>What windows show behind their content. Config: <c>[window] backdrop = mica | acrylic | none</c> (global).</summary>
     public WindowBackdrop Backdrop { get; init; }
 
+    /// <summary>
+    /// How much color frosted or clear glass carries (0: none, the most see-through; 1: solid), in the
+    /// terminal's background color. Config: <c>[window] backdrop-tint</c> (global).
+    /// </summary>
+    public double BackdropTint { get; init; } = 0.3;
+
     /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
     public double CursorOpacity { get; init; } = 1;
 
@@ -432,14 +438,15 @@ public sealed record Config
             "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },
-            "minimum-contrast" when TryFloat(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
+            "minimum-contrast" when TryDouble(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
-            "faint-opacity" when TryFloat(value, out var faint) && faint is >= 0.1f and <= 1 => this with { FaintOpacity = faint },
-            "background-opacity" when TryFloat(value, out var backgroundOpacity) && backgroundOpacity is >= 0.1f and <= 1 =>
+            "faint-opacity" when TryDouble(value, out var faint) && faint is >= 0.1 and <= 1 => this with { FaintOpacity = faint },
+            "background-opacity" when TryDouble(value, out var backgroundOpacity) && backgroundOpacity is >= 0.1 and <= 1 =>
                 this with { BackgroundOpacity = backgroundOpacity },
             "backdrop" when TryMode<WindowBackdrop>(value, out var backdrop) => this with { Backdrop = backdrop },
-            "cursor-opacity" when TryFloat(value, out var cursorOpacity) && cursorOpacity is >= 0.1f and <= 1 =>
+            "backdrop-tint" when TryDouble(value, out var tint) && tint is >= 0 and <= 1 => this with { BackdropTint = tint },
+            "cursor-opacity" when TryDouble(value, out var cursorOpacity) && cursorOpacity is >= 0.1 and <= 1 =>
                 this with { CursorOpacity = cursorOpacity },
             "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },
             "search-selected-background" when TryColor(value, out var current) => this with { SearchSelectedBackground = current },
@@ -596,6 +603,9 @@ public sealed record Config
             return false;
         }
     }
+
+    private static bool TryDouble(string s, out double value) =>
+        double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
 
     private static bool TryFloat(string s, out float value) =>
         float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
