@@ -277,6 +277,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   first with a press alone (Ghostty/kitty send only the press). App: plain left click (no modifiers,
   no drag, no selection, pane already focused) in `TerminalControl.Mouse.cs`; `test:click:col:row`;
   `.scratch/tools/click-test.ps1 -Shell ... -Clicks "c:r",...` types a marker after each click.
+- Resizes: `TerminalSession.Resize` resizes libghostty at once (live reflow) but ConPTY (the shell's
+  SIGWINCH) only after 100 ms without another (`PtyResizeSettle`, a threadpool Timer): a drag's many
+  sizes made p10k redraw its full-width frame each time and stale copies piled up (Windows Terminal does
+  the same). Tests that check the child's size must wait for the settle.
 - `cursor-style-at-prompt`: `SetCursorDefaults(style, blink, atPrompt)` stores them; `ApplyCursorDefaults`
   switches libghostty's DEFAULT_CURSOR_STYLE when the marks' prompt state enters/leaves Prompt|Input
   (`NotePromptState`), so a program's DECSCUSR still wins. Command text read-back

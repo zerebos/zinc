@@ -79,8 +79,10 @@ Ideas from Ghostty's side:
   resize. libghostty already clears prompt lines on resize (its default assumes a full redraw).
   **Checked 2026-10-01, not needed under ConPTY:** pwsh, Git Bash (two-line prompt) and a long
   wrapped command all came through narrow/wide resizes intact: ConPTY repaints the screen itself
-  after a resize. powerlevel10k's two-line frame leaves a stale copy while narrowed (gone when
-  widened again); to compare with Windows Terminal, which also sits on ConPTY.
+  after a resize. powerlevel10k's full-width frame was the exception: a fast drag (dozens of sizes)
+  piled up stale copies of it, in Windows Terminal too (the user compared). Fixed by telling the
+  shell the size only once a resize settles (100 ms; the view still reflows live): one redraw per
+  drag, at most one stale copy, as a slow resize gives.
 - **`aid=<pid>`**: separates nested shells' marks. **Done differently (2026-10-01)**: Phosphor tracks
   shells by their prompt mark's options as a whole, since the shells that nest most (fish,
   nushell, powerlevel10k) send no aid but differ anyway. Our scripts send `aid=<pid>` on A so

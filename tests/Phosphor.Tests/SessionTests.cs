@@ -67,6 +67,7 @@ public class SessionTests
         using var s = new TestSession("cmd.exe /d /q /k prompt $G");
         s.WaitForScreen(">");
         s.Session.Resize(57, 21, 8, 16);
+        Thread.Sleep(TerminalSession.PtyResizeSettle * 3); // the shell hears of it once the size settles
         s.Session.SendInput("mode con\r");
         s.WaitForScreen(new Regex(@"Columns:\s+57"));
         s.WaitForScreen(new Regex(@"Lines:\s+21"));

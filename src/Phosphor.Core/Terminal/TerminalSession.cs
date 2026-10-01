@@ -577,7 +577,49 @@ public sealed unsafe partial class TerminalSession : IDisposable
             _commandSnapshot = null; // reflow moves rows
         }
 
-        _pty?.Resize((short)cols, (short)rows);
+        if (_pty == null)
+        {
+            return;
+        }
+
+        // The shell hears of the size once a resize settles: dragging a window's edge goes through
+        // dozens of sizes, and a prompt redrawn for each while the lines reflow piles up stale
+        // copies (powerlevel10k's frame, in Windows Terminal as well). The view reflows live.
+        lock (_ptyResizeGate)
+        {
+            _ptyPendingSize = ((short)cols, (short)rows);
+            _ptyResizeTimer ??= new Timer(_ => SendPtySize());
+            _ptyResizeTimer.Change(PtyResizeSettle, Timeout.InfiniteTimeSpan);
+        }
+    }
+
+    /// <summary>How long a resize must stay put before the shell is told (tests: zero).</summary>
+    internal static TimeSpan PtyResizeSettle { get; set; } = TimeSpan.FromMilliseconds(100);
+
+    private readonly object _ptyResizeGate = new();
+    private Timer? _ptyResizeTimer;
+    private (short Cols, short Rows)? _ptyPendingSize;
+
+    private void SendPtySize()
+    {
+        (short Cols, short Rows)? size;
+        lock (_ptyResizeGate)
+        {
+            size = _ptyPendingSize;
+            _ptyPendingSize = null;
+        }
+
+        try
+        {
+            if (size is var (cols, rows))
+            {
+                _pty?.Resize(cols, rows);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Crash("pty resize", ex); // a timer thread: nothing above to catch it
+        }
     }
 
     public void ScrollViewport(GhosttyTerminalScrollViewport behavior)
@@ -1402,6 +1444,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     public void Dispose()
     {
+        lock (_ptyResizeGate)
+        {
+            _ptyResizeTimer?.Dispose();
+            _ptyResizeTimer = null;
+        }
+
         _pty?.Dispose();
         _flashTimer?.Dispose();
         lock (Lock)
