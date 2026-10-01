@@ -290,6 +290,21 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   switches libghostty's DEFAULT_CURSOR_STYLE when the marks' prompt state enters/leaves Prompt|Input
   (`NotePromptState`), so a program's DECSCUSR still wins. Command text read-back
   (`ReadCommandLine`) goes row by row (decoration gap cut per row; soft wraps joined, line breaks a space).
+- Default terminal (Settings > Layout, a switch on Windows' state, not config.toml): Windows hands a new
+  console to `HKCU\Console\%%Startup` DelegationConsole (an installed Windows Terminal's OpenConsole; Phosphor
+  doesn't ship that half yet) then DelegationTerminal = Phosphor's CLSID (Core `Pty/DefaultTerminal.cs`:
+  Enable/Disable remember the replaced value in `HKCU\Software\Phosphor`, `Register` = HKCU LocalServer32
+  `"exe" -Embedding`, no package; tested on a scratch key). App `TerminalHandoff.cs`: CoRegisterClassObject on
+  its own MTA thread at every start (not test runs unless PHOSPHOR_DEFTERM_TEST=1); **the COM types must be
+  public and top-level** (nested in an internal class, QueryInterface failed and OpenConsole fell back to a
+  console window). `ITerminalHandoff3.EstablishPtyHandoff` → Core `ConPty.FromHandoff`
+  (ConptyPackPseudoConsole + two anonymous pipes; reading waits for `Begin()`, called by
+  `TerminalSession.Attach`: output waits in the pipe while the pane is made) → `MainWindow.OpenHandedOver`
+  (default profile, `TerminalTab.HandedOver`: not saved). `-Embedding` launch: no window until a console
+  arrives (20 s, else quit); redirected `-Embedding` launches are ignored. install.ps1 repoints/gives back.
+  Test: `.scratch/tools/defterm-test.ps1` (backs up + restores the user's value; never run a COM *launch*
+  of the dev exe: without PHOSPHOR_CONFIG it would redirect into the installed Phosphor). Findings and the
+  feasibility spike: .scratch/NOTES.md, .scratch/defterm-spike.
 - About's open-source list: Core `OpenSourceNotices` (name, version, use, license, URL, license file)
   + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
   `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every

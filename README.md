@@ -356,6 +356,21 @@ When the last window closes, Phosphor keeps running in the tray while its quick 
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
 In `[window]`, `quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
+### Default terminal
+
+Phosphor can open the console programs Windows starts outside a terminal: a script you
+double-click, a command from Run, an installer, a tool that opens a console. Turn on **Default
+terminal app** in Settings > Layout; each such program then opens in a Phosphor tab (in the window
+you used last, or a window of its own if none is open), running as it would anywhere. Turning it off
+gives the setting back to what it was.
+
+For now this needs **Windows Terminal** (any edition) installed and chosen as the default terminal
+app in Windows Settings first: Windows hands each new console to a console host and then to a
+terminal, and Phosphor takes the terminal's part while Windows Terminal's console host keeps its own.
+No package or installer change is involved (Phosphor registers itself for your user only; the
+installer keeps that pointing at the newest version and gives the setting back on uninstall). Its
+tabs aren't saved with the session: such a program can't be started again as it was.
+
 ### Reopening where you left off
 
 Phosphor remembers its windows: their size and place, their workspaces (titles, colors), split

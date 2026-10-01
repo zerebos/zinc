@@ -129,14 +129,15 @@ public static class SettingsCatalog
             { Minimum = 1, Maximum = 21, Step = 0.5 },
         new("appearance", "Readability", "colors.bold-is-bright", "Bold in bright colors",
             "Bold text in the first eight colors shows their bright versions, as older terminals did.", SettingKind.Toggle, false),
-        new("appearance", "Readability", "colors.bold", "Bold text color", "For bold text in the default text color.", SettingKind.Color, null),
+        new("appearance", "Readability", "colors.bold", "Bold text color", "For bold text in the default text color.", SettingKind.Color, null)
+            { Placeholder = "Same as the text" },
         new("appearance", "Readability", "colors.faint-opacity", "Faint text",
             "How much of faint (dim) text's color shows (1: as bright as other text).", SettingKind.Number, 0.5)
             { Minimum = 0.1, Maximum = 1, Step = 0.05 },
         new("appearance", "Readability", "colors.find-highlight", "Find highlight", "Behind each match of Find (default: a light yellow).",
-            SettingKind.Color, null),
+            SettingKind.Color, null) { Placeholder = "Phosphor's yellow" },
         new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Behind the match Find is on (default: orange).",
-            SettingKind.Color, null),
+            SettingKind.Color, null) { Placeholder = "Phosphor's orange" },
         new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim's insert mode often does).",
             SettingKind.Choice, "block")
             {
@@ -186,8 +187,10 @@ public static class SettingsCatalog
         new("layout", "Panes", "window.unfocused-split-opacity", "Unfocused panes",
             "How much of an unfocused pane shows through (1: not dimmed).", SettingKind.Number, 0.7)
             { Minimum = 0.15, Maximum = 1, Step = 0.05 },
-        new("layout", "Panes", "window.unfocused-split-fill", "Dimming color", "What unfocused panes fade toward (default: their background).", SettingKind.Color, null),
-        new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes.", SettingKind.Color, null),
+        new("layout", "Panes", "window.unfocused-split-fill", "Dimming color", "What unfocused panes fade toward (default: their background).", SettingKind.Color, null)
+            { Placeholder = "The pane's" },
+        new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes.", SettingKind.Color, null)
+            { Placeholder = "Phosphor's grey" },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
             "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice, "always")
             { Choices = [new("Reopen them", "always"), new("Start fresh", "never")] },

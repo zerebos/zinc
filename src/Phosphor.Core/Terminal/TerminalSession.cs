@@ -183,13 +183,23 @@ public sealed unsafe partial class TerminalSession : IDisposable
             Environment.SetEnvironmentVariable(name, null);
         }
 
-        _pty = new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, environment);
+        Attach(new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, environment));
+    }
+
+    /// <summary>
+    /// Takes a console Phosphor didn't start (one handed over as the default terminal) and starts
+    /// reading it; resize the session after, so its program learns the pane's size.
+    /// </summary>
+    public void Attach(ConPty pty)
+    {
+        _pty = pty;
         _pty.OutputReceived += OnPtyOutput;
         _pty.Exited += code =>
         {
             HasExited = true;
             ProcessExited?.Invoke(code);
         };
+        _pty.Begin();
     }
 
     // Set PHOSPHOR_TRACE=<file> to record raw PTY output for debugging.

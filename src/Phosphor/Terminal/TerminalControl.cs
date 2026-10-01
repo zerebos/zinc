@@ -240,6 +240,9 @@ public sealed partial class TerminalControl : UserControl
         _canvas.Invalidate();
     }
 
+    /// <summary>A console Windows handed over (default terminal): attached instead of starting a program.</summary>
+    public Phosphor.Pty.ConPty? HandedOver { get; set; }
+
     private void StartSession(ushort cols, ushort rows)
     {
         Log.Write($"pane: start {cols}x{rows}: {_commandLine}");
@@ -285,6 +288,15 @@ public sealed partial class TerminalControl : UserControl
         if (_previewScript is { } script)
         {
             session.WriteToScreen(script);
+            return;
+        }
+
+        if (HandedOver is { } handedOver)
+        {
+            HandedOver = null;
+            Log.Write($"pane: a console handed over: {_commandLine} (pid {handedOver.ProcessId})");
+            session.Attach(handedOver);
+            session.Resize(cols, rows, m.WidthPx, m.HeightPx); // its program learns the pane's size
             return;
         }
 

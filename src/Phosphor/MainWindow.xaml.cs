@@ -33,6 +33,9 @@ public sealed partial class MainWindow : Window
         public string WorkingDirectory { get; } = workingDirectory;
         public TerminalControl Control { get; } = control;
 
+        /// <summary>A console Windows handed over (default terminal): not saved with the session.</summary>
+        public bool HandedOver { get; set; }
+
         /// <summary>Removes the owning window's event wiring (set by <see cref="Wire"/>).</summary>
         public Action? Unwire { get; set; }
 
@@ -101,6 +104,29 @@ public sealed partial class MainWindow : Window
     {
         OpenNewWorkspace();
         ReplayTestKeys();
+    }
+
+    /// <summary>A window for a console handed over by Windows (default terminal) when none is open.</summary>
+    internal MainWindow(ConfigFile config, Keybindings keybindings, Phosphor.Pty.ConPty handedOver, string title)
+        : this(config, keybindings, quick: false)
+    {
+        OpenHandedOver(handedOver, title);
+    }
+
+    /// <summary>
+    /// A console Windows handed over (Phosphor as the default terminal: a script double-clicked, Run,
+    /// an installer): a new workspace with the default profile's look, running what it runs. Not saved
+    /// with the session (it can't be reopened); Duplicate starts its program again.
+    /// </summary>
+    internal void OpenHandedOver(Phosphor.Pty.ConPty pty, string title)
+    {
+        var profile = _config.DefaultProfile;
+        var pane = CreatePane(profile, title, profile.Config.ResolveWorkingDirectory());
+        pane.Control.HandedOver = pty;
+        pane.HandedOver = true;
+        var tab = AddWorkspace(new Workspace<TerminalTab>(pane), color: AutoColor(null));
+        FocusActive(tab);
+        Activate();
     }
 
     /// <summary>A window that takes over a workspace moved from another window.</summary>

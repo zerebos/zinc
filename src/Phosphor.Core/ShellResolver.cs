@@ -12,9 +12,12 @@ public static class ShellResolver
     /// <summary>Starting at sign-in (the Run entry Phosphor writes): not a command to run.</summary>
     public const string LoginFlag = "--at-login";
 
-    /// <summary>Our command line after the executable, without <see cref="LoginFlag"/>.</summary>
+    /// <summary>Our command line after the executable, without <see cref="LoginFlag"/> or COM's <c>-Embedding</c>.</summary>
     public static string[] OwnArguments() =>
-        [.. Environment.GetCommandLineArgs().Skip(1).Where(a => a != LoginFlag)];
+        [.. Environment.GetCommandLineArgs().Skip(1).Where(a => a != LoginFlag && a != Phosphor.Pty.DefaultTerminal.EmbeddingFlag)];
+
+    /// <summary>Whether Windows started this process to hand it a console (as the default terminal).</summary>
+    public static bool LaunchedForHandoff => Environment.GetCommandLineArgs().Skip(1).Contains(Phosphor.Pty.DefaultTerminal.EmbeddingFlag);
 
     /// <summary>Whether this launch came from the sign-in entry.</summary>
     public static bool LaunchedAtLogin => Environment.GetCommandLineArgs().Skip(1).Contains(LoginFlag);

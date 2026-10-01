@@ -68,6 +68,18 @@ if ($Uninstall) {
     }
     if (Test-Path $shortcut) { Remove-Item $shortcut }
     Remove-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Phosphor -ErrorAction SilentlyContinue
+    # Phosphor as the default terminal: give the terminal half back to what it replaced.
+    $clsid = '{8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B64}'
+    $startup = 'HKCU:\Console\%%Startup'
+    if ((Get-ItemProperty $startup -ErrorAction SilentlyContinue).DelegationTerminal -eq $clsid) {
+        $previous = (Get-ItemProperty 'HKCU:\Software\Phosphor' -ErrorAction SilentlyContinue).PreviousDelegationTerminal
+        if ($previous) { Set-ItemProperty $startup -Name DelegationTerminal -Value $previous }
+        else {
+            Set-ItemProperty $startup -Name DelegationConsole -Value '{00000000-0000-0000-0000-000000000000}'
+            Set-ItemProperty $startup -Name DelegationTerminal -Value '{00000000-0000-0000-0000-000000000000}'
+        }
+    }
+    if (Test-Path "HKCU:\Software\Classes\CLSID\$clsid") { Remove-Item "HKCU:\Software\Classes\CLSID\$clsid" -Recurse -Force }
     if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
     Say 'Phosphor uninstalled (config in %APPDATA%\Phosphor is kept).'
     return
@@ -131,6 +143,13 @@ $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
 if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).Phosphor) {
     Set-ItemProperty $runKey -Name Phosphor -Value "`"$(Join-Path $target 'Phosphor.exe')`" --at-login"
     Say "Sign-in entry -> $target"
+}
+
+# ---- default terminal (Settings > Layout): Windows starts this exe to hand it a console ----
+$defterm = 'HKCU:\Software\Classes\CLSID\{8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B64}\LocalServer32'
+if (Test-Path $defterm) {
+    Set-ItemProperty $defterm -Name '(default)' -Value "`"$(Join-Path $target 'Phosphor.exe')`" -Embedding"
+    Say "Default terminal -> $target"
 }
 
 # ---- prune old versions (skip any still running) ----

@@ -66,7 +66,8 @@ public sealed partial class MainWindow
     /// <summary>This window's saved form; null if it has nothing to reopen.</summary>
     internal WindowState? CaptureState()
     {
-        var tabs = AllTabs().ToList();
+        // Workspaces of consoles Windows handed over can't be reopened.
+        var tabs = AllTabs().Where(t => !t.Workspace.Tabs.All(p => p.HandedOver)).ToList();
         var workspaces = tabs.Select(tab => new WorkspaceState(tab.CustomTitle, FormatColor(tab.Color),
             SessionLayout.Capture(tab.Workspace, DescribeTab), tab.Folder, tab.Icon)).ToList();
         if (workspaces.Count == 0)

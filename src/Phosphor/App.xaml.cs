@@ -84,7 +84,26 @@ public partial class App : Application
         var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
                               Environment.GetEnvironmentVariable("PHOSPHOR_SHELL") is { Length: > 0 };
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
-        if (ShellResolver.LaunchedAtLogin && !explicitCommand && _config.Global.LaunchAtLogin == LaunchAtLogin.Tray)
+        ListenForConsoles();
+        if (ShellResolver.LaunchedForHandoff && !explicitCommand)
+        {
+            // Started by Windows to receive a console (default terminal): its window opens when it
+            // arrives; with none after a while, there's nothing to stay for.
+            Log.Write("default terminal: started to receive a console");
+            _handoffStartTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _handoffStartTimer.Interval = TimeSpan.FromSeconds(20);
+            _handoffStartTimer.IsRepeating = false;
+            _handoffStartTimer.OnTick(_ =>
+            {
+                if (_windows.Count == 0 && _quick?.IsQuickShown != true)
+                {
+                    Log.Write("default terminal: no console arrived; quitting");
+                    Quit();
+                }
+            });
+            _handoffStartTimer.Start();
+        }
+        else if (ShellResolver.LaunchedAtLogin && !explicitCommand && _config.Global.LaunchAtLogin == LaunchAtLogin.Tray)
         {
             // Signed in with "start in the tray": no window; the tray icon brings back the saved ones.
             Log.Write("login: started in the tray");
@@ -332,6 +351,60 @@ public partial class App : Application
 
     internal void Quit() => Quit(fresh: false);
 
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _handoffStartTimer;
+
+    /// <summary>
+    /// Receives consoles Windows hands over while Phosphor is the default terminal (registered with
+    /// COM whenever Phosphor runs: harmless otherwise, as only that setting points Windows here), and
+    /// keeps the registration pointing at this exe (installs are versioned folders). Test runs
+    /// (PHOSPHOR_CONFIG) don't, unless PHOSPHOR_DEFTERM_TEST=1, so they never take a real console.
+    /// </summary>
+    private void ListenForConsoles()
+    {
+        if (Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } &&
+            Environment.GetEnvironmentVariable("PHOSPHOR_DEFTERM_TEST") != "1")
+        {
+            return;
+        }
+
+        try
+        {
+            var dt = Phosphor.Pty.DefaultTerminal.ForUser();
+            if (dt.Current() == Phosphor.Pty.DefaultTerminal.State.Phosphor && Environment.ProcessPath is { } exe)
+            {
+                dt.Register(exe);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"default terminal: couldn't check the registration: {ex.Message}");
+        }
+
+        var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+        TerminalHandoff.Received = (pty, title) => dq.SafeEnqueue(() => OpenHandedOver(pty, title));
+        TerminalHandoff.StartListening();
+    }
+
+    /// <summary>A console handed over: a tab in the window used last, or a window of its own.</summary>
+    private void OpenHandedOver(Phosphor.Pty.ConPty pty, string title)
+    {
+        _handoffStartTimer?.Stop();
+        if (_quitting)
+        {
+            pty.Dispose();
+            return;
+        }
+
+        if (_windows.LastOrDefault() is { } window)
+        {
+            window.OpenHandedOver(pty, title);
+        }
+        else
+        {
+            Track(new MainWindow(_config, _keybindings, pty, title));
+        }
+    }
+
     private void Quit(bool fresh)
     {
         if (_quitting)
@@ -349,6 +422,7 @@ public partial class App : Application
         }
 
         _quitting = true;
+        TerminalHandoff.StopListening();
         foreach (var window in _windows.ToList())
         {
             window.CloseWithoutAsking();
@@ -410,6 +484,12 @@ public partial class App : Application
     {
         if (_quitting)
         {
+            return;
+        }
+
+        if (argv.Contains(Phosphor.Pty.DefaultTerminal.EmbeddingFlag))
+        {
+            // Started by COM for a console while this one runs: the console comes here through COM.
             return;
         }
 

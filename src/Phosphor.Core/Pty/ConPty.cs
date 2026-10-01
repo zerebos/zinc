@@ -92,6 +92,77 @@ public sealed unsafe partial class ConPty : IDisposable
         waiter.Start();
     }
 
+    /// <summary>A handed-over console: reading starts with <see cref="Begin"/>, once someone listens.</summary>
+    private ConPty(nint hpc, SafeFileHandle inputWrite, SafeFileHandle outputRead, SafeWaitHandle process, int processId)
+    {
+        (_hpc, _inputWrite, _outputRead, _process, ProcessId) = (hpc, inputWrite, outputRead, process, processId);
+        _input = new FileStream(_inputWrite, FileAccess.Write, 1);
+        _reader = new Thread(ReadLoop) { IsBackground = true, Name = "ConPty reader" };
+        _waiter = new Thread(WaitForExit) { IsBackground = true, Name = "ConPty exit waiter" };
+    }
+
+    private readonly Thread? _waiter;
+
+    /// <summary>
+    /// Starts reading a handed-over console's output and waiting for its program (until then it
+    /// waits in the pipe, so none is lost while its pane is made). Started consoles read at once.
+    /// </summary>
+    public void Begin()
+    {
+        // (ThreadState is flags: a background thread not started yet is "Background, Unstarted".)
+        if (_waiter is { } waiter && (waiter.ThreadState & ThreadState.Unstarted) != 0)
+        {
+            _reader.Start();
+            waiter.Start();
+        }
+    }
+
+    /// <summary>
+    /// A console handed over to Phosphor as the default terminal (ITerminalHandoff3, from Windows
+    /// Terminal's OpenConsole): its handles become a pseudoconsole as one Phosphor started would be
+    /// (ConptyPackPseudoConsole), with one duplex pipe. The handles given are the caller's (COM
+    /// closes them after the call): they're duplicated. <paramref name="theirInput"/> and
+    /// <paramref name="theirOutput"/> are the pipe's other end, to hand back.
+    /// </summary>
+    public static ConPty FromHandoff(nint server, nint reference, nint signal, nint client, out nint theirInput, out nint theirOutput)
+    {
+        if (!UsesBundledConpty)
+        {
+            throw new NotSupportedException("A handed-over console needs the bundled ConPTY (conpty.dll + OpenConsole.exe).");
+        }
+
+        // Two pipes, as a pseudoconsole Phosphor creates has (Windows Terminal uses one duplex pipe
+        // with overlapped I/O; a synchronous handle serializes its reads and writes, so a read waiting
+        // for output held up the reply to the console's first query, and both sides waited).
+        if (!CreatePipe(out var inputRead, out var inputWrite, 0, 0) || !CreatePipe(out var outputRead, out var outputWrite, 0, 0))
+        {
+            throw new Win32Exception();
+        }
+
+        var self = GetCurrentProcess();
+        nint Duplicate(nint handle) =>
+            DuplicateHandle(self, handle, self, out var copy, 0, false, DuplicateSameAccess) ? copy : throw new Win32Exception();
+
+        var process = new SafeWaitHandle(Duplicate(client), true);
+        var hr = ConptyPackPseudoConsole(Duplicate(server), Duplicate(reference), Duplicate(signal), out var hpc);
+        if (hr != 0)
+        {
+            foreach (var handle in new SafeHandle[] { inputRead, inputWrite, outputRead, outputWrite, process })
+            {
+                handle.Dispose();
+            }
+
+            throw Marshal.GetExceptionForHR(hr)!;
+        }
+
+        // Handed back: COM owns these now.
+        theirInput = inputRead.DangerousGetHandle();
+        theirOutput = outputWrite.DangerousGetHandle();
+        inputRead.SetHandleAsInvalid();
+        outputWrite.SetHandleAsInvalid();
+        return new ConPty(hpc, inputWrite, outputRead, process, GetProcessId(process));
+    }
+
     public void Write(ReadOnlySpan<byte> data)
     {
         if (data.IsEmpty || Volatile.Read(ref _closed) != 0)
@@ -389,6 +460,24 @@ public sealed unsafe partial class ConPty : IDisposable
     [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool CloseHandle(nint handle);
+
+    private const uint DuplicateSameAccess = 2;
+
+    [LibraryImport("conpty.dll")]
+    private static partial int ConptyPackPseudoConsole(nint server, nint reference, nint signal, out nint hpc);
+
+
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool DuplicateHandle(nint sourceProcess, nint source, nint targetProcess, out nint target, uint access,
+        [MarshalAs(UnmanagedType.Bool)] bool inherit, uint options);
+
+    [LibraryImport("kernel32.dll")]
+    private static partial nint GetCurrentProcess();
+
+    [LibraryImport("kernel32.dll")]
+    private static partial int GetProcessId(SafeWaitHandle process);
 
     private const uint Infinite = 0xFFFFFFFF;
 

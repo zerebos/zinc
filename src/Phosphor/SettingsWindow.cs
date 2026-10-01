@@ -277,6 +277,11 @@ internal sealed partial class SettingsWindow : Window
             foreach (var group in SettingsCatalog.All.Where(s => s.Section == _section).GroupBy(s => s.Group))
             {
                 AddGroup(group.Key, group);
+                if (group.Key == "When you come back")
+                {
+                    DefaultTerminalCard(); // Windows' setting, not one of config.toml's
+                }
+
                 if (group.Key == "Colors")
                 {
                     _page.Children.Add(Note(SettingsCatalog.FileOnly["colors.palette"]));
@@ -1607,7 +1612,7 @@ internal sealed partial class SettingsWindow : Window
 
         var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1) };
         swatch.BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-        var box = new TextBox { Width = ControlWidth - 22 - 8 - 40 - 8, PlaceholderText = setting.Key == "window.unfocused-split-fill" ? "The pane's" : "The scheme's" };
+        var box = new TextBox { Width = ControlWidth - 22 - 8 - 40 - 8, PlaceholderText = setting.Placeholder ?? "The scheme's" };
         AutomationProperties.SetName(box, setting.Label);
 
         // The flyout: the scheme's colors as chips, "use the scheme's", and the full picker below.
