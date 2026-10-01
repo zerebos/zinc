@@ -138,6 +138,6 @@ public class TerminalSettingTests
         Assert.Equal((Phosphor.Ghostty.TerminalCursorStyle.Block, false), (config.CursorStyle, config.CursorBlink));
         Assert.Equal((CloseOnExit.Success, BellMode.Attention, false, true),
             (config.CloseOnExit, config.Bell, config.BellSound, config.ProgramTitles));
-        Assert.Null(config.Theme.SelectionBackground); // inverse video, unless a scheme says otherwise
+        Assert.Same(TerminalTheme.Default, config.Theme); // Lit Cell, selection colors included
     }
 }

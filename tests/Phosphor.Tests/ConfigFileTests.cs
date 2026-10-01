@@ -196,11 +196,13 @@ public class ConfigFileTests : IDisposable
         // Explicit colors override the scheme, wherever they are written.
         Assert.Equal(new GhosttyColorRgb(0x10, 0x10, 0x10), config.Global.Theme.Background);
         Assert.Equal(new GhosttyColorRgb(0xAC, 0x42, 0x42), config.Global.Theme.Palette[1]);
-        // The user's copy wins over the bundled one; the profile's scheme applies on top of the global.
+        // The user's copy wins over the bundled one; the profile's scheme replaces the global one's
+        // colors (what it leaves out is libghostty's, not the other scheme's or Phosphor's own).
         var fedora = config.Profiles[0].Config.Theme;
         Assert.Equal(new GhosttyColorRgb(0x11, 0x11, 0x11), fedora.Background);
         Assert.Equal(new GhosttyColorRgb(0xFC, 0xFC, 0xFA), fedora.Foreground);
-        Assert.Equal(new GhosttyColorRgb(0xAC, 0x42, 0x42), fedora.Palette[1]);
+        Assert.Empty(fedora.Palette);
+        Assert.Null(fedora.SelectionBackground);
         Assert.Empty(config.Warnings);
     }
 

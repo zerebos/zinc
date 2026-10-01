@@ -4,11 +4,45 @@ namespace Phosphor.Terminal;
 
 public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb Foreground, GhosttyColorRgb Cursor)
 {
-    // Catppuccin Mocha base colors; the 256-color palette uses libghostty's defaults.
+    /// <summary>
+    /// Phosphor's own colors: "Lit Cell", from the brand (phosphor green on near-black). Its 16 base
+    /// colors; the rest of the 256 are libghostty's. (Its cursor text would be the background, which
+    /// is how the cursor is drawn anyway.)
+    /// </summary>
     public static TerminalTheme Default { get; } = new(
-        GhosttyColorRgb.FromHex(0x1E1E2E),
-        GhosttyColorRgb.FromHex(0xCDD6F4),
-        GhosttyColorRgb.FromHex(0xF5E0DC));
+        GhosttyColorRgb.FromHex(0x0C110E),
+        GhosttyColorRgb.FromHex(0xCFDDD3),
+        GhosttyColorRgb.FromHex(0x3DF2A0))
+    {
+        Palette = new Dictionary<int, GhosttyColorRgb>
+        {
+            [0] = GhosttyColorRgb.FromHex(0x1C2420),
+            [1] = GhosttyColorRgb.FromHex(0xFF6B6B),
+            [2] = GhosttyColorRgb.FromHex(0x3DF2A0),
+            [3] = GhosttyColorRgb.FromHex(0xFFB000),
+            [4] = GhosttyColorRgb.FromHex(0x6FB3F2),
+            [5] = GhosttyColorRgb.FromHex(0xC99AF2),
+            [6] = GhosttyColorRgb.FromHex(0x48D6CF),
+            [7] = GhosttyColorRgb.FromHex(0xB9C7BE),
+            [8] = GhosttyColorRgb.FromHex(0x758679),
+            [9] = GhosttyColorRgb.FromHex(0xFF9494),
+            [10] = GhosttyColorRgb.FromHex(0x86FFC6),
+            [11] = GhosttyColorRgb.FromHex(0xFFCB5C),
+            [12] = GhosttyColorRgb.FromHex(0x9CCBFF),
+            [13] = GhosttyColorRgb.FromHex(0xDDBCFF),
+            [14] = GhosttyColorRgb.FromHex(0x86ECE6),
+            [15] = GhosttyColorRgb.FromHex(0xEDEFEA),
+        },
+        SelectionBackground = GhosttyColorRgb.FromHex(0x1E4533),
+        SelectionForeground = GhosttyColorRgb.FromHex(0xEDEFEA),
+    };
+
+    /// <summary>
+    /// What a color scheme starts from: the default's background, text and cursor (schemes nearly
+    /// always set their own), but libghostty's palette and inverted selection, so a scheme that leaves
+    /// them out doesn't show Phosphor's.
+    /// </summary>
+    public static TerminalTheme SchemeBase { get; } = new(Default.Background, Default.Foreground, Default.Cursor);
 
     /// <summary>Overrides for palette entries (0-255); the rest keep libghostty's defaults.</summary>
     public IReadOnlyDictionary<int, GhosttyColorRgb> Palette { get; init; } = new Dictionary<int, GhosttyColorRgb>();

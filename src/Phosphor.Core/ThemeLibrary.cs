@@ -146,7 +146,8 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
         try
         {
-            return ApplyFile(config, file) with { PairedDark = null }; // one scheme, whatever came before
+            // One scheme, whatever came before: its colors replace the theme's, not add to them.
+            return ApplyFile(config with { Theme = Phosphor.Terminal.TerminalTheme.SchemeBase }, file) with { PairedDark = null };
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

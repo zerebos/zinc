@@ -188,8 +188,8 @@ public class ConfigTests : IDisposable
         Assert.Equal(new GhosttyColorRgb(0x18, 0x18, 0x18), config.Theme.Background);
         Assert.Equal(new GhosttyColorRgb(0xD8, 0xD8, 0xD8), config.Theme.Foreground);
         Assert.Equal(new GhosttyColorRgb(0xFC, 0xFC, 0xFA), config.Theme.Cursor);
-        Assert.Equal(2, config.Theme.Palette.Count);
         Assert.Equal(new GhosttyColorRgb(0xAC, 0x42, 0x42), config.Theme.Palette[1]);
+        Assert.Equal(TerminalTheme.Default.Palette[2], config.Theme.Palette[2]); // the rest stay Phosphor's own
         Assert.Equal(new GhosttyColorRgb(0xF8, 0xF8, 0xF8), config.Theme.Palette[15]);
     }
 
@@ -200,8 +200,9 @@ public class ConfigTests : IDisposable
             [colors]
             palette = ["#000000", "#aa0000", "#00aa00"]
             """);
-        Assert.Equal(3, config.Theme.Palette.Count);
+        Assert.Equal(new GhosttyColorRgb(0, 0, 0), config.Theme.Palette[0]);
         Assert.Equal(new GhosttyColorRgb(0xAA, 0, 0), config.Theme.Palette[1]);
+        Assert.Equal(new GhosttyColorRgb(0, 0xAA, 0), config.Theme.Palette[2]);
     }
 
     [Fact]

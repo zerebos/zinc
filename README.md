@@ -162,6 +162,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   your own go in `%APPDATA%\Phosphor\themes\`, one file per scheme in Ghostty's theme format
   (`background = #181818`, `palette = 1=#AC4242`, ...), named as `theme` refers to them. Yours
   win over bundled ones with the same name.
+  Without a theme, Phosphor's own colors: "Lit Cell", phosphor green on near-black. A scheme
+  replaces them entirely: what its file leaves out (some palette entries, selection colors) is
+  libghostty's default, not Lit Cell's.
   **Light and dark**: `theme = "light:Catppuccin Latte,dark:Catppuccin Mocha"` (Ghostty's syntax)
   follows Windows' app mode (Settings > Personalization > Colors), switching as it changes.
   Programs that ask whether the terminal is light or dark (`CSI ? 996 n`) are told the side in
