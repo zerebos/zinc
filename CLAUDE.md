@@ -300,7 +300,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   console window). `ITerminalHandoff3.EstablishPtyHandoff` → Core `ConPty.FromHandoff`
   (ConptyPackPseudoConsole + two anonymous pipes; reading waits for `Begin()`, called by
   `TerminalSession.Attach`: output waits in the pipe while the pane is made) → `MainWindow.OpenHandedOver`
-  (default profile, `TerminalTab.HandedOver`: not saved). `-Embedding` launch: no window until a console
+  (`ProfileForHandedOver`: the one profile running the same exe, else a made-up one named after the program with its icon; `TerminalTab.HandedOver`: not saved). Test runs listen as `DefaultTerminal.TestClsid` so the installed Phosphor (which always listens as `Clsid`) never takes a test console. `-Embedding` launch: no window until a console
   arrives (20 s, else quit); redirected `-Embedding` launches are ignored. install.ps1 repoints/gives back.
   Test: `.scratch/tools/defterm-test.ps1` (backs up + restores the user's value; never run a COM *launch*
   of the dev exe: without PHOSPHOR_CONFIG it would redirect into the installed Phosphor). Findings and the

@@ -361,8 +361,8 @@ public partial class App : Application
     /// </summary>
     private void ListenForConsoles()
     {
-        if (Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } &&
-            Environment.GetEnvironmentVariable("PHOSPHOR_DEFTERM_TEST") != "1")
+        var test = Environment.GetEnvironmentVariable("PHOSPHOR_DEFTERM_TEST") == "1";
+        if (Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } && !test)
         {
             return;
         }
@@ -382,7 +382,7 @@ public partial class App : Application
 
         var dq = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         TerminalHandoff.Received = (pty, title) => dq.SafeEnqueue(() => OpenHandedOver(pty, title));
-        TerminalHandoff.StartListening();
+        TerminalHandoff.StartListening(test ? Phosphor.Pty.DefaultTerminal.TestClsid : Phosphor.Pty.DefaultTerminal.Clsid);
     }
 
     /// <summary>A console handed over: a tab in the window used last, or a window of its own.</summary>

@@ -120,13 +120,44 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal void OpenHandedOver(Phosphor.Pty.ConPty pty, string title)
     {
-        var profile = _config.DefaultProfile;
+        var profile = ProfileForHandedOver(title);
         var pane = CreatePane(profile, title, profile.Config.ResolveWorkingDirectory());
         pane.Control.HandedOver = pty;
         pane.HandedOver = true;
         var tab = AddWorkspace(new Workspace<TerminalTab>(pane), color: AutoColor(null));
         FocusActive(tab);
         Activate();
+    }
+
+    /// <summary>
+    /// Who a handed-over console's tab says it is: the one profile running the same program (cmd.exe:
+    /// Command Prompt), else the program itself, named after it with its own icon, in the default
+    /// profile's look (several profiles run wsl.exe: which distro isn't known, so "wsl").
+    /// </summary>
+    private Profile ProfileForHandedOver(string program)
+    {
+        var exe = Path.GetFileName(program);
+        bool Runs(Profile p)
+        {
+            var (command, _) = ProfileIcons.SplitCommand(ShellResolver.ForProfile(p.Config));
+            var name = Path.GetFileName(command);
+            return name.Equals(exe, StringComparison.OrdinalIgnoreCase) ||
+                   (name + ".exe").Equals(exe, StringComparison.OrdinalIgnoreCase);
+        }
+
+        var matches = _config.VisibleProfiles.Where(Runs).Take(2).ToList();
+        if (matches.Count == 1)
+        {
+            return matches[0];
+        }
+
+        var look = _config.DefaultProfile;
+        return look with
+        {
+            Id = "handed-over:" + exe.ToLowerInvariant(),
+            Name = Path.GetFileNameWithoutExtension(program),
+            Config = look.Config with { Command = program, Icon = null },
+        };
     }
 
     /// <summary>A window that takes over a workspace moved from another window.</summary>

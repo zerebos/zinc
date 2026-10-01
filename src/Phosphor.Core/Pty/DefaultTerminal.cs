@@ -16,6 +16,9 @@ public sealed class DefaultTerminal(RegistryKey root)
     /// <summary>Phosphor's terminal class (what OpenConsole creates to hand a console over).</summary>
     public static readonly Guid Clsid = new("8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B64");
 
+    /// <summary>What test runs (PHOSPHOR_DEFTERM_TEST=1) listen as, so they never take a console meant for the installed Phosphor.</summary>
+    public static readonly Guid TestClsid = new("8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B65");
+
     private static readonly Guid Default = Guid.Empty;
     private static readonly Guid Conhost = new("B23D10C0-E52E-411E-9D5B-C09FDF709C7D");
 

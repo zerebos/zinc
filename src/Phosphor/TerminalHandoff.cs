@@ -18,7 +18,7 @@ internal static class TerminalHandoff
     /// <summary>Called on a COM thread with each console: open it (on the UI thread).</summary>
     public static Action<ConPty, string>? Received { get; set; }
 
-    public static void StartListening()
+    public static void StartListening(Guid clsid)
     {
         if (_thread != null)
         {
@@ -27,8 +27,8 @@ internal static class TerminalHandoff
 
         _thread = new Thread(() =>
         {
-            var hr = CoRegisterClassObject(DefaultTerminal.Clsid, new TerminalHandoffFactory(), ClsctxLocalServer, RegclsMultipleUse, out var cookie);
-            Log.Write($"default terminal: listening for consoles (0x{hr:X8})");
+            var hr = CoRegisterClassObject(clsid, new TerminalHandoffFactory(), ClsctxLocalServer, RegclsMultipleUse, out var cookie);
+            Log.Write($"default terminal: listening for consoles as {clsid} (0x{hr:X8})");
             Stop.Wait();
             if (hr == 0)
             {
