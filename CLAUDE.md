@@ -293,6 +293,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`
   (a see-through block skips the glyph redraw), `find-highlight(-current)` (`MatchColorFor`), all applied in
   `TerminalRenderer.ReadRow`/`DrawCursor`; `[window] divider-color` (`ApplyDividerColor`, shared brush).
+- Transparency: `[colors] background-opacity` → the renderer's `ds.Clear` alpha (and the canvas `ClearColor`);
+  `[window] backdrop` → `MainWindow.ApplyBackdrop` (MicaBackdrop / DesktopAcrylicBackdrop / `ClearBackdrop`: a
+  transparent Windows.UI.Composition brush; needs a Windows.System DispatcherQueue, made once). Nothing opaque
+  sits behind the canvas (checked with backdrop none). Don't screenshot acrylic/none windows for others' content:
+  PrintWindow shows only our pixels, but keep captures to mica/none.
 - `cursor-style-at-prompt`: `SetCursorDefaults(style, blink, atPrompt)` stores them; `ApplyCursorDefaults`
   switches libghostty's DEFAULT_CURSOR_STYLE when the marks' prompt state enters/leaves Prompt|Input
   (`NotePromptState`), so a program's DECSCUSR still wins. Command text read-back

@@ -104,6 +104,19 @@ public enum BellMode
 }
 
 /// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
+/// <summary>What a window shows behind its content (and through a see-through terminal background).</summary>
+public enum WindowBackdrop
+{
+    /// <summary>Mica: the wallpaper's tint, as Windows apps use.</summary>
+    Mica,
+
+    /// <summary>The windows behind, blurred.</summary>
+    Acrylic,
+
+    /// <summary>Nothing: the windows behind show as they are.</summary>
+    None,
+}
+
 public enum TitleBarMode
 {
     Show,
@@ -349,6 +362,15 @@ public sealed record Config
     /// <summary>How much of faint text's color shows over its background (0.1-1). Config: <c>[colors] faint-opacity</c> (Ghostty's 0.5).</summary>
     public double FaintOpacity { get; init; } = 0.5;
 
+    /// <summary>
+    /// How opaque the default background is (0.1-1); below 1 the window's backdrop shows through.
+    /// Cells with a background color of their own stay solid. Config: <c>[colors] background-opacity</c> (Ghostty's).
+    /// </summary>
+    public double BackgroundOpacity { get; init; } = 1;
+
+    /// <summary>What windows show behind their content. Config: <c>[window] backdrop = mica | acrylic | none</c> (global).</summary>
+    public WindowBackdrop Backdrop { get; init; }
+
     /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
     public double CursorOpacity { get; init; } = 1;
 
@@ -414,6 +436,9 @@ public sealed record Config
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
             "faint-opacity" when TryFloat(value, out var faint) && faint is >= 0.1f and <= 1 => this with { FaintOpacity = faint },
+            "background-opacity" when TryFloat(value, out var backgroundOpacity) && backgroundOpacity is >= 0.1f and <= 1 =>
+                this with { BackgroundOpacity = backgroundOpacity },
+            "backdrop" when TryMode<WindowBackdrop>(value, out var backdrop) => this with { Backdrop = backdrop },
             "cursor-opacity" when TryFloat(value, out var cursorOpacity) && cursorOpacity is >= 0.1f and <= 1 =>
                 this with { CursorOpacity = cursorOpacity },
             "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },

@@ -183,6 +183,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   text in the first eight colors in their bright versions (as older terminals did).
 - `faint-opacity`: how much of faint (dim) text's color shows, `0.1` to `1` (default `0.5`).
 - `cursor-opacity`: `0.1` to `1` (default): below 1 a block cursor lets its character show.
+- `background-opacity`: `0.1` to `1` (default): below 1 the terminal's background is see-through and
+  the window's backdrop shows (cells with a background color of their own stay solid). The backdrop is
+  `[window] backdrop`: `"mica"` (default: your wallpaper's tint), `"acrylic"` (the windows behind,
+  blurred) or `"none"` (the windows behind, as they are).
 - `find-highlight`, `find-highlight-current`: `"#rrggbb"` behind Find's matches and the current one
   (default: see-through yellow and orange).
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.

@@ -29,6 +29,25 @@ public sealed partial class MainWindow
     /// and updates its colors, font and padding; strips, dimming and menus follow. Where the
     /// workspace tabs sit (top or left) applies to windows opened from now on.
     /// </summary>
+    private WindowBackdrop? _backdrop;
+
+    /// <summary>The window's backdrop (<c>[window] backdrop</c>): set again only when it changes (each set restarts it).</summary>
+    private void ApplyBackdrop()
+    {
+        if (TestHooks.Deterministic || _backdrop == _config.Global.Backdrop)
+        {
+            return;
+        }
+
+        _backdrop = _config.Global.Backdrop;
+        SystemBackdrop = _config.Global.Backdrop switch
+        {
+            WindowBackdrop.Acrylic => new Microsoft.UI.Xaml.Media.DesktopAcrylicBackdrop(),
+            WindowBackdrop.None => new ClearBackdrop(),
+            _ => new Microsoft.UI.Xaml.Media.MicaBackdrop(),
+        };
+    }
+
     /// <summary>The line between split panes: <c>divider-color</c>, else Phosphor's grey (every divider shares the brush).</summary>
     private void ApplyDividerColor() =>
         _dividerBrush.Color = _config.Global.SplitDividerColor is { } color ? Phosphor.Terminal.TerminalRenderer.ToColor(color) : DefaultDividerColor;
@@ -37,6 +56,7 @@ public sealed partial class MainWindow
     {
         _config = config;
         ApplyDividerColor();
+        ApplyBackdrop();
         foreach (var tab in AllTabs())
         {
             foreach (var pane in tab.Workspace.Tabs)

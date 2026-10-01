@@ -137,7 +137,7 @@ public sealed partial class TerminalControl : UserControl
     private CanvasControl CreateCanvas()
     {
         var canvas = CanvasLifetime.Create();
-        canvas.ClearColor = TerminalRenderer.ToColor(_config.Theme.Background);
+        canvas.ClearColor = ClearColor(_config);
         canvas.CreateResources += OnCreateResources;
         canvas.Draw += OnDraw;
         canvas.SizeChanged += OnCanvasSizeChanged;
@@ -238,6 +238,13 @@ public sealed partial class TerminalControl : UserControl
         }
 
         _canvas.Invalidate();
+    }
+
+    /// <summary>The canvas's color before its first frame: the background, as see-through as it's drawn.</summary>
+    private static Windows.UI.Color ClearColor(Config config)
+    {
+        var c = TerminalRenderer.ToColor(config.Theme.Background);
+        return Windows.UI.Color.FromArgb((byte)(255 * config.BackgroundOpacity), c.R, c.G, c.B);
     }
 
     /// <summary>A console Windows handed over (default terminal): attached instead of starting a program.</summary>
@@ -348,7 +355,7 @@ public sealed partial class TerminalControl : UserControl
         var old = _config;
         _config = config;
         _renderer.Config = config;
-        _canvas.ClearColor = TerminalRenderer.ToColor(config.Theme.Background);
+        _canvas.ClearColor = ClearColor(config);
         if (_session is { } session)
         {
             session.SetTheme(config.Theme);

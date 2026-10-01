@@ -676,6 +676,8 @@ public sealed class ConfigFile
             ["colors.bold-is-bright"] = ("bold-is-bright", v => Bool(v)),
             ["colors.faint-opacity"] = ("faint-opacity", v => Number(v)),
             ["colors.cursor-opacity"] = ("cursor-opacity", v => Number(v)),
+            ["colors.background-opacity"] = ("background-opacity", v => Number(v)),
+            ["window.backdrop"] = ("backdrop", v => v as string),
             ["colors.find-highlight"] = ("search-background", v => v as string),
             ["colors.find-highlight-current"] = ("search-selected-background", v => v as string),
             ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),

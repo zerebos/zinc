@@ -329,7 +329,8 @@ public sealed unsafe class TerminalRenderer : IDisposable
             _bright[i] = Color.FromArgb(255, colors.Palette[(i + 8) * 3], colors.Palette[(i + 8) * 3 + 1], colors.Palette[(i + 8) * 3 + 2]);
         }
 
-        ds.Clear(defaultBg);
+        // A see-through default background (background-opacity) lets the window's backdrop show.
+        ds.Clear(Config.BackgroundOpacity < 1 ? Color.FromArgb((byte)(255 * Config.BackgroundOpacity), defaultBg.R, defaultBg.G, defaultBg.B) : defaultBg);
         DrawImages(ds, rows, belowText: true);
 
         var iterator = _rowIterator;

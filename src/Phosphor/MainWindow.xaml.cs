@@ -202,7 +202,7 @@ public sealed partial class MainWindow : Window
         titleBar.ButtonForegroundColor = Colors.White;
         titleBar.ButtonHoverBackgroundColor = Windows.UI.Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF);
         titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF);
-        SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
+        ApplyBackdrop();
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
         MenuKeySuppressor.Attach(this);
