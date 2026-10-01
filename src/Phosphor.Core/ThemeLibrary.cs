@@ -156,7 +156,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         }
     }
 
-    /// <summary>Applies a scheme file's colors (cursor text, which it may also set, isn't used yet).</summary>
+    /// <summary>Applies a scheme file's colors.</summary>
     public static Config ApplyFile(Config config, string file)
     {
         foreach (var raw in File.ReadLines(file))
@@ -169,7 +169,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             }
 
             var key = line[..eq].Trim();
-            if (key is "background" or "foreground" or "cursor-color" or "palette" or "selection-background" or "selection-foreground" &&
+            if (key is "background" or "foreground" or "cursor-color" or "cursor-text" or "palette" or "selection-background" or "selection-foreground" &&
                 config.Apply(key, line[(eq + 1)..].Trim()) is { } next)
             {
                 config = next;

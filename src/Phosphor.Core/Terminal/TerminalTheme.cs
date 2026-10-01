@@ -6,8 +6,7 @@ public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb F
 {
     /// <summary>
     /// Phosphor's own colors: "Lit Cell", from the brand (phosphor green on near-black). Its 16 base
-    /// colors; the rest of the 256 are libghostty's. (Its cursor text would be the background, which
-    /// is how the cursor is drawn anyway.)
+    /// colors; the rest of the 256 are libghostty's.
     /// </summary>
     public static TerminalTheme Default { get; } = new(
         GhosttyColorRgb.FromHex(0x0C110E),
@@ -35,6 +34,7 @@ public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb F
         },
         SelectionBackground = GhosttyColorRgb.FromHex(0x1E4533),
         SelectionForeground = GhosttyColorRgb.FromHex(0xEDEFEA),
+        CursorText = GhosttyColorRgb.FromHex(0x0C110E),
     };
 
     /// <summary>
@@ -52,6 +52,13 @@ public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb F
 
     /// <summary>Selected text; null: the text keeps its color (or inverts, without a selection background).</summary>
     public GhosttyColorRgb? SelectionForeground { get; init; }
+
+    /// <summary>
+    /// The character under a block cursor; null: the cell's background. Drawing only (no escape
+    /// sequence sets it, so libghostty has no option for it), kept even when a program recolors the
+    /// cursor (OSC 12), as in Ghostty.
+    /// </summary>
+    public GhosttyColorRgb? CursorText { get; init; }
 
     /// <summary>The 16 base colors as a terminal shows them: this theme's, else libghostty's built-in ones.</summary>
     public IReadOnlyList<GhosttyColorRgb> BaseColors =>

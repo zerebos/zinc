@@ -420,6 +420,7 @@ public sealed record Config
             "background" when TryColor(value, out var c) => this with { Theme = theme with { Background = c } },
             "foreground" when TryColor(value, out var c) => this with { Theme = theme with { Foreground = c } },
             "cursor-color" when TryColor(value, out var c) => this with { Theme = theme with { Cursor = c } },
+            "cursor-text" when TryColor(value, out var c) => this with { Theme = theme with { CursorText = c } },
             "palette" when TryPaletteEntry(value, out var index, out var c) =>
                 this with { Theme = theme with { Palette = new Dictionary<int, GhosttyColorRgb>(theme.Palette) { [index] = c } } },
             "window-padding-x" when TryPadding(value, out var left, out var right) =>

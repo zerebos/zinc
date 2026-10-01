@@ -967,10 +967,10 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 ds.FillRectangle(left, top, width, m.Height, color);
                 if (x < count && _cells[x].CpLen > 0)
                 {
-                    // Redraw the covered glyph in the background color.
+                    // Redraw the covered glyph in the cursor-text color, else the cell's background.
                     ref var cell = ref _cells[x];
                     var fg = cell.Fg;
-                    cell.Fg = cell.HasBg ? cell.Bg : defaultBg;
+                    cell.Fg = Config.Theme.CursorText is { } text ? ToColor(text) : cell.HasBg ? cell.Bg : defaultBg;
                     var glyph = cell.CpLen == 1 && !wide ? GlyphIndex(_codepoints[cell.CpStart], cell.FontVariant) : 0;
                     if (IsSprite(ref cell))
                     {

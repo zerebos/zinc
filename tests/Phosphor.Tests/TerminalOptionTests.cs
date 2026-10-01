@@ -122,6 +122,27 @@ public class TerminalSettingTests
         Assert.Equal(style, new Config().Apply("cursor-style", value)!.CursorStyle);
 
     [Fact]
+    public void CursorTextComesFromConfigOrScheme()
+    {
+        Assert.Equal(new Phosphor.Ghostty.GhosttyColorRgb(0x11, 0x22, 0x33), new Config().Apply("cursor-text", "#112233")!.Theme.CursorText);
+
+        var scheme = Path.Combine(Path.GetTempPath(), $"phosphor-scheme-{Guid.NewGuid():N}");
+        try
+        {
+            File.WriteAllText(scheme, "background = #102040\ncursor-color = #007acc\ncursor-text = #bfdbfe\n");
+            Assert.Equal(new Phosphor.Ghostty.GhosttyColorRgb(0xBF, 0xDB, 0xFE),
+                ThemeLibrary.ApplyFile(new Config { Theme = TerminalTheme.SchemeBase }, scheme).Theme.CursorText);
+
+            File.WriteAllText(scheme, "background = #102040\n");
+            Assert.Null(ThemeLibrary.ApplyFile(new Config { Theme = TerminalTheme.SchemeBase }, scheme).Theme.CursorText); // the background, as before
+        }
+        finally
+        {
+            File.Delete(scheme);
+        }
+    }
+
+    [Fact]
     public void ValuesOutsideTheirRangeAreRejected()
     {
         Assert.Null(new Config().Apply("cursor-style", "3"));

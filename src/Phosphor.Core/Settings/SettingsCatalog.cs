@@ -117,6 +117,8 @@ public static class SettingsCatalog
         new("appearance", "Colors", "colors.background", "Background", "Instead of the scheme's.", SettingKind.Color, null),
         new("appearance", "Colors", "colors.foreground", "Text", "Instead of the scheme's.", SettingKind.Color, null),
         new("appearance", "Colors", "colors.cursor", "Cursor", "Instead of the scheme's.", SettingKind.Color, null),
+        new("appearance", "Colors", "colors.cursor-text", "Cursor text",
+            "The character under a block cursor, instead of the scheme's (without either, the background color).", SettingKind.Color, null),
         new("appearance", "Colors", "colors.selection-background", "Selection",
             "Behind selected text, instead of the scheme's (without either, selection inverts the colors).", SettingKind.Color, null),
         new("appearance", "Colors", "colors.selection-foreground", "Selected text",
@@ -321,7 +323,7 @@ public static class SettingsCatalog
     [
         new(null, null, "font.builtin-glyphs", ["font.adjust-box-thickness"]),
         new("Background, text, cursor and selection", "The scheme's, unless you pick your own.", null,
-            ["colors.background", "colors.foreground", "colors.cursor", "colors.selection-background", "colors.selection-foreground"]),
+            ["colors.background", "colors.foreground", "colors.cursor", "colors.cursor-text", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
         new(null, null, "window.tab-groups", ["window.group-tab-strip"]),
         new(null, null, "window.unfocused-split-opacity", ["window.unfocused-split-fill"]),

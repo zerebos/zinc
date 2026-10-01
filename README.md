@@ -171,6 +171,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   force (with a single scheme: whether its background is dark), and those that subscribe (mode
   2031, e.g. neovim) hear of each change, so they can switch their own colors too.
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.
+- `cursor-text`: `"#rrggbb"`, the character under a block cursor, instead of the scheme's (without
+  either, the background color). It stays when a program recolors the cursor.
 - `selection-background`, `selection-foreground`: `"#rrggbb"`, instead of the scheme's (most
   schemes set them). With neither, selection inverts the colors; with only a background, selected
   text keeps its color.

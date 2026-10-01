@@ -636,6 +636,7 @@ public sealed class ConfigFile
             ["colors.background"] = ("background", v => v as string),
             ["colors.foreground"] = ("foreground", v => v as string),
             ["colors.cursor"] = ("cursor-color", v => v as string),
+            ["colors.cursor-text"] = ("cursor-text", v => v as string),
             ["colors.selection-background"] = ("selection-background", v => v as string),
             ["colors.selection-foreground"] = ("selection-foreground", v => v as string),
             ["terminal.cursor-style"] = ("cursor-style", v => v as string),
