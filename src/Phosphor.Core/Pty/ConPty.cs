@@ -160,7 +160,20 @@ public sealed unsafe partial class ConPty : IDisposable
         theirOutput = outputWrite.DangerousGetHandle();
         inputRead.SetHandleAsInvalid();
         outputWrite.SetHandleAsInvalid();
-        return new ConPty(hpc, inputWrite, outputRead, process, GetProcessId(process));
+        return new ConPty(hpc, inputWrite, outputRead, process, GetProcessId(process)) { ProgramPath = ImagePath(process) };
+    }
+
+    /// <summary>
+    /// A handed-over console's program (its exe's full path), or null. Not the console's title: started
+    /// from a shortcut, that's the shortcut's name ("Command Prompt").
+    /// </summary>
+    public string? ProgramPath { get; private init; }
+
+    private static string? ImagePath(SafeWaitHandle process)
+    {
+        var buffer = stackalloc char[1024];
+        var size = 1024;
+        return QueryFullProcessImageNameW(process, 0, buffer, ref size) ? new string(buffer, 0, size) : null;
     }
 
     public void Write(ReadOnlySpan<byte> data)
@@ -478,6 +491,10 @@ public sealed unsafe partial class ConPty : IDisposable
 
     [LibraryImport("kernel32.dll")]
     private static partial int GetProcessId(SafeWaitHandle process);
+
+    [LibraryImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool QueryFullProcessImageNameW(SafeWaitHandle process, uint flags, char* name, ref int size);
 
     private const uint Infinite = 0xFFFFFFFF;
 

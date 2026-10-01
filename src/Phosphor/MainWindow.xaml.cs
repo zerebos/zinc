@@ -120,8 +120,10 @@ public sealed partial class MainWindow : Window
     /// </summary>
     internal void OpenHandedOver(Phosphor.Pty.ConPty pty, string title)
     {
-        var profile = ProfileForHandedOver(title);
-        var pane = CreatePane(profile, title, profile.Config.ResolveWorkingDirectory());
+        // Its program, not the title: from a shortcut that's the shortcut's name ("Command Prompt").
+        var program = pty.ProgramPath ?? title;
+        var profile = ProfileForHandedOver(program);
+        var pane = CreatePane(profile, program, profile.Config.ResolveWorkingDirectory());
         pane.Control.HandedOver = pty;
         pane.HandedOver = true;
         var tab = AddWorkspace(new Workspace<TerminalTab>(pane), color: AutoColor(null));

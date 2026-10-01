@@ -82,7 +82,7 @@ public sealed class TerminalHandoffObject : ITerminalHandoff3
             // TERMINAL_STARTUP_INFO starts with the title (a BSTR): the program's path, or a shortcut's name.
             var title = startupInfo != 0 ? Marshal.PtrToStringBSTR(Marshal.ReadIntPtr(startupInfo)) ?? "" : "";
             var pty = ConPty.FromHandoff(server, reference, signal, client, out input, out output);
-            Log.Write($"default terminal: a console arrived: {title} (pid {pty.ProcessId})");
+            Log.Write($"default terminal: a console arrived: {title} ({pty.ProgramPath}, pid {pty.ProcessId})");
             if (TerminalHandoff.Received is { } received)
             {
                 received(pty, title);
