@@ -78,7 +78,7 @@ public sealed partial class MainWindow
         // (-32000, -32000) and 160 x 39, and a window restored there is invisible and too small
         // for its terminals to start (2026-09-27). Minimized windows come back restored.
         var b = _normalBounds;
-        var maximized = AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+        var maximized = _maximized;
         // Which workspace was shown (a new-workspace page isn't saved: the one before it, then).
         var shown = SelectedTab is { } selected ? tabs.IndexOf(selected) : tabs.Count - 1;
         return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, shown), workspaces, CaptureChrome());
@@ -87,10 +87,21 @@ public sealed partial class MainWindow
     /// <summary>Where the window is when neither minimized nor maximized (what a session saves).</summary>
     private RectInt32 _normalBounds;
 
+    /// <summary>Whether it's maximized (kept here: a closing window's AppWindow is gone when it's saved as closed).</summary>
+    private bool _maximized;
+
+    /// <summary>The workspaces' titles, in order (what a closed window is called).</summary>
+    internal IReadOnlyList<string> WorkspaceTitles => [.. AllTabs().Select(t => t.Header.Title)];
+
     private void TrackNormalBounds()
     {
         void Note()
         {
+            if (AppWindow.Presenter is OverlappedPresenter { State: not OverlappedPresenterState.Minimized } presenter)
+            {
+                _maximized = presenter.State == OverlappedPresenterState.Maximized; // minimized: as it was before
+            }
+
             if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized or OverlappedPresenterState.Maximized })
             {
                 return; // keep the bounds from before

@@ -631,6 +631,47 @@ public partial class App : Application
     /// <summary>Workspaces closed lately, for reopening (saved with the session).</summary>
     internal ClosedWorkspaces ClosedWorkspaces { get; private set; } = new();
 
+    /// <summary>Windows closed lately, for reopening (saved with the session).</summary>
+    internal ClosedWindows ClosedWindows { get; private set; } = new();
+
+    /// <summary>
+    /// A window is closing (before its terminals end): it can be reopened. Not when quitting
+    /// (the session keeps every window) or when its last workspace left (nothing to bring back).
+    /// </summary>
+    internal void NoteClosedWindow(MainWindow window)
+    {
+        if (_quitting || window.CaptureState() is not { } state)
+        {
+            return;
+        }
+
+        var last = _windows.Count == 1 && ReferenceEquals(_windows[0], window) && _sessionPath != null && _config.Global.RestoreSession;
+        var closed = new ClosedWindow(ClosedWindow.NameFor(window.WorkspaceTitles), state, DateTimeOffset.UtcNow) { WasLast = last };
+        ClosedWindows.Note(closed);
+        Log.Write($"closed window: {closed.Name} ({closed.Summary}){(last ? ", the last one" : "")}");
+    }
+
+    /// <summary>Opens the window closed last again, where it was, with its workspaces.</summary>
+    internal void ReopenWindow()
+    {
+        if (ClosedWindows.All.FirstOrDefault() is not { } closed || !ClosedWindows.Take(closed))
+        {
+            return;
+        }
+
+        var window = new MainWindow(_config, _keybindings, closed.State);
+        if (window.HasWorkspaces)
+        {
+            Track(window);
+            Log.Write($"reopen window: {closed.Name} ({closed.Summary})");
+        }
+        else
+        {
+            window.Close();
+            Log.Write($"reopen window: nothing of {closed.Name} could start");
+        }
+    }
+
     /// <summary>Recent commands come back even when the windows don't (a launch with a command).</summary>
     private void LoadRecentCommands()
     {
@@ -643,6 +684,7 @@ public partial class App : Application
         _settingsBounds = saved?.Settings;
         RecentFolders = new RecentFolders(saved?.RecentFolders);
         ClosedWorkspaces = new ClosedWorkspaces(saved?.ClosedWorkspaces);
+        ClosedWindows = new ClosedWindows(saved?.ClosedWindows);
         _settingsPreviewHidden = saved?.SettingsPreviewHidden ?? false;
     }
 
@@ -707,6 +749,15 @@ public partial class App : Application
         }
 
         Log.Write($"session: reopened {opened} of {session.Windows.Count} window(s)");
+        if (opened > 0)
+        {
+            // The last window closed came back with the session: it can't be reopened again.
+            foreach (var back in ClosedWindows.All.Where(c => c.WasLast).ToList())
+            {
+                ClosedWindows.Take(back);
+            }
+        }
+
         return opened > 0;
     }
 
@@ -743,7 +794,7 @@ public partial class App : Application
         {
             SessionStore.Save(_sessionPath, SessionStore.Serialize(
                 new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds, _settingsPreviewHidden,
-                    [.. RecentFolders.All], [.. ClosedWorkspaces.All])));
+                    [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All])));
             Log.Write("session: windows forgotten; the next start opens a new one");
         }
         catch (Exception ex)
@@ -768,7 +819,7 @@ public partial class App : Application
             }
 
             var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds,
-                _settingsPreviewHidden, [.. RecentFolders.All], [.. ClosedWorkspaces.All]));
+                _settingsPreviewHidden, [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All]));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);
@@ -799,6 +850,7 @@ public partial class App : Application
             return
             [
                 new TrayIcon.MenuItem("New window", OpenNewWindow),
+                new TrayIcon.MenuItem("Reopen closed window", ReopenWindow, ClosedWindows.All.Count > 0),
                 new TrayIcon.MenuItem(quickLabel, ToggleQuickTerminalFromTray),
                 new TrayIcon.MenuItem("Settings", () => ShowSettings()),
                 null,

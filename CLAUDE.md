@@ -157,7 +157,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   the WinRT FolderPicker can't), result through `WorkspaceFolder.FromWindows` (tested). Steps 3-4
   (reopen: `CloseTabNow` → `RememberClosed` (a WorkspaceState, before the panes close) → Core
   `ClosedWorkspaces` on App (session.json `closedWorkspaces`, 10, tested) → the page's Reopen chips /
-  `reopen-workspace` → `ReopenWorkspace` via `SessionLayout.Restore` + `OpenSaved`). Later ideas are
+  `reopen-workspace` → `ReopenWorkspace` via `SessionLayout.Restore` + `OpenSaved`). Closed windows: the
+  window's `Closed` handler (first thing, not the quick terminal) → `App.NoteClosedWindow` (`CaptureState`,
+  skipped while quitting or for an emptied window; `_maximized` is tracked because AppWindow is gone by
+  then) → Core `ClosedWindows` (5, session.json `closedWindows`, tested). The last window is marked
+  `WasLast` (the session keeps it anyway); `RestoreSession` drops those entries. `reopen-window`, palette,
+  tray menu → `App.ReopenWindow`. Test: `.scratch/tools/close-window.ps1` (posts WM_CLOSE to our others). Later ideas are
   in .scratch/NOTES.md.
 - IME (`input-method`, **off by default** until the user confirms it): `TerminalControl.InputMethod.cs`. A
   focused pane's keyboard focus sits in a hidden TextBox at the cursor (`OnGotFocus` redirects;

@@ -166,6 +166,12 @@ public sealed partial class MainWindow : Window
             // Nothing may reach for this window once it's gone (its AppWindow is null by now): the
             // timers stop, and the terminals are unwired before they close, so events already
             // queued (titles, commands, progress) find no handler here.
+            if (!_quick)
+            {
+                // First: its shells' folders are read from them.
+                Ui.Guard("remembering a closed window", () => App.Instance.NoteClosedWindow(this));
+            }
+
             _windowClosed = true;
             _chromeTimer?.Stop();
             _commandClock?.Stop();
@@ -1359,6 +1365,9 @@ public sealed partial class MainWindow : Window
                     ReopenWorkspace(last);
                 }
 
+                return true;
+            case TerminalAction.ReopenWindow:
+                App.Instance.ReopenWindow();
                 return true;
             case TerminalAction.NewWindow:
                 App.Instance.OpenNewWindow();

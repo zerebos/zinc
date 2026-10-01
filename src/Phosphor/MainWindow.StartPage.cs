@@ -88,6 +88,9 @@ public sealed partial class MainWindow
                 }
 
                 return true;
+            case TerminalAction.ReopenWindow:
+                App.Instance.ReopenWindow();
+                return true;
             case TerminalAction.NextAttention:
                 GoToNextAttention();
                 return true;

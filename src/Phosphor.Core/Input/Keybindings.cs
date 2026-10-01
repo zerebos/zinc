@@ -35,6 +35,7 @@ public enum TerminalAction
     SwitchToTab,
     NewWindow,
     ReopenWorkspace,
+    ReopenWindow,
 
     /// <summary>New pane with the default profile on side <see cref="ActionInvocation.Direction"/>.</summary>
     SplitPane,

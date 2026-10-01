@@ -352,6 +352,11 @@ public sealed partial class MainWindow
         {
             Action(TerminalAction.ReopenWorkspace);
         }
+
+        if (App.Instance.ClosedWindows.All.Count > 0)
+        {
+            Action(TerminalAction.ReopenWindow);
+        }
         Action(TerminalAction.DuplicateTab);
         Action(TerminalAction.ClosePane);
         Custom("Close workspace", () => CloseTab(tab));

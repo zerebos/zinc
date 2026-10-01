@@ -44,4 +44,40 @@ public class ClosedWorkspacesTests
         Assert.Equal("notes", read!.ClosedWorkspaces![0].Name);
         Assert.Equal("2 tabs", read.ClosedWorkspaces[0].Summary);
     }
+
+    private static ClosedWindow Window(params string[] titles) =>
+        new(ClosedWindow.NameFor(titles), new WindowState(10, 20, 800, 600, false, 0,
+            [.. titles.Select(t => new WorkspaceState(t, null, Pane(1)))]), DateTimeOffset.UtcNow);
+
+    [Theory]
+    [InlineData(new string[0], "Window")]
+    [InlineData(new[] { "notes" }, "notes")]
+    [InlineData(new[] { "notes", "api" }, "notes and api")]
+    [InlineData(new[] { "notes", "api", "logs" }, "notes, api and logs")]
+    [InlineData(new[] { "notes", "api", "logs", "db", "web" }, "notes, api and 3 more")]
+    public void AClosedWindowIsNamedForItsWorkspaces(string[] titles, string name) => Assert.Equal(name, ClosedWindow.NameFor(titles));
+
+    [Fact]
+    public void ClosedWindowsKeepFiveNewestFirst()
+    {
+        var closed = new ClosedWindows();
+        for (var i = 0; i < 7; i++)
+        {
+            closed.Note(Window($"w{i}"));
+        }
+
+        Assert.Equal(ClosedWindows.Capacity, closed.All.Count);
+        Assert.Equal(("w6", "1 workspace"), (closed.All[0].Name, closed.All[0].Summary));
+        Assert.True(closed.Take(closed.All[0]));
+        Assert.Equal("w5", closed.All[0].Name);
+    }
+
+    [Fact]
+    public void ClosedWindowsRoundTripThroughTheSessionFile()
+    {
+        var window = Window("notes", "api") with { WasLast = true };
+        var read = SessionStore.Deserialize(SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, [], ClosedWindows: [window])));
+        var back = read!.ClosedWindows![0];
+        Assert.Equal(("notes and api", "2 workspaces", true, 800), (back.Name, back.Summary, back.WasLast, back.State.Width));
+    }
 }

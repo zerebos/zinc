@@ -352,6 +352,10 @@ The state is saved as you go (`%APPDATA%\Phosphor\session.json`), so a crash kee
 closing the last window keeps that window for next time. `save-state = "never"` in `[window]` turns this
 off (`"always"`, the default, keeps it on).
 
+A window you close can come back too: *Reopen closed window* (in the command palette and the
+tray menu, `reopen-window` in `[keys]`) reopens the one closed last, where it was, with its
+workspaces, splits and tabs. The last five are kept, with the session.
+
 A tab reopens in the folder its shell last *reported* (OSC 7, or OSC 9;9 / OSC 1337).
 PowerShell, bash and zsh report it through Phosphor's [shell integration](#shell-integration),
 with nothing to set up; other shells need to send it themselves, e.g. from their prompt:
@@ -522,6 +526,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `new-workspace` | A new workspace with the default profile. |
 | `new-window` | A new window with the default profile. |
 | `reopen-workspace` | Bring back the workspace closed last: its tabs, splits and folders. |
+| `reopen-window` | Bring back the window closed last, where it was: its workspaces, tabs, splits and folders. |
 | `duplicate-tab` | The focused tab's command again, next to it. |
 | `close-tab` | Close the focused tab (its pane goes with its last tab). |
 | `next-tab`, `previous-tab` | The pane's next or previous tab; with one tab there, the next or previous workspace. |

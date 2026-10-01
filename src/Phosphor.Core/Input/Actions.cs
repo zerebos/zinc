@@ -61,6 +61,8 @@ public static class Actions
         new("new-window", TerminalAction.NewWindow, Arg.None, "New window", "Open a window with the default profile."),
         new("reopen-workspace", TerminalAction.ReopenWorkspace, Arg.None, "Reopen closed workspace",
             "Bring back the workspace closed last: its tabs, splits and folders."),
+        new("reopen-window", TerminalAction.ReopenWindow, Arg.None, "Reopen closed window",
+            "Bring back the window closed last, where it was: its workspaces, tabs, splits and folders."),
         new("duplicate-tab", TerminalAction.DuplicateTab, Arg.None, "Duplicate tab", "Open the focused tab's command again, next to it."),
         new("close-tab", TerminalAction.ClosePane, Arg.None, "Close tab", "Close the focused tab (its pane goes with its last tab)."),
         new("next-tab", TerminalAction.NextTab, Arg.None, "Next tab", "The pane's next tab, or the next workspace."),
@@ -175,7 +177,7 @@ public static class Actions
         ["new-tab"] = "Tabs", ["duplicate-tab"] = "Tabs", ["close-tab"] = "Tabs", ["next-tab"] = "Tabs", ["previous-tab"] = "Tabs",
         ["tab-switcher"] = "Tabs", ["next-attention"] = "Tabs", ["profile-menu"] = "Tabs",
         ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
-        ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows", ["reopen-workspace"] = "Workspaces and windows",
+        ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows", ["reopen-workspace"] = "Workspaces and windows", ["reopen-window"] = "Workspaces and windows",
         ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
         ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor", ["quit-fresh"] = "Phosphor",
     };
