@@ -365,7 +365,7 @@ public sealed partial class MainWindow
         }
 
         Action(TerminalAction.NewWindow);
-        Action(TerminalAction.ClosePane);
+        commands.Add(new PaletteCommand("Close page", Keys(TerminalAction.ClosePane), () => HandlePageAction(TerminalAction.ClosePane, page)));
         if (Tabs.TabItems.Count > 1)
         {
             Action(TerminalAction.NextTab);

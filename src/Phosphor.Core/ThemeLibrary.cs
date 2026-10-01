@@ -53,7 +53,8 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
     /// <summary>
     /// A light scheme to pair with <paramref name="dark"/>: its obvious counterpart where the
     /// collection has one ("Catppuccin Mocha" → "Catppuccin Latte", "Solarized Dark" → "Solarized
-    /// Light", "Tokyo Night" → "Tokyo Night Day", "Rose Pine" → "Rose Pine Dawn"), else Catppuccin Latte.
+    /// Light", "Tokyo Night" → "Tokyo Night Day", "Rose Pine" → "Rose Pine Dawn", "Lit Cell" → "Lit Cell
+    /// Light"); for Phosphor's own colors (null), Lit Cell Light; else Catppuccin Latte.
     /// </summary>
     public static string? LightCounterpart(string? dark, IReadOnlyList<string> names)
     {
@@ -79,7 +80,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             }
         }
 
-        return Named("Catppuccin Latte") ?? names.FirstOrDefault();
+        return (dark == null ? Named("Lit Cell Light") : null) ?? Named("Catppuccin Latte") ?? names.FirstOrDefault();
     }
 
     /// <summary>The scheme in force for <paramref name="value"/> (a name, or a light/dark pair) in <paramref name="scheme"/> mode.</summary>

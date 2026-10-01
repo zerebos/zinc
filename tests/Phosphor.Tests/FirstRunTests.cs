@@ -88,11 +88,29 @@ public class FirstRunTests
     [InlineData("Tokyo Night", "Tokyo Night Day")]
     [InlineData("Rose Pine", "Rose Pine Dawn")]
     [InlineData("Dracula", "Catppuccin Latte")] // no counterpart: a well-known light scheme
-    [InlineData(null, "Catppuccin Latte")]
+    [InlineData("Lit Cell", "Lit Cell Light")]
+    [InlineData(null, "Lit Cell Light")] // Phosphor's own colors
     public void LightSchemesPairWithTheirDarkOnes(string? dark, string light)
     {
-        string[] names = ["Catppuccin Latte", "Catppuccin Mocha", "Dracula", "Rose Pine", "Rose Pine Dawn", "Solarized Dark",
-            "Solarized Light", "Tokyo Night", "Tokyo Night Day"];
+        string[] names = ["Catppuccin Latte", "Catppuccin Mocha", "Dracula", "Lit Cell", "Lit Cell Light", "Rose Pine", "Rose Pine Dawn",
+            "Solarized Dark", "Solarized Light", "Tokyo Night", "Tokyo Night Day"];
         Assert.Equal(light, ThemeLibrary.LightCounterpart(dark, names));
+    }
+
+    [Fact]
+    public void BundledLitCellIsPhosphorsOwnColors()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (!File.Exists(Path.Combine(dir!.FullName, "Phosphor.slnx")))
+        {
+            dir = dir.Parent;
+        }
+
+        var file = ThemeLibrary.ApplyFile(new Config { Theme = Phosphor.Terminal.TerminalTheme.SchemeBase },
+            Path.Combine(dir.FullName, "assets", "phosphor-themes", "Lit Cell")).Theme;
+        var own = Phosphor.Terminal.TerminalTheme.Default;
+        Assert.Equal((own.Background, own.Foreground, own.Cursor, own.CursorText, own.SelectionBackground, own.SelectionForeground),
+            (file.Background, file.Foreground, file.Cursor, file.CursorText, file.SelectionBackground, file.SelectionForeground));
+        Assert.Equal(own.Palette.OrderBy(p => p.Key), file.Palette.OrderBy(p => p.Key));
     }
 }
