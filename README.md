@@ -407,6 +407,12 @@ hand-written one, and a folder report you send yourself. Phosphor then adds only
 else. If your startup files hand over to something else (tmux, or `exec` another shell), the
 marks don't follow; the scripts in `ShellIntegration\` show what to send from there.
 
+**A shell started from another** (`fish` from zsh, `wsl` from PowerShell) is followed too: the
+command that started it runs until you leave it, and the commands you run inside are its own. Two
+shells are told apart by how their prompts mark themselves (Phosphor's scripts add their process
+id); two that mark alike, like zsh inside zsh with powerlevel10k, look like one shell, and the
+command that started the inner one ends at its first prompt.
+
 **cmd** can mark prompts (for jumping), but not commands or exit codes:
 `setx PROMPT "$e]133;D$e\$e]133;A$e\$P$G$e]133;B$e\"`.
 

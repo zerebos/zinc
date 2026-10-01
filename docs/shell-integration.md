@@ -47,7 +47,7 @@ Gaps:
 
 | | Phosphor | Ghostty |
 |---|---|---|
-| Prompt start | `133;A` | `133;A;cl=line` (zsh), `133;A;redraw=last;cl=line;aid=<pid>` (bash); fish/elvish add `click_events=1`/`aid` |
+| Prompt start | `133;A;aid=<pid>` | `133;A;cl=line` (zsh), `133;A;redraw=last;cl=line;aid=<pid>` (bash); fish/elvish add `click_events=1`/`aid` |
 | Continuation prompts (PS2) | not marked | `133;P;k=s` (and bash marks each line of a multi-line PS1 with `P;k=s`) |
 | Input start | `133;B` | `133;B` (bash, zsh); not in fish/elvish |
 | Command start | `133;C;cmdline_url=<percent-encoded>` (zsh, pwsh); plain `133;C` (bash: sent from PS0, which can't see the line) | `133;C`, no command text |
@@ -78,9 +78,11 @@ Ideas from Ghostty's side:
 - **`redraw=last`** (bash): tells the terminal the shell redraws the prompt's last line on
   resize, so the terminal can clear it rather than reflow it. Ghostty's docs credit
   integration with "resizing the window with a complex prompt usually paints much better".
-- **`aid=<pid>`**: separates nested shells' marks (a shell inside a shell). Our `Osc133Scanner`
-  doesn't track it. Today a nested shell's marks simply interleave (the outer `fish` command
-  above stays open, "exit ?").
+- **`aid=<pid>`**: separates nested shells' marks. **Done differently (2026-10-01)**: Phosphor tracks
+  shells by their prompt mark's options as a whole, since the shells that nest most (fish,
+  nushell, powerlevel10k) send no aid but differ anyway. Our scripts send `aid=<pid>` on A so
+  they always differ. Ghostty doesn't track nesting ("We don't currently do explicit command
+  tracking").
 - **Secondary prompts (`P;k=s`)**: lets "select output" and jump-to-prompt treat a multi-line
   command as input, not output.
 - **Writing marks to a dedicated TTY descriptor** (zsh: `sysopen -o cloexec /dev/tty`), so they

@@ -22,7 +22,7 @@ public class ShellIntegrationTests
     public void FindsMarksWithEitherTerminator()
     {
         var marks = ScanAll(new Osc133Scanner(), "\e]133;A\a$ \e]133;B\e\\ls\r\n\e]133;C\aout\r\n\e]133;D;2\a");
-        Assert.Equal([new('A'), new('B'), new('C'), new('D', 2)], marks);
+        Assert.Equal([new('A') { Options = "" }, new('B'), new('C'), new('D', 2)], marks);
     }
 
     [Fact]

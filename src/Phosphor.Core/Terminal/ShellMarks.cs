@@ -11,6 +11,12 @@ namespace Phosphor.Terminal;
 /// </summary>
 public readonly record struct ShellMark(char Kind, int? ExitCode = null, string? CommandLine = null, PromptClickMode? Click = null)
 {
+    /// <summary>
+    /// A prompt mark's options as sent ("click_events=1", "aid=123", "" for none; null on other
+    /// marks). Each shell sends its own, so they tell nested shells apart.
+    /// </summary>
+    public string? Options { get; init; }
+
     /// <summary>Reads the text after <c>ESC ] 133;</c> (up to the terminator); null if it isn't a mark.</summary>
     public static ShellMark? Parse(string payload)
     {
@@ -56,8 +62,13 @@ public readonly record struct ShellMark(char Kind, int? ExitCode = null, string?
             }
         }
 
-        var click = kind is 'A' or 'N' ? PromptClick.Announced(payload.Split(';').Skip(1)) : null;
-        return new ShellMark(kind, exit, commandLine, click);
+        if (kind is 'A' or 'N')
+        {
+            var options = payload.Length > 2 ? payload[2..] : "";
+            return new ShellMark(kind, Click: PromptClick.Announced(options.Split(';'))) { Options = options };
+        }
+
+        return new ShellMark(kind, exit, commandLine);
     }
 }
 

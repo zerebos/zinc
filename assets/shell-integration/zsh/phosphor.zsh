@@ -58,7 +58,7 @@ typeset -g __phosphor_si_b=$'%{\e]133;B\a%}'
 __phosphor_si_precmd() {
     [[ -z "${__phosphor_si_prompted-}" ]] || 'builtin' 'print' -nr -- $'\e]133;D;'"${__phosphor_si_last-0}"$'\a'
     __phosphor_si_prompted=1
-    'builtin' 'print' -nr -- $'\e]133;A\a'
+    'builtin' 'print' -nr -- $'\e]133;A;aid='"$$"$'\a'
     [[ "$PS1" == *"$__phosphor_si_b" ]] || PS1+=$__phosphor_si_b
 }
 

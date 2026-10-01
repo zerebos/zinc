@@ -16,14 +16,17 @@ public sealed unsafe partial class TerminalSession
 
     private PromptState _promptState;
 
-    /// <summary>What the shell's last prompt mark asked for (kept until another one says otherwise, as in Ghostty).</summary>
+    /// <summary>
+    /// What the shell's last prompt mark asked for. Ghostty keeps it until another prompt says
+    /// otherwise; here each prompt decides, so leaving fish for zsh doesn't send zsh click events.
+    /// </summary>
     private PromptClickMode? _announcedClick;
 
     private void NotePromptState(ShellMark mark)
     {
-        if (mark.Click is { } click)
+        if (mark.Kind is 'A' or 'N')
         {
-            _announcedClick = click;
+            _announcedClick = mark.Click;
         }
 
         _promptState = mark.Kind switch

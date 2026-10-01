@@ -91,17 +91,31 @@ public sealed partial class TerminalControl
     /// <summary>The command running in this pane, if the shell says one is.</summary>
     public ShellCommand? RunningCommand => _session?.Commands() is { Count: > 0 } commands && commands[^1].Running ? commands[^1] : null;
 
-    private DateTime? _loggedCommand;
+    /// <summary>When each command announced as finished started (how they're told apart).</summary>
+    private readonly HashSet<DateTime> _announcedCommands = [];
 
     private void OnCommandsChanged()
     {
-        // PHOSPHOR_LOG: each finished command once (what shell integration saw).
-        if (_session?.Commands() is { Count: > 0 } commands &&
-            commands.LastOrDefault(c => c.Ran && !c.Running) is { Started: { } started } done && started != _loggedCommand)
+        // Each finished command once, when the next prompt has started: only then is a D known to be
+        // the command's own (the shell around a nested one reports how that one ended with a D its
+        // "exit" would otherwise get), and a nested shell's command ends with the outer shell's prompt.
+        if (_session?.Commands() is { Count: > 1 } commands)
         {
-            _loggedCommand = started;
-            Log.Write($"command: '{done.Text}' exit {done.ExitCode?.ToString() ?? "?"} in {done.Duration?.TotalSeconds:0.0}s, rows {done.PromptRow}-{done.LastRow}");
-            CommandFinished?.Invoke(done);
+            for (var i = 0; i < commands.Count - 1; i++)
+            {
+                if (commands[i] is { Ran: true, Running: false, Started: { } started } done && _announcedCommands.Add(started))
+                {
+                    // PHOSPHOR_LOG: what shell integration saw.
+                    Log.Write($"command: '{done.Text}' exit {done.ExitCode?.ToString() ?? "?"} in {done.Duration?.TotalSeconds:0.0}s, rows {done.PromptRow}-{done.LastRow}");
+                    CommandFinished?.Invoke(done);
+                }
+            }
+
+            if (_announcedCommands.Count > 4 * commands.Count + 100)
+            {
+                // Forget commands that scrolled away.
+                _announcedCommands.IntersectWith(commands.Select(c => c.Started).OfType<DateTime>());
+            }
         }
 
         CommandsChanged?.Invoke();

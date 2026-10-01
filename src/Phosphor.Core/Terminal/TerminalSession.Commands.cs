@@ -103,9 +103,27 @@ public sealed unsafe partial class TerminalSession
         NotePromptState(mark);
 
         var last = _commands.Count > 0 && !_commands[^1].Closed ? _commands[^1] : null;
+        var lastD = _lastD;
+        _lastD = null;
         switch (mark.Kind)
         {
             case 'A':
+                var signature = mark.Options ?? "";
+                _outerSignature ??= signature;
+                if (signature != Signature(_nested.Count) && OuterLevel(signature) is { } outer)
+                {
+                    // Back at a shell further out: the nested one has ended.
+                    LeaveNested(outer, lastD);
+                    last = _commands.Count > 0 && !_commands[^1].Closed ? _commands[^1] : null;
+                }
+                else if (last is { Started: not null } && signature != Signature(_nested.Count) && _nested.Count < MaxNesting)
+                {
+                    // Another shell's prompt while a command runs: the command started that shell
+                    // (fish from zsh). It runs until that shell ends; the new shell's commands are its own.
+                    _nested.Add((signature, last));
+                    last = null;
+                }
+
                 if (last != null)
                 {
                     // No D: it ended anyway (the shell doesn't send one, or it was interrupted).
@@ -133,13 +151,86 @@ public sealed unsafe partial class TerminalSession
                 last.Exit = mark.ExitCode;
                 last.Ended = last.Started != null ? Clock() : null;
                 last.Closed = true;
+                _lastD = (last, mark.ExitCode);
                 break;
+            case 'D' when _nested.Count > 0:
+                _lastD = (null, mark.ExitCode); // the shell around a nested one, after it ended
+                return;
             default:
                 return;
         }
 
         _commandsChanged = true;
         _commandSnapshot = null;
+    }
+
+    /// <summary>Shells this deep inside each other are taken as one (a shell that never sends D would otherwise nest forever).</summary>
+    private const int MaxNesting = 8;
+
+    /// <summary>
+    /// Shells started from a command of the shell around them (fish from zsh), innermost last: each
+    /// one's prompt-mark options, which tell it from the others, and the command it runs in. Two shells
+    /// whose prompts look alike (zsh in zsh) can't be told apart; Phosphor's own scripts send their
+    /// process id (aid) so theirs always differ.
+    /// </summary>
+    private readonly List<(string Signature, CommandRefs Host)> _nested = [];
+
+    /// <summary>The outermost shell's prompt-mark options (from its first prompt).</summary>
+    private string? _outerSignature;
+
+    /// <summary>The D mark just before this one, and the command it closed: an ending nested shell's, if an outer prompt follows.</summary>
+    private (CommandRefs? Closed, int? Exit)? _lastD;
+
+    /// <summary>The prompt-mark options of the shell <paramref name="level"/> deep (0: the outermost).</summary>
+    private string? Signature(int level) => level == 0 ? _outerSignature : _nested[level - 1].Signature;
+
+    /// <summary>The innermost shell further out than the current one whose prompts look like <paramref name="signature"/>.</summary>
+    private int? OuterLevel(string signature)
+    {
+        for (var level = _nested.Count - 1; level >= 0; level--)
+        {
+            if (Signature(level) == signature)
+            {
+                return level;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Back at shell <paramref name="level"/>: every shell inside it has ended, and so have the
+    /// commands they ran in. A D just before is that shell's report on its command's exit: if it
+    /// closed a command of the nested shell (its "exit"), that was the wrong one.
+    /// </summary>
+    private void LeaveNested(int level, (CommandRefs? Closed, int? Exit)? lastD)
+    {
+        if (_commands.Count > 0 && !_commands[^1].Closed)
+        {
+            var open = _commands[^1];
+            open.Closed = true;
+            open.Ended ??= open.Started != null ? Clock() : null;
+        }
+
+        for (var i = _nested.Count - 1; i >= level; i--)
+        {
+            var host = _nested[i].Host;
+            host.Closed = true;
+            host.Ended = Clock();
+            // The D comes from the shell we're back at, about its own command: the outermost one ending.
+            if (i == level && lastD is var (closed, exit))
+            {
+                host.Exit = exit;
+                if (closed is { Started: not null })
+                {
+                    closed.Exit = null;
+                }
+            }
+
+            // No End: the command's rows stop where the nested shell's first prompt starts.
+        }
+
+        _nested.RemoveRange(level, _nested.Count - level);
     }
 
     private nint? TrackCursor(bool atLineStart)
@@ -366,5 +457,7 @@ public sealed unsafe partial class TerminalSession
         }
 
         _commands.Clear();
+        _nested.Clear();
+        _lastD = null;
     }
 }

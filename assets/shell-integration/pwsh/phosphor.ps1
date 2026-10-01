@@ -26,7 +26,7 @@ function Global:prompt {
     $marks = ''
     if (-not $Global:__PhosphorFirstPrompt) { $marks += "$e]133;D;$code$bel" }
     $Global:__PhosphorFirstPrompt = $false
-    $marks += "$e]133;A$bel"
+    $marks += "$e]133;A;aid=$PID$bel"
     $location = $executionContext.SessionState.Path.CurrentLocation
     if ($location.Provider.Name -eq 'FileSystem') {
         $marks += "$e]9;9;`"$($location.ProviderPath)`"$e\"

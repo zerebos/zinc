@@ -81,7 +81,7 @@ __phosphor_si_prompt() {
     if [[ -n "$__phosphor_si_marks" ]]; then
         [[ -z "${__phosphor_si_prompted-}" ]] || builtin printf '\e]133;D;%s\a' "${__phosphor_si_last-0}"
         __phosphor_si_prompted=1
-        builtin printf '\e]133;A\a'
+        builtin printf '\e]133;A;aid=%s\a' "$$"
         [[ "${PS0-}" == *"$__phosphor_si_c"* ]] || PS0+=$__phosphor_si_c
         suffix+=$__phosphor_si_b
     fi

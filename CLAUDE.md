@@ -221,6 +221,15 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   after an empty Enter too. Text comes from C's cmdline_url, else input cells read back (wide gaps
   = prompt decoration: p10k draws its frame corner after B). App: `TerminalControl.Commands.cs`
   (actions, scrollbar ticks, failure bars; logs `command: ...` with PHOSPHOR_LOG), command center.
+  Nested shells (`_nested` in TerminalSession.Commands.cs): a level per shell, told apart by its A
+  mark's options (`ShellMark.Options`: p10k "", fish "click_events=1", nu "k=i;click_events=1", our
+  scripts "aid=<pid>"). An A with new options while a command runs = a shell started by it (the
+  command stays open as the level's host); an A matching an outer level = back there (`LeaveNested`:
+  hosts close; a D just before is the host's exit, taken off the inner command it closed; hosts get
+  no End, so their rows stop at the nested shell's first prompt). Lookalikes (zsh in zsh) stay one
+  level. `TerminalControl.OnCommandsChanged` announces each finished command once (by Started) only
+  once a later prompt exists, since a D's owner is known at the next A. `.scratch/tools/nest-trace.ps1
+  -Shell ... -Lines ...` prints the raw marks and the `command:` log.
   `MainWindow.Attention.cs`: `TerminalControl.CommandFinished` → `TerminalTab.Attention` (dot on
   `TabHeader`/`GroupView` via `AttentionDot`, after the title or on the icon's corner on the rail;
   pulses on appearing and on window activation; "looking" = the focused terminal of the shown
