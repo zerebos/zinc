@@ -39,6 +39,7 @@ internal sealed partial class SettingsWindow
     /// <summary>The settings the preview shows on this page, or null for no preview.</summary>
     private Config? PreviewConfig() =>
         _search.Text.Trim().Length > 0 ? null
+        : _editingScheme is { } scheme ? _config.Themes.Apply(_config.Global, scheme) ?? _config.Global
         : _section == "appearance" ? _config.Global
         : _section == "profiles" && _editing is { } id ? _config.FindProfile(id)?.Config ?? _config.Global
         : null;

@@ -111,6 +111,58 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         }
     }
 
+    /// <summary>Scheme <paramref name="name"/>'s file in one folder, or null.</summary>
+    private static string? In(string folder, string name)
+    {
+        if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return null;
+        }
+
+        // The file's own spelling (the file system would find "dracula" as "Dracula" too, spelled as asked).
+        return File.Exists(Path.Combine(folder, name))
+            ? Files(folder).FirstOrDefault(f => Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase))
+            : null;
+    }
+
+    /// <summary>Whether scheme <paramref name="name"/> is the user's (a file in their themes folder, maybe a copy of a bundled one).</summary>
+    public bool IsUsers(string name) => In(userFolder, name) != null;
+
+    /// <summary>Whether the user's scheme <paramref name="name"/> stands in for a bundled one of that name.</summary>
+    public bool ReplacesBundled(string name) => IsUsers(name) && In(bundledFolder, name) != null;
+
+    /// <summary>
+    /// The file to edit for scheme <paramref name="name"/>: the user's, or else a copy of the bundled
+    /// one made in their themes folder (which then stands in for it everywhere it's used); null if
+    /// there's no such scheme.
+    /// </summary>
+    public string? Customize(string name)
+    {
+        if (In(userFolder, name) is { } own)
+        {
+            return own;
+        }
+
+        if (In(bundledFolder, name) is not { } bundled)
+        {
+            return null;
+        }
+
+        Directory.CreateDirectory(userFolder);
+        var copy = Path.Combine(userFolder, Path.GetFileName(bundled));
+        File.Copy(bundled, copy);
+        return copy;
+    }
+
+    /// <summary>Removes the user's copy of a bundled scheme, so the bundled one is used again.</summary>
+    public void BackToOriginal(string name)
+    {
+        if (ReplacesBundled(name) && In(userFolder, name) is { } own)
+        {
+            File.Delete(own);
+        }
+    }
+
     /// <summary>The file for scheme <paramref name="name"/> (the user's first; names match case-insensitively), or null.</summary>
     public string? Find(string name)
     {

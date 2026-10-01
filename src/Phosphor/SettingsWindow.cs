@@ -157,6 +157,7 @@ internal sealed partial class SettingsWindow : Window
             {
                 _section = id;
                 _editing = null;
+                _editingScheme = null;
                 _search.Text = "";
                 Render();
                 _scroller.ChangeView(null, 0, null, disableAnimation: true);
@@ -232,6 +233,12 @@ internal sealed partial class SettingsWindow : Window
     {
         _page.Children.Clear();
         _refreshers.Clear();
+        foreach (var timer in _paletteTimers)
+        {
+            timer.Stop();
+        }
+
+        _paletteTimers.Clear();
         _cards.Clear();
         _foldOf.Clear();
         _jumps.Clear();
@@ -239,6 +246,7 @@ internal sealed partial class SettingsWindow : Window
         var heading = new TextBlock
         {
             Text = query.Length > 0 ? "Results"
+                : _editingScheme is { } scheme ? scheme
                 : _section == "profiles" && _editing is { } editing ? _config.FindProfile(editing)?.Name ?? editing
                 : SettingsCatalog.Sections.First(s => s.Id == _section).Title,
             FontSize = 28,
@@ -252,6 +260,10 @@ internal sealed partial class SettingsWindow : Window
         if (query.Length > 0)
         {
             SearchResults(query);
+        }
+        else if (_editingScheme is { } editingScheme)
+        {
+            SchemeEditor(editingScheme);
         }
         else if (_section == "about")
         {
@@ -1149,10 +1161,10 @@ internal sealed partial class SettingsWindow : Window
 
             if (follow.IsOn)
             {
-                // The scheme in use becomes the dark side (Phosphor's own: Catppuccin Mocha), and
-                // the light side starts from its counterpart.
+                // The scheme in use becomes the dark side (Phosphor's own: Lit Cell), and the light
+                // side starts from its counterpart.
                 local = true;
-                var dark = scheme.Selected ?? names.FirstOrDefault(n => n == "Catppuccin Mocha") ?? names.FirstOrDefault();
+                var dark = scheme.Selected ?? names.FirstOrDefault(n => n == "Lit Cell") ?? names.FirstOrDefault();
                 scheme.Show(dark);
                 light.Show(ThemeLibrary.LightCounterpart(dark, names));
                 local = false;
@@ -1179,7 +1191,39 @@ internal sealed partial class SettingsWindow : Window
             DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followSwitch);
         var main = CardLayout(label, reset, description, profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", null, scheme);
         _cards[(profile, setting.Key)] = (main, scheme);
-        return [followCard, main, lightCard];
+
+        // Customize: the scheme(s) in force, edited on a page of their own.
+        var customizeDark = new Button();
+        var customizeLight = new Button();
+        string? darkName = null, lightName = null;
+        customizeDark.Click += (_, _) => CustomizeScheme(darkName, path);
+        customizeLight.Click += (_, _) => CustomizeScheme(lightName, path);
+        var customizeText = DescriptionText();
+        void ShowCustomize()
+        {
+            var value = (Own() ?? Inherited()) as string;
+            if (value != null && ThemeLibrary.TryParsePair(value, out var l, out var d))
+            {
+                (darkName, lightName) = (d, l);
+            }
+            else
+            {
+                (darkName, lightName) = (value, null);
+            }
+
+            customizeDark.Content = $"Customize {darkName ?? "Lit Cell"}";
+            customizeLight.Content = $"Customize {lightName}";
+            customizeLight.Visibility = lightName != null ? Visibility.Visible : Visibility.Collapsed;
+            SetText(customizeText, darkName == null
+                ? "Change its colors, live. Phosphor's own colors are Lit Cell's: editing them makes a copy you can change."
+                : "Change its colors, live: every pane using it follows.");
+        }
+
+        _refreshers.Add(ShowCustomize);
+        ShowCustomize();
+        var customizeCard = CardLayout(new TextBlock { Text = "Edit colors" }, null, customizeText, null, null,
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { customizeDark, customizeLight } });
+        return [followCard, main, lightCard, customizeCard];
     }
 
     /// <summary>A setting's description, and what its chosen option means.</summary>
@@ -1598,7 +1642,7 @@ internal sealed partial class SettingsWindow : Window
     private (FrameworkElement, Action<object?>) ColorControl(SettingDef setting, Action<object?> commit, string? profile)
     {
         // What "none" means for this setting, and its color under the scheme in force.
-        var nullLabel = setting.Key == "window.unfocused-split-fill" ? "Use each pane's background" : "Use the scheme's color";
+        var nullLabel = setting.NullLabel ?? (setting.Key == "window.unfocused-split-fill" ? "Use each pane's background" : "Use the scheme's color");
         Color NullColor()
         {
             var theme = SchemeTheme(profile);

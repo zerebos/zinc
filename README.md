@@ -162,6 +162,11 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   your own go in `%APPDATA%\Phosphor\themes\`, one file per scheme in Ghostty's theme format
   (`background = #181818`, `palette = 1=#AC4242`, ...), named as `theme` refers to them. Yours
   win over bundled ones with the same name.
+  **Customize** (Settings > Appearance, "Edit colors") edits the scheme in force: its background, text,
+  cursor, selection and 16 palette colors, each with a color picker. A bundled scheme is copied into
+  your `themes\` folder first and the copy is used instead of it everywhere ("Back to the original"
+  deletes the copy); your own are edited in place. Every pane using the scheme changes as you edit,
+  and "Undo changes" puts the file back as it was when you opened it.
   Without a theme, Phosphor's own colors: "Lit Cell", phosphor green on near-black (it and its
   light partner come with Phosphor by name: `theme = "light:Lit Cell Light,dark:Lit Cell"` follows
   Windows' mode). A scheme

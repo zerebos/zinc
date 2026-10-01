@@ -57,6 +57,9 @@ public sealed record SettingDef(string Section, string Group, string Key, string
     /// <summary>For Text: shown while empty.</summary>
     public string? Placeholder { get; init; }
 
+    /// <summary>A color setting's "no color" choice, if not "Use the scheme's color".</summary>
+    public string? NullLabel { get; init; }
+
     /// <summary>For Text: "10" is written as the number 10, "30s" as a string.</summary>
     public bool NumbersAsNumbers { get; init; }
 

@@ -281,6 +281,13 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   SIGWINCH) only after 100 ms without another (`PtyResizeSettle`, a threadpool Timer): a drag's many
   sizes made p10k redraw its full-width frame each time and stale copies piled up (Windows Terminal does
   the same). Tests that check the child's size must wait for the settle.
+- Scheme editor (`SettingsWindow.SchemeEditor.cs`): "Customize X" buttons on the scheme cards → `CustomizeScheme`
+  (`ThemeLibrary.Customize`: the user's file, else a copy of the bundled one into themes\ that stands in for it;
+  `BackToOriginal` deletes it; tested) → `_editingScheme` sub-page (any section; heading = the name; preview =
+  that scheme via `PreviewConfig`). Writes go through Core `Settings/SchemeFile` (Get/Set one key, other lines
+  untouched, `palette.N`; tested); the config watcher reloads, and the page updates in place via `_refreshers`
+  (never re-render: an open picker would close). Base colors reuse `ColorControl` (`SettingDef.NullLabel`);
+  palette chips have their own picker flyout (150 ms settle). Phosphor's own → "Lit Cell" written to the config.
 - Color settings (settings, not scheme keys: `ApplyFile` ignores them; Settings > Appearance > Readability):
   `[colors] minimum-contrast` (Core `MinimumContrast`: WCAG ratio, below it black/white; tested), `bold`,
   `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`
