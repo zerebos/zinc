@@ -65,9 +65,16 @@ Why ours differ:
   `kitty-shell-cwd://` exists so the path can be sent raw.
 
 Ideas from Ghostty's side:
-- **`cl=line` / `click_events`**: click-to-move-cursor at the prompt. libghostty parses these; the
-  app would have to turn a click on the input line into arrow keys. fish and nushell already
-  announce `click_events=1`.
+- **`cl=line` / `click_events`**: click to move the cursor at the prompt. **Done (2026-10-01)**,
+  ported from Ghostty's app code (libghostty-vt has no API for it), with three differences:
+  - A prompt that marks its input (B) but announces nothing gets arrow keys anyway, since our
+    scripts and powerlevel10k's own integration announce nothing. Ghostty's scripts send
+    `cl=line`.
+  - Clicks past the text stop at its last character: blank input cells and decoration across a
+    wide gap don't count (zsh clears autosuggestions with input-marked spaces; p10k's corner is
+    input). Ghostty counts every input cell.
+  - Click events go out as press and release, aimed at the text when the click missed it.
+    Ghostty sends only the press, and nushell then ignored every later click.
 - **`redraw=last`** (bash): tells the terminal the shell redraws the prompt's last line on
   resize, so the terminal can clear it rather than reflow it. Ghostty's docs credit
   integration with "resizing the window with a complex prompt usually paints much better".

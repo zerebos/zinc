@@ -661,6 +661,7 @@ public sealed class ConfigFile
             ["window.software-rendering"] = ("software-rendering", v => Bool(v)),
             ["window.focus-follows-mouse"] = ("focus-follows-mouse", v => Bool(v)),
             ["terminal.copy-on-select"] = ("copy-on-select", v => Bool(v)),
+            ["terminal.click-to-move"] = ("cursor-click-to-move", v => Bool(v)),
             ["terminal.paste-warning"] = ("paste-warning", v => v as string),
             ["terminal.large-paste-warning"] = ("large-paste-warning", v => Bool(v)),
             ["terminal.word-boundaries"] = ("word-boundaries", v => v as string),

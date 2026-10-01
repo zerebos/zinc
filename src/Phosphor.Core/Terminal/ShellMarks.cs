@@ -6,9 +6,10 @@ namespace Phosphor.Terminal;
 /// <summary>
 /// One OSC 133 mark from the shell: <c>A</c> a prompt starts, <c>B</c> the prompt ends and the
 /// command line starts, <c>C</c> the command runs (its output follows), <c>D</c> it finished, with
-/// its exit code when the shell sends one.
+/// its exit code when the shell sends one. A prompt mark (<c>A</c>, or <c>N</c>) may say how a
+/// click in the command line moves the cursor (<see cref="Click"/>).
 /// </summary>
-public readonly record struct ShellMark(char Kind, int? ExitCode = null, string? CommandLine = null)
+public readonly record struct ShellMark(char Kind, int? ExitCode = null, string? CommandLine = null, PromptClickMode? Click = null)
 {
     /// <summary>Reads the text after <c>ESC ] 133;</c> (up to the terminator); null if it isn't a mark.</summary>
     public static ShellMark? Parse(string payload)
@@ -55,7 +56,8 @@ public readonly record struct ShellMark(char Kind, int? ExitCode = null, string?
             }
         }
 
-        return new ShellMark(kind, exit, commandLine);
+        var click = kind is 'A' or 'N' ? PromptClick.Announced(payload.Split(';').Skip(1)) : null;
+        return new ShellMark(kind, exit, commandLine, click);
     }
 }
 

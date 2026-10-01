@@ -249,6 +249,18 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   fish 4.x and nushell send their own marks (traced 2026-10-01; nu's C has no cmdline, the text is
   read back): nothing loaded; elvish sends nothing (not covered yet). `docs/shell-integration.md` =
   how all this differs from Ghostty's.
+- Click to move (`[terminal] click-to-move`, default on; Ghostty's `cursor-click-to-move`): Core
+  `Terminal/PromptClick.cs` (port of Ghostty's `Screen.promptClickLine`: arrow counts over input
+  cells, wide chars once, soft wraps; plus: the text ends at its last non-blank cell before an
+  8-column gap (zsh writes spaces as input when clearing an autosuggestion; p10k's "─╯" corner is
+  input) so a past-the-end click never sends an extra arrow that could accept a suggestion;
+  `EventColumn` aims click events at the text) and `TerminalSession.PromptClick.cs` (`ClickToMove`:
+  mode from the A mark's `cl=`/`click_events=` via `ShellMark.Click`, else arrows when the prompt
+  marked input (B), our fallback for p10k/our scripts; prompt state from marks; not on the alt screen
+  or above the prompt). Click events are press **and release**: nushell ignored every click after the
+  first with a press alone (Ghostty/kitty send only the press). App: plain left click (no modifiers,
+  no drag, no selection, pane already focused) in `TerminalControl.Mouse.cs`; `test:click:col:row`;
+  `.scratch/tools/click-test.ps1 -Shell ... -Clicks "c:r",...` types a marker after each click.
 - About's open-source list: Core `OpenSourceNotices` (name, version, use, license, URL, license file)
   + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
   `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every

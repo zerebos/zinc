@@ -190,6 +190,12 @@ public sealed record Config
     /// <summary>A selection is copied as soon as it's made (and stays selected). Config: <c>copy-on-select = true</c>.</summary>
     public bool CopyOnSelect { get; init; }
 
+    /// <summary>
+    /// Clicking in a shell's command line moves its cursor there (with shell integration's marks).
+    /// Config: <c>[terminal] click-to-move = false</c> (Ghostty's <c>cursor-click-to-move</c>).
+    /// </summary>
+    public bool ClickToMove { get; init; } = true;
+
     /// <summary>When a paste asks first. Config: <c>paste-warning = auto | multiline | never</c>.</summary>
     public Phosphor.Terminal.PasteWarning PasteWarning { get; init; }
 
@@ -381,6 +387,7 @@ public sealed record Config
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "copy-on-select" when bool.TryParse(value, out var copyOnSelect) => this with { CopyOnSelect = copyOnSelect },
+            "cursor-click-to-move" when bool.TryParse(value, out var clickToMove) => this with { ClickToMove = clickToMove },
             "paste-warning" when Enum.TryParse<Phosphor.Terminal.PasteWarning>(value, true, out var paste) && !int.TryParse(value, out _) =>
                 this with { PasteWarning = paste },
             "large-paste-warning" when bool.TryParse(value, out var large) => this with { LargePasteWarning = large },

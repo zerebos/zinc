@@ -35,6 +35,7 @@ public unsafe partial class AbiTests
         [typeof(RenderStateRowCellsData)] = "GhosttyRenderStateRowCellsData",
         [typeof(CellData)] = "GhosttyCellData",
         [typeof(RowData)] = "GhosttyRowData",
+        [typeof(RowSemanticPrompt)] = "GhosttyRowSemanticPrompt",
         [typeof(CellWide)] = "GhosttyCellWide",
         [typeof(CellSemanticContent)] = "GhosttyCellSemanticContent",
         [typeof(TerminalProgressState)] = "GhosttyTerminalProgressState",

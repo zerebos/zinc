@@ -208,6 +208,9 @@ public static class SettingsCatalog
         new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
             "Characters that end a word when you double-click (space and tab always do). Empty: Ghostty's set.", SettingKind.Text, null)
             { Placeholder = "'\"│`|:;,()[]{}<>$" },
+        new("terminal", "Mouse", "terminal.click-to-move", "Click to move the cursor",
+            "At a shell prompt, clicking in the command you're typing moves the cursor there. Needs shell integration.",
+            SettingKind.Toggle, true),
         new("terminal", "Mouse", "window.focus-follows-mouse", "Focus follows the pointer",
             "Moving the pointer into a pane focuses it.", SettingKind.Toggle, false),
         new("terminal", "Clipboard", "terminal.copy-on-select", "Copy on select",

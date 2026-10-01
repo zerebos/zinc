@@ -650,6 +650,15 @@ public enum RowData : int
 {
     Wrap = 1,
     WrapContinuation = 2,
+    SemanticPrompt = 6,
+}
+
+/// <summary>Whether a row holds a prompt (GhosttyRowSemanticPrompt): its first line, or a continuation line.</summary>
+public enum RowSemanticPrompt : int
+{
+    None = 0,
+    Prompt = 1,
+    PromptContinuation = 2,
 }
 
 public enum CellData : int

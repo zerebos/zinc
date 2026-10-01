@@ -100,6 +100,8 @@ public sealed unsafe partial class TerminalSession
             return; // full-screen apps' marks aren't commands
         }
 
+        NotePromptState(mark);
+
         var last = _commands.Count > 0 && !_commands[^1].Closed ? _commands[^1] : null;
         switch (mark.Kind)
         {

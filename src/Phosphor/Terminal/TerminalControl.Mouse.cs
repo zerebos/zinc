@@ -12,12 +12,17 @@ namespace Phosphor.Terminal;
 public sealed partial class TerminalControl
 {
     private bool _selecting;
+
+    /// <summary>Where a plain left press landed, for click-to-move on its release.</summary>
+    private (int Col, int Row)? _clickCell;
     private MouseButton? _reportedButton;
     private bool _arrowCursor;
     private InputSystemCursorShape _cursorShape;
 
     protected override void OnPointerPressed(PointerRoutedEventArgs e)
     {
+        // A click that brings the pane into focus only focuses it (no click-to-move).
+        var wasFocused = FocusIsWithin();
         Focus(FocusState.Pointer);
         var session = _session;
         if (session == null || IsFromScrollBar(e.OriginalSource) || IsFromSearch(e.OriginalSource))
@@ -60,6 +65,9 @@ public sealed partial class TerminalControl
         if (props.IsLeftButtonPressed)
         {
             _selecting = true;
+            _clickCell = wasFocused && (e.KeyModifiers & (VirtualKeyModifiers.Shift | VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu)) == 0
+                ? CellAt(point.Position)
+                : null;
             Select(GesturePhase.Press, point.Position);
         }
     }
@@ -103,13 +111,23 @@ public sealed partial class TerminalControl
         if (_selecting)
         {
             _selecting = false;
-            Select(GesturePhase.Release, e.GetCurrentPoint(_canvas).Position);
+            var position = e.GetCurrentPoint(_canvas).Position;
+            Select(GesturePhase.Release, position);
 
             // Copy on select: the text goes to the clipboard, and stays selected.
-            if (_config.CopyOnSelect && session.GetSelectionText() is { } selected)
+            var selected = session.GetSelectionText();
+            if (_config.CopyOnSelect && selected != null)
             {
                 ClipboardText.Set(selected);
             }
+
+            // A plain click (no drag, nothing selected) in a shell's command line moves its cursor there.
+            if (_clickCell is { } pressed && selected == null && CellAt(position) == pressed)
+            {
+                ClickToMove(pressed.Col, pressed.Row);
+            }
+
+            _clickCell = null;
         }
         else if (_reportedButton is { } button)
         {
@@ -305,8 +323,7 @@ public sealed partial class TerminalControl
         }
 
         var m = _renderer.Metrics;
-        var col = (ushort)Math.Clamp((int)((pos.X - _config.PaddingLeft) / m.Width), 0, _cols - 1);
-        var row = (uint)Math.Clamp((int)((pos.Y - _config.PaddingTop) / m.Height), 0, _rows - 1);
+        var (col, row) = CellAt(pos);
         var geometry = new GhosttySelectionGestureGeometry
         {
             Columns = _cols,
@@ -316,7 +333,30 @@ public sealed partial class TerminalControl
         };
         var nowNs = (ulong)(Stopwatch.GetTimestamp() * (1_000_000_000.0 / Stopwatch.Frequency));
 
-        _selection.Handle(phase, col, row, pos.X * m.Scale, pos.Y * m.Scale, geometry, nowNs, 4.0 * m.Scale);
+        _selection.Handle(phase, (ushort)col, (uint)row, pos.X * m.Scale, pos.Y * m.Scale, geometry, nowNs, 4.0 * m.Scale);
         _canvas.Invalidate();
+    }
+
+    /// <summary>
+    /// A plain click at viewport cell (<paramref name="col"/>, <paramref name="row"/>): in a shell's
+    /// command line, moves its cursor there (<see cref="TerminalSession.ClickToMove"/>).
+    /// <c>test:click:col:row</c> calls it directly.
+    /// </summary>
+    internal void ClickToMove(int col, int row)
+    {
+        if (_session is { } session && _config.ClickToMove &&
+            session.ClickToMove(col, row, assumeArrows: true) is { Length: > 0 } move)
+        {
+            Log.Write($"click-to-move: ({col}, {row}) -> {System.Text.Encoding.ASCII.GetString(move).Replace("\x1b", "ESC")}");
+            session.SendInput(move);
+        }
+    }
+
+    /// <summary>The viewport cell under <paramref name="pos"/> (canvas DIPs), clamped to the grid.</summary>
+    private (int Col, int Row) CellAt(Windows.Foundation.Point pos)
+    {
+        var m = _renderer.Metrics;
+        return (Math.Clamp((int)((pos.X - _config.PaddingLeft) / m.Width), 0, _cols - 1),
+            Math.Clamp((int)((pos.Y - _config.PaddingTop) / m.Height), 0, _rows - 1));
     }
 }

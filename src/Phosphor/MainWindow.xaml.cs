@@ -1206,6 +1206,15 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord.StartsWith("test:click:"))
+            {
+                // A plain left click on viewport cell "col:row" of the focused pane (posted clicks can't reach WinUI).
+                var cell = chord["test:click:".Length..].Split(':');
+                Log.Write($"test {chord}");
+                Ui.Guard("test:click", () => tab.Active.Control.ClickToMove(int.Parse(cell[0]), int.Parse(cell[1])));
+                return;
+            }
+
             if (chord.StartsWith("test:drop:"))
             {
                 // Files dropped on the focused pane ("|" between paths), without a real drag.

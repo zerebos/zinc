@@ -179,6 +179,11 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
 - `copy-on-select`: `false` (default) or `true`: selecting text with the mouse copies it (the
   selection stays).
+- `click-to-move`: `true` (default) or `false`: at a shell prompt, clicking in the command you're
+  typing moves the cursor there (Ghostty's `cursor-click-to-move`). It needs the prompt marks of
+  [shell integration](#shell-integration): Phosphor presses the arrow keys for you, or, for shells
+  that ask for it (fish 4.1+, nushell), sends the click to the shell. A click on the prompt goes to
+  the start of the command, one past its end to the end. Only within the command's own line.
 - `paste-warning`: when to ask before a paste of more than one line. `"auto"` (default) asks when
   each line would run as a command: the program hasn't turned on bracketed paste, so line breaks
   arrive as Enter (cmd, old shells, a plain `cat`). `"multiline"` asks for every multi-line paste,
