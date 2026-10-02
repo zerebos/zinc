@@ -393,6 +393,10 @@ public sealed unsafe class TerminalRenderer : IDisposable
         // ...then each row's highlights and text (into the frame's sprite batch where the atlas is on), the batch,
         // and each row's decorations and cursor on top.
         _batching = AtlasEnabled && _spriteBatchSupported;
+        // Left over only if a frame failed halfway (OnDraw catches): its sprites may point into pages since disposed
+        // (a device lost), which would fail every frame after.
+        _frameSprites.Clear();
+        _rowSprites.Clear();
         if (_batching)
         {
             var padX = PadLeft * m.Scale;

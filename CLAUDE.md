@@ -525,7 +525,10 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
   reserved during the frame, `Flush` draws them all on a scratch page and whitens it onto the atlas page with one
   ColorMatrixEffect draw: no GPU read-back, two sessions per frame. NB: CanvasBlend.Copy + an effect drew nothing), then ONE
   `CanvasSpriteBatch` per frame for all glyphs + box-drawing sprites, then decorations and the cursor over it
-  (`_batching`; the cursor redraws its glyph directly). Fallback/emoji/clusters still DrawTextLayout immediately
+  (`_batching`; the cursor redraws its glyph directly). Each new glyph is clipped to its tile (some Nerd Font glyphs
+  reach ~5% of a cell past it, onto a neighbor's tile); pages grow past 512 px when one tile is bigger; a frame that
+  failed halfway leaves nothing behind (sprite lists cleared at frame start, a failed Flush clears the atlas), and
+  OnDraw hands a lost device to Win2D (`RaiseDeviceLost`; it can't be faked: Win2D refuses on a healthy device). Fallback/emoji/clusters still DrawTextLayout immediately
   (before the batch). Reset with `ClearSprites`. Pixel diff vs glyph runs: mostly 1/255, colored text edges up to
   ~24/255. Colors workload 9.5 -> 2.9 ms (GPU), 16.7 -> 3.5 ms (software).
   Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,

@@ -524,6 +524,15 @@ public sealed partial class TerminalControl : UserControl
         }
         catch (Exception ex)
         {
+            if (sender.Device.IsDeviceLost(ex.HResult))
+            {
+                // Win2D recreates the device (CreateResources) when a lost device's exception leaves Draw; caught
+                // here, it has to be told.
+                Log.Write($"pane: device lost while drawing ({ex.HResult:X8})");
+                sender.Device.RaiseDeviceLost();
+                return;
+            }
+
             if (_drawFailures++ == 0)
             {
                 Log.Crash("draw", ex);
