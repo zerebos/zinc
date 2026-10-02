@@ -9,3 +9,5 @@ native-src/*/.zig-cache/
 native-src/*/zig-pkg/
 
 .scratch/
+
+dist/

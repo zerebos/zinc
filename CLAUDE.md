@@ -587,6 +587,11 @@ and read state after the write (see `_titleDirty`).
   not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
   metapackage release they came from.
+- Tester builds: `scripts/package.ps1` → `dist\Zinc-<version>-win-x64.zip` (gitignored): `dotnet publish
+  --self-contained true` (the .NET runtime inside; install.ps1's builds still need .NET 10 installed), one
+  top-level folder, `README.txt` from `scripts/package-readme.txt` ({version} filled in), '+' in the version
+  becomes '_' in the name. ~197 MB unzipped / 77 MB zipped (.NET + WinAppSDK; language folders are tiny).
+  Smoke-test an unzipped copy with ZINC_CONFIG set to a fresh path (else it redirects into the user's Zinc).
 - Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>` (install.ps1
   computes the version like Directory.Build.props; the timestamp keeps names sortable); the
   user's Start Menu shortcut points at the newest. A post-commit hook (if installed)

@@ -63,6 +63,12 @@ Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Zinc\versi
 and repoints the Start Menu shortcut, so open windows are never disturbed; the three
 newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundled).
 
+**Sharing a build.** `pwsh scripts/package.ps1` makes `dist\Zinc-<version>-win-x64.zip`: a portable
+copy with the .NET runtime and the Windows App SDK inside (about 77 MB), nothing to install. Unzip it
+anywhere and open `zinc.exe`. Its `README.txt` (from `scripts/package-readme.txt`) tells testers how to
+start it past SmartScreen (the build isn't signed), where settings and logs go, how to send a debug log
+and benchmark results with feedback, and how to remove it.
+
 **Versions.** `PhosphorVersion` in `Directory.Build.props` is the release being worked toward. A build
 of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
 build numbered by the repository's commit count (`0.1.0-dev.812+a1b2c3d`). It's shown in Settings >
