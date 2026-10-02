@@ -226,7 +226,7 @@ public sealed class ConfigFile
     /// <summary>The sections a profile may override; the rest belong to the app.</summary>
     private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal"];
 
-    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "notify", "quick-terminal"];
+    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "notify", "quick-terminal", "debug"];
 
 
     private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover,
@@ -679,6 +679,8 @@ public sealed class ConfigFile
             ["colors.background-opacity"] = ("background-opacity", v => Number(v)),
             ["window.backdrop"] = ("backdrop", v => v as string),
             ["window.backdrop-tint"] = ("backdrop-tint", v => Number(v)),
+            ["window.backdrop-color"] = ("backdrop-color", v => v as string),
+            ["debug.logging"] = ("logging", v => Bool(v)),
             ["colors.find-highlight"] = ("search-background", v => v as string),
             ["colors.find-highlight-current"] = ("search-selected-background", v => v as string),
             ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),

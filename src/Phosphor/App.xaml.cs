@@ -70,6 +70,7 @@ public partial class App : Application
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
         WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
         _config = ConfigFile.Load();
+        Log.SetEnabled(_config.Global.Logging);
         CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
         LoadRecentCommands();
         _keybindings = _config.Keybindings;
@@ -226,6 +227,7 @@ public partial class App : Application
             if (firstRun)
             {
                 _config = ConfigFile.Load(path);
+                Log.SetEnabled(_config.Global.Logging);
                 CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
                 _keybindings.CopyFrom(_config.Keybindings);
                 OpenWindow(_config.DefaultProfile);
@@ -657,6 +659,11 @@ public partial class App : Application
         }
 
         var fresh = ConfigFile.Load(_config.Path);
+        if (!fresh.HasErrors)
+        {
+            Log.SetEnabled(fresh.Global.Logging); // first, so this reload is in a log just turned on
+        }
+
         Log.Write($"config: reloaded ({fresh.Warnings.Count} warning(s){(fresh.HasErrors ? ", not valid TOML: not applied" : "")})");
         foreach (var warning in fresh.Warnings)
         {

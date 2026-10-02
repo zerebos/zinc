@@ -372,10 +372,16 @@ public sealed record Config
     public WindowBackdrop Backdrop { get; init; }
 
     /// <summary>
-    /// How much color frosted or clear glass carries (0: none, the most see-through; 1: solid), in the
-    /// terminal's background color. Config: <c>[window] backdrop-tint</c> (global).
+    /// How much color frosted or clear glass carries (0: none, the most see-through; 1: solid), in
+    /// <see cref="BackdropColor"/>. Config: <c>[window] backdrop-tint</c> (global).
     /// </summary>
     public double BackdropTint { get; init; } = 0.3;
+
+    /// <summary>The glass's color; null: the terminal's background. Config: <c>[window] backdrop-color</c> (global).</summary>
+    public GhosttyColorRgb? BackdropColor { get; init; }
+
+    /// <summary>Whether Phosphor keeps a debug log (<see cref="Log.FilePath"/>). Config: <c>[debug] logging</c> (global).</summary>
+    public bool Logging { get; init; }
 
     /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
     public double CursorOpacity { get; init; } = 1;
@@ -446,6 +452,8 @@ public sealed record Config
                 this with { BackgroundOpacity = backgroundOpacity },
             "backdrop" when TryMode<WindowBackdrop>(value, out var backdrop) => this with { Backdrop = backdrop },
             "backdrop-tint" when TryDouble(value, out var tint) && tint is >= 0 and <= 1 => this with { BackdropTint = tint },
+            "backdrop-color" when TryColor(value, out var glass) => this with { BackdropColor = glass },
+            "logging" when bool.TryParse(value, out var logging) => this with { Logging = logging },
             "cursor-opacity" when TryDouble(value, out var cursorOpacity) && cursorOpacity is >= 0.1 and <= 1 =>
                 this with { CursorOpacity = cursorOpacity },
             "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },

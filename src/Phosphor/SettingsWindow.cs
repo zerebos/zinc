@@ -380,10 +380,46 @@ internal sealed partial class SettingsWindow : Window
             "Terminal emulation by Ghostty. The open-source software Phosphor ships is listed below.",
             null));
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
-        _page.Children.Add(Row("Crash log", Log.CrashPath, ButtonRow(("Open folder", () => Reveal(Log.CrashPath)))));
         _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
             ButtonRow(("Open", () => App.Instance.ShowWelcome(firstRun: false)))));
+        AddGroup("Troubleshooting", SettingsCatalog.All.Where(s => s.Section == "about"));
+        if (Log.FromEnvironment)
+        {
+            _page.Children.Add(Note("PHOSPHOR_LOG is set, so the log is always on, in the file it names."));
+        }
+
+        _page.Children.Add(LogFileRow());
+        _page.Children.Add(Row("Crash log", Log.CrashPath, ButtonRow(("Open folder", () => Reveal(Log.CrashPath)))));
         OpenSourceList();
+    }
+
+    /// <summary>The debug log's file: show it, copy it (with the version and Windows on top) for a bug report, or start it afresh.</summary>
+    private Border LogFileRow()
+    {
+        var copy = new Button { Content = "Copy" };
+        AutomationProperties.SetName(copy, "Copy the debug log");
+        copy.Click += (_, _) => Guard("copying the log", () =>
+        {
+            var text = Log.ReadText();
+            ClipboardText.Set($"Phosphor debug log: {Log.About}{Environment.NewLine}{Environment.NewLine}" +
+                (text.Length > 0 ? text : "(empty: turn the debug log on, make the problem happen, then copy it)"));
+            copy.Content = "Copied";
+        });
+
+        var clear = new Button { Content = "Clear" };
+        AutomationProperties.SetName(clear, "Clear the debug log");
+        clear.Click += (_, _) => Guard("clearing the log", () =>
+        {
+            Log.Clear();
+            copy.Content = "Copy";
+        });
+
+        var open = new Button { Content = "Open folder" };
+        AutomationProperties.SetName(open, "Open the debug log's folder");
+        open.Click += (_, _) => Reveal(Log.FilePath);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { open, copy, clear } };
+        return Row("Debug log file", Log.FilePath, buttons);
     }
 
     private static StackPanel ButtonRow(params (string Label, Action Run)[] buttons)

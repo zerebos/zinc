@@ -79,6 +79,26 @@ public class ConfigFileTests : IDisposable
     }
 
     [Fact]
+    public void GlassColorAndDebugLog()
+    {
+        var config = Parse("""
+            [window]
+            backdrop-color = "#102030"
+
+            [debug]
+            logging = true
+            """);
+        Assert.Empty(config.Warnings);
+        Assert.Equal((byte)0x10, config.Global.BackdropColor!.Value.R);
+        Assert.Equal((byte)0x30, config.Global.BackdropColor!.Value.B);
+        Assert.True(config.Global.Logging);
+
+        var plain = Parse("[font]\nsize = 12");
+        Assert.Null(plain.Global.BackdropColor);
+        Assert.False(plain.Global.Logging);
+    }
+
+    [Fact]
     public void QuotedIdsAndSubtables()
     {
         var config = Parse("""

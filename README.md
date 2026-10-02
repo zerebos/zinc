@@ -188,10 +188,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `background-opacity`: `0` to `1` (default): below 1 the terminal's background is see-through and
   the window glass shows through it (cells with a background color of their own stay solid). The glass
   is `[window] backdrop`: `"mica"` (default: solid, your wallpaper's tint), `"acrylic"` (frosted: the
-  windows behind, blurred) or `"none"` (clear: the windows behind, as they are), tinted with the
-  terminal's background by `[window] backdrop-tint` (`0` to `1`, default `0.3`; lower is more
-  see-through; Mica isn't tinted). Settings > Appearance > Background calls them Window glass, Glass tint
-  and Terminal background opacity.
+  windows behind, blurred) or `"none"` (clear: the windows behind, as they are), tinted with
+  `[window] backdrop-color` (`"#rrggbb"`; default: the terminal's background) by `[window] backdrop-tint`
+  (`0` to `1`, default `0.3`; lower is more see-through; Mica isn't tinted). Settings > Appearance >
+  Background calls them Window glass, Glass color, Glass tint and Terminal background opacity.
 - `find-highlight`, `find-highlight-current`: `"#rrggbb"` behind Find's matches and the current one
   (default: see-through yellow and orange).
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.
@@ -268,6 +268,11 @@ Phosphor is in the background (`"toast-always"`: whenever that pane is out of vi
 ignores them. Programs that report progress (OSC 9;4)
 get a small ring on their tab and a progress bar on Phosphor's taskbar button.
 Windows notifications come from Phosphor's tray icon and respect Do Not Disturb.
+
+**`[debug]`**: `logging = true` keeps a debug log in `%LOCALAPPDATA%\Phosphor\logs\phosphor.log`
+(moved aside to `phosphor.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
+(the log with Phosphor's version and Windows' on top, for a bug report) and Clear. `PHOSPHOR_LOG=<file>`
+overrides it: always on, into that file.
 
 **`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
 relative to this one. Settings in the including file win.

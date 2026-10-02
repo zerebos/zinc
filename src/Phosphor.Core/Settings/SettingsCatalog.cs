@@ -171,9 +171,12 @@ public static class SettingsCatalog
                 ],
             },
         new("appearance", "Background", "window.backdrop-tint", "Glass tint",
-            "How much color frosted or clear glass carries, in the terminal's background color: lower is more see-through.",
+            "How much color frosted or clear glass carries: lower is more see-through.",
             SettingKind.Number, 0.3)
             { Minimum = 0, Maximum = 1, Step = 0.05 },
+        new("appearance", "Background", "window.backdrop-color", "Glass color",
+            "The color frosted or clear glass is tinted with.", SettingKind.Color, null)
+            { NullLabel = "The terminal's background" },
         new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
             "How much of the window glass shows through the terminal (1: none; 0: only the glass, behind the text). Colored cells stay solid.",
             SettingKind.Number, 1.0)
@@ -308,6 +311,9 @@ public static class SettingsCatalog
             "Programs that flash the whole screen instead of ringing (Git Bash does) get the bell above.", SettingKind.Toggle, true),
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
             "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). New: off by default for now.",
+            SettingKind.Toggle, false),
+        new("about", "Troubleshooting", "debug.logging", "Debug log",
+            "Keeps a record of what Phosphor does, to send with a bug report. Turn it on, make the problem happen, then copy the log.",
             SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
             "Draws with the processor instead of the graphics card: for broken graphics drivers, some virtual machines and remote desktop glitches. Slower. Applies to terminals opened from now on.",

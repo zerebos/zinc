@@ -37,7 +37,7 @@ public sealed partial class MainWindow
     /// </summary>
     private void ApplyBackdrop()
     {
-        var tint = Phosphor.Terminal.TerminalRenderer.ToColor(_config.Global.Theme.Background);
+        var tint = Phosphor.Terminal.TerminalRenderer.ToColor(_config.Global.BackdropColor ?? _config.Global.Theme.Background);
         var wanted = (_config.Global.Backdrop, _config.Global.BackdropTint, tint);
         if (TestHooks.Deterministic || _backdrop == wanted)
         {

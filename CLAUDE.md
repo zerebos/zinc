@@ -25,6 +25,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `PHOSPHOR_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
 - `PHOSPHOR_LOG=<file>` appends diagnostics from `Log.Write` (Core). Cheap to add a line
   when something "doesn't happen" (e.g. pane lifecycle: Loaded / CreateResources / sizes).
+  Users get the same log from `[debug] logging` (Settings > About > Troubleshooting: switch, Open
+  folder / Copy / Clear) → `Log.SetEnabled` → `%LOCALAPPDATA%\Phosphor\logs\phosphor.log` (dated
+  lines, moved to phosphor.old.log at 4 MB). PHOSPHOR_LOG wins (always on, short times: tools read
+  them). Test it with `.scratch/tools/log-test.ps1` (no PHOSPHOR_LOG; removes the logs folder after).
 - Config: `%APPDATA%\Phosphor\config.toml` (TOML, grouped sections, `[profile.<id>]`; font
   size and padding are *points*; README has the reference). User schemes in `themes\` next to
   it, bundled ones (assets/themes, iTerm2-Color-Schemes' Ghostty-format files) in `Themes\`
