@@ -24,7 +24,7 @@ public partial class App : Application
     {
         InitializeComponent();
 
-        // Every exception that escapes leaves a record (crash.log, even without PHOSPHOR_LOG).
+        // Every exception that escapes leaves a record (crash.log, even without ZINC_LOG).
         // One on the UI thread is survived: a crash would take every terminal with it, and
         // most such failures belong to one action (a menu item, a palette command). Background
         // threads and XAML's own fail-fasts can't be survived; they're at least recorded.
@@ -80,10 +80,10 @@ public partial class App : Application
         }
         _messageWindow = new MessageWindow();
         var profile = _config.DefaultProfile;
-        // A command given on our command line (or PHOSPHOR_SHELL) is asked for explicitly: open
+        // A command given on our command line (or ZINC_SHELL) is asked for explicitly: open
         // it rather than the saved session. Otherwise reopen what was open last time.
         var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
-                              Environment.GetEnvironmentVariable("PHOSPHOR_SHELL") is { Length: > 0 };
+                              Environment.GetEnvironmentVariable("ZINC_SHELL") is { Length: > 0 };
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
         ListenForConsoles();
         if (ShellResolver.LaunchedForHandoff && !explicitCommand)
@@ -116,7 +116,7 @@ public partial class App : Application
         }
         else if (explicitCommand || !RestoreSession())
         {
-            // Our own arguments / PHOSPHOR_SHELL override the first tab's command only.
+            // Our own arguments / ZINC_SHELL override the first tab's command only.
             OpenWindow(profile, ShellResolver.Resolve(profile.Config));
         }
 
@@ -359,12 +359,12 @@ public partial class App : Application
     /// Receives consoles Windows hands over while Phosphor is the default terminal (registered with
     /// COM whenever Phosphor runs: harmless otherwise, as only that setting points Windows here), and
     /// keeps the registration pointing at this exe (installs are versioned folders). Test runs
-    /// (PHOSPHOR_CONFIG) don't, unless PHOSPHOR_DEFTERM_TEST=1, so they never take a real console.
+    /// (ZINC_CONFIG) don't, unless ZINC_DEFTERM_TEST=1, so they never take a real console.
     /// </summary>
     private void ListenForConsoles()
     {
-        var test = Environment.GetEnvironmentVariable("PHOSPHOR_DEFTERM_TEST") == "1";
-        if (Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } && !test)
+        var test = Environment.GetEnvironmentVariable("ZINC_DEFTERM_TEST") == "1";
+        if (Environment.GetEnvironmentVariable("ZINC_CONFIG") is { Length: > 0 } && !test)
         {
             return;
         }
@@ -498,9 +498,9 @@ public partial class App : Application
         var profile = _config.DefaultProfile;
         if (argv.Length > 0)
         {
-            // Its PHOSPHOR_SHELL stayed with the other process; only its arguments came over.
+            // Its ZINC_SHELL stayed with the other process; only its arguments came over.
             OpenWindow(profile, ShellResolver.Resolve(profile.Config, argv,
-                name => name == "PHOSPHOR_SHELL" ? null : Environment.GetEnvironmentVariable(name)));
+                name => name == "ZINC_SHELL" ? null : Environment.GetEnvironmentVariable(name)));
         }
         else if (_windows.Count > 0 || !RestoreSession())
         {
@@ -517,7 +517,7 @@ public partial class App : Application
         }
 
         var argv = SplitCommandLine(commandLine);
-        var self = Path.GetFileName(Environment.ProcessPath ?? "Phosphor.exe");
+        var self = Path.GetFileName(Environment.ProcessPath ?? "zinc.exe");
         return argv.Length > 0 && Path.GetFileName(argv[0]).Equals(self, StringComparison.OrdinalIgnoreCase) ? argv[1..] : argv;
     }
 
@@ -796,7 +796,7 @@ public partial class App : Application
         _sessionOwner = new Mutex(initiallyOwned: true, @"Local\" + SessionStore.InstanceKey(path) + ".Session", out var first);
         if (!first)
         {
-            Log.Write("session: another Phosphor process owns it; not restoring or saving here");
+            Log.Write("session: another Zinc process owns it; not restoring or saving here");
             _sessionOwner.Dispose();
             _sessionOwner = null;
             return null;
@@ -923,7 +923,7 @@ public partial class App : Application
 
     private void SetUpTray()
     {
-        _tray = new TrayIcon(_messageWindow!, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
+        _tray = new TrayIcon(_messageWindow!, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
         _tray.Activated += ShowWindows;
         _tray.NotificationClicked += () => _notificationClicked?.Invoke();
         _tray.BuildMenu = () =>
@@ -941,7 +941,7 @@ public partial class App : Application
                 new TrayIcon.MenuItem(quickLabel, ToggleQuickTerminalFromTray),
                 new TrayIcon.MenuItem("Settings", () => ShowSettings()),
                 null,
-                new TrayIcon.MenuItem("Quit Phosphor", AskQuit),
+                new TrayIcon.MenuItem("Quit Zinc", AskQuit),
             ];
         };
     }

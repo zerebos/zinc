@@ -204,7 +204,7 @@ public sealed partial class MainWindow : Window
         titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF);
         ApplyBackdrop();
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
-        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
+        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
         MenuKeySuppressor.Attach(this);
         ConfirmWindowClose();
 
@@ -1071,7 +1071,7 @@ public sealed partial class MainWindow : Window
         NewTabMenu.Items.Add(new MenuFlyoutSeparator());
         NewTabMenu.Items.Add(AppItem("Settings", 0xE713, TerminalAction.OpenSettings, () => App.Instance.ShowSettings()));
         NewTabMenu.Items.Add(AppItem("Command palette", 0xE721, TerminalAction.OpenCommandPalette, () => OpenCommandPalette()));
-        NewTabMenu.Items.Add(AppItem("About Phosphor", 0xE946, null, () => App.Instance.ShowSettings("about")));
+        NewTabMenu.Items.Add(AppItem("About Zinc", 0xE946, null, () => App.Instance.ShowSettings("about")));
 
     }
 
@@ -1100,7 +1100,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Test hook: PHOSPHOR_TEST_KEYS="alt+shift+plus,alt+left" replays chords (one per second)
+    /// Test hook: ZINC_TEST_KEYS="alt+shift+plus,alt+left" replays chords (one per second)
     /// through the keybindings and action handler, as if pressed in the focused pane.
     /// Automated tests can't post real modifier state to the window.
     /// </summary>
@@ -1108,7 +1108,7 @@ public sealed partial class MainWindow : Window
 
     private void ReplayTestKeys()
     {
-        if (Environment.GetEnvironmentVariable("PHOSPHOR_TEST_KEYS") is not { Length: > 0 } keys)
+        if (Environment.GetEnvironmentVariable("ZINC_TEST_KEYS") is not { Length: > 0 } keys)
         {
             return;
         }

@@ -20,7 +20,7 @@ internal sealed partial class SettingsWindow
         open.Click += (_, _) => Reveal(Path.Combine(folder, "Ghostty.txt"));
         header.Children.Add(open);
         _page.Children.Add(header);
-        _page.Children.Add(Note("Phosphor is built with these projects and ships them. Select a license to read it."));
+        _page.Children.Add(Note("Zinc is built with these projects and ships them. Select a license to read it."));
 
         var list = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
         var components = OpenSourceNotices.Components;

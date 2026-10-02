@@ -1,16 +1,16 @@
 <#
 .SYNOPSIS
-  Installs Phosphor for the current user from this checkout.
+  Installs Zinc for the current user from this checkout.
 
 .DESCRIPTION
   Publishes a Release build into a new versioned folder under
-  %LOCALAPPDATA%\Programs\Phosphor\versions\ and points the Start Menu shortcut
+  %LOCALAPPDATA%\Programs\Zinc\versions\ and points the Start Menu shortcut
   (what Raycast and Windows Search index) at it. Open windows keep running from
   their own folder, so installing never conflicts with them; old versions are
   pruned once nothing is using them.
 
   The shortcut targets the versioned folder rather than a "current" symlink on
-  purpose: a running Phosphor loads files lazily (OpenConsole.exe starts per
+  purpose: a running Zinc loads files lazily (OpenConsole.exe starts per
   session), and repointing a link under it would mix versions.
 
 .EXAMPLE
@@ -28,9 +28,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Phosphor'
+$installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Zinc'
 $versions = Join-Path $installRoot 'versions'
-$shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Phosphor.lnk'
+$shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Zinc.lnk'
 $hook = Join-Path $repo '.git\hooks\post-commit'
 $hookMarker = '# phosphor-install-hook'
 
@@ -41,7 +41,7 @@ function Say($msg) { if (-not $Quiet) { Write-Host $msg } }
 # has and pwsh doesn't, hence powershell.exe.
 function Notify($title, $text) {
     if (-not $Quiet) { return }
-    $toast = Join-Path ([IO.Path]::GetTempPath()) 'phosphor-install-toast.ps1'
+    $toast = Join-Path ([IO.Path]::GetTempPath()) 'zinc-install-toast.ps1'
     @'
 param($Title, $Text)
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
@@ -63,16 +63,16 @@ if ($RemoveGitHook -or $Uninstall) {
 }
 
 if ($Uninstall) {
-    if (Get-Process Phosphor -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$installRoot*" }) {
-        throw 'Close all installed Phosphor windows first.'
+    if (Get-Process zinc -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$installRoot*" }) {
+        throw 'Close all installed Zinc windows first.'
     }
     if (Test-Path $shortcut) { Remove-Item $shortcut }
-    Remove-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Phosphor -ErrorAction SilentlyContinue
-    # Phosphor as the default terminal: give the terminal half back to what it replaced.
+    Remove-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Zinc -ErrorAction SilentlyContinue
+    # Zinc as the default terminal: give the terminal half back to what it replaced.
     $clsid = '{8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B64}'
     $startup = 'HKCU:\Console\%%Startup'
     if ((Get-ItemProperty $startup -ErrorAction SilentlyContinue).DelegationTerminal -eq $clsid) {
-        $previous = (Get-ItemProperty 'HKCU:\Software\Phosphor' -ErrorAction SilentlyContinue).PreviousDelegationTerminal
+        $previous = (Get-ItemProperty 'HKCU:\Software\Zinc' -ErrorAction SilentlyContinue).PreviousDelegationTerminal
         if ($previous) { Set-ItemProperty $startup -Name DelegationTerminal -Value $previous }
         else {
             Set-ItemProperty $startup -Name DelegationConsole -Value '{00000000-0000-0000-0000-000000000000}'
@@ -81,7 +81,7 @@ if ($Uninstall) {
     }
     if (Test-Path "HKCU:\Software\Classes\CLSID\$clsid") { Remove-Item "HKCU:\Software\Classes\CLSID\$clsid" -Recurse -Force }
     if (Test-Path $installRoot) { Remove-Item $installRoot -Recurse -Force }
-    Say 'Phosphor uninstalled (config in %APPDATA%\Phosphor is kept).'
+    Say 'Zinc uninstalled (config in %APPDATA%\Zinc is kept).'
     return
 }
 
@@ -95,7 +95,7 @@ if ($InstallGitHook) {
     @"
 #!/bin/sh
 $hookMarker
-# Reinstall Phosphor in the background after each commit (scripts/install.ps1 -RemoveGitHook to undo).
+# Reinstall Zinc in the background after each commit (scripts/install.ps1 -RemoveGitHook to undo).
 log="`$(git rev-parse --git-dir)/phosphor-install.log"
 nohup pwsh -NoProfile -File scripts/install.ps1 -Quiet > "`$log" 2>&1 &
 "@ -replace "`r", '' | Set-Content -NoNewline -Encoding utf8NoBOM $hook
@@ -124,7 +124,7 @@ if ($LASTEXITCODE -ne 0) {
     $publishLog | Write-Host
     if (Test-Path $target) { Remove-Item $target -Recurse -Force }
     $firstError = ($publishLog | Select-String ' error ' | Select-Object -First 1) -replace '^.*?error ', ''
-    Notify "Phosphor install failed ($rev)" "The build failed, so the previous version is still installed. $firstError"
+    Notify "Zinc install failed ($rev)" "The build failed, so the previous version is still installed. $firstError"
     throw 'dotnet publish failed.'
 }
 
@@ -132,32 +132,32 @@ if ($LASTEXITCODE -ne 0) {
 New-Item -ItemType Directory -Force (Split-Path $shortcut) | Out-Null
 $shell = New-Object -ComObject WScript.Shell
 $lnk = $shell.CreateShortcut($shortcut)
-$lnk.TargetPath = Join-Path $target 'Phosphor.exe'
+$lnk.TargetPath = Join-Path $target 'zinc.exe'
 $lnk.WorkingDirectory = $env:USERPROFILE
-$lnk.Description = "Phosphor terminal ($name)"
+$lnk.Description = "Zinc terminal ($name)"
 $lnk.Save()
 Say "Start Menu shortcut -> $target"
 
 # ---- sign-in entry (launch-at-login): follows the new version, if there is one ----
 $runKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
-if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).Phosphor) {
-    Set-ItemProperty $runKey -Name Phosphor -Value "`"$(Join-Path $target 'Phosphor.exe')`" --at-login"
+if ((Get-ItemProperty $runKey -ErrorAction SilentlyContinue).Zinc) {
+    Set-ItemProperty $runKey -Name Zinc -Value "`"$(Join-Path $target 'zinc.exe')`" --at-login"
     Say "Sign-in entry -> $target"
 }
 
 # ---- default terminal (Settings > Layout): Windows starts this exe to hand it a console ----
 $defterm = 'HKCU:\Software\Classes\CLSID\{8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B64}\LocalServer32'
 if (Test-Path $defterm) {
-    Set-ItemProperty $defterm -Name '(default)' -Value "`"$(Join-Path $target 'Phosphor.exe')`" -Embedding"
+    Set-ItemProperty $defterm -Name '(default)' -Value "`"$(Join-Path $target 'zinc.exe')`" -Embedding"
     Say "Default terminal -> $target"
 }
 
 # ---- prune old versions (skip any still running) ----
-$running = @(Get-Process Phosphor -ErrorAction SilentlyContinue | ForEach-Object { try { Split-Path $_.Path } catch { } })
+$running = @(Get-Process zinc -ErrorAction SilentlyContinue | ForEach-Object { try { Split-Path $_.Path } catch { } })
 Get-ChildItem $versions -Directory | Sort-Object Name -Descending | Select-Object -Skip $Keep | ForEach-Object {
     if ($running -contains $_.FullName) { return }
     try { Remove-Item $_.FullName -Recurse -Force; Say "Pruned $($_.Name)" }
     catch { Say "Kept $($_.Name) (in use)" }
 }
 
-Say 'Done. Launch "Phosphor" from the Start Menu or Raycast.'
+Say 'Done. Launch "Zinc" from the Start Menu or Raycast.'

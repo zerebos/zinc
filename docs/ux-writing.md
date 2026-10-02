@@ -1,8 +1,8 @@
-# Writing Phosphor's interface
+# Writing Zinc's interface
 
-How Phosphor talks to people: settings, menus, notices, the palette, the welcome page. These
+How Zinc talks to people: settings, menus, notices, the palette, the welcome page. These
 rules come from building the settings window and from studying Windows Terminal's (2026-09-30),
-where the good and the weak parts of its wording were easy to compare side by side. Phosphor is a
+where the good and the weak parts of its wording were easy to compare side by side. Zinc is a
 power tool; the aim is still to be easier to understand than the tools it competes with.
 
 ## Voice
@@ -32,7 +32,7 @@ power tool; the aim is still to be easier to understand than the tools it compet
   shrinks inactive tabs to their icon." A description that restates the name adds nothing; leave it
   out instead.
 - **Say when a change doesn't apply right away**: "Applies to windows opened from now on.",
-  "Restart Phosphor to apply." Put it in the description, where it's read before changing it.
+  "Restart Zinc to apply." Put it in the description, where it's read before changing it.
 - **Recommend when there's a safe answer**: "If your shell doesn't support bracketed paste, choose
   Always."
 - **Refer to other settings and choices by their exact label, in quotes**: "Only with the

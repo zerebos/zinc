@@ -11,7 +11,7 @@ namespace Phosphor;
 /// </summary>
 internal sealed unsafe partial class MessageWindow : IDisposable
 {
-    public const string ClassName = "PhosphorMessageWindow";
+    public const string ClassName = "ZincMessageWindow";
     private static MessageWindow? _instance;
 
     public MessageWindow()

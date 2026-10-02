@@ -30,8 +30,8 @@ internal sealed partial class SettingsWindow
         var detail = state switch
         {
             DefaultTerminal.State.NoConsoleHost =>
-                "Needs Windows Terminal: choose it as the default terminal app in Windows Settings first; Phosphor then takes over from it.",
-            _ => "Programs that open a console outside a terminal (a script you double-click, Run, an installer) open in a Phosphor tab.",
+                "Needs Windows Terminal: choose it as the default terminal app in Windows Settings first; Zinc then takes over from it.",
+            _ => "Programs that open a console outside a terminal (a script you double-click, Run, an installer) open in a Zinc tab.",
         };
 
         FrameworkElement control = panel;
@@ -50,7 +50,7 @@ internal sealed partial class SettingsWindow
                 if (toggle.IsOn && dt.Current() != DefaultTerminal.State.Phosphor && Environment.ProcessPath is { } exe)
                 {
                     var done = dt.Enable(exe);
-                    Log.Write($"default terminal: {(done ? "Phosphor is the default terminal" : "no console host to keep")}");
+                    Log.Write($"default terminal: {(done ? "Zinc is the default terminal" : "no console host to keep")}");
                 }
                 else if (!toggle.IsOn && dt.Current() == DefaultTerminal.State.Phosphor)
                 {

@@ -11,7 +11,7 @@
 
 # Take the bootstrap back out of PROMPT_COMMAND (your startup files may have added to it), and
 # don't hand it on to programs started from here.
-__phosphor_si_boot='. "$PHOSPHOR_SHELL_INTEGRATION_DIR/bash/phosphor.bash"'
+__phosphor_si_boot='. "$ZINC_SHELL_INTEGRATION_DIR/bash/phosphor.bash"'
 if [[ "$(builtin declare -p PROMPT_COMMAND 2>/dev/null)" == "declare -a"* ]]; then
     for __phosphor_si_i in "${!PROMPT_COMMAND[@]}"; do
         [[ "${PROMPT_COMMAND[__phosphor_si_i]}" != "$__phosphor_si_boot" ]] || builtin unset 'PROMPT_COMMAND[__phosphor_si_i]'

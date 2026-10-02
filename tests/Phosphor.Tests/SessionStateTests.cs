@@ -115,14 +115,14 @@ public class SessionStateTests
     [Fact]
     public void TestRunsNeverTouchTheRealSession()
     {
-        Assert.Null(SessionStore.DefaultPath(n => n == "PHOSPHOR_CONFIG" ? @"C:\tmp\config" : null));
+        Assert.Null(SessionStore.DefaultPath(n => n == "ZINC_CONFIG" ? @"C:\tmp\config" : null));
         Assert.Equal(@"C:\tmp\s.json", SessionStore.DefaultPath(n => n switch
         {
-            "PHOSPHOR_CONFIG" => @"C:\tmp\config",
-            "PHOSPHOR_SESSION" => @"C:\tmp\s.json",
+            "ZINC_CONFIG" => @"C:\tmp\config",
+            "ZINC_SESSION" => @"C:\tmp\s.json",
             _ => null,
         }));
-        Assert.EndsWith(@"Phosphor\session.json", SessionStore.DefaultPath(_ => null));
+        Assert.EndsWith(@"Zinc\session.json", SessionStore.DefaultPath(_ => null));
     }
 
     [Theory]

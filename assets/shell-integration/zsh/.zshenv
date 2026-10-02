@@ -6,9 +6,9 @@
 # which sets itself up at the first prompt (after all of those).
 
 'builtin' 'typeset' __phosphor_si_dir=${ZDOTDIR}
-if [[ -n "${PHOSPHOR_ZDOTDIR+x}" ]]; then
-    'builtin' 'export' ZDOTDIR=$PHOSPHOR_ZDOTDIR
-    'builtin' 'unset' PHOSPHOR_ZDOTDIR
+if [[ -n "${ZINC_ZDOTDIR+x}" ]]; then
+    'builtin' 'export' ZDOTDIR=$ZINC_ZDOTDIR
+    'builtin' 'unset' ZINC_ZDOTDIR
 else
     'builtin' 'unset' ZDOTDIR
 fi

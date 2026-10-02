@@ -10,37 +10,37 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `scripts/build-libghostty.sh x64` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit).
   `external/` (ghostty clone) and `native/` are gitignored build products.
 - `dotnet build` (Phosphor.slnx; add `-c Release` for perf work). App output:
-  `src/Phosphor/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phosphor.exe`.
+  `src/Phosphor/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
   always after bumping the Ghostty commit.
 - **Before every commit: `dotnet build` (the solution) AND `dotnet test`.** `dotnet test`
   alone does not build the app project (tests don't reference it): a compile error in
   src/Phosphor once got committed, the post-commit install failed, and a "verification"
   ran the stale exe. When verifying the app, check the exe/dll timestamp is fresh.
-- **A running Phosphor.exe locks the output** → build fails with MSB3027. Stop only *dev*
+- **A running zinc.exe locks the output** → build fails with MSB3027. Stop only *dev*
   builds — the user daily-drives the installed copy, and this session may be running in it:
-  `Get-Process Phosphor -ErrorAction SilentlyContinue | Where-Object Path -like 'C:\Users\Zack\dev\phosphor\*' | Stop-Process -Force`
-  Never stop every Phosphor process.
-- Shell: args after the exe, else `PHOSPHOR_SHELL`, else pwsh → powershell → cmd.
-- `PHOSPHOR_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
-- `PHOSPHOR_LOG=<file>` appends diagnostics from `Log.Write` (Core). Cheap to add a line
+  `Get-Process zinc -ErrorAction SilentlyContinue | Where-Object Path -like 'C:\Users\Zack\dev\phosphor\*' | Stop-Process -Force`
+  Never stop every Zinc (zinc.exe) process.
+- Shell: args after the exe, else `ZINC_SHELL`, else pwsh → powershell → cmd.
+- `ZINC_TRACE=<file>` records raw PTY output bytes (see which modes an app enables).
+- `ZINC_LOG=<file>` appends diagnostics from `Log.Write` (Core). Cheap to add a line
   when something "doesn't happen" (e.g. pane lifecycle: Loaded / CreateResources / sizes).
   Users get the same log from `[debug] logging` (Settings > About > Troubleshooting: switch, Open
-  folder / Copy / Clear) → `Log.SetEnabled` → `%LOCALAPPDATA%\Phosphor\logs\phosphor.log` (dated
-  lines, moved to phosphor.old.log at 4 MB). PHOSPHOR_LOG wins (always on, short times: tools read
-  them). Test it with `.scratch/tools/log-test.ps1` (no PHOSPHOR_LOG; removes the logs folder after).
+  folder / Copy / Clear) → `Log.SetEnabled` → `%LOCALAPPDATA%\Zinc\logs\zinc.log` (dated
+  lines, moved to zinc.old.log at 4 MB). ZINC_LOG wins (always on, short times: tools read
+  them). Test it with `.scratch/tools/log-test.ps1` (no ZINC_LOG; removes the logs folder after).
 - Drawing benchmark (Settings > About, under the logs): Core `Terminal/Benchmark.cs` (`BenchmarkWorkloads`:
   Colors / Synchronized / Text / Scrolling, seeded, a port of `.scratch/perf/load.py`; `TimeStats`,
   `BenchmarkResult`, `BenchmarkReport.Text()` = what Copy gives; tested) → App `BenchmarkWindow` (its own
   1200x760 window, `TerminalControl.Benchmark(config, software)` = a preview pane with a `FramePerf`;
   each workload written from a background thread for 5 s via `WriteForBenchmark`, no ConPTY) →
   `SettingsWindow.Benchmark.cs` (Run, "Also with software rendering", last results + Copy; logs
-  `benchmark: …`). `FramePerf` is per pane now (`TerminalRenderer.Perf`); PHOSPHOR_PERF=1 + PHOSPHOR_LOG
+  `benchmark: …`). `FramePerf` is per pane now (`TerminalRenderer.Perf`); ZINC_PERF=1 + ZINC_LOG
   still logs every pane once a second. Test: `.scratch/tools/bench-test.ps1 [-Software]`.
-- Config: `%APPDATA%\Phosphor\config.toml` (TOML, grouped sections, `[profile.<id>]`; font
+- Config: `%APPDATA%\Zinc\config.toml` (TOML, grouped sections, `[profile.<id>]`; font
   size and padding are *points*; README has the reference). User schemes in `themes\` next to
   it, bundled ones (assets/themes, iTerm2-Color-Schemes' Ghostty-format files) in `Themes\`
-  next to the exe. `PHOSPHOR_CONFIG=<file>` overrides the path — use it for tests instead of
+  next to the exe. `ZINC_CONFIG=<file>` overrides the path — use it for tests instead of
   editing the user's real config (which sets `family = "JetBrainsMono NF"`). Schemes are
   looked up next to *that* file, so a test config copied elsewhere needs its `themes\` too;
   test scripts append their own `[window]` section (a TOML table can't be opened twice).
@@ -52,15 +52,15 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ConfigFile.HasErrors` (invalid TOML) = report only, keep the settings in force.
   libghostty's "default palette" getter returns the last palette *set*, so the session keeps
   its built-in palette from creation to restore entries a new theme doesn't define.
-- Session (reopening windows): `%APPDATA%\Phosphor\session.json`, `PHOSPHOR_SESSION=<file>`
-  overrides. **A run with `PHOSPHOR_CONFIG` set neither restores nor saves** unless
-  `PHOSPHOR_SESSION` is also set — so test instances never touch the user's session. Launching
-  with a command (args or PHOSPHOR_SHELL) opens it instead of restoring.
+- Session (reopening windows): `%APPDATA%\Zinc\session.json`, `ZINC_SESSION=<file>`
+  overrides. **A run with `ZINC_CONFIG` set neither restores nor saves** unless
+  `ZINC_SESSION` is also set — so test instances never touch the user's session. Launching
+  with a command (args or ZINC_SHELL) opens it instead of restoring.
 - **Single instance per session file** (`Program.cs`, `DISABLE_XAML_GENERATED_MAIN`): a later
   launch redirects its activation (args, exe path included) to the running process
-  (`App.OnRedirectedLaunch`) and exits. So **a dev build started without `PHOSPHOR_CONFIG`
+  (`App.OnRedirectedLaunch`) and exits. So **a dev build started without `ZINC_CONFIG`
   would open a window inside the user's installed Phosphor** instead of running — always set
-  PHOSPHOR_CONFIG (or PHOSPHOR_SESSION to a scratch file, which also exercises redirection:
+  ZINC_CONFIG (or ZINC_SESSION to a scratch file, which also exercises redirection:
   `.scratch/tools/single-instance.ps1`). App's session mutex is the backstop if redirection fails.
 
 ## Architecture (where to look)
@@ -77,7 +77,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   the COLOR_SCHEME callback, sends CSI ? 997 on change when mode 2031 is set. Chrome surfaces
   colored like the pane (selected tab, sidebar item, pane strip) get dark text when light (`Contrast`).
   Options worth knowing: `RESIZE_PULL_SCROLLBACK` off (ConPTY has no scrollback; libghostty's
-  docs name it), `XTVERSION` → "phosphor <InformationalVersion>" (`Directory.Build.props`: `PhosphorVersion` +
+  docs name it), `XTVERSION` → "zinc <InformationalVersion>" (`Directory.Build.props`: `PhosphorVersion` +
   `-dev.<commit count>` unless the commit is tagged v<version>, + `+<7-char hash>`; About and the
   crash log show it too), `RENDER_HOLD`
   (synchronized output, mode 2026): the callback captures the renderer's snapshot at hold start
@@ -99,7 +99,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   the Tomlyn syntax tree, *splices the text* so everything else stays byte-identical. Careful:
   a KeyValueSyntax span includes its line break — anchor on the value span. New profile
   sections go after the last `[profile.*]`; other new tables at the end),
-  `ShellResolver.cs` (`Resolve` for the first tab: args > PHOSPHOR_SHELL > profile;
+  `ShellResolver.cs` (`Resolve` for the first tab: args > ZINC_SHELL > profile;
   `ForProfile` for tabs opened later).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
   Bindings run in the terminal's OnKeyDown; with focus elsewhere (tab strip, sidebar, a button),
@@ -110,7 +110,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   updates the one instance App shares with every window and pane (live reload). Key sequences
   ("ctrl+a > c"): `KeySequence`, `Keybindings.Sequences`/`Continuations`/`ShortcutFor`, and the
   pure `KeySequencer` state machine (tested); `TerminalControl.Sequences.cs` feeds it from
-  OnKeyDown (before plain chords) and draws the which-key hint. PHOSPHOR_TEST_KEYS entries go
+  OnKeyDown (before plain chords) and draws the which-key hint. ZINC_TEST_KEYS entries go
   through it too (`PressForTest`); `.scratch/tools/leader-shot.ps1` captures hints/runs.
   `Input/Actions.cs` — the action registry: names/args as text ("split right", "new-tab
   wsl:Fedora"), palette titles. **A new action needs an entry there (and the README table:
@@ -146,9 +146,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `ClipboardConsent` (blocking, on the reader thread, terminal unlocked), then feeds the request
   with `_readConsented`; the callback denies anything not consented (split requests, OSC 5522).
   App: `TerminalControl.ClipboardRead.cs` (waits on `ClipboardText.AskToRead`'s dialog; `_closing`
-  cancels it; "Allow in this tab" remembered per pane). `PHOSPHOR_TEST_CLIPBOARD` stands in for the
+  cancels it; "Allow in this tab" remembered per pane). `ZINC_TEST_CLIPBOARD` stands in for the
   clipboard's text in tests. `launch-at-login`: `LoginStartup` keeps HKCU Run "Phosphor" =
-  `"<exe>" --at-login` in step (never with PHOSPHOR_CONFIG); `ShellResolver.LoginFlag` isn't a
+  `"<exe>" --at-login` in step (never with ZINC_CONFIG); `ShellResolver.LoginFlag` isn't a
   command; "tray" opens no window; install.ps1 repoints/removes it. `quit-fresh` (palette/keys only, not the tray: the user's call) = `App.AskQuit(fresh)`
   → `ForgetWindows` (session.json keeps recents and settings bounds, no windows).
 - New-workspace page (design: claude.ai/artifact/Vw21Hh3F1zEYbUTshQ4E9d, option E; all 4 steps built):
@@ -239,7 +239,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `CommandInView`, `SelectOutput`. A command `Ran` only if it has text: shells send D (and p10k C)
   after an empty Enter too. Text comes from C's cmdline_url, else input cells read back (wide gaps
   = prompt decoration: p10k draws its frame corner after B). App: `TerminalControl.Commands.cs`
-  (actions, scrollbar ticks, failure bars; logs `command: ...` with PHOSPHOR_LOG), command center.
+  (actions, scrollbar ticks, failure bars; logs `command: ...` with ZINC_LOG), command center.
   Nested shells (`_nested` in TerminalSession.Commands.cs): a level per shell, told apart by its A
   mark's options (`ShellMark.Options`: p10k "", fish "click_events=1", nu "k=i;click_events=1", our
   scripts "aid=<pid>"). An A with new options while a command runs = a shell started by it (the
@@ -269,7 +269,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   pwsh/powershell: `-NoExit -Command ". ([scriptblock]::Create(ReadAllText(...)))"` (text, not a
   file: WinPS's Restricted policy); skipped when the args already run something. Everything else
   gets env: `PROMPT_COMMAND` bootstrap (bash; the script removes it), `ZDOTDIR` (zsh; `.zshenv`
-  restores + sources the user's), `PHOSPHOR_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
+  restores + sources the user's), `ZINC_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
   C:/x, WSLENV `/p` translates it), `WSLENV`. Each script stands down where marks/OSC 7 already
   exist (p10k's `POWERLEVEL9K_TERM_SHELL_INTEGRATION`, `133;`/`]7;` in prompt/hook text).
   `ShellInjectionTests` run real pwsh, WinPS, Git Bash, MSYS2 zsh (skipped if absent);
@@ -321,9 +321,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - Default terminal (Settings > Layout, a switch on Windows' state, not config.toml): Windows hands a new
   console to `HKCU\Console\%%Startup` DelegationConsole (an installed Windows Terminal's OpenConsole; Phosphor
   doesn't ship that half yet) then DelegationTerminal = Phosphor's CLSID (Core `Pty/DefaultTerminal.cs`:
-  Enable/Disable remember the replaced value in `HKCU\Software\Phosphor`, `Register` = HKCU LocalServer32
+  Enable/Disable remember the replaced value in `HKCU\Software\Zinc`, `Register` = HKCU LocalServer32
   `"exe" -Embedding`, no package; tested on a scratch key). App `TerminalHandoff.cs`: CoRegisterClassObject on
-  its own MTA thread at every start (not test runs unless PHOSPHOR_DEFTERM_TEST=1); **the COM types must be
+  its own MTA thread at every start (not test runs unless ZINC_DEFTERM_TEST=1); **the COM types must be
   public and top-level** (nested in an internal class, QueryInterface failed and OpenConsole fell back to a
   console window). `ITerminalHandoff3.EstablishPtyHandoff` → Core `ConPty.FromHandoff`
   (ConptyPackPseudoConsole + two anonymous pipes; reading waits for `Begin()`, called by
@@ -331,7 +331,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   (`ProfileForHandedOver`: the one profile running the same exe, else a made-up one named after the program with its icon; `TerminalTab.HandedOver`: not saved). Test runs listen as `DefaultTerminal.TestClsid` so the installed Phosphor (which always listens as `Clsid`) never takes a test console. `-Embedding` launch: no window until a console
   arrives (20 s, else quit); redirected `-Embedding` launches are ignored. install.ps1 repoints/gives back.
   Test: `.scratch/tools/defterm-test.ps1` (backs up + restores the user's value; never run a COM *launch*
-  of the dev exe: without PHOSPHOR_CONFIG it would redirect into the installed Phosphor). Findings and the
+  of the dev exe: without ZINC_CONFIG it would redirect into the installed Phosphor). Findings and the
   feasibility spike: .scratch/NOTES.md, .scratch/defterm-spike.
 - About's open-source list: Core `OpenSourceNotices` (name, version, use, license, URL, license file)
   + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
@@ -438,7 +438,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   without a pick. `.scratch/tools/focus-in-flyout.ps1` focuses a list item for captures. Reset arrow =
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
-  "Phosphor Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
+  "Zinc Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.
@@ -487,7 +487,7 @@ miss Explorer's TaskbarCreated broadcast) that logs its hwnd and dispatches WM_H
 `TrayIcon` callbacks. App lifetime: `DispatcherShutdownMode.OnExplicitShutdown`;
 `App.OnWindowClosed` decides stay-in-tray vs `Quit()` (tray icon must be removed on exit).
 Test a press with `.scratch/tools/quick-toggle.ps1` and lifetime with `lifetime.ps1` (both post
-to the logged hwnd; need PHOSPHOR_LOG). Don't launch `powershell.exe` consoles
+to the logged hwnd; need ZINC_LOG). Don't launch `powershell.exe` consoles
 mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
   Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,
@@ -577,12 +577,12 @@ and read state after the write (see `_titleDirty`).
   not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
   metapackage release they came from.
-- Installed copies live in `%LOCALAPPDATA%\Programs\Phosphor\versions\<stamp>-<version>` (install.ps1
+- Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>` (install.ps1
   computes the version like Directory.Build.props; the timestamp keeps names sortable); the
   user's Start Menu shortcut points at the newest. A post-commit hook (if installed)
   reinstalls in the background after every commit — including Claude's; log at
-  `.git/phosphor-install.log`. Installed Phosphor.exe processes are the user's own
-  windows: never kill `Get-Process Phosphor` blindly — filter by Path to the dev bin/.
+  `.git/phosphor-install.log`. Installed zinc.exe processes are the user's own
+  windows: never kill `Get-Process zinc` blindly — filter by Path to the dev bin/.
 
 ## Windows / WinUI / ConPTY footguns
 
@@ -640,14 +640,10 @@ and read state after the write (see `_titleDirty`).
   Alt+Space (system menu) and a bare Alt tap are passed through.
 - Focus is the window's job (`FocusActive`, low-priority dispatch after layout); panes must
   not grab focus on Loaded, since every rebuild re-loads every pane.
-- App icon: `scripts/gen-icon.py` (needs resvg-py + pillow; a venv with both is at
-  `.scratch/venv`) builds the .ico from assets/phosphor-icon.svg (the user's design, 2026-09-26;
-  shade-phosphor-fluent.svg is the previous one). The mark is a dot-matrix of lit cells, so
-  sizes below 256 are re-drawn snapped to whole pixels, except 16 px (tray and title bar at
-  100%; the taskbar and Alt+Tab use the 32 frame — checked with a color-per-size debug .ico),
-  which is blended at ~70% of the tile: the user's pick side by side. Rerun after SVG edits and
-  look at `--preview`. The SVG carries a large C2PA `<metadata>` blob; the script strips it. `AppWindow.SetIcon` rescales one frame (smeared at 16px); `WindowIcon.cs`
-  uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
+- App icon: `src/Phosphor/Assets/Zinc.ico` = the brand's `assets/brand/icon/quadrant.ico` (docs/brand.md §7:
+  hand-placed whole-pixel frames 16-64, vector master 96+; every frame verified identical to its PNG master,
+  never resample them). The old SVG pipeline (gen-icon.py) is gone. `AppWindow.SetIcon` rescales one frame
+  (smeared at 16px); `WindowIcon.cs` uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
 - **An exception in a `DispatcherQueue` callback or a `DispatcherQueueTimer.Tick` ends the
   process on the spot, unlogged** — it bypasses `Application.UnhandledException` (found with
   `test:throw`). Queue work with `SafeEnqueue` and ticks with `OnTick` (`Ui.cs`: `Ui.Guard`
@@ -655,8 +651,8 @@ and read state after the write (see `_titleDirty`).
   guard it too. Native callbacks (`UnmanagedCallersOnly`, the `MessageWindow` WndProc, ConPty's
   reader/exit threads) catch everything themselves. XAML event handlers do reach
   `App.UnhandledException`, which now marks them handled and shows the ErrorNotice. Every
-  escaped exception goes to `Log.Crash` → `%LOCALAPPDATA%\Phosphor\crash.log` (always, even
-  without PHOSPHOR_LOG; `PHOSPHOR_CRASH_LOG=<file>` for tests). Code reachable after a window
+  escaped exception goes to `Log.Crash` → `%LOCALAPPDATA%\Zinc\crash.log` (always, even
+  without ZINC_LOG; `ZINC_CRASH_LOG=<file>` for tests). Code reachable after a window
   closes checks `_windowClosed` (its AppWindow is null); `Closed` stops the timers and unwires
   every terminal first. Config/theme reads share access and retry (an editor mid-save); an
   unreadable config counts as HasErrors (report, keep settings).
@@ -697,8 +693,8 @@ and read state after the write (see `_titleDirty`).
   scripts under a pinned config (`.scratch/visual-config`); `.scratch/venv/Scripts/python
   .scratch/tools/visual-diff.py <before> <after>` compares pixel by pixel (title bar ignored:
   its active/inactive look is noise). Capture a baseline *before* touching rendering code.
-  It also captures `splits` and `tabs` layouts (driven by PHOSPHOR_TEST_KEYS) for layout work.
-  Runs are deterministic because visual.ps1 sets `PHOSPHOR_TEST_DETERMINISTIC=1` (`TestHooks`:
+  It also captures `splits` and `tabs` layouts (driven by ZINC_TEST_KEYS) for layout work.
+  Runs are deterministic because visual.ps1 sets `ZINC_TEST_DETERMINISTIC=1` (`TestHooks`:
   no cursor blink, cursor drawn as focused, no Mica — each of those once made two captures of
   the same build differ). Verify determinism by capturing twice when adding scenarios.
 
@@ -710,10 +706,10 @@ and read state after the write (see `_titleDirty`).
 - UI actions (tabs, buttons, menus): `.scratch/tools/uia.ps1 -ProcessId N -Action
   list|invoke|select` drives our window via UI Automation — no mouse, no focus stealing.
   Give buttons an `AutomationProperties.Name` (also needed for screen readers).
-  Keybindings with modifiers can't be posted (no modifier state). `PHOSPHOR_TEST_KEYS=
+  Keybindings with modifiers can't be posted (no modifier state). `ZINC_TEST_KEYS=
   "alt+shift+plus,alt+left"` replays chords (1/s) through the real keybindings and the focused
   pane's `Invoke` (pane actions, then the window's; see `MainWindow.ReplayTestKeys`; logs to
-  PHOSPHOR_LOG). `uia.ps1 -Action invoke` also toggles ToggleButtons.
+  ZINC_LOG). `uia.ps1 -Action invoke` also toggles ToggleButtons.
   The chord→action map itself is unit-tested; the user confirms real key delivery.
   Entries like `menu:Split pane/Split right` run that workspace context-menu item's command
   (context menus can't be opened by posted input or UIA), and `palette:<exact title>` runs a
@@ -737,7 +733,7 @@ and read state after the write (see `_titleDirty`).
   so a replaced or closed canvas freed by the GC left a dangling handler: the next minimize/restore
   hung the app (user's dump) or crashed in Microsoft.Graphics.Canvas.dll (reproduced).
   `Terminal/CanvasLifetime.cs` creates every canvas, mirrors Win2D's count/registration, and holds
-  retired canvases until they're unregistered (logs unbalanced counts with PHOSPHOR_LOG). Repro:
+  retired canvases until they're unregistered (logs unbalanced counts with ZINC_LOG). Repro:
   `.scratch/tools/canvas-stress.ps1` (uses `test:gc`; `-Exe` to run another build).
 - Screenshots are downscaled when viewed; before claiming a rendering defect (gaps,
   misalignment), crop + upscale or scan pixel columns with PIL (installed). A "gap" in

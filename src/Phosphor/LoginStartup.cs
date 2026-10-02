@@ -4,19 +4,19 @@ using Phosphor.Terminal;
 namespace Phosphor;
 
 /// <summary>
-/// <c>launch-at-login</c>: a "Phosphor" value in the user's Run key starting this exe with
+/// <c>launch-at-login</c>: a "Zinc" value in the user's Run key starting this exe with
 /// <see cref="ShellResolver.LoginFlag"/>. Kept in step with the setting at every start and reload,
 /// with this exe's own path (installs are versioned folders; scripts/install.ps1 also moves it on).
-/// Test runs (PHOSPHOR_CONFIG) never touch it, as they never touch the saved windows.
+/// Test runs (ZINC_CONFIG) never touch it, as they never touch the saved windows.
 /// </summary>
 internal static class LoginStartup
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string ValueName = "Phosphor";
+    private const string ValueName = "Zinc";
 
     public static void Apply(LaunchAtLogin mode)
     {
-        if (Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } || Environment.ProcessPath is not { } exe)
+        if (Environment.GetEnvironmentVariable("ZINC_CONFIG") is { Length: > 0 } || Environment.ProcessPath is not { } exe)
         {
             return;
         }

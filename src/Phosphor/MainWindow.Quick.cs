@@ -103,7 +103,7 @@ public sealed partial class MainWindow
 
         HotkeyNotice.Message =
             $"{key} is in use by another app (Windows Terminal's quake mode uses Win+`). " +
-            "Set quick-terminal-hotkey in your config, or free the key; Phosphor retries whenever a window is activated.";
+            "Set quick-terminal-hotkey in your config, or free the key; Zinc retries whenever a window is activated.";
         HotkeyNotice.IsOpen = true;
     }
 

@@ -44,7 +44,7 @@ public static class OpenSourceNotices
             "MIT", "https://github.com/microsoft/Win2D", @"Licenses\Win2D.txt", ["Microsoft.Graphics.Win2D"]),
         new("ConPTY and OpenConsole", "1.24.260710001", "Runs console programs (from Windows Terminal)",
             "MIT", "https://github.com/microsoft/terminal", @"Licenses\ConPTY.txt", ["Microsoft.Windows.Console.ConPTY"]),
-        new(".NET", Environment.Version.ToString(), "The runtime Phosphor is written for, shipped with it",
+        new(".NET", Environment.Version.ToString(), "The runtime Zinc is written for, shipped with it",
             "MIT", "https://github.com/dotnet/runtime", @"Licenses\dotnet.txt", ["System.Drawing.Common"]),
         new("Tomlyn", "2.10.1", "Reads and edits config.toml",
             "BSD-2-Clause", "https://github.com/xoofx/Tomlyn", @"Licenses\Tomlyn.txt", ["Tomlyn"]),

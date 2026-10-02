@@ -105,7 +105,7 @@ public sealed partial class TerminalControl
             {
                 if (commands[i] is { Ran: true, Running: false, Started: { } started } done && _announcedCommands.Add(started))
                 {
-                    // PHOSPHOR_LOG: what shell integration saw.
+                    // ZINC_LOG: what shell integration saw.
                     Log.Write($"command: '{done.Text}' exit {done.ExitCode?.ToString() ?? "?"} in {done.Duration?.TotalSeconds:0.0}s, rows {done.PromptRow}-{done.LastRow}");
                     CommandFinished?.Invoke(done);
                 }

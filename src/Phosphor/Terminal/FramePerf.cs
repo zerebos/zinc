@@ -5,15 +5,15 @@ namespace Phosphor.Terminal;
 /// <summary>
 /// Frame timing for one pane: how long its frames took, our drawing (render state, glyph runs: the
 /// commands Direct2D records, split into <see cref="SectionNames"/>) and the flush (Direct2D
-/// rasterizing them: the GPU's work, or the CPU's with software rendering). Two uses: PHOSPHOR_PERF=1
-/// with PHOSPHOR_LOG logs every pane's numbers once a second (<see cref="LogsEverySecond"/>), and the
+/// rasterizing them: the GPU's work, or the CPU's with software rendering). Two uses: ZINC_PERF=1
+/// with ZINC_LOG logs every pane's numbers once a second (<see cref="LogsEverySecond"/>), and the
 /// drawing benchmark collects them for a run (<see cref="Snapshot"/>). Off, a pane has none and
 /// pays one null check per frame.
 /// </summary>
 internal sealed class FramePerf
 {
-    /// <summary>Whether every pane logs its frame times (PHOSPHOR_PERF=1 with PHOSPHOR_LOG).</summary>
-    public static readonly bool LogEnabled = Log.Enabled && Environment.GetEnvironmentVariable("PHOSPHOR_PERF") == "1";
+    /// <summary>Whether every pane logs its frame times (ZINC_PERF=1 with ZINC_LOG).</summary>
+    public static readonly bool LogEnabled = Log.Enabled && Environment.GetEnvironmentVariable("ZINC_PERF") == "1";
 
     public static readonly string[] SectionNames = ["read", "backgrounds", "text", "decorations"];
 

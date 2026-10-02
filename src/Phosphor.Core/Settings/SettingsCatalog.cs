@@ -97,9 +97,9 @@ public static class SettingsCatalog
 
     private static readonly SettingChoice[] NotifyChoices =
     [
-        new("Tab dot", "badge", "A dot on its tab; the taskbar button flashes if Phosphor is in the background."),
-        new("Notification", "toast", "A dot on its tab, and a Windows notification if Phosphor is in the background."),
-        new("Always notify", "toast-always", "A Windows notification whenever you aren't looking at that pane, even in Phosphor."),
+        new("Tab dot", "badge", "A dot on its tab; the taskbar button flashes if Zinc is in the background."),
+        new("Notification", "toast", "A dot on its tab, and a Windows notification if Zinc is in the background."),
+        new("Always notify", "toast-always", "A Windows notification whenever you aren't looking at that pane, even in Zinc."),
         new("Nothing", "never", "No dot, no notification."),
     ];
 
@@ -138,9 +138,9 @@ public static class SettingsCatalog
             "How much of faint (dim) text's color shows (1: as bright as other text).", SettingKind.Number, 0.5)
             { Minimum = 0.1, Maximum = 1, Step = 0.05 },
         new("appearance", "Readability", "colors.find-highlight", "Find highlight", "Behind each match of Find (default: a light yellow).",
-            SettingKind.Color, null) { Placeholder = "Phosphor's yellow" },
+            SettingKind.Color, null) { Placeholder = "Zinc's yellow" },
         new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Behind the match Find is on (default: orange).",
-            SettingKind.Color, null) { Placeholder = "Phosphor's orange" },
+            SettingKind.Color, null) { Placeholder = "Zinc's orange" },
         new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim's insert mode often does).",
             SettingKind.Choice, "block")
             {
@@ -214,7 +214,7 @@ public static class SettingsCatalog
         new("layout", "Panes", "window.unfocused-split-fill", "Dimming color", "What unfocused panes fade toward (default: their background).", SettingKind.Color, null)
             { Placeholder = "The pane's" },
         new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes.", SettingKind.Color, null)
-            { Placeholder = "Phosphor's grey" },
+            { Placeholder = "Zinc's grey" },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
             "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice, "always")
             { Choices = [new("Reopen them", "always"), new("Start fresh", "never")] },
@@ -232,7 +232,7 @@ public static class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Don't start Phosphor", "off"),
+                    new("Don't start Zinc", "off"),
                     new("Start in the tray", "tray", "No window: the quick terminal's hotkey works, and the tray icon opens your windows."),
                     new("Open my windows", "windows", "As they were when you left, or a new one."),
                 ],
@@ -313,7 +313,7 @@ public static class SettingsCatalog
             "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). New: off by default for now.",
             SettingKind.Toggle, false),
         new("about", "Troubleshooting", "debug.logging", "Debug log",
-            "Keeps a record of what Phosphor does, to send with a bug report. Turn it on, make the problem happen, then copy the log.",
+            "Keeps a record of what Zinc does, to send with a bug report. Turn it on, make the problem happen, then copy the log.",
             SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
             "Draws with the processor instead of the graphics card: for broken graphics drivers, some virtual machines and remote desktop glitches. Slower. Applies to terminals opened from now on.",

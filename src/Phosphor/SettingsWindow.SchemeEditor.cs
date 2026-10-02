@@ -34,7 +34,7 @@ internal sealed partial class SettingsWindow
     ];
 
     /// <summary>
-    /// Opens the editor for scheme <paramref name="name"/> (null: Phosphor's own, which becomes "Lit
+    /// Opens the editor for scheme <paramref name="name"/> (null: the default, which becomes "Lit
     /// Cell", named in config.toml so the edited copy is the one used).
     /// </summary>
     private void CustomizeScheme(string? name, IReadOnlyList<string> themePath)
@@ -107,7 +107,7 @@ internal sealed partial class SettingsWindow
 
         var replaces = _config.Themes.ReplacesBundled(name);
         _page.Children.Add(Note(replaces
-            ? $"Your copy of {name}, in the themes folder next to config.toml: it's used instead of the one Phosphor comes with. Every pane using it changes as you edit."
+            ? $"Your copy of {name}, in the themes folder next to config.toml: it's used instead of the one Zinc comes with. Every pane using it changes as you edit."
             : $"Yours, in the themes folder next to config.toml. Every pane using it changes as you edit."));
 
         var undo = new Button { Content = "Undo changes" };
@@ -126,7 +126,7 @@ internal sealed partial class SettingsWindow
         if (replaces)
         {
             var original = new Button { Content = "Back to the original" };
-            ToolTipService.SetToolTip(original, $"Deletes your copy: {name} as Phosphor comes with it is used again.");
+            ToolTipService.SetToolTip(original, $"Deletes your copy: {name} as Zinc comes with it is used again.");
             original.Click += (_, _) =>
             {
                 try
@@ -278,7 +278,7 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Deletes one of the user's own schemes, after asking; if it was in use, Phosphor's own colors take its place.</summary>
+    /// <summary>Deletes one of the user's own schemes, after asking; if it was in use, the default colors take its place.</summary>
     private async void DeleteScheme(string name)
     {
         try
@@ -287,7 +287,7 @@ internal sealed partial class SettingsWindow
             {
                 XamlRoot = Content.XamlRoot,
                 Title = $"Delete {name}?",
-                Content = "Its file goes from the themes folder. Where it's chosen, Phosphor's own colors take its place.",
+                Content = "Its file goes from the themes folder. Where it's chosen, the default colors take its place.",
                 PrimaryButtonText = "Delete",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,

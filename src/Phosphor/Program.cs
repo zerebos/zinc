@@ -9,7 +9,7 @@ namespace Phosphor;
 /// Entry point (replaces WinUI's generated Main; DISABLE_XAML_GENERATED_MAIN). Phosphor runs once
 /// per session file: a second launch hands its activation — command line included — to the
 /// running instance, which opens a window for it (see <see cref="App.OnRedirectedLaunch"/>), and
-/// exits. Runs without a session (tests: PHOSPHOR_CONFIG set) stay separate processes.
+/// exits. Runs without a session (tests: ZINC_CONFIG set) stay separate processes.
 /// </summary>
 public static partial class Program
 {

@@ -1,4 +1,8 @@
-# Phosphor
+# Zinc
+
+*Every cell, exactly right.* A precise, native terminal for Windows, built on Ghostty's core.
+The code still uses its working name, Phosphor (projects, namespaces, `src/Phosphor`), until a
+rename before 1.0. Brand guidelines: [docs/brand.md](docs/brand.md).
 
 A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 **libghostty-vt**, the terminal emulation core extracted from
@@ -12,7 +16,7 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 
 - **libghostty-vt** (`ghostty-vt.dll`, C API via P/Invoke) does VT parsing,
   screen/scrollback state, reflow, selection, and key/mouse/paste encoding.
-- **ConPTY** runs the child process. Phosphor ships Windows Terminal's
+- **ConPTY** runs the child process. Zinc ships Windows Terminal's
   out-of-box ConPTY (`conpty.dll` + `OpenConsole.exe` from the
   `Microsoft.Windows.Console.ConPTY` package) and falls back to the inbox one
   if those files are missing.
@@ -44,30 +48,30 @@ dotnet test
 ```
 
 The app is unpackaged and Windows App SDK self-contained, so
-`src/Phosphor/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/Phosphor.exe`
+`src/Phosphor/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`
 runs directly.
 
 ## Installing locally
 
 ```bash
-pwsh scripts/install.ps1                  # Release build -> Start Menu "Phosphor" (Raycast finds it)
+pwsh scripts/install.ps1                  # Release build -> Start Menu "Zinc" (Raycast finds it)
 pwsh scripts/install.ps1 -InstallGitHook  # also reinstall in the background after each commit
 pwsh scripts/install.ps1 -Uninstall       # remove install, shortcut and hook (keeps config)
 ```
 
-Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Phosphor\versions\`
+Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Zinc\versions\`
 and repoints the Start Menu shortcut, so open windows are never disturbed; the three
 newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundled).
 
 **Versions.** `PhosphorVersion` in `Directory.Build.props` is the release being worked toward. A build
 of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
 build numbered by the repository's commit count (`0.1.0-dev.812+a1b2c3d`). It's shown in Settings >
-About, answered to programs asking the terminal's version (XTVERSION: `phosphor 0.1.0-dev.812+a1b2c3d`),
+About, answered to programs asking the terminal's version (XTVERSION: `zinc 0.1.0-dev.812+a1b2c3d`),
 in the exe's file properties, and in install folder names (after a timestamp, which keeps them in order).
 
 ## Configuration
 
-The first time Phosphor starts, a welcome page asks how you like to work (**Simple**: tabs along
+The first time Zinc starts, a welcome page asks how you like to work (**Simple**: tabs along
 the top, one terminal each; **Workspaces**: in a sidebar or along the top, each with its own tabs
 and splits), a color scheme and font (with a preview; or two schemes that follow Windows' light
 and dark mode), your default shell, and whether a long command finishing in the background shows
@@ -96,7 +100,7 @@ delete, or undo your changes to a found one), each one's name, command, folder, 
 folder button to browse for them) and visibility, and its
 own font, colors and padding: each shows what it inherits until you change it there, and the
 reset arrow makes it inherit again ("Inherited from Appearance" links to where it's set). Also which
-shells Phosphor looks for, and what each search found. A found profile you changed that can't open
+shells Zinc looks for, and what each search found. A found profile you changed that can't open
 any more (its shell is gone, or its search is turned off) stays in the list, saying why, with
 **Delete** or **Turn on** the search; it's left out of the menus meanwhile. Under **Keyboard**: every action with its keys, grouped (Clipboard, Tabs,
 Panes…) and filterable by name or key; an action that takes an argument (split: a direction; new
@@ -106,7 +110,7 @@ by pressing it (it says if another action has that key, and takes it over), the 
 the defaults. Changes go in `[keys]`: taking away a default key writes `"chord" = "none"`. Key
 sequences are listed but added in the file.
 
-`%APPDATA%\Phosphor\config.toml` (override the path with `PHOSPHOR_CONFIG`), in
+`%APPDATA%\Zinc\config.toml` (override the path with `ZINC_CONFIG`), in
 [TOML](https://toml.io): settings grouped into sections, `#` comments. Problems (unknown keys,
 bad values, TOML mistakes) are shown in a bar naming the file and line; everything else
 still applies.
@@ -143,7 +147,7 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 **`[font]`**
 - `family`: any installed monospace family; Nerd Fonts work. The default, **Cascadia Mono NF**
   (Microsoft's Nerd Font build of Windows Terminal's font, so prompt icons show out of the box),
-  ships with Phosphor and needs no installing. A family that isn't installed falls back to it,
+  ships with Zinc and needs no installing. A family that isn't installed falls back to it,
   then to Cascadia Mono and Consolas.
 - `size`: in points; `Ctrl+0` resets to this.
 - `builtin-glyphs`: `true` (default) draws box drawing, block elements, Symbols for Legacy
@@ -157,9 +161,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   `1` adds a pixel, `-1` takes one away (never below 1), `"20%"` scales.
 
 **`[colors]`**
-- `theme`: a color scheme by name. About 650 come with Phosphor (the
+- `theme`: a color scheme by name. About 650 come with Zinc (the
   [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) collection);
-  your own go in `%APPDATA%\Phosphor\themes\`, one file per scheme in Ghostty's theme format
+  your own go in `%APPDATA%\Zinc\themes\`, one file per scheme in Ghostty's theme format
   (`background = #181818`, `palette = 1=#AC4242`, ...), named as `theme` refers to them. Yours
   win over bundled ones with the same name.
   **Customize** (Settings > Appearance, "Edit colors") edits the scheme in force: its background, text,
@@ -168,9 +172,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   deletes the copy); your own are edited in place. Every pane using the scheme changes as you edit,
   and "Undo changes" puts the file back as it was when you opened it. **New scheme…** (there, and
   "Save as a new scheme…" in the editor) starts a scheme of your own as a copy, under a name you give;
-  "Delete scheme" removes one of yours (where it was chosen, Phosphor's own colors take its place).
-  Without a theme, Phosphor's own colors: "Lit Cell", phosphor green on near-black (it and its
-  light partner come with Phosphor by name: `theme = "light:Lit Cell Light,dark:Lit Cell"` follows
+  "Delete scheme" removes one of yours (where it was chosen, Zinc's own colors take its place).
+  Without a theme, Zinc's own colors: "Lit Cell", phosphor green on near-black (it and its
+  light partner come with Zinc by name: `theme = "light:Lit Cell Light,dark:Lit Cell"` follows
   Windows' mode). A scheme
   replaces them entirely: what its file leaves out (some palette entries, selection colors) is
   libghostty's default, not Lit Cell's.
@@ -210,7 +214,7 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   selection stays).
 - `click-to-move`: `true` (default) or `false`: at a shell prompt, clicking in the command you're
   typing moves the cursor there (Ghostty's `cursor-click-to-move`). It needs the prompt marks of
-  [shell integration](#shell-integration): Phosphor presses the arrow keys for you, or, for shells
+  [shell integration](#shell-integration): Zinc presses the arrow keys for you, or, for shells
   that ask for it (fish 4.1+, nushell), sends the click to the shell. A click on the prompt goes to
   the start of the command, one past its end to the end. Only within the command's own line.
 - `paste-warning`: when to ask before a paste of more than one line. `"auto"` (default) asks when
@@ -228,7 +232,7 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   Anything running in the terminal, including a remote host, could read it.
 - `command-marks`: `"failures"` (default), `"all"` or `"none"`: which commands get a bar beside
   them ([shell integration](#shell-integration)).
-- `shell-integration`: `"auto"` (default) loads Phosphor's [shell integration](#shell-integration)
+- `shell-integration`: `"auto"` (default) loads Zinc's [shell integration](#shell-integration)
   into PowerShell, bash and zsh; `"off"` starts shells as they are.
 - `cursor-style-at-prompt`: `"same"` (default) or a shape as for `cursor-style`: the cursor while
   a shell waits at its prompt ([shell integration](#shell-integration) says when), e.g. `"bar"`, as
@@ -264,14 +268,14 @@ glitches; slower; applies to terminals opened after it's set).
 [Shell integration](#shell-integration)), and `programs`: notifications that programs send
 (OSC 9 and OSC 777, e.g. a build script's `printf '\e]9;Build done\a'`). Out of view they put a
 blue dot on the tab, like a finished command; `"toast"` also shows a Windows notification while
-Phosphor is in the background (`"toast-always"`: whenever that pane is out of view), `"never"`
+Zinc is in the background (`"toast-always"`: whenever that pane is out of view), `"never"`
 ignores them. Programs that report progress (OSC 9;4)
-get a small ring on their tab and a progress bar on Phosphor's taskbar button.
-Windows notifications come from Phosphor's tray icon and respect Do Not Disturb.
+get a small ring on their tab and a progress bar on Zinc's taskbar button.
+Windows notifications come from Zinc's tray icon and respect Do Not Disturb.
 
-**`[debug]`**: `logging = true` keeps a debug log in `%LOCALAPPDATA%\Phosphor\logs\phosphor.log`
-(moved aside to `phosphor.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
-(the log with Phosphor's version and Windows' on top, for a bug report) and Clear. `PHOSPHOR_LOG=<file>`
+**`[debug]`**: `logging = true` keeps a debug log in `%LOCALAPPDATA%\Zinc\logs\zinc.log`
+(moved aside to `zinc.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
+(the log with Zinc's version and Windows' on top, for a bug report) and Clear. `ZINC_LOG=<file>`
 overrides it: always on, into that file. About also has a drawing benchmark: four 5-second tests
 in a window of their own (optionally again with software rendering), with results you can copy.
 
@@ -298,19 +302,19 @@ working-directory = "~/dev"
 size = 12
 ```
 
-- `default-profile` (at the top): the profile Phosphor starts with; defaults to the first.
+- `default-profile` (at the top): the profile Zinc starts with; defaults to the first.
 - `profile-order` (at the top): profile ids in the order menus list them (Settings writes it when
   you reorder); profiles not in it follow in their usual order.
 - `name`: shown in menus and tabs; defaults to the id.
 - `command`: the command line; without one, PowerShell 7, else Windows PowerShell, else cmd.
-- `icon`: image shown for the profile in tabs. Without one, Phosphor picks one like Windows
+- `icon`: image shown for the profile in tabs. Without one, Zinc picks one like Windows
   Terminal: the WSL distro's registered icon, Git for Windows' icon for Git Bash, a network
   glyph for `ssh`, else the command's executable icon.
 - `working-directory`: `"~"` (the default) or a path; `~/sub` and `%VARS%` expand.
 - `hidden = true`: keeps a profile out of menus.
 - Without any profiles, of your own or found, the settings above act as a single "Default" profile.
 
-Phosphor also finds the shells installed on this machine every time it reads the config, as
+Zinc also finds the shells installed on this machine every time it reads the config, as
 Windows Terminal does, and lists them after your own profiles:
 
 | Found | Id | Name |
@@ -352,51 +356,51 @@ and Alt+Tab, and it keeps its tabs while hidden. In `[quick-terminal]`:
 - `autohide`: `true` (default) hides it when it loses focus.
 
 If another app holds the hotkey (Windows Terminal's quake mode uses ``Win+` ``), windows
-show a notice, and Phosphor retries whenever one of its windows is activated.
+show a notice, and Zinc retries whenever one of its windows is activated.
 
 ### Tray icon and background
 
-Only one Phosphor runs at a time: launching it again (Start menu, a launcher, the command line)
+Only one Zinc runs at a time: launching it again (Start menu, a launcher, the command line)
 opens a new window in the running one — with the command given, if any — or, when it's in the
 tray with no window open, reopens the saved windows.
 
-Phosphor shows a notification-area icon while it runs. Clicking it brings back the most
+Zinc shows a notification-area icon while it runs. Clicking it brings back the most
 recently used window (or the saved windows); right-clicking offers New window, Show/Hide quick
-terminal, Settings, and Quit Phosphor, which closes every window, the hidden quick terminal
-included. Quit Phosphor is also in the command palette, next to Quit and start fresh next time,
+terminal, Settings, and Quit Zinc, which closes every window, the hidden quick terminal
+included. Quit Zinc is also in the command palette, next to Quit and start fresh next time,
 which quits without keeping the windows (the next start opens a new one).
 
-`launch-at-login` in `[window]` starts Phosphor when you sign in to Windows: `"tray"` without a
+`launch-at-login` in `[window]` starts Zinc when you sign in to Windows: `"tray"` without a
 window (the quick terminal's hotkey works; the tray icon opens your windows), `"windows"` with
-your windows as you left them, `"off"` (default). Phosphor keeps a "Phosphor" entry in your
+your windows as you left them, `"off"` (default). Zinc keeps a "Zinc" entry in your
 startup apps (the Run key) in step with it, pointing at the installed version; switching it off
-in Windows' Startup apps page works too (Phosphor leaves that switch alone).
+in Windows' Startup apps page works too (Zinc leaves that switch alone).
 
-When the last window closes, Phosphor keeps running in the tray while its quick terminal hotkey
+When the last window closes, Zinc keeps running in the tray while its quick terminal hotkey
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
 In `[window]`, `quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
 ### Default terminal
 
-Phosphor can open the console programs Windows starts outside a terminal: a script you
+Zinc can open the console programs Windows starts outside a terminal: a script you
 double-click, a command from Run, an installer, a tool that opens a console. Turn on **Default
-terminal app** in Settings > Layout; each such program then opens in a Phosphor tab (in the window
+terminal app** in Settings > Layout; each such program then opens in a Zinc tab (in the window
 you used last, or a window of its own if none is open), running as it would anywhere. Turning it off
 gives the setting back to what it was.
 
 For now this needs **Windows Terminal** (any edition) installed and chosen as the default terminal
 app in Windows Settings first: Windows hands each new console to a console host and then to a
-terminal, and Phosphor takes the terminal's part while Windows Terminal's console host keeps its own.
-No package or installer change is involved (Phosphor registers itself for your user only; the
+terminal, and Zinc takes the terminal's part while Windows Terminal's console host keeps its own.
+No package or installer change is involved (Zinc registers itself for your user only; the
 installer keeps that pointing at the newest version and gives the setting back on uninstall). Its
 tabs aren't saved with the session: such a program can't be started again as it was.
 
 ### Reopening where you left off
 
-Phosphor remembers its windows: their size and place, their workspaces (titles, colors), split
+Zinc remembers its windows: their size and place, their workspaces (titles, colors), split
 layouts and tabs, and which were shown. Next time it starts (without a command on its command
 line), they reopen with fresh shells in the same folders. What the terminals showed isn't kept.
-The state is saved as you go (`%APPDATA%\Phosphor\session.json`), so a crash keeps it too;
+The state is saved as you go (`%APPDATA%\Zinc\session.json`), so a crash keeps it too;
 closing the last window keeps that window for next time. `save-state = "never"` in `[window]` turns this
 off (`"always"`, the default, keeps it on).
 
@@ -405,7 +409,7 @@ tray menu, `reopen-window` in `[keys]`) reopens the one closed last, where it wa
 workspaces, splits and tabs. The last five are kept, with the session.
 
 A tab reopens in the folder its shell last *reported* (OSC 7, or OSC 9;9 / OSC 1337).
-PowerShell, bash and zsh report it through Phosphor's [shell integration](#shell-integration),
+PowerShell, bash and zsh report it through Zinc's [shell integration](#shell-integration),
 with nothing to set up; other shells need to send it themselves, e.g. from their prompt:
 `printf '\e]7;file://%s%s\e\\' "$HOSTNAME" "$PWD"`. Without it, tabs reopen where they first
 started. WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive.
@@ -413,7 +417,7 @@ started. WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map t
 ### Shell integration
 
 A shell can mark its prompts and commands (OSC 133): where each prompt starts, where a command's
-output starts, and how it ended. With those marks, Phosphor can:
+output starts, and how it ended. With those marks, Zinc can:
 
 - **jump between prompts**: `Ctrl+Shift+↑` / `Ctrl+Shift+↓` scroll the previous or next prompt to
   the top of the pane (without marks they scroll a line);
@@ -429,10 +433,10 @@ output starts, and how it ended. With those marks, Phosphor can:
   (anywhere but the focused one), or while you're in another app, a command that ran 10 seconds
   or more puts a pulsing dot after its tab's title (on the icon in the rail): green, or red if it
   failed, until you focus it. A pane without a tab strip shows it in its top-right corner, and a
-  workspace with several tabs to look at shows how many. The taskbar button flashes if Phosphor
+  workspace with several tabs to look at shows how many. The taskbar button flashes if Zinc
   is in the background. In
   `[notify]`: `command-finished = "toast"` shows a Windows notification instead of the flash
-  (click it to go to the pane), `"toast-always"` shows one even while you're in Phosphor (just
+  (click it to go to the pane), `"toast-always"` shows one even while you're in Zinc (just
   not looking at that pane), `"never"` turns this off, and `command-finished-after` sets what
   counts as long (`30`, `"45s"`, `"2m"`);
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
@@ -440,21 +444,21 @@ output starts, and how it ended. With those marks, Phosphor can:
 
 The marks are invisible, and **PowerShell (7 and Windows PowerShell), bash and zsh get them
 automatically**, in WSL, Git Bash and MSYS2 too, along with folder reports for
-[reopening tabs](#reopening-where-you-left-off). Your startup files run as usual; Phosphor's
-script (in `ShellIntegration\` next to Phosphor.exe) runs after them and changes nothing you see:
+[reopening tabs](#reopening-where-you-left-off). Your startup files run as usual; Zinc's
+script (in `ShellIntegration\` next to zinc.exe) runs after them and changes nothing you see:
 
 - **PowerShell** is started with `-NoExit -Command` running it after your profile. A profile
   started with `-Command` or `-File` of its own is left alone.
 - **bash** finds it in `PROMPT_COMMAND`, which runs it once at the first prompt (then puts
   `PROMPT_COMMAND` back as your startup files left it).
-- **zsh** finds it through `ZDOTDIR`: Phosphor's `.zshenv` puts your `ZDOTDIR` back, loads your
+- **zsh** finds it through `ZDOTDIR`: Zinc's `.zshenv` puts your `ZDOTDIR` back, loads your
   `.zshenv` as zsh would have, and sets the rest up at the first prompt.
 - **WSL** gets the same variables through `WSLENV`, so it works with whichever of these is your
   login shell.
 
 Marks your prompt already sends are left to it: **powerlevel10k's** own integration
 (`typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true` in `p10k.zsh`; it knows its own prompt best) or a
-hand-written one, and a folder report you send yourself. Phosphor then adds only what's missing
+hand-written one, and a folder report you send yourself. Zinc then adds only what's missing
 (powerlevel10k sends no folder report).
 
 `shell-integration = "off"` in `[terminal]` (or in one profile) starts shells exactly as anywhere
@@ -463,7 +467,7 @@ marks don't follow; the scripts in `ShellIntegration\` show what to send from th
 
 **A shell started from another** (`fish` from zsh, `wsl` from PowerShell) is followed too: the
 command that started it runs until you leave it, and the commands you run inside are its own. Two
-shells are told apart by how their prompts mark themselves (Phosphor's scripts add their process
+shells are told apart by how their prompts mark themselves (Zinc's scripts add their process
 id); two that mark alike, like zsh inside zsh with powerlevel10k, look like one shell, and the
 command that started the inner one ends at its first prompt.
 
@@ -471,18 +475,18 @@ command that started the inner one ends at its first prompt.
 `setx PROMPT "$e]133;D$e\$e]133;A$e\$P$G$e]133;B$e\"`.
 
 **fish** (recent versions: 4.3 checked) and **nushell** send the marks and folder reports on their own, so
-Phosphor loads nothing into them: jumping, selecting output and the command list work as they
+Zinc loads nothing into them: jumping, selecting output and the command list work as they
 are. For other shells, the scripts in `ShellIntegration\` show what to send.
 [docs/shell-integration.md](docs/shell-integration.md) compares all this with Ghostty's.
 
 ## Choosing a shell
 
-1. Arguments after the executable: `Phosphor.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
-2. The `PHOSPHOR_SHELL` environment variable (a full command line)
+1. Arguments after the executable: `zinc.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
+2. The `ZINC_SHELL` environment variable (a full command line)
 3. The default profile's `command` (tabs opened later use their profile's)
 4. Otherwise `pwsh.exe`, then `powershell.exe`, then `cmd.exe`
 
-Children get `COLORTERM=truecolor` and `TERM_PROGRAM=phosphor`.
+Children get `COLORTERM=truecolor` and `TERM_PROGRAM=zinc`.
 
 ## Keys and mouse
 
@@ -621,7 +625,7 @@ direct placements (e.g. fastfetch `--kitty-direct`) and Unicode placeholders (e.
 previews). Programs may send image data inline, or name a file to load
 (or a temp file under `%TEMP%`); paths from WSL or a remote host don't resolve here, so
 those programs must send data inline. Images keep their place in scrollback. Programs detect
-support with the protocol's query; Phosphor answers it (and identifies as libghostty).
+support with the protocol's query; Zinc answers it (and identifies as libghostty).
 
 Find (`Ctrl+Shift+F`) opens a box at the pane's top right. Matches highlight as you type, with
 their positions marked beside the scrollbar; `Enter` moves to the next older match and
@@ -656,7 +660,7 @@ type) and keeps it: its new tabs and splits start there, in each shell's own ter
 opens in PowerShell as `\\wsl.localhost\…`, a Windows one in WSL under `/mnt/c/…`); shells can still
 go anywhere, and Duplicate and "New tab in folder…" keep their own folder. "Show this page for new
 workspaces" at the bottom (`new-workspace-page` in `[window]`) turns the page off: + then starts the
-default at once. The ▾ menu and Phosphor's own start (with nothing to reopen) start at once, as before.
+default at once. The ▾ menu and Zinc's own start (with nothing to reopen) start at once, as before.
 
 A workspace's **icon** (a set of Windows' own icons: code, folder, globe, bug, cloud…) shows on its tab
 and in the sidebar instead of its active tab's profile icon; set it on the page, from the workspace's
@@ -697,7 +701,7 @@ workspaces. Its Split pane menu can also move the focused pane out to a new work
 Workspaces can be dragged, with their terminals still running:
 
 - out of the tab strip, to open in a new window where you drop them;
-- onto another Phosphor window's tabs (or its +/▾ buttons), to move there;
+- onto another Zinc window's tabs (or its +/▾ buttons), to move there;
 - onto the edge of a pane (the outer third on that side), to join that workspace as a split on
   that side, keeping their own split layout;
 - onto the middle of a pane, to join that pane as tabs (with tab groups on).
@@ -709,8 +713,8 @@ A pane's own tabs can be dragged too:
   there (also beside its own pane, when that pane has other tabs);
 - onto the title bar's tabs, to become a workspace of their own; resting on a workspace's tab
   for a moment switches to it, so a tab can be carried into another workspace's panes;
-- outside every Phosphor window, to open in a new window;
-- into panes and title bars of other Phosphor windows.
+- outside every Zinc window, to open in a new window;
+- into panes and title bars of other Zinc windows.
 
 The drop area is highlighted while you drag.
 
@@ -722,8 +726,7 @@ until a key is pressed; a clean exit closes it.
 ```
 scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
-scripts/gen-icon.py               assets/*.svg -> src/Phosphor/Assets/Phosphor.ico (pixel-snapped sizes)
-assets/                           source artwork (app icon SVG)
+assets/brand/                     icon frames, mark and lockups (docs/brand.md)
 src/Phosphor.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
 src/Phosphor.Core/                 everything testable without a window:
   Ghostty/                          P/Invoke bindings
@@ -756,7 +759,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 
 ## Open-source software
 
-Phosphor ships Ghostty's terminal core (libghostty-vt, with simdutf, Highway, uucode and the Zig
+Zinc ships Ghostty's terminal core (libghostty-vt, with simdutf, Highway, uucode and the Zig
 standard library compiled in), z2d (in the built-in glyphs), Cascadia Mono NF, iTerm2-Color-Schemes,
 the Windows App SDK, Win2D, ConPTY/OpenConsole, .NET, Tomlyn and a Heroicons shape. Settings > About
-lists them with their licenses; the texts are in `Licenses\` next to `Phosphor.exe`.
+lists them with their licenses; the texts are in `Licenses\` next to `zinc.exe`.

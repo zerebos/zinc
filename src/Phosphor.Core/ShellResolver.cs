@@ -33,7 +33,7 @@ public static class ShellResolver
         }
 
         // 2. An explicit override.
-        var fromEnv = getEnv("PHOSPHOR_SHELL");
+        var fromEnv = getEnv("ZINC_SHELL");
         if (!string.IsNullOrWhiteSpace(fromEnv))
         {
             return fromEnv;
@@ -45,7 +45,7 @@ public static class ShellResolver
 
     /// <summary>
     /// The command for a profile opened from the UI (new tab/pane): its `command`, else a
-    /// default shell. Our own arguments and PHOSPHOR_SHELL only apply to the first tab.
+    /// default shell. Our own arguments and ZINC_SHELL only apply to the first tab.
     /// </summary>
     public static string ForProfile(Config profile, Func<string, string?>? getEnv = null)
     {

@@ -20,7 +20,7 @@ public static class ShellIntegration
     public const string FolderName = "ShellIntegration";
 
     /// <summary>What bash's first PROMPT_COMMAND runs (the script removes it again).</summary>
-    public const string BashBootstrap = ". \"$PHOSPHOR_SHELL_INTEGRATION_DIR/bash/phosphor.bash\"";
+    public const string BashBootstrap = ". \"$ZINC_SHELL_INTEGRATION_DIR/bash/phosphor.bash\"";
 
     /// <summary>
     /// <paramref name="commandLine"/> with the integration in <paramref name="scripts"/> added, or as
@@ -59,14 +59,14 @@ public static class ShellIntegration
         var dir = scripts.Replace('\\', '/').TrimEnd('/');
         var env = new Dictionary<string, string?>
         {
-            ["PHOSPHOR_SHELL_INTEGRATION_DIR"] = dir,
+            ["ZINC_SHELL_INTEGRATION_DIR"] = dir,
             ["PROMPT_COMMAND"] = BashBootstrap,
             ["ZDOTDIR"] = dir + "/zsh",
         };
-        List<string> wsl = ["PHOSPHOR_SHELL_INTEGRATION_DIR/p", "PROMPT_COMMAND", "ZDOTDIR/p"];
+        List<string> wsl = ["ZINC_SHELL_INTEGRATION_DIR/p", "PROMPT_COMMAND", "ZDOTDIR/p"];
         if (environment("ZDOTDIR") is { Length: > 0 } zdotdir)
         {
-            env["PHOSPHOR_ZDOTDIR"] = zdotdir; // .zshenv puts it back
+            env["ZINC_ZDOTDIR"] = zdotdir; // .zshenv puts it back
         }
 
         var existing = environment("WSLENV") is { Length: > 0 } w ? w.Split(':', StringSplitOptions.RemoveEmptyEntries).ToList() : [];

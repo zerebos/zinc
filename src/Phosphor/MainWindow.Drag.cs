@@ -66,7 +66,7 @@ public sealed partial class MainWindow
         var point = new PointInt32(cursor.X, cursor.Y);
         if (App.Instance.IsOverWindow(point))
         {
-            Log.Write("tab drag: released over a Phosphor window, cancelled");
+            Log.Write("tab drag: released over a Zinc window, cancelled");
             return;
         }
 

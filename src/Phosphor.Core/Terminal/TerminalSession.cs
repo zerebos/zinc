@@ -142,7 +142,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         byte pullScrollback = 0;
         Native.TerminalSet(_terminal, TerminalOption.ResizePullScrollback, &pullScrollback);
 
-        // Who we are, for programs that ask (XTVERSION, CSI > q): "phosphor <version>", lowercase
+        // Who we are, for programs that ask (XTVERSION, CSI > q): "zinc <version>", lowercase
         // like TERM_PROGRAM (and Ghostty's own "ghostty 1.x"). Default: "libghostty".
         Native.TerminalSet(_terminal, TerminalOption.Xtversion, (delegate* unmanaged[Cdecl]<nint, nint, GhosttyString>)&OnXtversion);
 
@@ -175,7 +175,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         // Children inherit our environment; advertise what the terminal supports.
         Environment.SetEnvironmentVariable("COLORTERM", "truecolor");
-        Environment.SetEnvironmentVariable("TERM_PROGRAM", "phosphor");
+        Environment.SetEnvironmentVariable("TERM_PROGRAM", "zinc");
         // Launched from another terminal, we'd pass on its identity, and programs would pick
         // features for it (e.g. image protocols for Windows Terminal instead of kitty graphics).
         foreach (var name in (string[])["WT_SESSION", "WT_PROFILE_ID", "TERM_PROGRAM_VERSION", "KITTY_WINDOW_ID", "WEZTERM_PANE"])
@@ -202,8 +202,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
         _pty.Begin();
     }
 
-    // Set PHOSPHOR_TRACE=<file> to record raw PTY output for debugging.
-    private readonly FileStream? _trace = Environment.GetEnvironmentVariable("PHOSPHOR_TRACE") is { Length: > 0 } path
+    // Set ZINC_TRACE=<file> to record raw PTY output for debugging.
+    private readonly FileStream? _trace = Environment.GetEnvironmentVariable("ZINC_TRACE") is { Length: > 0 } path
         ? new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read)
         : null;
 
@@ -1283,7 +1283,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnBell(nint terminal, nint userdata) => FromUserdata(userdata)._bell = true;
 
-    /// <summary>"phosphor 1.0.0+abc1234": the app's version, with a short commit hash if it has one.</summary>
+    /// <summary>"zinc 1.0.0+abc1234": the app's version, with a short commit hash if it has one.</summary>
     public static string Version { get; } = ComputeVersion();
 
     private static string ComputeVersion()
@@ -1292,7 +1292,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
             .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "0";
         var plus = info.IndexOf('+');
-        return "phosphor " + (plus >= 0 && info.Length > plus + 8 ? info[..(plus + 8)] : info);
+        return "zinc " + (plus >= 0 && info.Length > plus + 8 ? info[..(plus + 8)] : info);
     }
 
     // XTVERSION's answer, in memory that stays put (libghostty reads it after we return).

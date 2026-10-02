@@ -27,7 +27,7 @@ internal sealed partial class SettingsWindow
 
         var controls = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, Children = { software, run } };
         _page.Children.Add(Row("Drawing benchmark",
-            $"How fast Phosphor draws on this computer: {Enum.GetValues<BenchmarkWorkload>().Length} tests of {BenchmarkWindow.Seconds:0} seconds, " +
+            $"How fast Zinc draws on this computer: {Enum.GetValues<BenchmarkWorkload>().Length} tests of {BenchmarkWindow.Seconds:0} seconds, " +
             "in a window of their own. Software rendering draws without the graphics card, which shows how a slower computer would do.",
             controls));
 
@@ -142,7 +142,7 @@ internal sealed partial class SettingsWindow
                 table,
                 new TextBlock
                 {
-                    Text = "Program output: how fast Phosphor took a busy program's output. Drawn: frames a second it showed. " +
+                    Text = "Program output: how fast Zinc took a busy program's output. Drawn: frames a second it showed. " +
                         "Frame time: drawing one frame, including the graphics card's part. Copy has the details.",
                     FontSize = 12,
                     Foreground = secondary,

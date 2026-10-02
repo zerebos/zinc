@@ -20,7 +20,7 @@ internal static class ProfileIcons
 
     private static readonly Dictionary<Profile, IconSource> Cache = new();
     private static readonly string IconCacheDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Phosphor", "cache", "icons");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Zinc", "cache", "icons");
 
     public static IconSource For(Profile profile)
     {

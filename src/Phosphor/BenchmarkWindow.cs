@@ -21,8 +21,8 @@ internal sealed class BenchmarkWindow : Window
 
     private BenchmarkWindow()
     {
-        Title = "Phosphor benchmark";
-        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
+        Title = "Zinc benchmark";
+        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
         Content = _host;
         Closed += (_, _) => _closed = true;
     }
@@ -69,7 +69,7 @@ internal sealed class BenchmarkWindow : Window
                 var output = new BenchmarkWorkloads(size.Cols, size.Rows);
                 foreach (var workload in workloads)
                 {
-                    Title = $"Phosphor benchmark: {BenchmarkWorkloads.Title(workload)}{(pass ? ", software" : "")} ({++step} of {workloads.Length * passes.Length})";
+                    Title = $"Zinc benchmark: {BenchmarkWorkloads.Title(workload)}{(pass ? ", software" : "")} ({++step} of {workloads.Length * passes.Length})";
                     if (await RunOne(terminal, output, workload, pass) is not { } result)
                     {
                         return null;

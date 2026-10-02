@@ -2,14 +2,14 @@ namespace Phosphor;
 
 /// <summary>
 /// Diagnostics. <see cref="Write"/> is opt-in: the debug log (<c>[debug] logging</c>, switched with
-/// <see cref="SetEnabled"/>, into <see cref="FilePath"/>), or PHOSPHOR_LOG=&lt;file&gt;, which wins and
+/// <see cref="SetEnabled"/>, into <see cref="FilePath"/>), or ZINC_LOG=&lt;file&gt;, which wins and
 /// is always on. <see cref="Crash"/> always keeps a record, in <see cref="CrashPath"/>, so a failure
 /// leaves its stack trace even when nobody was logging. Neither ever throws: a log that can't be
 /// written mustn't take the app down with it.
 /// </summary>
 public static class Log
 {
-    private static readonly string? EnvironmentPath = Environment.GetEnvironmentVariable("PHOSPHOR_LOG") is { Length: > 0 } p ? p : null;
+    private static readonly string? EnvironmentPath = Environment.GetEnvironmentVariable("ZINC_LOG") is { Length: > 0 } p ? p : null;
     private static readonly object Gate = new();
     private static volatile string? _path = EnvironmentPath;
     private static int _sinceSizeCheck;
@@ -22,23 +22,23 @@ public static class Log
 
     public static bool Enabled => _path != null;
 
-    /// <summary>Whether PHOSPHOR_LOG decides (then the setting changes nothing).</summary>
+    /// <summary>Whether ZINC_LOG decides (then the setting changes nothing).</summary>
     public static bool FromEnvironment => EnvironmentPath != null;
 
     private static string Folder { get; } =
-        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Phosphor");
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Zinc");
 
-    /// <summary>The debug log: PHOSPHOR_LOG's file, else %LOCALAPPDATA%\Phosphor\logs\phosphor.log.</summary>
-    public static string FilePath { get; } = EnvironmentPath ?? System.IO.Path.Combine(Folder, "logs", "phosphor.log");
+    /// <summary>The debug log: ZINC_LOG's file, else %LOCALAPPDATA%\Phosphor\logs\phosphor.log.</summary>
+    public static string FilePath { get; } = EnvironmentPath ?? System.IO.Path.Combine(Folder, "logs", "zinc.log");
 
     /// <summary>The debug log before its last move aside.</summary>
     public static string OldFilePath => System.IO.Path.ChangeExtension(FilePath, ".old.log");
 
-    /// <summary>%LOCALAPPDATA%\Phosphor\crash.log (PHOSPHOR_CRASH_LOG=&lt;file&gt; for test runs).</summary>
+    /// <summary>%LOCALAPPDATA%\Phosphor\crash.log (ZINC_CRASH_LOG=&lt;file&gt; for test runs).</summary>
     public static string CrashPath { get; } =
-        Environment.GetEnvironmentVariable("PHOSPHOR_CRASH_LOG") is { Length: > 0 } crash ? crash : System.IO.Path.Combine(Folder, "crash.log");
+        Environment.GetEnvironmentVariable("ZINC_CRASH_LOG") is { Length: > 0 } crash ? crash : System.IO.Path.Combine(Folder, "crash.log");
 
-    /// <summary>Turns the debug log on or off (nothing changes while PHOSPHOR_LOG is set).</summary>
+    /// <summary>Turns the debug log on or off (nothing changes while ZINC_LOG is set).</summary>
     public static void SetEnabled(bool on)
     {
         if (FromEnvironment || on == Enabled)
@@ -76,7 +76,7 @@ public static class Log
     {
         if (_path is { } path)
         {
-            // PHOSPHOR_LOG's lines keep their short time (test tools read them); the debug log may span days.
+            // ZINC_LOG's lines keep their short time (test tools read them); the debug log may span days.
             var time = FromEnvironment ? $"{DateTime.Now:HH:mm:ss.fff}" : $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}";
             Append(path, $"{time} [{Environment.CurrentManagedThreadId}] {message}", rotate: !FromEnvironment);
         }

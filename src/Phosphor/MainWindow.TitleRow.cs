@@ -46,11 +46,11 @@ public sealed partial class MainWindow
             {
                 new Image
                 {
-                    Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"))),
+                    Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"))),
                     Width = 16,
                     Height = 16,
                 },
-                new TextBlock { Text = "Phosphor", FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
+                new TextBlock { Text = "Zinc", FontSize = 12, VerticalAlignment = VerticalAlignment.Center },
             },
         };
         row.Children.Add(mark);

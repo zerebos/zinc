@@ -86,7 +86,7 @@ public static class Actions
             "With workspace-tabs = \"left\": auto-hide the title bar and the workspace list; again to bring them back."),
         new("reload-config", TerminalAction.ReloadConfig, Arg.None, "Reload config", "Read config.toml again."),
         new("open-settings", TerminalAction.OpenSettings, Arg.None, "Settings", "Open the settings window."),
-        new("quit", TerminalAction.Quit, Arg.None, "Quit Phosphor", "Close every window and exit."),
+        new("quit", TerminalAction.Quit, Arg.None, "Quit Zinc", "Close every window and exit."),
         new("quit-fresh", TerminalAction.QuitFresh, Arg.None, "Quit and start fresh next time",
             "Close every window and exit without saving them: next time opens a new window."),
     ];
@@ -165,7 +165,7 @@ public static class Actions
 
     /// <summary>The groups actions are listed under (the settings' Keyboard page), in order.</summary>
     public static IReadOnlyList<string> Categories { get; } =
-        ["Clipboard", "Find and scroll", "Zoom", "Tabs", "Panes", "Workspaces and windows", "Sidebar and title bar", "Phosphor"];
+        ["Clipboard", "Find and scroll", "Zoom", "Tabs", "Panes", "Workspaces and windows", "Sidebar and title bar", "Zinc"];
 
     private static readonly Dictionary<string, string> CategoryOf = new()
     {
@@ -179,7 +179,7 @@ public static class Actions
         ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
         ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows", ["reopen-workspace"] = "Workspaces and windows", ["reopen-window"] = "Workspaces and windows",
         ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
-        ["command-palette"] = "Phosphor", ["reload-config"] = "Phosphor", ["open-settings"] = "Phosphor", ["quit"] = "Phosphor", ["quit-fresh"] = "Phosphor",
+        ["command-palette"] = "Zinc", ["reload-config"] = "Zinc", ["open-settings"] = "Zinc", ["quit"] = "Zinc", ["quit-fresh"] = "Zinc",
     };
 
     private static readonly Dictionary<string, string> SearchWordsOf = new()
@@ -195,9 +195,9 @@ public static class Actions
 
     /// <summary>The group <paramref name="invocation"/>'s action is listed under (one of <see cref="Categories"/>).</summary>
     public static string Category(ActionInvocation invocation) =>
-        Order(invocation) is var at and >= 0 && CategoryOf.TryGetValue(Definitions[at].Name, out var category) ? category : "Phosphor";
+        Order(invocation) is var at and >= 0 && CategoryOf.TryGetValue(Definitions[at].Name, out var category) ? category : "Zinc";
 
-    /// <summary>Every action's name has a category (a test checks, so a new action isn't filed under "Phosphor" by accident).</summary>
+    /// <summary>Every action's name has a category (a test checks, so a new action isn't filed under "Zinc" by accident).</summary>
     internal static IEnumerable<string> Uncategorized => Definitions.Select(d => d.Name).Where(n => !CategoryOf.ContainsKey(n));
 
     /// <summary>Where <paramref name="invocation"/>'s action sits in the registry (for listing in its order).</summary>

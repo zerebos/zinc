@@ -227,7 +227,7 @@ public static partial class ClipboardText
     public static string? ReadNow()
     {
         // Tests stand in for the clipboard, so they never read (or show) the user's own.
-        if (Environment.GetEnvironmentVariable("PHOSPHOR_TEST_CLIPBOARD") is { } stand)
+        if (Environment.GetEnvironmentVariable("ZINC_TEST_CLIPBOARD") is { } stand)
         {
             return stand;
         }

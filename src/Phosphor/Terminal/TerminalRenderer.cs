@@ -28,7 +28,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 {
     private Config _config;
 
-    /// <summary>Where frame times go while a pane is measured (PHOSPHOR_PERF, the benchmark); null otherwise.</summary>
+    /// <summary>Where frame times go while a pane is measured (ZINC_PERF, the benchmark); null otherwise.</summary>
     internal FramePerf? Perf { get; set; }
 
     /// <summary>The settings drawn with (font family, padding); replaced on a config reload.</summary>

@@ -54,7 +54,7 @@ public class BenchmarkTests
             stats, TimeStats.Of([1]), [("read", 0.5)]);
         Assert.Equal(40, result.DrawRate);
         Assert.Equal(5, result.FrameMs);
-        var text = new BenchmarkReport(new DateTime(2026, 10, 1, 12, 0, 0), "phosphor x", 120, 40, 1.5, [result]).Text();
+        var text = new BenchmarkReport(new DateTime(2026, 10, 1, 12, 0, 0), "zinc x", 120, 40, 1.5, [result]).Text();
         Assert.Contains("120 x 40 cells at 150% scale", text);
         Assert.Contains("Colors (software): program 100 frames/s, drew 40 fps", text);
         Assert.Contains("per frame: read 0.5 ms", text);

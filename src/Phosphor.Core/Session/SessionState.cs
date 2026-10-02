@@ -175,24 +175,24 @@ public static class SessionStore
     });
 
     /// <summary>
-    /// Where the session lives: <c>PHOSPHOR_SESSION</c> if set; otherwise next to the config in
-    /// %APPDATA%\Phosphor — unless <c>PHOSPHOR_CONFIG</c> points elsewhere (a test run), where
+    /// Where the session lives: <c>ZINC_SESSION</c> if set; otherwise next to the config in
+    /// %APPDATA%\Phosphor — unless <c>ZINC_CONFIG</c> points elsewhere (a test run), where
     /// nothing is saved or restored, so test instances never touch the real session.
     /// </summary>
     public static string? DefaultPath(Func<string, string?>? getEnv = null)
     {
         getEnv ??= Environment.GetEnvironmentVariable;
-        if (getEnv("PHOSPHOR_SESSION") is { Length: > 0 } explicitPath)
+        if (getEnv("ZINC_SESSION") is { Length: > 0 } explicitPath)
         {
             return explicitPath;
         }
 
-        if (getEnv("PHOSPHOR_CONFIG") is { Length: > 0 })
+        if (getEnv("ZINC_CONFIG") is { Length: > 0 })
         {
             return null;
         }
 
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phosphor", "session.json");
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zinc", "session.json");
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public static class SessionStore
     /// and the name of the lock guarding the file. Same file, same key, however the path is cased.
     /// </summary>
     public static string InstanceKey(string path) =>
-        "Phosphor." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+        "Zinc." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())))[..16];
 
     public static string Serialize(SessionState state) => JsonSerializer.Serialize(state, Json.SessionState);

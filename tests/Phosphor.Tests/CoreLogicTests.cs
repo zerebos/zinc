@@ -298,14 +298,14 @@ public class ShellResolverTests
     public void ArgumentsWinOverEverything()
     {
         var command = ShellResolver.Resolve(new Config { Command = "from-config" }, ["wsl.exe", "-d", "Fedora Linux"],
-            Env(("PHOSPHOR_SHELL", "from-env")));
+            Env(("ZINC_SHELL", "from-env")));
         Assert.Equal("wsl.exe -d \"Fedora Linux\"", command);
     }
 
     [Fact]
     public void EnvironmentWinsOverConfig()
     {
-        var command = ShellResolver.Resolve(new Config { Command = "from-config" }, [], Env(("PHOSPHOR_SHELL", "from-env")));
+        var command = ShellResolver.Resolve(new Config { Command = "from-config" }, [], Env(("ZINC_SHELL", "from-env")));
         Assert.Equal("from-env", command);
     }
 

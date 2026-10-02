@@ -15,10 +15,10 @@ public class TerminalOptionTests
         var replies = new List<byte[]>();
         session.PtyReplyObserver = replies.Add;
         session.WriteToScreen("\x1b[>q");
-        Assert.Contains("\x1bP>|phosphor ", Joined(replies));
-        Assert.StartsWith("phosphor ", TerminalSession.Version);
+        Assert.Contains("\x1bP>|zinc ", Joined(replies));
+        Assert.StartsWith("zinc ", TerminalSession.Version);
         // Directory.Build.props: the release ("0.1.0+a1b2c3d") or a dev build ("0.1.0-dev.812+a1b2c3d").
-        Assert.Matches(@"^phosphor \d+\.\d+\.\d+(-dev\.\d+)?(\+[0-9a-f]{7})?$", TerminalSession.Version);
+        Assert.Matches(@"^zinc \d+\.\d+\.\d+(-dev\.\d+)?(\+[0-9a-f]{7})?$", TerminalSession.Version);
     }
 
     [Fact]

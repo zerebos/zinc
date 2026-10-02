@@ -55,19 +55,19 @@ public class ShellInjectionTests
     {
         var launch = Prepare(command);
         Assert.Equal(command, launch.CommandLine);
-        Assert.Equal("C:/Phosphor/ShellIntegration", launch.Environment["PHOSPHOR_SHELL_INTEGRATION_DIR"]);
+        Assert.Equal("C:/Phosphor/ShellIntegration", launch.Environment["ZINC_SHELL_INTEGRATION_DIR"]);
         Assert.Equal("C:/Phosphor/ShellIntegration/zsh", launch.Environment["ZDOTDIR"]);
         Assert.Equal(ShellIntegration.BashBootstrap, launch.Environment["PROMPT_COMMAND"]);
-        Assert.Equal("PHOSPHOR_SHELL_INTEGRATION_DIR/p:PROMPT_COMMAND:ZDOTDIR/p", launch.Environment["WSLENV"]);
-        Assert.False(launch.Environment.ContainsKey("PHOSPHOR_ZDOTDIR"));
+        Assert.Equal("ZINC_SHELL_INTEGRATION_DIR/p:PROMPT_COMMAND:ZDOTDIR/p", launch.Environment["WSLENV"]);
+        Assert.False(launch.Environment.ContainsKey("ZINC_ZDOTDIR"));
     }
 
     [Fact]
     public void KeepsTheUsersWslenvAndZdotdir()
     {
         var launch = Prepare("wsl.exe", new() { ["WSLENV"] = "GOPATH/l:ZDOTDIR/p", ["ZDOTDIR"] = @"C:\me\zsh" });
-        Assert.Equal("GOPATH/l:ZDOTDIR/p:PHOSPHOR_SHELL_INTEGRATION_DIR/p:PROMPT_COMMAND", launch.Environment["WSLENV"]);
-        Assert.Equal(@"C:\me\zsh", launch.Environment["PHOSPHOR_ZDOTDIR"]);
+        Assert.Equal("GOPATH/l:ZDOTDIR/p:ZINC_SHELL_INTEGRATION_DIR/p:PROMPT_COMMAND", launch.Environment["WSLENV"]);
+        Assert.Equal(@"C:\me\zsh", launch.Environment["ZINC_ZDOTDIR"]);
     }
 
     [Theory]

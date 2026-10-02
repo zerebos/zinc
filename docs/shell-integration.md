@@ -1,13 +1,13 @@
-# Shell integration: Phosphor vs Ghostty
+# Shell integration: Zinc vs Ghostty
 
-Where Phosphor's automatic shell integration (`assets/shell-integration/`,
+Where Zinc's automatic shell integration (`assets/shell-integration/`,
 `src/Phosphor.Core/Terminal/ShellIntegration.cs`) and Ghostty's (`external/ghostty/src/shell-integration/`,
 `src/termio/shell_integration.zig`) differ, as of 2026-10-01. Written to find ideas worth taking,
 not as a to-do list.
 
 ## Shells covered
 
-| Shell | Phosphor | Ghostty |
+| Shell | Zinc | Ghostty |
 |---|---|---|
 | bash | script, loaded through `PROMPT_COMMAND` | script, loaded by starting `bash --posix` with `ENV` pointing at it (then leaving POSIX mode; HISTFILE fixed up) |
 | zsh | `ZDOTDIR` → our `.zshenv`, which restores the user's | same mechanism |
@@ -16,7 +16,7 @@ not as a to-do list.
 | nushell | **nothing to load**: nushell sends its own marks | `vendor/autoload` module through `XDG_DATA_DIRS` + `--execute 'use ghostty *'`, for ssh/sudo only (no marks) |
 | elvish | none (elvish sends no marks itself; traced 2026-10-01) | `lib/ghostty-integration.elv`, found through `XDG_DATA_DIRS` but **opt-in**: the user adds `use ghostty-integration` to rc.elv. A, C, D, OSC 7; no B (elvish draws prompts on a background thread) |
 
-What fish and nushell send by themselves, traced in Phosphor (`PHOSPHOR_TRACE`) on 2026-10-01:
+What fish and nushell send by themselves, traced in Zinc (`ZINC_TRACE`) on 2026-10-01:
 
 - **fish 4.3** (Homebrew, Fedora on WSL): `133;A;click_events=1`, `133;B`,
   `133;C;cmdline_url=<encoded>`, `133;D;<status>`, `7;file://host/path`. Everything our command
@@ -24,7 +24,7 @@ What fish and nushell send by themselves, traced in Phosphor (`PHOSPHOR_TRACE`) 
 - **nushell 0.116** (`$env.config.shell_integration`): `133;A;k=i;click_events=1`,
   `133;P;k=r` (right prompt), `133;B`, `133;C` (no command text), `133;D;<status>`, a title (OSC 2).
   The folder report is OSC 7 on Linux and OSC 9;9 on Windows (its `osc7`/`osc9_9` defaults). It
-  redraws the prompt (A/P/B again) on every key. Phosphor reads the command text back from the
+  redraws the prompt (A/P/B again) on every key. Zinc reads the command text back from the
   input cells, so the command list works without C's `cmdline_url`. nushell also sends OSC 633
   (VS Code's protocol, which carries the command line in `633;E`) when `osc633` is on, and it's
   on by default. We don't parse 633; it's the way to get exact text if reading back the cells
@@ -37,7 +37,7 @@ Gaps:
   would also have to export it to their children, since fish is usually started from them.
   The script must leave the defaults (`/usr/local/share:/usr/share`) in place when the variable
   was unset.
-- Our variables (`PROMPT_COMMAND`, `ZDOTDIR`, `PHOSPHOR_SHELL_INTEGRATION_DIR`) are removed by
+- Our variables (`PROMPT_COMMAND`, `ZDOTDIR`, `ZINC_SHELL_INTEGRATION_DIR`) are removed by
   our bash/zsh scripts once they run. A profile whose shell is fish or nu never runs them, so
   that shell and its children inherit the variables. A zsh started from there still works
   (our `.zshenv` restores the user's), but a cleaner fix is to skip the variables when
@@ -45,7 +45,7 @@ Gaps:
 
 ## The marks themselves
 
-| | Phosphor | Ghostty |
+| | Zinc | Ghostty |
 |---|---|---|
 | Prompt start | `133;A;aid=<pid>` | `133;A;cl=line` (zsh), `133;A;redraw=last;cl=line;aid=<pid>` (bash); fish/elvish add `click_events=1`/`aid` |
 | Continuation prompts (PS2) | `133;P;k=s` … `B` around bash's PS2 (zsh's C carries the text, so not needed there) | `133;P;k=s` (and bash marks each line of a multi-line PS1 with `P;k=s`) |
@@ -83,7 +83,7 @@ Ideas from Ghostty's side:
   piled up stale copies of it, in Windows Terminal too (the user compared). Fixed by telling the
   shell the size only once a resize settles (100 ms; the view still reflows live): one redraw per
   drag, at most one stale copy, as a slow resize gives.
-- **`aid=<pid>`**: separates nested shells' marks. **Done differently (2026-10-01)**: Phosphor tracks
+- **`aid=<pid>`**: separates nested shells' marks. **Done differently (2026-10-01)**: Zinc tracks
   shells by their prompt mark's options as a whole, since the shells that nest most (fish,
   nushell, powerlevel10k) send no aid but differ anyway. Our scripts send `aid=<pid>` on A so
   they always differ. Ghostty doesn't track nesting ("We don't currently do explicit command
@@ -98,9 +98,9 @@ Ideas from Ghostty's side:
 
 ## Features beyond marks
 
-Ghostty's `shell-integration-features` (defaults in brackets) and where Phosphor stands:
+Ghostty's `shell-integration-features` (defaults in brackets) and where Zinc stands:
 
-| Feature | What it does | Phosphor |
+| Feature | What it does | Zinc |
 |---|---|---|
 | `cursor` [on] | bar cursor at the prompt (DECSCUSR 5/6), reset before a command runs | **done terminal-side** (2026-10-01): `cursor-style-at-prompt` (default "same"), from the marks, so it works for every marking shell without scripts; a program's DECSCUSR still wins |
 | `title` [on] | title = folder at the prompt, command while running | not done; titles come from the shell/prompt itself |

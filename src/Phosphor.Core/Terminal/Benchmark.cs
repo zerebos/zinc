@@ -195,7 +195,7 @@ public sealed record BenchmarkReport(DateTime When, string About, int Cols, int 
     public string Text()
     {
         var text = new StringBuilder();
-        text.AppendLine($"Phosphor drawing benchmark, {When:yyyy-MM-dd HH:mm}");
+        text.AppendLine($"Zinc drawing benchmark, {When:yyyy-MM-dd HH:mm}");
         text.AppendLine(About);
         text.AppendLine($"{Cols} x {Rows} cells at {Scale * 100:0}% scale");
         foreach (var result in Results)

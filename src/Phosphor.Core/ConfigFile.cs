@@ -151,15 +151,15 @@ public sealed class ConfigFile
         Profiles.FirstOrDefault(p => p.Id == id) ?? Profiles.FirstOrDefault(p => p.Name == id);
 
     public static string DefaultPath { get; } =
-        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Phosphor", "config.toml");
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zinc", "config.toml");
 
     /// <summary>The color schemes that ship with Phosphor (Themes\ next to the executable).</summary>
     public static string BundledThemesDirectory => System.IO.Path.Combine(AppContext.BaseDirectory, "Themes");
 
-    /// <summary>Reads the config at <paramref name="path"/> (default: PHOSPHOR_CONFIG, else <see cref="DefaultPath"/>).</summary>
+    /// <summary>Reads the config at <paramref name="path"/> (default: ZINC_CONFIG, else <see cref="DefaultPath"/>).</summary>
     public static ConfigFile Load(string? path = null)
     {
-        path ??= Environment.GetEnvironmentVariable("PHOSPHOR_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
+        path ??= Environment.GetEnvironmentVariable("ZINC_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
         path = System.IO.Path.GetFullPath(path);
         string text;
         try
@@ -270,7 +270,7 @@ public sealed class ConfigFile
             {
                 if (table is not TableSyntax { Name: { } name } t)
                 {
-                    _warnings.Add($"{System.IO.Path.GetFileName(file)}:{table.Span.Start.Line + 1}: arrays of tables ([[...]]) aren't used by Phosphor");
+                    _warnings.Add($"{System.IO.Path.GetFileName(file)}:{table.Span.Start.Line + 1}: arrays of tables ([[...]]) aren't used by Zinc");
                     continue;
                 }
 

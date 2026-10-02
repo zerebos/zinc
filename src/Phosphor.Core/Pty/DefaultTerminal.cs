@@ -16,7 +16,7 @@ public sealed class DefaultTerminal(RegistryKey root)
     /// <summary>Phosphor's terminal class (what OpenConsole creates to hand a console over).</summary>
     public static readonly Guid Clsid = new("8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B64");
 
-    /// <summary>What test runs (PHOSPHOR_DEFTERM_TEST=1) listen as, so they never take a console meant for the installed Phosphor.</summary>
+    /// <summary>What test runs (ZINC_DEFTERM_TEST=1) listen as, so they never take a console meant for the installed Phosphor.</summary>
     public static readonly Guid TestClsid = new("8E3F6C4B-2D71-4A59-9B0E-5C7A1D2F3B65");
 
     private static readonly Guid Default = Guid.Empty;
@@ -27,7 +27,7 @@ public sealed class DefaultTerminal(RegistryKey root)
     private static readonly string ClassKey = $@"Software\Classes\CLSID\{{{Clsid.ToString().ToUpperInvariant()}}}";
 
     /// <summary>Where the terminal half Phosphor replaced is kept, to give it back.</summary>
-    private const string PhosphorKey = @"Software\Phosphor", PreviousValue = "PreviousDelegationTerminal";
+    private const string PhosphorKey = @"Software\Zinc", PreviousValue = "PreviousDelegationTerminal";
 
     /// <summary>The current user's registry.</summary>
     public static DefaultTerminal ForUser() => new(Registry.CurrentUser);

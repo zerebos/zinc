@@ -22,7 +22,7 @@ namespace Phosphor;
 /// </summary>
 internal sealed partial class WelcomeWindow : Window
 {
-    private const string DefaultSchemeLabel = "Phosphor's own";
+    private const string DefaultSchemeLabel = "Default (Lit Cell)";
     private const string BundledFontLabel = BundledFonts.Family + " (included)";
 
     private readonly ConfigFile _config;
@@ -57,10 +57,10 @@ internal sealed partial class WelcomeWindow : Window
     public WelcomeWindow(ConfigFile config, bool firstRun)
     {
         _config = config;
-        Title = "Welcome to Phosphor";
+        Title = "Welcome to Zinc";
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
-        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
+        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
         _firstRun = firstRun;
 
         // Start from what's in force; on first run, workspaces in the sidebar (Phosphor at its most
@@ -118,7 +118,7 @@ internal sealed partial class WelcomeWindow : Window
     }
 
     private static FrameworkElement Header() =>
-        new TextBlock { Text = "Welcome to Phosphor", FontSize = 30, FontWeight = FontWeights.SemiBold };
+        new TextBlock { Text = "Welcome to Zinc", FontSize = 30, FontWeight = FontWeights.SemiBold };
 
     private static TextBlock SectionTitle(string text) => new() { Text = text, FontSize = 18, FontWeight = FontWeights.SemiBold };
 
@@ -476,13 +476,13 @@ internal sealed partial class WelcomeWindow : Window
 
         var lines = new (string Text, int Color)[][]
         {
-            [("~/src/phosphor ", 4), (" main ", 5), ("❯ ", 2), ("git status", -1)],
+            [("~/src/zinc ", 4), (" main ", 5), ("❯ ", 2), ("git status", -1)],
             [("On branch main", -1)],
             [("  modified:   ", 1), ("README.md", 1)],
             [("  new file:   ", 2), ("src/Welcome.cs", 2)],
-            [("~/src/phosphor ", 4), (" main ", 5), ("❯ ", 2), ("ls", -1)],
+            [("~/src/zinc ", 4), (" main ", 5), ("❯ ", 2), ("ls", -1)],
             [("assets/  ", 4), ("src/  ", 4), ("tests/  ", 4), ("README.md  ", -1), ("build.sh", 2)],
-            [("~/src/phosphor ", 4), (" main ", 5), ("❯ ", 2), ("█", -2)],
+            [("~/src/zinc ", 4), (" main ", 5), ("❯ ", 2), ("█", -2)],
         };
         _previewText.Blocks.Clear();
         var paragraph = new Paragraph();
@@ -573,7 +573,7 @@ internal sealed partial class WelcomeWindow : Window
             {
                 SectionTitle("When a long command finishes"),
                 Note("A command that ran 10 seconds or more puts a dot on its tab if you weren't looking. " +
-                     "If Phosphor is in the background, also:"),
+                     "If Zinc is in the background, also:"),
                 flash,
                 toast,
             },

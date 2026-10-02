@@ -55,7 +55,7 @@ internal sealed unsafe partial class TrayIcon : IDisposable
             uCallbackMessage = CallbackMessage,
             hIcon = _icon,
         };
-        "Phosphor".AsSpan().CopyTo(new Span<char>(data.szTip, 128));
+        "Zinc".AsSpan().CopyTo(new Span<char>(data.szTip, 128));
         return data;
     }
 

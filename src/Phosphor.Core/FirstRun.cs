@@ -23,7 +23,7 @@ public static class FirstRun
 {
     /// <summary>What a new config file starts with (kept short: the README has every setting).</summary>
     public const string Template =
-        "# Phosphor's settings. Changes apply when you save; the README lists every setting.\n" +
+        "# Zinc's settings. Changes apply when you save; the README lists every setting.\n" +
         "# Reopen the welcome page from the command palette (Ctrl+Shift+P): Welcome…\n";
 
     /// <summary>

@@ -26,7 +26,7 @@ namespace Phosphor;
 /// </summary>
 internal sealed partial class SettingsWindow : Window
 {
-    private const string DefaultSchemeLabel = "Phosphor's own";
+    private const string DefaultSchemeLabel = "Default (Lit Cell)";
     private const string BundledFontLabel = BundledFonts.Family + " (included)";
 
     private readonly SettingsWriter _writer;
@@ -58,10 +58,10 @@ internal sealed partial class SettingsWindow : Window
         _config = config;
         _writer = new SettingsWriter(config.Path);
         _section = SettingsCatalog.Sections.Any(s => s.Id == startSection) ? startSection! : SettingsCatalog.Sections[0].Id;
-        Title = "Phosphor Settings";
+        Title = "Zinc Settings";
         ExtendsContentIntoTitleBar = true;
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
-        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"));
+        WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
 
         // Title bar: the app's mark and the window's name, in the caption area.
         var titleBar = new StackPanel
@@ -72,8 +72,8 @@ internal sealed partial class SettingsWindow : Window
             Padding = new Thickness(16, 0, 0, 0),
             Children =
             {
-                new Image { Width = 16, Height = 16, Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "Phosphor.ico"))) },
-                new TextBlock { Text = "Phosphor Settings", VerticalAlignment = VerticalAlignment.Center, FontSize = 12 },
+                new Image { Width = 16, Height = 16, Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"))) },
+                new TextBlock { Text = "Zinc Settings", VerticalAlignment = VerticalAlignment.Center, FontSize = 12 },
             },
         };
 
@@ -376,8 +376,8 @@ internal sealed partial class SettingsWindow : Window
 
     private void AboutPage()
     {
-        _page.Children.Add(Row(TerminalSession.Version.Replace("phosphor", "Phosphor"),
-            "Terminal emulation by Ghostty. The open-source software Phosphor ships is listed below.",
+        _page.Children.Add(Row(TerminalSession.Version.Replace("zinc", "Zinc"),
+            "Zinc: what makes ghosts glow in the dark. Built on libghostty, the terminal engine that powers Ghostty; the open-source software Zinc ships is listed below.",
             null));
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
         _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
@@ -385,7 +385,7 @@ internal sealed partial class SettingsWindow : Window
         AddGroup("Troubleshooting", SettingsCatalog.All.Where(s => s.Section == "about"));
         if (Log.FromEnvironment)
         {
-            _page.Children.Add(Note("PHOSPHOR_LOG is set, so the log is always on, in the file it names."));
+            _page.Children.Add(Note("ZINC_LOG is set, so the log is always on, in the file it names."));
         }
 
         _page.Children.Add(LogFileRow());
@@ -402,7 +402,7 @@ internal sealed partial class SettingsWindow : Window
         copy.Click += (_, _) => Guard("copying the log", () =>
         {
             var text = Log.ReadText();
-            ClipboardText.Set($"Phosphor debug log: {Log.About}{Environment.NewLine}{Environment.NewLine}" +
+            ClipboardText.Set($"Zinc debug log: {Log.About}{Environment.NewLine}{Environment.NewLine}" +
                 (text.Length > 0 ? text : "(empty: turn the debug log on, make the problem happen, then copy it)"));
             copy.Content = "Copied";
         });
@@ -1099,7 +1099,7 @@ internal sealed partial class SettingsWindow : Window
         IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
         var names = _config.Themes.Names();
 
-        // Pickers showing each scheme as a tile. A profile has no "Phosphor's own" to pick:
+        // Pickers showing each scheme as a tile. A profile has no "Default (Lit Cell)" to pick:
         // without a scheme of its own it inherits.
         var scheme = new SchemePicker(_config.Themes, names, profile == null ? DefaultSchemeLabel : null, "Color scheme");
         var light = new SchemePicker(_config.Themes, names, null, "Light scheme");
@@ -1107,7 +1107,7 @@ internal sealed partial class SettingsWindow : Window
         var label = new TextBlock { Text = setting.Label };
         var description = DescriptionText();
         var reset = ResetArrow(setting.Label, profile == null
-            ? "Back to Phosphor's own (removes it from config.toml)"
+            ? "Back to the default (removes it from config.toml)"
             : "Back to the scheme every profile inherits");
         var lightCard = CardLayout(new TextBlock { Text = "Light scheme" }, null, DescriptionText("While Windows is in light mode."), null, null, light);
         var local = false; // showing a value: not a change
@@ -1252,7 +1252,7 @@ internal sealed partial class SettingsWindow : Window
             customizeLight.Content = $"Customize {lightName}";
             customizeLight.Visibility = lightName != null ? Visibility.Visible : Visibility.Collapsed;
             SetText(customizeText, darkName == null
-                ? "Change its colors, live. Phosphor's own colors are Lit Cell's: editing them makes a copy you can change."
+                ? "Change its colors, live. The default colors are Lit Cell's: editing them makes a copy you can change."
                 : "Change its colors, live: every pane using it follows.");
         }
 
