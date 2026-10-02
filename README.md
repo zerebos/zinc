@@ -1,8 +1,7 @@
 # Zinc
 
 *Every cell, exactly right.* A precise, native terminal for Windows, built on Ghostty's core.
-The code still uses its working name, Phosphor (projects, namespaces, `src/Phosphor`), until a
-rename before 1.0. Brand guidelines: [docs/brand.md](docs/brand.md).
+Brand guidelines: [docs/brand.md](docs/brand.md).
 
 A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 **libghostty-vt**, the terminal emulation core extracted from
@@ -41,14 +40,14 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 scripts/build-libghostty.sh x64
 
 # 2. Build and run the app
-dotnet run --project src/Phosphor
+dotnet run --project src/Zinc
 
 # 3. Run the tests (ABI check against libghostty's manifest, headless ConPTY sessions)
 dotnet test
 ```
 
 The app is unpackaged and Windows App SDK self-contained, so
-`src/Phosphor/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`
+`src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`
 runs directly.
 
 ## Installing locally
@@ -69,7 +68,7 @@ anywhere and open `zinc.exe`. Its `README.txt` (from `scripts/package-readme.txt
 start it past SmartScreen (the build isn't signed), where settings and logs go, how to send a debug log
 and benchmark results with feedback, and how to remove it.
 
-**Versions.** `PhosphorVersion` in `Directory.Build.props` is the release being worked toward. A build
+**Versions.** `ZincVersion` in `Directory.Build.props` is the release being worked toward. A build
 of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
 build numbered by the repository's commit count (`0.1.0-dev.812+a1b2c3d`). It's shown in Settings >
 About, answered to programs asking the terminal's version (XTVERSION: `zinc 0.1.0-dev.812+a1b2c3d`),
@@ -747,15 +746,15 @@ until a key is pressed; a clean exit closes it.
 scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
 assets/brand/                     icon frames, mark and lockups (docs/brand.md)
-src/Phosphor.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
-src/Phosphor.Core/                 everything testable without a window:
+src/Zinc.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
+src/Zinc.Core/                 everything testable without a window:
   Ghostty/                          P/Invoke bindings
   Pty/ConPty.cs                     pseudoconsole + child process + reader thread
   Terminal/TerminalSession.cs       terminal + pty glue, libghostty callbacks
   Input/                            scan code -> GhosttyKey map, keyboard layout translation
   Config.cs, ShellResolver.cs       config file, command resolution
-src/Phosphor/                      WinUI app: window, TerminalControl (Win2D render + input)
-tests/Phosphor.Tests/              xUnit v3: ABI check, headless sessions, unit tests
+src/Zinc/                      WinUI app: window, TerminalControl (Win2D render + input)
+tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions, unit tests
 ```
 
 ## Updating libghostty-vt

@@ -1,7 +1,7 @@
 # Shell integration: Zinc vs Ghostty
 
 Where Zinc's automatic shell integration (`assets/shell-integration/`,
-`src/Phosphor.Core/Terminal/ShellIntegration.cs`) and Ghostty's (`external/ghostty/src/shell-integration/`,
+`src/Zinc.Core/Terminal/ShellIntegration.cs`) and Ghostty's (`external/ghostty/src/shell-integration/`,
 `src/termio/shell_integration.zig`) differ, as of 2026-10-01. Written to find ideas worth taking,
 not as a to-do list.
 
@@ -112,7 +112,7 @@ Ghostty's `shell-integration-features` (defaults in brackets) and where Zinc sta
 Both use the marks for close confirmation: closing at a prompt doesn't ask. Ours asks only when a
 pane has a running command (C without D yet, `TerminalControl.RunningCommand`).
 
-Phosphor-only:
+Zinc-only:
 - **Stand-down**: each script checks whether the prompt already sends marks or folder reports
   (powerlevel10k's own integration, `133;` or `]7;` in PS1/hooks/functions) and leaves those to it.
   Ghostty's scripts don't check; p10k under Ghostty is configured through Ghostty's variables instead.

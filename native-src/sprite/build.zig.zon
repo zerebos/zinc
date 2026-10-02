@@ -1,7 +1,7 @@
 .{
-    .name = .phosphor_sprite,
+    .name = .zinc_sprite,
     .version = "0.1.0",
-    .fingerprint = 0x14a36db770d84588,
+    .fingerprint = 0xc17fde2c2d55d136,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
         // The same z2d the pinned Ghostty uses (its build.zig.zon).
@@ -11,5 +11,5 @@
             .lazy = true,
         },
     },
-    .paths = .{ "build.zig", "build.zig.zon", "phosphor_sprite.zig" },
+    .paths = .{ "build.zig", "build.zig.zon", "zinc_sprite.zig" },
 }

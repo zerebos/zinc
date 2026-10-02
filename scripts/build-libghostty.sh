@@ -7,7 +7,7 @@ set -euo pipefail
 
 ARCH="${1:-x64}"
 # libghostty-vt's C API is unstable; bump deliberately and re-verify the
-# bindings in src/Phosphor/Ghostty/Native.cs against `ghostty_type_json()`.
+# bindings in src/Zinc/Ghostty/Native.cs against `ghostty_type_json()`.
 COMMIT="${2:-6301810a48aaa3426887a4316668f18833a40138}"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

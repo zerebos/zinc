@@ -1,37 +1,37 @@
 <Project>
   <!--
-    Phosphor's version, for every project. PhosphorVersion is the release being worked toward:
-    bump it when work on the next one starts. A build of the commit tagged v$(PhosphorVersion) is that
+    Zinc's version, for every project. ZincVersion is the release being worked toward:
+    bump it when work on the next one starts. A build of the commit tagged v$(ZincVersion) is that
     release ("0.1.0+a1b2c3d"); any other build is a dev build, numbered by the repository's commit
     count, which only grows ("0.1.0-dev.812+a1b2c3d"). Shown in About, answered to XTVERSION, in the
     exe's file properties and the crash log; scripts/install.ps1 names install folders after it.
   -->
   <PropertyGroup>
-    <PhosphorVersion>0.1.0</PhosphorVersion>
-    <Version>$(PhosphorVersion)</Version>
+    <ZincVersion>0.1.0</ZincVersion>
+    <Version>$(ZincVersion)</Version>
     <!-- The SDK's own "+<full commit>" suffix is replaced by ours. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
-  <Target Name="PhosphorGitVersion" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo" Condition="'$(PhosphorInformationalVersion)' == ''">
+  <Target Name="ZincGitVersion" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo" Condition="'$(ZincInformationalVersion)' == ''">
     <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low"
           StandardErrorImportance="low" WorkingDirectory="$(MSBuildThisFileDirectory)">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_PhosphorCommits" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ZincCommits" />
     </Exec>
     <Exec Command="git rev-parse --short=7 HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low"
           StandardErrorImportance="low" WorkingDirectory="$(MSBuildThisFileDirectory)">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_PhosphorHash" />
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ZincHash" />
     </Exec>
-    <Exec Command="git describe --exact-match --tags --match v$(PhosphorVersion) HEAD" IgnoreExitCode="true" StandardOutputImportance="low"
+    <Exec Command="git describe --exact-match --tags --match v$(ZincVersion) HEAD" IgnoreExitCode="true" StandardOutputImportance="low"
           StandardErrorImportance="low" EchoOff="true" WorkingDirectory="$(MSBuildThisFileDirectory)">
-      <Output TaskParameter="ExitCode" PropertyName="_PhosphorTagged" />
+      <Output TaskParameter="ExitCode" PropertyName="_ZincTagged" />
     </Exec>
     <PropertyGroup>
-      <_PhosphorDev Condition="'$(_PhosphorTagged)' != '0' and '$(_PhosphorCommits)' != ''">-dev.$(_PhosphorCommits)</_PhosphorDev>
-      <_PhosphorBuild Condition="'$(_PhosphorHash)' != ''">+$(_PhosphorHash)</_PhosphorBuild>
-      <PhosphorInformationalVersion>$(PhosphorVersion)$(_PhosphorDev)$(_PhosphorBuild)</PhosphorInformationalVersion>
-      <InformationalVersion>$(PhosphorInformationalVersion)</InformationalVersion>
-      <FileVersion Condition="'$(_PhosphorCommits)' != ''">$(PhosphorVersion).$(_PhosphorCommits)</FileVersion>
+      <_ZincDev Condition="'$(_ZincTagged)' != '0' and '$(_ZincCommits)' != ''">-dev.$(_ZincCommits)</_ZincDev>
+      <_ZincBuild Condition="'$(_ZincHash)' != ''">+$(_ZincHash)</_ZincBuild>
+      <ZincInformationalVersion>$(ZincVersion)$(_ZincDev)$(_ZincBuild)</ZincInformationalVersion>
+      <InformationalVersion>$(ZincInformationalVersion)</InformationalVersion>
+      <FileVersion Condition="'$(_ZincCommits)' != ''">$(ZincVersion).$(_ZincCommits)</FileVersion>
     </PropertyGroup>
   </Target>
 </Project>

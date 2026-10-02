@@ -30,7 +30,7 @@ if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
 # ---- version (as Directory.Build.props computes it) ----
 $rev = (git -C $repo rev-parse --short=7 HEAD).Trim()
 if (git -C $repo status --porcelain --untracked-files=no) { $rev += '-dirty' }
-$base = [regex]::Match((Get-Content (Join-Path $repo 'Directory.Build.props') -Raw), '<PhosphorVersion>(.+?)</PhosphorVersion>').Groups[1].Value
+$base = [regex]::Match((Get-Content (Join-Path $repo 'Directory.Build.props') -Raw), '<ZincVersion>(.+?)</ZincVersion>').Groups[1].Value
 $commits = (git -C $repo rev-list --count HEAD).Trim()
 git -C $repo describe --exact-match --tags --match "v$base" HEAD 2>$null | Out-Null
 $version = if ($LASTEXITCODE -eq 0) { "$base+$rev" } else { "$base-dev.$commits+$rev" }
@@ -50,9 +50,9 @@ $lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
 try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
 try {
     # (dotnet publish has no --no-incremental: the app's Release state goes instead, rebuilt in full.)
-    $state = Join-Path $repo 'src\Phosphor\obj\x64\Release'
+    $state = Join-Path $repo 'src\Zinc\obj\x64\Release'
     if (Test-Path $state) { Remove-Item $state -Recurse -Force }
-    $log = dotnet publish (Join-Path $repo 'src\Phosphor\Phosphor.csproj') -c Release -r win-x64 --self-contained true -o $folder -nologo 2>&1
+    $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $folder -nologo 2>&1
     $failed = $LASTEXITCODE -ne 0
 } finally {
     $lock.ReleaseMutex()
@@ -64,7 +64,7 @@ if ($failed) {
 }
 
 # Everything a tester needs must be inside (a framework-dependent build would ask for .NET 10).
-foreach ($file in 'zinc.exe', 'coreclr.dll', 'hostfxr.dll', 'ghostty-vt.dll', 'phosphor-sprite.dll', 'zinc.pri', 'Microsoft.Graphics.Canvas.dll') {
+foreach ($file in 'zinc.exe', 'coreclr.dll', 'hostfxr.dll', 'ghostty-vt.dll', 'zinc-sprite.dll', 'zinc.pri', 'Microsoft.Graphics.Canvas.dll') {
     if (-not (Test-Path (Join-Path $folder $file))) { throw "$file is missing from the build: not packaging it." }
 }
 

@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>Zinc</RootNamespace>
+    <AssemblyName>zinc</AssemblyName>
+    <Product>Zinc</Product>
+    <AssemblyTitle>Zinc</AssemblyTitle>
+    <Company>Zinc</Company>
+    <Platforms>x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <!-- Also covers solution builds, which may pass Platform=AnyCPU globally (a global
+         property the Platform default above can't override); WinAppSDK then keys off the RID. -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <!-- Needed so `dotnet publish` includes the .pri and compiled XAML (.xbf) of an
+         unpackaged app; without them WinUI crashes at startup (0xC000027B). -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Embedded in the exe: Explorer, Start Menu shortcut, Raycast. The brand's icon (docs/brand.md), hand-placed frames. -->
+    <ApplicationIcon>Assets\Zinc.ico</ApplicationIcon>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Program.cs is the entry point: it redirects second launches to the running instance. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+
+  <Import Project="..\Zinc.Native.targets" />
+
+  <ItemGroup>
+    <!-- Loose copy for AppWindow.SetIcon (title bar, taskbar, Alt+Tab). -->
+    <Content Include="Assets\Zinc.ico" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Zinc's own schemes (Lit Cell, Lit Cell Light), apart from the collection below, whose refresh replaces its folder. -->
+    <Content Include="..\..\assets\zinc-themes\*" Exclude="..\..\assets\zinc-themes\README.md" Link="Themes\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Bundled color schemes (theme = "Name"), with their license. assets/themes/README.md says where they come from. -->
+    <Content Include="..\..\assets\themes\*" Exclude="..\..\assets\themes\README.md" Link="Themes\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The default font, Cascadia Mono NF (Microsoft's Nerd Font build), used without installing it. -->
+    <Content Include="..\..\assets\fonts\*" Link="Fonts\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Brand artwork shown in the app: About's lockup, the welcome page's app tile (docs/brand.md). -->
+    <Content Include="..\..\assets\brand\lockups\quadrant-zinc-dark.svg;..\..\assets\brand\lockups\quadrant-zinc-light.svg;..\..\assets\brand\mark\quadrant-app-tile.svg"
+             Link="Brand\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- License texts of the open-source software Zinc ships (Settings > About; OpenSourceNotices.cs). -->
+    <Content Include="..\..\assets\licenses\*" Link="Licenses\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Shell integration scripts, loaded into the shells Zinc starts (ShellIntegration.cs). -->
+    <Content Include="..\..\assets\shell-integration\**\*" Link="ShellIntegration\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Zinc.Core\Zinc.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Windows App SDK 2.5.1 component packages (the versions its metapackage pins).
+         The metapackage also drags in AI/ML/Search/Widgets (onnxruntime, DirectML, ...),
+         roughly doubling the install size for nothing a terminal uses. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.Graphics.Win2D" Version="1.4.0" />
+    <!-- Executable icon extraction for profile icons (ProfileIcons.cs). -->
+    <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
+  </ItemGroup>
+</Project>

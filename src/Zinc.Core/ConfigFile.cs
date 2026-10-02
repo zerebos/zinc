@@ -1,0 +1,805 @@
+using System.Globalization;
+using Zinc.Input;
+using Tomlyn.Parsing;
+using Tomlyn.Syntax;
+
+namespace Zinc;
+
+/// <summary>
+/// A named set of settings: the global settings with the profile's own on top. <see cref="Id"/>
+/// is what keys, the default profile and saved sessions refer to; <see cref="Name"/> is shown.
+/// </summary>
+public sealed record Profile(string Id, string Name, Config Config, bool Hidden = false)
+{
+    /// <summary>Found on this machine (WSL, Git Bash, …), as opposed to only defined in the file.</summary>
+    public bool Found { get; init; }
+
+    /// <summary>The file has a <c>[profile.&lt;id&gt;]</c> section for it (its own, or changes to a found one).</summary>
+    public bool InFile { get; init; }
+
+    /// <summary>What was found on this machine, before the file's changes (null if it wasn't found).</summary>
+    public string? FoundName { get; init; }
+
+    /// <inheritdoc cref="FoundName"/>
+    public string? FoundCommand { get; init; }
+
+    /// <summary>The search that finds this profile (<see cref="ProfileDiscovery.SourceOf"/>: "wsl", "ssh"…), or null for your own.</summary>
+    public string? Source { get; init; }
+
+    /// <summary>
+    /// Why this profile can't open, if it can't: changes you made to a found profile are kept after
+    /// its shell is gone, or while its search is turned off (it's hidden from menus then).
+    /// </summary>
+    public ProfileMissing Missing { get; init; }
+}
+
+/// <summary>Why a found profile you changed can't open any more.</summary>
+public enum ProfileMissing
+{
+    /// <summary>It can open.</summary>
+    None,
+
+    /// <summary>Its shell isn't on this PC any more (uninstalled, an ssh host removed).</summary>
+    NotFound,
+
+    /// <summary>Its search ("Find shells on this PC") is turned off.</summary>
+    SearchOff,
+}
+
+/// <summary>
+/// The config file, <c>%APPDATA%\Zinc\config.toml</c>: settings grouped into sections,
+/// profiles that override some of them, and named color schemes from the themes folders.
+/// <code>
+/// default-profile = "fedora"
+///
+/// [font]
+/// family = "JetBrainsMono NF"
+/// size = 11
+///
+/// [colors]
+/// theme = "Alacritty"
+///
+/// [profile.fedora]
+/// name = "Fedora"
+/// command = 'wsl.exe -d Fedora'
+/// colors.theme = "0x96f"
+/// </code>
+/// Problems (unknown keys, bad values, TOML errors) become <see cref="Warnings"/> naming the
+/// file and line; everything else still applies.
+/// </summary>
+public sealed class ConfigFile
+{
+    private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings,
+        bool hasErrors, string path, Keybindings keybindings, ThemeLibrary themes)
+    {
+        Themes = themes;
+        Keybindings = keybindings;
+        Global = global;
+        Profiles = profiles;
+        DefaultProfile = defaultProfile;
+        Warnings = warnings;
+        HasErrors = hasErrors;
+        Path = path;
+    }
+
+    /// <summary>
+    /// Whether a file isn't valid TOML. Its valid parts still load at startup, but a reload
+    /// keeps the settings in force rather than apply a half-read file (a save mid-edit).
+    /// </summary>
+    public bool HasErrors { get; }
+
+    /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
+    public ThemeLibrary Themes { get; }
+
+    /// <summary>
+    /// The global settings as written (last one wins, includes counted), by key ("font.size"):
+    /// TOML values (string, bool, long, double, lists). For the settings window.
+    /// </summary>
+    public IReadOnlyDictionary<string, object> GlobalValues { get; private init; } = new Dictionary<string, object>();
+
+    /// <summary>Each profile section's settings as written, by profile id, then key relative to it ("font.size", "command").</summary>
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, object>> ProfileValues { get; private init; } =
+        new Dictionary<string, IReadOnlyDictionary<string, object>>();
+
+    /// <summary>The value profile <paramref name="id"/>'s section writes for <paramref name="key"/>, if any.</summary>
+    public object? ValueOf(string id, string key) =>
+        ProfileValues.TryGetValue(id, out var values) && values.TryGetValue(key, out var value) ? value : null;
+
+    /// <summary>The value written for <paramref name="key"/> ("font.size"), if any.</summary>
+    public object? ValueOf(string key) => GlobalValues.TryGetValue(key, out var value) ? value : null;
+
+    /// <summary>Every <c>[group] key</c> setting the reader knows, as "group.key" (plus colors.theme and colors.palette).</summary>
+    public static IReadOnlyCollection<string> SettingKeys => [.. Reader.Mappings.Keys, "colors.theme", "colors.palette"];
+
+    /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page); may be a light/dark pair.</summary>
+    public string? SchemeName { get; private init; }
+
+    /// <summary>
+    /// Windows' light/dark mode, which a <c>light:…,dark:…</c> theme follows. The app keeps it
+    /// current (and reloads when it flips); files are read with it unless told otherwise.
+    /// </summary>
+    public static Zinc.Ghostty.ColorScheme SystemScheme { get; set; } = Zinc.Ghostty.ColorScheme.Dark;
+
+    /// <summary>The scheme this was read for (<see cref="SystemScheme"/> at the time, unless given).</summary>
+    public Zinc.Ghostty.ColorScheme Appearance { get; private init; }
+
+    /// <summary>Whether any theme here is a light/dark pair (so a flip of Windows' mode changes colors).</summary>
+    public bool FollowsAppearance { get; private init; }
+
+    /// <summary>The Windows Terminal defaults with the <c>[keys]</c> table applied.</summary>
+    public Keybindings Keybindings { get; }
+
+    /// <summary>The file these settings came from.</summary>
+    public string Path { get; }
+
+    /// <summary>Settings outside any profile.</summary>
+    public Config Global { get; }
+
+    /// <summary>Profiles in file order, hidden ones included; never empty (a "Default" profile if none are defined).</summary>
+    public IReadOnlyList<Profile> Profiles { get; }
+
+    /// <summary>Profiles offered in menus: <see cref="Profiles"/> without the hidden ones.</summary>
+    public IEnumerable<Profile> VisibleProfiles => Profiles.Where(p => !p.Hidden);
+
+    public Profile DefaultProfile { get; }
+
+    /// <summary>Problems found while reading, as "FILE:LINE: message".</summary>
+    public IReadOnlyList<string> Warnings { get; }
+
+    /// <summary>The profile with id <paramref name="id"/>, or (for older saved sessions) with that display name.</summary>
+    public Profile? FindProfile(string id) =>
+        Profiles.FirstOrDefault(p => p.Id == id) ?? Profiles.FirstOrDefault(p => p.Name == id);
+
+    public static string DefaultPath { get; } =
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zinc", "config.toml");
+
+    /// <summary>The color schemes that ship with Zinc (Themes\ next to the executable).</summary>
+    public static string BundledThemesDirectory => System.IO.Path.Combine(AppContext.BaseDirectory, "Themes");
+
+    /// <summary>Reads the config at <paramref name="path"/> (default: ZINC_CONFIG, else <see cref="DefaultPath"/>).</summary>
+    public static ConfigFile Load(string? path = null)
+    {
+        path ??= Environment.GetEnvironmentVariable("ZINC_CONFIG") is { Length: > 0 } fromEnv ? fromEnv : DefaultPath;
+        path = System.IO.Path.GetFullPath(path);
+        string text;
+        try
+        {
+            text = File.Exists(path) ? ReadShared(path) : "";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Treated like invalid TOML: reported, and a reload keeps the settings in force (at
+            // startup, the defaults) rather than apply a file it couldn't see.
+            var defaults = Parse("", path, discover: ProfileDiscovery.Discover);
+            return new ConfigFile(defaults.Global, defaults.Profiles, defaults.DefaultProfile,
+                [$"{System.IO.Path.GetFileName(path)}: couldn't be read ({ex.Message})"], hasErrors: true,
+                path, defaults.Keybindings, defaults.Themes);
+        }
+
+        return Parse(text, path, discover: ProfileDiscovery.Discover);
+    }
+
+    /// <summary>
+    /// Reads a file another program may have open (an editor mid-save): sharing its access, with a
+    /// few short retries while it's locked.
+    /// </summary>
+    internal static string ReadShared(string path)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
+            }
+            catch (IOException) when (attempt < 4 && File.Exists(path))
+            {
+                Thread.Sleep(50 * attempt);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads config text. <paramref name="path"/> names it in warnings and anchors <c>include</c>
+    /// and the user's themes folder (next to it); <paramref name="bundledThemes"/> is searched after.
+    /// <paramref name="discover"/> finds installed profiles (none if null: tests, and anything
+    /// that shouldn't look at the machine).
+    /// </summary>
+    public static ConfigFile Parse(string text, string path = "config.toml", string? bundledThemes = null,
+        Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover = null, Zinc.Ghostty.ColorScheme? appearance = null)
+    {
+        var reader = new Reader(path, bundledThemes ?? BundledThemesDirectory, discover, appearance ?? SystemScheme);
+        reader.Read(text, path, depth: 0);
+        return reader.Build();
+    }
+
+    // ------------------------------------------------------------------ reading
+
+    /// <summary>One setting as written: its full key path, its value, and where it is.</summary>
+    private sealed record Entry(IReadOnlyList<string> Path, object Value, string File, int Line)
+    {
+        public string Where => $"{System.IO.Path.GetFileName(File)}:{Line}";
+        public string Key => string.Join('.', Path);
+    }
+
+    /// <summary>The sections a profile may override; the rest belong to the app.</summary>
+    private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal"];
+
+    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "notify", "quick-terminal", "debug"];
+
+
+    private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover,
+        Zinc.Ghostty.ColorScheme appearance)
+    {
+        private bool _followsAppearance;
+        private readonly Dictionary<string, IReadOnlyDictionary<string, object>> _profileValues = new();
+
+        private readonly List<Entry> _entries = [];
+        private readonly ThemeLibrary _themes = ThemeLibrary.For(mainPath, bundledThemes);
+        private readonly List<string> _warnings = [];
+        private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
+        private bool _hasErrors;
+
+        // [profile.<id>] headers in order, empty ones included: a bare header places a found
+        // profile in the menu without changing it.
+        private readonly List<string> _profileSections = [];
+
+        public void Read(string text, string file, int depth)
+        {
+            if (!_files.Add(System.IO.Path.GetFullPath(file)))
+            {
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}: included more than once; skipped");
+                return;
+            }
+
+            var doc = SyntaxParser.Parse(text, file);
+            _hasErrors |= doc.HasErrors;
+            foreach (var d in doc.Diagnostics)
+            {
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{d.Span.Start.Line + 1}: {d.Message}");
+            }
+
+            var entries = new List<Entry>();
+            foreach (var kv in doc.KeyValues)
+            {
+                Flatten([], kv, file, entries);
+            }
+
+            foreach (var table in doc.Tables)
+            {
+                if (table is not TableSyntax { Name: { } name } t)
+                {
+                    _warnings.Add($"{System.IO.Path.GetFileName(file)}:{table.Span.Start.Line + 1}: arrays of tables ([[...]]) aren't used by Zinc");
+                    continue;
+                }
+
+                var prefix = ConfigEditor.KeyParts(name);
+                if (prefix is ["profile", var sectionId, ..] && !_profileSections.Contains(sectionId))
+                {
+                    _profileSections.Add(sectionId);
+                }
+
+                foreach (var kv in t.Items)
+                {
+                    Flatten(prefix, kv, file, entries);
+                }
+            }
+
+            // Included files first: what includes them wins.
+            foreach (var include in entries.Where(e => e.Path is ["include"]))
+            {
+                foreach (var pattern in include.Value is List<object> list ? list : [include.Value])
+                {
+                    if (pattern is not string p)
+                    {
+                        _warnings.Add($"{include.Where}: include takes file paths");
+                        continue;
+                    }
+
+                    foreach (var included in Expand(p, file, include))
+                    {
+                        if (depth >= 8)
+                        {
+                            _warnings.Add($"{include.Where}: includes nested too deeply");
+                            break;
+                        }
+
+                        string includedText;
+                        try
+                        {
+                            includedText = ReadShared(included);
+                        }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                        {
+                            _warnings.Add($"{include.Where}: couldn't read {included} ({ex.Message})");
+                            _hasErrors = true; // as with a file that isn't valid TOML: keep what's in force
+                            continue;
+                        }
+
+                        Read(includedText, included, depth + 1);
+                    }
+                }
+            }
+
+            _entries.AddRange(entries.Where(e => e.Path is not ["include"]));
+        }
+
+        /// <summary>Files an include pattern names, relative to the including file; <c>*</c> matches within a folder.</summary>
+        private IEnumerable<string> Expand(string pattern, string from, Entry at)
+        {
+            var baseDir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(from)) ?? ".";
+            var full = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, Environment.ExpandEnvironmentVariables(pattern)));
+            var dir = System.IO.Path.GetDirectoryName(full)!;
+            var name = System.IO.Path.GetFileName(full);
+            if (name.Contains('*') || name.Contains('?'))
+            {
+                return Directory.Exists(dir) ? Directory.GetFiles(dir, name).Order(StringComparer.OrdinalIgnoreCase) : [];
+            }
+
+            if (!File.Exists(full))
+            {
+                _warnings.Add($"{at.Where}: can't find included file {pattern}");
+                return [];
+            }
+
+            return [full];
+        }
+
+        private void Flatten(IReadOnlyList<string> prefix, KeyValueSyntax kv, string file, List<Entry> into)
+        {
+            if (kv.Key is not { } key || kv.Value is not { } value)
+            {
+                return;
+            }
+
+            var path = prefix.Concat(ConfigEditor.KeyParts(key)).ToList();
+            var line = kv.Span.Start.Line + 1;
+            if (value is InlineTableSyntax inline)
+            {
+                foreach (var item in inline.Items)
+                {
+                    if (item.KeyValue is { } inner)
+                    {
+                        Flatten(path, inner, file, into);
+                    }
+                }
+
+                return;
+            }
+
+            if (ToValue(value) is { } v)
+            {
+                into.Add(new Entry(path, v, file, line));
+            }
+            else
+            {
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{line}: unsupported value for {string.Join('.', path)}");
+            }
+        }
+
+        private static object? ToValue(ValueSyntax value) => value switch
+        {
+            StringValueSyntax s => s.Value,
+            IntegerValueSyntax i => i.Value,
+            FloatValueSyntax f => f.Value,
+            BooleanValueSyntax b => b.Value,
+            ArraySyntax a => a.Items.Select(item => item.Value is { } v ? ToValue(v) : null).ToList() is var items && items.All(x => x != null)
+                ? items.Cast<object>().ToList()
+                : null,
+            _ => null,
+        };
+
+        // --------------------------------------------------------- interpreting
+
+        public ConfigFile Build()
+        {
+            string? defaultId = null;
+            List<string>? listOrder = null;
+            var global = new Config();
+            var profileEntries = new Dictionary<string, List<Entry>>();
+            var profileOrder = new List<string>();
+            var keys = new List<(string Chord, string Action, string Where)>();
+            var discovery = new DiscoverySettings();
+
+            foreach (var e in _entries)
+            {
+                switch (e.Path)
+                {
+                    case ["default-profile"]:
+                        if (e.Value is string chosen)
+                        {
+                            defaultId = chosen;
+                        }
+                        else
+                        {
+                            _warnings.Add($"{e.Where}: default-profile takes a profile id");
+                        }
+
+                        break;
+                    case ["profile-order"]:
+                        if (e.Value is List<object> ids && ids.All(i => i is string))
+                        {
+                            listOrder = ids.Cast<string>().ToList();
+                        }
+                        else
+                        {
+                            _warnings.Add($"{e.Where}: profile-order takes a list of profile ids");
+                        }
+
+                        break;
+                    case ["profile", var profileId, _, ..]:
+                        if (!profileEntries.TryGetValue(profileId, out var list))
+                        {
+                            profileEntries[profileId] = list = [];
+                            profileOrder.Add(profileId);
+                        }
+
+                        list.Add(e with { Path = e.Path.Skip(2).ToList() });
+                        break;
+                    case ["keys", var chord]:
+                        if (e.Value is string action)
+                        {
+                            keys.Add((chord, action, e.Where));
+                        }
+                        else
+                        {
+                            _warnings.Add($"{e.Where}: a key's action is text, like \"split right\" or \"none\"");
+                        }
+
+                        break;
+                    case ["keys", ..]:
+                        _warnings.Add($"{e.Where}: put a chord in quotes: \"{string.Join('.', e.Path.Skip(1))}\" = ...");
+                        break;
+                    case ["discover", var source] when e.Value is bool on:
+                        discovery = source switch
+                        {
+                            "wsl" => discovery with { Wsl = on },
+                            "powershell" => discovery with { PowerShell = on },
+                            "cmd" => discovery with { Cmd = on },
+                            "git-bash" => discovery with { GitBash = on },
+                            "msys2" => discovery with { Msys2 = on },
+                            "ssh" => discovery with { Ssh = on },
+                            "visual-studio" => discovery with { VisualStudio = on },
+                            _ => Unknown(discovery, e),
+                        };
+                        break;
+                    case ["discover", ..]:
+                        _warnings.Add($"{e.Where}: [discover] takes wsl, powershell, cmd, git-bash, msys2, ssh or visual-studio = true or false");
+                        break;
+                    case [var group, _, ..] when Groups.Contains(group):
+                        break; // applied below, themes first
+                    default:
+                        _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
+                        break;
+                }
+            }
+
+            global = ApplyGroups(global, _entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: false);
+
+            // Empty sections count too, in their place among the others.
+            var sectioned = _profileSections.Concat(profileOrder).Distinct().ToList();
+            foreach (var id in sectioned.Where(id => !profileEntries.ContainsKey(id)))
+            {
+                profileEntries[id] = [];
+            }
+
+            profileOrder = _profileSections.Count > 0
+                ? sectioned.OrderBy(id => _profileSections.IndexOf(id) is var i and >= 0 ? i : int.MaxValue).ToList()
+                : profileOrder;
+
+            // Profiles found on this machine: the base for a section with the same id, else listed
+            // after the file's own.
+            var discovered = (discover?.Invoke(discovery) ?? []).GroupBy(d => d.Id).Select(g => g.First()).ToList();
+            var found = discovered.ToDictionary(d => d.Id);
+
+            var profiles = new List<Profile>();
+            foreach (var id in profileOrder)
+            {
+                var entries = profileEntries[id];
+                string name = id;
+                var hidden = false;
+                var config = global;
+                DiscoveredProfile? foundAs = null;
+                var source = ProfileDiscovery.SourceOf(id);
+                var missing = ProfileMissing.None;
+                if (found.Remove(id, out var basis))
+                {
+                    foundAs = basis;
+                    name = basis.Name;
+                    config = FromDiscovery(config, basis);
+                }
+                else if (source != null && !entries.Any(e => e.Path is ["command"]))
+                {
+                    // Changes to a found profile that isn't here (any more), or whose search is
+                    // off: nothing to run. Kept, hidden from menus, and the settings say why.
+                    missing = ProfileDiscovery.IsOn(discovery, source) ? ProfileMissing.NotFound : ProfileMissing.SearchOff;
+                    name = ProfileDiscovery.NameFor(id); // what the search called it (a name of its own still wins below)
+                    Log.Write($"config: profile '{id}' {(missing == ProfileMissing.SearchOff ? $"is from the {source} search, which is off" : "wasn't found on this machine")}; hiding it");
+                }
+
+                foreach (var e in entries)
+                {
+                    switch (e.Path)
+                    {
+                        case ["name"] when e.Value is string n && n.Length > 0: name = n; break;
+                        case ["hidden"] when e.Value is bool h: hidden = h; break;
+                        case ["command" or "working-directory" or "icon"] when e.Value is string s && s.Length > 0:
+                            config = config.Apply(e.Path[0], s)!;
+                            break;
+                        case [var group, _, ..] when Groups.Contains(group):
+                            break;
+                        default:
+                            _warnings.Add($"{e.Where}: unknown or invalid profile setting '{e.Key}'");
+                            break;
+                    }
+                }
+
+                config = ApplyGroups(config, entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: true);
+                profiles.Add(new Profile(id, name, config, hidden || missing != ProfileMissing.None)
+                {
+                    Found = foundAs != null, InFile = true, FoundName = foundAs?.Name, FoundCommand = foundAs?.Command,
+                    Source = source, Missing = missing,
+                });
+                _profileValues[id] = entries.GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.Last().Value);
+            }
+
+            foreach (var d in discovered.Where(d => found.ContainsKey(d.Id)))
+            {
+                profiles.Add(new Profile(d.Id, d.Name, FromDiscovery(global, d))
+                {
+                    Found = true, FoundName = d.Name, FoundCommand = d.Command, Source = ProfileDiscovery.SourceOf(d.Id),
+                });
+            }
+
+            // Your own profiles first, in file order; then found ones in the order the searches
+            // found them, changed or not (a section of changes mustn't move one to the top, and so
+            // make it the default); then the ones that can't open.
+            var searchOrder = discovered.Select((d, i) => (d.Id, i)).ToDictionary(x => x.Id, x => x.i);
+            profiles = profiles.Select((p, i) => (p, i))
+                .OrderBy(x => x.p.Missing != ProfileMissing.None ? 2 : x.p.Found ? 1 : 0)
+                .ThenBy(x => x.p.Found ? searchOrder[x.p.Id] : x.i)
+                .Select(x => x.p).ToList();
+
+            if (listOrder != null)
+            {
+                // profile-order (the settings window's drag order) first; the rest keep their places after it.
+                profiles = profiles.Select((p, i) => (p, i))
+                    .OrderBy(x => listOrder.IndexOf(x.p.Id) is var at and >= 0 ? at : listOrder.Count + x.i)
+                    .Select(x => x.p).ToList();
+            }
+
+            if (profiles.Count == 0)
+            {
+                profiles.Add(new Profile("default", "Default", global));
+            }
+
+            var defaultProfile = profiles.FirstOrDefault(p => p.Id == defaultId) ?? profiles.FirstOrDefault(p => !p.Hidden) ?? profiles[0];
+            if (defaultId != null && defaultProfile.Id != defaultId)
+            {
+                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn't a profile; using '{defaultProfile.Id}'");
+            }
+
+            var keybindings = Keybindings.Configure(keys, _warnings);
+            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes)
+            {
+                SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
+                Appearance = appearance,
+                FollowsAppearance = _followsAppearance,
+                ProfileValues = _profileValues,
+                GlobalValues = _entries.Where(e => e.Path[0] != "profile")
+                    .GroupBy(e => e.Key).ToDictionary(g => g.Key, g => g.Last().Value),
+            };
+        }
+
+        private static Config FromDiscovery(Config config, DiscoveredProfile found) =>
+            config with { Command = found.Command, Icon = found.Icon ?? config.Icon };
+
+        private DiscoverySettings Unknown(DiscoverySettings settings, Entry e)
+        {
+            _warnings.Add($"{e.Where}: unknown [discover] source '{e.Path[1]}'");
+            return settings;
+        }
+
+        /// <summary>Applies grouped settings: a color theme first, so the colors written next to it override it.</summary>
+        private Config ApplyGroups(Config config, List<Entry> entries, bool inProfile)
+        {
+            foreach (var e in entries.Where(e => e.Path is ["colors", "theme"]))
+            {
+                config = e.Value is string theme ? ApplyTheme(config, theme, e) : Warn(config, e, "a theme name");
+            }
+
+            foreach (var e in entries.Where(e => e.Path is not ["colors", "theme"]))
+            {
+                if (inProfile && !ProfileGroups.Contains(e.Path[0]))
+                {
+                    _warnings.Add($"{e.Where}: [{e.Path[0]}] applies to the whole app, not to one profile");
+                    continue;
+                }
+
+                config = ApplySetting(config, e);
+            }
+
+            return config;
+        }
+
+        /// <summary>
+        /// Every grouped setting (<c>"font.size"</c>) and how its TOML value becomes the value
+        /// Config.Apply parses. The settings window's catalog is checked against these keys.
+        /// </summary>
+        public static readonly Dictionary<string, (string Key, Func<object, string?> Convert)> Mappings = new()
+        {
+            ["font.family"] = ("font-family", v => v as string),
+            ["font.size"] = ("font-size", v => Number(v)),
+            ["font.builtin-glyphs"] = ("builtin-glyphs", v => Bool(v)),
+            ["font.adjust-box-thickness"] = ("adjust-box-thickness", v => v is string a ? a : Number(v)),
+            ["colors.background"] = ("background", v => v as string),
+            ["colors.foreground"] = ("foreground", v => v as string),
+            ["colors.cursor"] = ("cursor-color", v => v as string),
+            ["colors.cursor-text"] = ("cursor-text", v => v as string),
+            ["colors.selection-background"] = ("selection-background", v => v as string),
+            ["colors.selection-foreground"] = ("selection-foreground", v => v as string),
+            ["terminal.cursor-style"] = ("cursor-style", v => v as string),
+            ["terminal.cursor-style-at-prompt"] = ("cursor-style-at-prompt", v => v as string),
+            ["terminal.cursor-blink"] = ("cursor-blink", v => Bool(v)),
+            ["terminal.scrollback-lines"] = ("scrollback-lines", v => Number(v)),
+            ["terminal.close-on-exit"] = ("close-on-exit", v => v as string),
+            ["terminal.bell"] = ("bell", v => v as string),
+            ["terminal.bell-sound"] = ("bell-sound", v => Bool(v)),
+            ["terminal.screen-flash-bell"] = ("screen-flash-bell", v => Bool(v)),
+            ["terminal.program-titles"] = ("program-titles", v => Bool(v)),
+            ["terminal.input-method"] = ("input-method", v => Bool(v)),
+            ["terminal.padding-x"] = ("window-padding-x", v => Pair(v)),
+            ["terminal.padding-y"] = ("window-padding-y", v => Pair(v)),
+            ["terminal.padding-balance"] = ("window-padding-balance", v => Bool(v)),
+            ["terminal.mouse-pointer"] = ("mouse-pointer", v => v as string),
+            ["terminal.clipboard-read"] = ("clipboard-read", v => Permission(v)),
+            ["terminal.clipboard-write"] = ("clipboard-write", v => Permission(v)),
+            ["terminal.command-marks"] = ("command-marks", v => v as string),
+            ["terminal.shell-integration"] = ("shell-integration", v => v as string),
+            ["window.workspace-tabs"] = ("workspace-tabs", v => v as string),
+            ["window.title-bar"] = ("title-bar", v => v as string),
+            ["window.sidebar"] = ("sidebar", v => v as string),
+            ["window.tab-groups"] = ("tab-groups", v => Bool(v)),
+            ["window.software-rendering"] = ("software-rendering", v => Bool(v)),
+            ["window.focus-follows-mouse"] = ("focus-follows-mouse", v => Bool(v)),
+            ["terminal.copy-on-select"] = ("copy-on-select", v => Bool(v)),
+            ["terminal.click-to-move"] = ("cursor-click-to-move", v => Bool(v)),
+            ["terminal.paste-warning"] = ("paste-warning", v => v as string),
+            ["terminal.large-paste-warning"] = ("large-paste-warning", v => Bool(v)),
+            ["terminal.word-boundaries"] = ("word-boundaries", v => v as string),
+            ["window.group-tab-strip"] = ("group-tab-strip", v => v as string),
+            ["window.unfocused-split-opacity"] = ("unfocused-split-opacity", v => Number(v)),
+            ["window.unfocused-split-fill"] = ("unfocused-split-fill", v => v as string),
+            ["window.divider-color"] = ("split-divider-color", v => v as string),
+            ["colors.minimum-contrast"] = ("minimum-contrast", v => Number(v)),
+            ["colors.bold"] = ("bold-color", v => v as string),
+            ["colors.bold-is-bright"] = ("bold-is-bright", v => Bool(v)),
+            ["colors.faint-opacity"] = ("faint-opacity", v => Number(v)),
+            ["colors.cursor-opacity"] = ("cursor-opacity", v => Number(v)),
+            ["colors.background-opacity"] = ("background-opacity", v => Number(v)),
+            ["window.backdrop"] = ("backdrop", v => v as string),
+            ["window.backdrop-tint"] = ("backdrop-tint", v => Number(v)),
+            ["window.backdrop-color"] = ("backdrop-color", v => v as string),
+            ["window.accent"] = ("accent", v => v as string),
+            ["window.appearance"] = ("appearance", v => v as string),
+            ["debug.logging"] = ("logging", v => Bool(v)),
+            ["colors.find-highlight"] = ("search-background", v => v as string),
+            ["colors.find-highlight-current"] = ("search-selected-background", v => v as string),
+            ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),
+            ["window.quit-after-last-window-closed"] = ("quit-after-last-window-closed", v => Bool(v)),
+            ["window.new-workspace-page"] = ("new-workspace-page", v => Bool(v)),
+            ["window.workspace-colors"] = ("workspace-colors", v => v as string),
+            ["window.launch-at-login"] = ("launch-at-login", v => v is bool b ? (b ? "windows" : "off") : v as string),
+            ["notify.command-finished"] = ("notify-command-finished", v => v as string),
+            ["notify.programs"] = ("notify-programs", v => v as string),
+            ["notify.finished-color"] = ("notify-finished-color", v => v as string),
+            ["notify.bell-color"] = ("notify-bell-color", v => v as string),
+            ["notify.failed-color"] = ("notify-failed-color", v => v as string),
+            ["notify.command-finished-after"] = ("notify-command-finished-after", v => v is string d ? d : Number(v)),
+            ["quick-terminal.position"] = ("quick-terminal-position", v => v as string),
+            ["quick-terminal.screen"] = ("quick-terminal-screen", v => v as string),
+            ["quick-terminal.size"] = ("quick-terminal-size", v => Pair(v)),
+            ["quick-terminal.autohide"] = ("quick-terminal-autohide", v => Bool(v)),
+            ["quick-terminal.hotkey"] = ("quick-terminal-hotkey", v => v as string),
+        };
+
+        private Config ApplySetting(Config config, Entry e)
+        {
+            // Each setting maps onto the (tested) value parsing of Config.Apply.
+            (string Key, string? Value)? legacy = e.Path switch
+            {
+                ["colors", "palette", var index] => ("palette", e.Value is string c ? $"{index}={c}" : null),
+                [var group, var name] when Mappings.TryGetValue($"{group}.{name}", out var m) => (m.Key, m.Convert(e.Value)),
+                _ => null,
+            };
+
+            // The whole palette as an array: palette = ["#000000", "#aa0000", ...].
+            if (e.Path is ["colors", "palette"] && e.Value is List<object> colors)
+            {
+                for (var i = 0; i < colors.Count; i++)
+                {
+                    config = colors[i] is string c && config.Apply("palette", $"{i}={c}") is { } next ? next : Warn(config, e, "colors like \"#rrggbb\"");
+                }
+
+                return config;
+            }
+
+            if (legacy is not { } l)
+            {
+                _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
+                return config;
+            }
+
+            return l.Value != null && config.Apply(l.Key, l.Value) is { } applied ? applied : Warn(config, e, null);
+        }
+
+        /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
+        private Config ApplyTheme(Config config, string name, Entry at)
+        {
+            // "light:X,dark:Y": the side for Windows' current mode (both sides checked, so a
+            // typo shows up now rather than when the mode flips).
+            if (ThemeLibrary.TryParsePair(name, out var light, out var dark))
+            {
+                _followsAppearance = true;
+                foreach (var side in new[] { light, dark }.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (_themes.Find(side) == null)
+                    {
+                        _warnings.Add($"{at.Where}: no color scheme named '{side}' (looked in {_themes.UserFolder} and the bundled ones)");
+                    }
+                }
+
+                var isDark = appearance == Zinc.Ghostty.ColorScheme.Dark;
+                return (_themes.Apply(config, isDark ? dark : light) ?? config) with { PairedDark = isDark };
+            }
+
+            if (_themes.Apply(config, name) is { } themed)
+            {
+                return themed with { PairedDark = null };
+            }
+
+            _warnings.Add($"{at.Where}: no color scheme named '{name}' (looked in {_themes.UserFolder} and the bundled ones)");
+            return config;
+        }
+
+        private Config Warn(Config config, Entry e, string? expected)
+        {
+            _warnings.Add($"{e.Where}: ignored {e.Key} = {Show(e.Value)}{(expected != null ? $" (expected {expected})" : "")}");
+            return config;
+        }
+
+        private static string Show(object value) => value switch
+        {
+            string s => $"\"{s}\"",
+            bool b => b ? "true" : "false",
+            List<object> l => $"[{string.Join(", ", l.Select(Show))}]",
+            IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+            _ => value.ToString() ?? "",
+        };
+
+        private static string? Number(object value) => value is long or double
+            ? Convert.ToString(value, CultureInfo.InvariantCulture)
+            : null;
+
+        private static string? Bool(object value) => value is bool b ? (b ? "true" : "false") : null;
+
+        /// <summary>true/false or "allow"/"deny".</summary>
+        private static string? Permission(object value) => value switch
+        {
+            bool b => b ? "allow" : "deny",
+            string s => s,
+            _ => null,
+        };
+
+        /// <summary>One value or two (<c>[a, b]</c>), as Config.Apply's "a,b" form.</summary>
+        private static string? Pair(object value) => value switch
+        {
+            List<object> { Count: 1 or 2 } l when l.All(x => x is long or double or string) =>
+                string.Join(",", l.Select(x => Convert.ToString(x, CultureInfo.InvariantCulture))),
+            long or double => Convert.ToString(value, CultureInfo.InvariantCulture),
+            string s => s,
+            _ => null,
+        };
+    }
+}
