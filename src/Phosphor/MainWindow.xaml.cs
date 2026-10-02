@@ -1223,6 +1223,21 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord == "test:mem")
+            {
+                // Where memory goes: the process's private bytes, and how much of it is .NET's heap (after a
+                // collection, so it's what's live). The rest is native: libghostty's screens, Win2D/Direct3D,
+                // WinUI/XAML, DirectWrite.
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                using var self = System.Diagnostics.Process.GetCurrentProcess();
+                var gc = GC.GetGCMemoryInfo();
+                Log.Write($"test {chord}: private {self.PrivateMemorySize64 / 1048576} MB, working set {self.WorkingSet64 / 1048576} MB, " +
+                    $".NET heap {gc.HeapSizeBytes / 1048576} MB (committed {gc.TotalCommittedBytes / 1048576} MB), panes {AllTabs().Sum(t => t.Workspace.Tabs.Count())}");
+                return;
+            }
+
             if (chord == "test:gc")
             {
                 // Frees whatever is unreferenced (e.g. a retired canvas), as a later GC would.
