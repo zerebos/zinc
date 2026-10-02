@@ -215,8 +215,16 @@ internal sealed partial class StartPage : UserControl
     /// <summary>The "Show this page" box changed.</summary>
     public event Action<bool>? ShowPageChanged;
 
-    public void FocusFilter() => DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
-        () => _filter.Focus(FocusState.Programmatic));
+    public void FocusFilter()
+    {
+        // Not in test captures: the focused look (caret, underline) showed only when the window happened to be in front.
+        if (TestHooks.Deterministic)
+        {
+            return;
+        }
+
+        DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _filter.Focus(FocusState.Programmatic));
+    }
 
     private static StackPanel Column(string title, ListView list)
     {

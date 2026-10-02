@@ -63,6 +63,13 @@ internal sealed partial class WelcomeWindow : Window
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
         _firstRun = firstRun;
+        if (TestHooks.Deterministic)
+        {
+            // Each page focuses Next; whether its focus outline shows depends on how Windows took the last input
+            // (UI Automation's invoke, while the window may or may not be in front), so captures differed run to run.
+            _next.UseSystemFocusVisuals = false;
+            _back.UseSystemFocusVisuals = false;
+        }
 
         // Start from what's in force; on first run, workspaces in the sidebar (Zinc at its most
         // itself; Simple is one click away).
