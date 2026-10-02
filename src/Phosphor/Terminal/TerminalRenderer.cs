@@ -84,6 +84,14 @@ public sealed unsafe class TerminalRenderer : IDisposable
     /// <summary>One pixel per cell (premultiplied BGRA): its background, transparent for the default one.</summary>
     private byte[] _bgPixels = [];
     private CanvasBitmap? _bgBitmap;
+
+    // Text through the glyph atlas: each frame's glyphs (and box-drawing sprites) are collected while the rows
+    // are drawn, then copied in one sprite batch. ZINC_GLYPH_ATLAS=0 keeps the glyph runs (for comparisons).
+    private static readonly bool AtlasEnabled = Environment.GetEnvironmentVariable("ZINC_GLYPH_ATLAS") != "0";
+    private readonly GlyphAtlas _atlas = new();
+    private bool _batching;
+    private int _gridX, _gridY; // the grid's top-left device pixel (the padding, rounded down)
+    private readonly List<(CanvasBitmap Bitmap, Rect Destination, Rect? Source, Vector4 Tint)> _frameSprites = [];
     private readonly List<KittyPlaceholders.Run> _runs = [];
     private ulong _viewportTop; // screen row at the top of the viewport, this frame
     private uint[] _codepoints = new uint[1024];
@@ -145,6 +153,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
     private void ClearSprites()
     {
+        _atlas.Clear(); // same reasons: font, cell size, device
         foreach (var sprite in _sprites.Values)
         {
             sprite?.Bitmap.Dispose();
@@ -377,7 +386,18 @@ public sealed unsafe class TerminalRenderer : IDisposable
         DrawBackgrounds(ds, read, cols);
         if (perf != null) t = perf.Mark(1, t);
 
-        // ...then each row's highlights, text, decorations and cursor.
+        // ...then each row's highlights and text (into the frame's sprite batch where the atlas is on), the batch,
+        // and each row's decorations and cursor on top.
+        _batching = AtlasEnabled && _spriteBatchSupported;
+        if (_batching)
+        {
+            var padX = PadLeft * m.Scale;
+            var padY = PadTop * m.Scale;
+            _gridX = (int)MathF.Floor(padX);
+            _gridY = (int)MathF.Floor(padY);
+            _atlas.Prepare(m, padX - _gridX, padY - _gridY);
+        }
+
         for (var y = 0; y < read; y++)
         {
             var count = _frameCounts[y];
@@ -393,8 +413,13 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 DrawPlaceholders(ds, count, top);
             }
 
-            DrawText(ds, count, top);
+            DrawText(ds, count, top, y);
             if (perf != null) t = perf.Mark(2, t);
+            if (_batching)
+            {
+                continue; // decorations and the cursor go over the batch, below
+            }
+
             DrawDecorations(ds, count, top);
             if (HoverLink?.ColumnsOn(y, count) is { } span)
             {
@@ -404,6 +429,31 @@ public sealed unsafe class TerminalRenderer : IDisposable
             if (cursor.Visible != 0 && cursor.ViewportHasValue != 0 && cursor.ViewportY == y)
             {
                 DrawCursor(ds, cursor, count, top, cursorColor, defaultBg, presentation);
+            }
+
+            if (perf != null) t = perf.Mark(3, t);
+        }
+
+        if (_batching)
+        {
+            DrawFrameSprites(ds);
+            _batching = false; // the cursor redraws its cell's glyph directly
+            if (perf != null) t = perf.Mark(2, t);
+            for (var y = 0; y < read; y++)
+            {
+                _cells = _frameCells[y];
+                var count = _frameCounts[y];
+                var top = PadTop + y * m.Height;
+                DrawDecorations(ds, count, top);
+                if (HoverLink?.ColumnsOn(y, count) is { } span)
+                {
+                    DrawLinkUnderline(ds, span.First, span.Last, count, top);
+                }
+
+                if (cursor.Visible != 0 && cursor.ViewportHasValue != 0 && cursor.ViewportY == y)
+                {
+                    DrawCursor(ds, cursor, count, top, cursorColor, defaultBg, presentation);
+                }
             }
 
             if (perf != null) t = perf.Mark(3, t);
@@ -425,6 +475,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         _bitmaps.Clear();
         ClearSprites();
         _bgBitmap?.Dispose();
+        _atlas.Dispose();
         Native.RowCellsFree(_rowCells);
         Native.RowIteratorFree(_rowIterator);
         Native.RenderStateFree(_renderState);
@@ -691,7 +742,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             CanvasImageInterpolation.NearestNeighbor);
     }
 
-    private void DrawText(CanvasDrawingSession ds, int count, float top)
+    private void DrawText(CanvasDrawingSession ds, int count, float top, int row)
     {
         // Batch cells into glyph runs with a fixed advance of one cell, so each
         // glyph lands exactly on the grid. Cells the primary font can't render
@@ -738,6 +789,12 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 FlushRun(ds, runStart, runLen, runVariant, runColor, top);
                 runLen = 0;
                 DrawFallback(ds, ref cell, x, top);
+                continue;
+            }
+
+            if (_batching)
+            {
+                AddGlyph(ds, glyph, variant, cell.Fg, x, row);
                 continue;
             }
 
@@ -809,6 +866,23 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         var m = Metrics;
+        if (_batching)
+        {
+            // Into the frame's batch with the glyphs.
+            foreach (var (column, codepoint, color) in _rowSprites)
+            {
+                if (Sprite(ds, codepoint) is { } sprite)
+                {
+                    var size = sprite.Bitmap.SizeInPixels;
+                    _frameSprites.Add((sprite.Bitmap, new Rect(PadLeft + column * m.Width + sprite.X / m.Scale, top + sprite.Y / m.Scale,
+                        size.Width / m.Scale, size.Height / m.Scale), null, new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f)));
+                }
+            }
+
+            _rowSprites.Clear();
+            return;
+        }
+
         using (var batch = ds.CreateSpriteBatch(CanvasSpriteSortMode.None, CanvasImageInterpolation.NearestNeighbor))
         {
             foreach (var (column, codepoint, color) in _rowSprites)
@@ -826,6 +900,52 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         _rowSprites.Clear();
+    }
+
+    /// <summary>A glyph's atlas tile into the frame's batch, at its cell, tinted with its color.</summary>
+    private void AddGlyph(CanvasDrawingSession ds, int glyph, int variant, Color color, int column, int row)
+    {
+        if (_faces[variant] is not { } face)
+        {
+            return;
+        }
+
+        // Direct2D's grayscale contrast depends on the text's lightness: dark text has its own tiles.
+        var dark = 0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B < 128;
+        if (_atlas.Get(ds, face, _fontSize, glyph, variant, dark) is not { } tile)
+        {
+            return;
+        }
+
+        var m = Metrics;
+        _frameSprites.Add((tile.Page, _atlas.Destination(_gridX + column * (int)m.WidthPx, _gridY + row * (int)m.HeightPx), tile.Source,
+            new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f)));
+    }
+
+    /// <summary>The frame's glyphs and box-drawing sprites, in one sprite batch.</summary>
+    private void DrawFrameSprites(CanvasDrawingSession ds)
+    {
+        if (_frameSprites.Count == 0)
+        {
+            return;
+        }
+
+        using (var batch = ds.CreateSpriteBatch(CanvasSpriteSortMode.None, CanvasImageInterpolation.NearestNeighbor))
+        {
+            foreach (var (bitmap, destination, source, tint) in _frameSprites)
+            {
+                if (source is { } from)
+                {
+                    batch.DrawFromSpriteSheet(bitmap, destination, from, tint);
+                }
+                else
+                {
+                    batch.Draw(bitmap, destination, tint);
+                }
+            }
+        }
+
+        _frameSprites.Clear();
     }
 
     private void FlushRun(CanvasDrawingSession ds, int start, int len, int variant, Color color, float top)

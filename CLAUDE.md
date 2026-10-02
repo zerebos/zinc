@@ -519,6 +519,13 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
   benchmark in its OWN pwsh process (`pwsh -File bench-test.ps1`): UI Automation inside one PowerShell session
   fails to find windows after the first run's process exits. Direct2D defers work, so per-section timings move
   between sections: judge by the frame total.
+  Text goes through `GlyphAtlas` (Terminal/GlyphAtlas.cs; `ZINC_GLYPH_ATLAS=0` = the old glyph runs): each glyph drawn
+  once (tile = 3x2 cells, the glyph's cell in the middle, at the grid's fractional pixel offset; a light and a dark
+  variant, Direct2D's grayscale contrast depends on the text color; stored as white coverage), then ONE
+  `CanvasSpriteBatch` per frame for all glyphs + box-drawing sprites, then decorations and the cursor over it
+  (`_batching`; the cursor redraws its glyph directly). Fallback/emoji/clusters still DrawTextLayout immediately
+  (before the batch). Reset with `ClearSprites`. Pixel diff vs glyph runs: mostly 1/255, colored text edges up to
+  ~24/255. Colors workload 9.5 -> 2.9 ms (GPU), 16.7 -> 3.5 ms (software).
   Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,
   Powerline, Braille come from **Ghostty's own sprite rasterizer** built as
   `native/<arch>/phosphor-sprite.dll` (`scripts/build-sprites.sh`, run by build-libghostty.sh:
