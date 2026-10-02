@@ -9,6 +9,13 @@ namespace Phosphor;
 public partial class App : Application
 {
     private readonly List<MainWindow> _windows = []; // normal windows, most recently active last
+
+    /// <summary>Windows (the quick terminal included once it exists) and the terminals in them.</summary>
+    internal (int Windows, int Panes) Counts()
+    {
+        var all = _quick != null ? _windows.Append(_quick).ToList() : _windows;
+        return (all.Count, all.Sum(w => w.PaneCount));
+    }
     private ConfigFile _config = null!;
 
     // One instance shared by every window and pane; a reload copies the new bindings into it.

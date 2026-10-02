@@ -408,6 +408,7 @@ internal sealed partial class SettingsWindow : Window
 
         _page.Children.Add(LogFileRow());
         _page.Children.Add(Row("Crash log", Log.CrashPath, ButtonRow(("Open folder", () => Reveal(Log.CrashPath)))));
+        MemoryRow();
         BenchmarkRows();
         OpenSourceList();
     }
@@ -439,6 +440,29 @@ internal sealed partial class SettingsWindow : Window
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { open, copy, clear } };
         return Row("Debug log file", Log.FilePath, buttons);
+    }
+
+    /// <summary>
+    /// Where memory goes (<see cref="Phosphor.Pty.MemoryReport"/>): Zinc's own, the .NET heap's share, and the programs it
+    /// started, which Task Manager counts in Zinc's row. Measured when About opens and on Refresh.
+    /// </summary>
+    private void MemoryRow()
+    {
+        var (windows, panes) = App.Instance.Counts();
+        var report = Phosphor.Pty.MemoryReport.Measure(windows, panes);
+        var copy = new Button { Content = "Copy" };
+        AutomationProperties.SetName(copy, "Copy the memory details");
+        copy.Click += (_, _) =>
+        {
+            ClipboardText.Set($"{report.Text()}{Environment.NewLine}{Log.About}");
+            copy.Content = "Copied";
+        };
+
+        var refresh = new Button { Content = "Refresh" };
+        AutomationProperties.SetName(refresh, "Measure memory again");
+        refresh.Click += (_, _) => Render();
+        _page.Children.Add(Row("Memory", report.Summary + ". Most of it is native: Windows' UI framework, the graphics card's driver and the terminals' screens and scrollback.",
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { refresh, copy } }));
     }
 
     private static StackPanel ButtonRow(params (string Label, Action Run)[] buttons)

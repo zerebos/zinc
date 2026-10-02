@@ -253,6 +253,9 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>The workspaces, in order (a new-workspace page among them isn't one).</summary>
+    /// <summary>How many terminals this window holds (Settings > About's memory row).</summary>
+    internal int PaneCount => AllTabs().Sum(t => t.Workspace.Tabs.Count());
+
     private IEnumerable<WorkspaceTab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => i.Tag).OfType<WorkspaceTab>();
 
     private WorkspaceTab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as WorkspaceTab;
