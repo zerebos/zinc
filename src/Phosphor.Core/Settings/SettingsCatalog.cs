@@ -175,9 +175,9 @@ public static class SettingsCatalog
             SettingKind.Number, 0.3)
             { Minimum = 0, Maximum = 1, Step = 0.05 },
         new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
-            "How much of the window glass shows through the terminal (1: none). Colored cells stay solid.",
+            "How much of the window glass shows through the terminal (1: none; 0: only the glass, behind the text). Colored cells stay solid.",
             SettingKind.Number, 1.0)
-            { Minimum = 0.1, Maximum = 1, Step = 0.05 },
+            { Minimum = 0, Maximum = 1, Step = 0.05 },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)

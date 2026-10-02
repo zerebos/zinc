@@ -363,7 +363,7 @@ public sealed record Config
     public double FaintOpacity { get; init; } = 0.5;
 
     /// <summary>
-    /// How opaque the default background is (0.1-1); below 1 the window's backdrop shows through.
+    /// How opaque the default background is (0-1); below 1 the window's backdrop shows through (0: only it).
     /// Cells with a background color of their own stay solid. Config: <c>[colors] background-opacity</c> (Ghostty's).
     /// </summary>
     public double BackgroundOpacity { get; init; } = 1;
@@ -442,7 +442,7 @@ public sealed record Config
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
             "faint-opacity" when TryDouble(value, out var faint) && faint is >= 0.1 and <= 1 => this with { FaintOpacity = faint },
-            "background-opacity" when TryDouble(value, out var backgroundOpacity) && backgroundOpacity is >= 0.1 and <= 1 =>
+            "background-opacity" when TryDouble(value, out var backgroundOpacity) && backgroundOpacity is >= 0 and <= 1 =>
                 this with { BackgroundOpacity = backgroundOpacity },
             "backdrop" when TryMode<WindowBackdrop>(value, out var backdrop) => this with { Backdrop = backdrop },
             "backdrop-tint" when TryDouble(value, out var tint) && tint is >= 0 and <= 1 => this with { BackdropTint = tint },

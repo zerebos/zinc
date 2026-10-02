@@ -291,7 +291,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   New schemes: `NewSchemeFlyout` (card and editor) → `ThemeLibrary.Create(name, from)` (`NameProblem`; tested) →
   `UseScheme` (replaces one side of a light/dark pair) → editor; `DeleteScheme` (ContentDialog; user-only schemes).
   Glass: `[window] backdrop-tint` → `GlassBackdrop` (DesktopAcrylicController, tint = terminal bg, kept active) /
-  `ClearBackdrop(tint)`.
+  `ClearBackdrop(tint)` (a transparent brush alone showed BLACK: the window also needs DWM blur-behind with an empty region + zero frame margins + WM_ERASEBKGND filled black, via a window subclass; redone on WM_DWMCOMPOSITIONCHANGED, undone on disconnect; as WinUIEx's TransparentTintBackdrop). Opacity reaches 0.
 - Color settings (settings, not scheme keys: `ApplyFile` ignores them; Settings > Appearance > Readability):
   `[colors] minimum-contrast` (Core `MinimumContrast`: WCAG ratio, below it black/white; tested), `bold`,
   `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`
