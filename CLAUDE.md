@@ -513,6 +513,12 @@ Test a press with `.scratch/tools/quick-toggle.ps1` and lifetime with `lifetime.
 to the logged hwnd; need ZINC_LOG). Don't launch `powershell.exe` consoles
 mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
+  A frame reads every row first (`_frameCells`, one codepoint buffer per frame), draws all backgrounds as one
+  cols x rows bitmap (`DrawBackgrounds`, nearest-neighbor, default bg transparent), then each row's matches,
+  text, decorations, cursor. Measure drawing changes A/B with `.scratch/tools/ab-bench.ps1`-style runs, each
+  benchmark in its OWN pwsh process (`pwsh -File bench-test.ps1`): UI Automation inside one PowerShell session
+  fails to find windows after the first run's process exits. Direct2D defers work, so per-section timings move
+  between sections: judge by the frame total.
   Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,
   Powerline, Braille come from **Ghostty's own sprite rasterizer** built as
   `native/<arch>/phosphor-sprite.dll` (`scripts/build-sprites.sh`, run by build-libghostty.sh:

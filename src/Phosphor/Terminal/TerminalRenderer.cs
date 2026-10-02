@@ -71,6 +71,19 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private Cell[] _cells = [];
     private KittyPlaceholders.Cell?[] _placeholders = [];
     private bool _rowHasPlaceholders;
+
+    // The frame's rows, all read before anything is drawn: the backgrounds go first, as one bitmap
+    // (DrawBackgrounds), then each row's text and the rest. _cells, _placeholders and _rowHasPlaceholders
+    // point at the row being read or drawn; character data is one buffer for the frame (_codepointsUsed).
+    private Cell[][] _frameCells = [];
+    private KittyPlaceholders.Cell?[][] _framePlaceholders = [];
+    private bool[] _frameHasPlaceholders = [];
+    private int[] _frameCounts = [];
+    private int _frameColumns, _columns, _codepointsUsed;
+
+    /// <summary>One pixel per cell (premultiplied BGRA): its background, transparent for the default one.</summary>
+    private byte[] _bgPixels = [];
+    private CanvasBitmap? _bgBitmap;
     private readonly List<KittyPlaceholders.Run> _runs = [];
     private ulong _viewportTop; // screen row at the top of the viewport, this frame
     private uint[] _codepoints = new uint[1024];
@@ -121,6 +134,8 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         _bitmaps.Clear();
         ClearSprites();
+        _bgBitmap?.Dispose(); // the old device's
+        _bgBitmap = null;
         _spriteBatchSupported = CanvasSpriteBatch.IsSupported(device.Device);
         if (!_spriteBatchSupported)
         {
@@ -217,6 +232,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
     /// <summary>Grows the per-row buffers to hold <paramref name="cols"/> cells.</summary>
     public void EnsureColumns(int cols)
     {
+        _columns = Math.Max(_columns, cols);
         if (_cells.Length < cols)
         {
             _cells = new Cell[cols];
@@ -340,15 +356,36 @@ public sealed unsafe class TerminalRenderer : IDisposable
         Native.RenderStateGet(_renderState, RenderStateData.RowIterator, &iterator);
 
         var m = Metrics;
-        var y = 0;
         var perf = Perf;
         var t = perf != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
-        while (Native.RowIteratorNext(_rowIterator) != 0 && y < rows)
+
+        // Every row first (the backgrounds are drawn before any text)...
+        var cols = Math.Max(_columns, _cells.Length);
+        EnsureFrame(rows, cols);
+        _codepointsUsed = 0;
+        var read = 0;
+        while (Native.RowIteratorNext(_rowIterator) != 0 && read < rows)
         {
-            var count = ReadRow(defaultFg, defaultBg);
-            if (perf != null) t = perf.Mark(0, t);
+            _cells = _frameCells[read];
+            _placeholders = _framePlaceholders[read];
+            _frameCounts[read] = ReadRow(defaultFg, defaultBg);
+            _frameHasPlaceholders[read] = _rowHasPlaceholders;
+            read++;
+        }
+
+        if (perf != null) t = perf.Mark(0, t);
+        DrawBackgrounds(ds, read, cols);
+        if (perf != null) t = perf.Mark(1, t);
+
+        // ...then each row's highlights, text, decorations and cursor.
+        for (var y = 0; y < read; y++)
+        {
+            var count = _frameCounts[y];
+            _cells = _frameCells[y];
+
+            _placeholders = _framePlaceholders[y];
+            _rowHasPlaceholders = _frameHasPlaceholders[y];
             var top = PadTop + y * m.Height;
-            DrawBackgrounds(ds, count, top);
             DrawMatches(ds, y, count, top);
             if (perf != null) t = perf.Mark(1, t);
             if (_rowHasPlaceholders)
@@ -370,7 +407,6 @@ public sealed unsafe class TerminalRenderer : IDisposable
             }
 
             if (perf != null) t = perf.Mark(3, t);
-            y++;
         }
 
         DrawImages(ds, rows, belowText: false);
@@ -388,6 +424,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         _bitmaps.Clear();
         ClearSprites();
+        _bgBitmap?.Dispose();
         Native.RowCellsFree(_rowCells);
         Native.RowIteratorFree(_rowIterator);
         Native.RenderStateFree(_renderState);
@@ -435,7 +472,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         Color? selectionFg = hasSelection && theme.SelectionForeground is { } sf ? ToColor(sf) : null;
 
         var x = 0;
-        var cp = 0;
+        var cp = _codepointsUsed; // the frame's rows share one buffer
         _rowHasPlaceholders = false;
         while (x < _cells.Length && Native.RowCellsNext(_rowCells) != 0)
         {
@@ -567,33 +604,91 @@ public sealed unsafe class TerminalRenderer : IDisposable
             x++;
         }
 
+        _codepointsUsed = cp;
         return x;
     }
 
-    private void DrawBackgrounds(CanvasDrawingSession ds, int count, float top)
+    /// <summary>Room for <paramref name="rows"/> rows of <paramref name="cols"/> cells (grown, never shrunk).</summary>
+    private void EnsureFrame(int rows, int cols)
     {
-        var m = Metrics;
-        ds.Antialiasing = CanvasAntialiasing.Aliased;
-        var x = 0;
-        while (x < count)
+        if (_frameCells.Length >= rows && _frameColumns >= cols)
         {
-            if (!_cells[x].HasBg)
-            {
-                x++;
-                continue;
-            }
-
-            var start = x;
-            var color = _cells[x].Bg;
-            while (x < count && _cells[x].HasBg && _cells[x].Bg == color)
-            {
-                x++;
-            }
-
-            ds.FillRectangle(PadLeft + start * m.Width, top, (x - start) * m.Width, m.Height, color);
+            return;
         }
 
-        ds.Antialiasing = CanvasAntialiasing.Antialiased;
+        rows = Math.Max(rows, _frameCells.Length);
+        cols = Math.Max(cols, _frameColumns);
+        _frameCells = new Cell[rows][];
+        _framePlaceholders = new KittyPlaceholders.Cell?[rows][];
+        for (var y = 0; y < rows; y++)
+        {
+            _frameCells[y] = new Cell[cols];
+            _framePlaceholders[y] = new KittyPlaceholders.Cell?[cols];
+        }
+
+        _frameHasPlaceholders = new bool[rows];
+        _frameCounts = new int[rows];
+        _frameColumns = cols;
+    }
+
+    /// <summary>
+    /// Every cell's background in one draw: a bitmap with one pixel per cell, stretched over the grid without
+    /// smoothing (cells are whole device pixels, so each pixel covers exactly one cell). It replaced a rectangle
+    /// per run of same-colored cells (thousands of Direct2D calls on a busy screen). Measured 2026-10-02: the
+    /// backgrounds went from ~2 ms to ~0.1 ms a frame, but ~1.5 ms of that was Direct2D work it defers, which now
+    /// lands on the text: ~3% overall. The point is the order it sets up: every background before any text, which
+    /// drawing text in one batch (a glyph atlas) needs. The default background is transparent here: the Clear
+    /// (with background-opacity) shows.
+    /// </summary>
+    private void DrawBackgrounds(CanvasDrawingSession ds, int rows, int cols)
+    {
+        if (rows == 0 || cols == 0)
+        {
+            return;
+        }
+
+        var size = rows * cols * 4;
+        if (_bgPixels.Length != size) // exactly the bitmap's size: no copy per frame
+        {
+            _bgPixels = new byte[size];
+        }
+
+        for (var y = 0; y < rows; y++)
+        {
+            var cells = _frameCells[y];
+            var count = _frameCounts[y];
+            var i = y * cols * 4;
+            for (var x = 0; x < cols; x++, i += 4)
+            {
+                if (x < count && cells[x].HasBg)
+                {
+                    var c = cells[x].Bg;
+                    _bgPixels[i] = (byte)(c.B * c.A / 255);
+                    _bgPixels[i + 1] = (byte)(c.G * c.A / 255);
+                    _bgPixels[i + 2] = (byte)(c.R * c.A / 255);
+                    _bgPixels[i + 3] = c.A;
+                }
+                else
+                {
+                    _bgPixels[i] = _bgPixels[i + 1] = _bgPixels[i + 2] = _bgPixels[i + 3] = 0;
+                }
+            }
+        }
+
+        if (_bgBitmap is not { } bitmap || bitmap.SizeInPixels.Width != cols || bitmap.SizeInPixels.Height != rows)
+        {
+            _bgBitmap?.Dispose();
+            bitmap = _bgBitmap = CanvasBitmap.CreateFromBytes(ds, _bgPixels, cols, rows,
+                DirectXPixelFormat.B8G8R8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
+        }
+        else
+        {
+            bitmap.SetPixelBytes(_bgPixels);
+        }
+
+        var m = Metrics;
+        ds.DrawImage(bitmap, new Rect(PadLeft, PadTop, cols * m.Width, rows * m.Height), new Rect(0, 0, cols, rows), 1,
+            CanvasImageInterpolation.NearestNeighbor);
     }
 
     private void DrawText(CanvasDrawingSession ds, int count, float top)
