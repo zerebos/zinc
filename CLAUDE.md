@@ -85,6 +85,11 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   which guards the snapshot read outside the terminal lock); Draw skips updates while held and
   calls `EndRenderHold` after 1 s; a one-shot `_holdTimer` redraws at the timeout. Unset so far:
   ENQUIRY, TITLE_REPORT (off on purpose), GLYPH_PROTOCOL.
+  Output path allocations (2026-10-02, measured with GC.GetAllocatedBytesForCurrentThread): parsing allocates
+  nothing; keep the per-read work allocation-free. Titles: the reader only notes a change (one `TitleChanged`
+  notice until `TakeTitle`, which the pane calls on the UI thread); cmd under ConPTY retitles ~14,000 times a
+  second in a loop. Screen-flash filter: `ScreenFlashFilter.Concerns` lets reads without its sequences skip
+  the copying filter. Together: ~20 MB/s of garbage on heavy output -> ~1.4 MB/s.
 - `Input/` — scan code → GhosttyKey map; Win32 `ToUnicodeEx` layout translation.
 - `Config.cs` (one resolved settings set; `Apply(key, value)` parses one value by its
   Ghostty-style key — the TOML reader maps each `[section] key` onto it, and scheme files are

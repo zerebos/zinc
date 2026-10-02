@@ -9,6 +9,28 @@ public class ScreenFlashTests
 
     private static string S(byte[] b) => Encoding.UTF8.GetString(b);
 
+    [Theory]
+    [InlineData("plain text\r\n", false)]
+    [InlineData("\u001b[32mgreen\u001b[0m \u001b[?25h \u001b[?1049l", false)] // other sequences, one sharing the prefix
+    [InlineData("\u001b[?5h", true)]
+    [InlineData("before \u001b[?5l after", true)]
+    [InlineData("ends partway \u001b[?", true)] // may finish in the next read
+    [InlineData("ends with \u001b", true)]
+    [InlineData("\u001b[?50h", false)]
+    public void ConcernsOnlyReadsTheFilterCouldChange(string text, bool concerns)
+    {
+        Assert.Equal(concerns, ScreenFlashFilter.Concerns(B(text)));
+
+        // And where it says no, the filter would indeed have given the read back unchanged.
+        if (!concerns)
+        {
+            var filter = new ScreenFlashFilter();
+            Assert.Equal(text, S(filter.Filter(B(text), 0, out var flashes)));
+            Assert.Equal(0, flashes);
+            Assert.False(filter.Waiting);
+        }
+    }
+
     [Fact]
     public void OnAndStraightOffIsAFlashAndDisappears()
     {

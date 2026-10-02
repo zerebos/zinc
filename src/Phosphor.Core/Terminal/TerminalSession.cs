@@ -36,7 +36,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public event Action? OutputProcessed;
 
     /// <summary>The OSC 0/2 title changed. Raised on the reader thread.</summary>
-    public event Action<string>? TitleChanged;
+    public event Action? TitleChanged;
 
     /// <summary>The shell reported a different working directory (<see cref="ReportedDirectory"/>); raised after the write.</summary>
     public event Action? DirectoryChanged;
@@ -272,7 +272,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (_flashLock)
         {
-            if (!CatchScreenFlash && !_flash.Waiting)
+            // Nothing held and no flash sequence in sight (nearly every read): straight through, no copies.
+            if (!_flash.Waiting && (!CatchScreenFlash || !ScreenFlashFilter.Concerns(data)))
             {
                 Process(data, flashBell: false);
                 return;
@@ -319,7 +320,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     private void Process(ReadOnlySpan<byte> data, bool flashBell)
     {
-        string? title = null;
+        var titleChanged = false;
         var directoryChanged = false;
         bool bell, commandsChanged;
         bool? hold;
@@ -336,10 +337,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
             // Callbacks fire mid-parse, so read derived state only once the
             // write has finished.
+            // Only noted here: the title is read when the view gets to it (TakeTitle), once per notice.
             if (_titleDirty)
             {
                 _titleDirty = false;
-                title = ReadTitle();
+                titleChanged = Interlocked.Exchange(ref _titleNoticePending, 1) == 0;
             }
 
             if (_pwdDirty)
@@ -361,9 +363,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
             RenderHoldChanged?.Invoke(held);
         }
 
-        if (title != null)
+        if (titleChanged)
         {
-            TitleChanged?.Invoke(title);
+            TitleChanged?.Invoke();
         }
 
         if (directoryChanged)
@@ -544,7 +546,42 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// </summary>
     public string? ReportedDirectory { get; private set; }
 
-    private string ReadTitle() => ReadString(TerminalData.Title);
+    /// <summary>The title's bytes as last taken (<see cref="TakeTitle"/>).</summary>
+    private byte[] _titleBytes = [];
+
+    /// <summary>1 while a <see cref="TitleChanged"/> notice waits for <see cref="TakeTitle"/>.</summary>
+    private int _titleNoticePending;
+
+    /// <summary>
+    /// After <see cref="TitleChanged"/>: the title, or null if it's back to what it was last time. Programs retitle
+    /// themselves constantly (cmd running a loop under ConPTY: ~14,000 different titles a second, the command line
+    /// with its counter), and reading each one on the reader thread, a string and a UI update apiece, churned
+    /// ~20 MB a second of garbage (2026-10-02). Now there's one notice until the view takes the title, so it's read
+    /// at most once per UI tick. Any thread.
+    /// </summary>
+    public string? TakeTitle()
+    {
+        lock (Lock)
+        {
+            Volatile.Write(ref _titleNoticePending, 0); // a change after this read sends a new notice
+            return _disposed ? null : ReadTitleIfChanged();
+        }
+    }
+
+    private string? ReadTitleIfChanged()
+    {
+        GhosttyString s;
+        var bytes = Native.TerminalGet(_terminal, TerminalData.Title, &s) == GhosttyResult.Success && s.Len > 0
+            ? new ReadOnlySpan<byte>((byte*)s.Ptr, (int)s.Len)
+            : [];
+        if (bytes.SequenceEqual(_titleBytes))
+        {
+            return null;
+        }
+
+        _titleBytes = bytes.ToArray();
+        return Encoding.UTF8.GetString(bytes);
+    }
 
     private string ReadString(TerminalData what)
     {

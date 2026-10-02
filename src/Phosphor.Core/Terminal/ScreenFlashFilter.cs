@@ -27,6 +27,28 @@ public sealed class ScreenFlashFilter
     /// <summary>Whether something is held (so <see cref="TakeExpired"/> must be called later).</summary>
     public bool Waiting => _heldSince != null || _carry.Count > 0;
 
+    /// <summary>
+    /// Whether <paramref name="input"/> holds either sequence or ends partway into one: if not, and nothing is
+    /// <see cref="Waiting"/>, <see cref="Filter"/> would return it unchanged, so it can skip the filter (which copies
+    /// every read: the bulk of the garbage heavy output made, 2026-10-02). No allocation.
+    /// </summary>
+    public static bool Concerns(ReadOnlySpan<byte> input)
+    {
+        for (var at = input.IndexOf((byte)0x1b); at >= 0; at = input.IndexOf((byte)0x1b))
+        {
+            input = input[at..];
+            if (input.StartsWith(On) || input.StartsWith(Off) ||
+                (input.Length < On.Length && (On.StartsWith(input) || Off.StartsWith(input))))
+            {
+                return true;
+            }
+
+            input = input[1..];
+        }
+
+        return false;
+    }
+
     /// <summary>The output with caught flashes taken out; <paramref name="flashes"/> counts them.</summary>
     public byte[] Filter(ReadOnlySpan<byte> input, long nowMs, out int flashes)
     {

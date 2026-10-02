@@ -277,8 +277,15 @@ public sealed partial class TerminalControl : UserControl
                 _holdTimer.Start();
             }
         });
-        session.TitleChanged += title => dq.SafeEnqueue(() =>
+        // One notice until the title is taken (TerminalSession.TakeTitle): a program retitling itself on every
+        // line costs one read per UI tick, not one per change.
+        session.TitleChanged += () => dq.SafeEnqueue(() =>
         {
+            if (session.TakeTitle() is not { } title)
+            {
+                return;
+            }
+
             _programTitle = title;
             if (_config.ProgramTitles)
             {
