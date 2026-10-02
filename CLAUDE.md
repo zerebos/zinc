@@ -320,6 +320,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   the lockup SVG is the heading. Welcome: the app tile SVG. Artwork ships from assets/brand to `Brand\`.
   Review page: claude.ai/artifact/WnrBCkuKo2oECTe2eqXc7L; tools `brand-shots.ps1`, `brand-try.ps1`; unused
   variants in .scratch/brand-extras.
+  Brand exports arrive with C2PA metadata (SVG <metadata>, PNG caBX); the repo's copies are stripped:
+  `python scripts/strip-c2pa.py` after copying new ones into assets/brand (keep .scratch/brand's originals).
 - Color settings (settings, not scheme keys: `ApplyFile` ignores them; Settings > Appearance > Readability):
   `[colors] minimum-contrast` (Core `MinimumContrast`: WCAG ratio, below it black/white; tested), `bold`,
   `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`

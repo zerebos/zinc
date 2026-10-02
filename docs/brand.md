@@ -198,6 +198,8 @@ Both were checked against all 658 schemes in iTerm2-Color-Schemes (CIEDE2000). N
 In this repository: `assets/brand/icon/`, `assets/brand/mark/`, `assets/brand/lockups/`; the app's
 icon is `src/Phosphor/Assets/Zinc.ico` (a copy of `quadrant.ico`); the schemes are bundled from
 `assets/phosphor-themes/`.
+The repository's copies carry no C2PA provenance block (the exports do): after copying new exports in,
+run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the same).
 
 | File | Use |
 |---|---|
