@@ -73,7 +73,62 @@ internal static class ProfileIcons
     }
 
     private static IconSource Bitmap(string path) =>
-        new BitmapIconSource { UriSource = new Uri(path), ShowAsMonochrome = false };
+        new BitmapIconSource { UriSource = new Uri(Small(path)), ShowAsMonochrome = false };
+
+    /// <summary>The largest an icon is kept: tabs show it at 16-20 DIPs, so 64 px covers 300% scaling.</summary>
+    private const int IconPixels = 64;
+
+    /// <summary>
+    /// A picture used as an icon, shrunk to <see cref="IconPixels"/> (cached by path and timestamp), or the file
+    /// itself when it's small already or an .ico (Windows picks an .ico's frame by size). Every place an icon
+    /// shows decodes its file at full size: a 2089x2050 PNG cost 16 MB per tab header and strip, ~400 MB with
+    /// 9 workspaces (2026-10-02).
+    /// </summary>
+    private static string Small(string path)
+    {
+        if (Path.GetExtension(path).Equals(".ico", StringComparison.OrdinalIgnoreCase))
+        {
+            return path;
+        }
+
+        try
+        {
+            var stamp = File.GetLastWriteTimeUtc(path).Ticks;
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{path}|{stamp}|{IconPixels}")))[..16];
+            var png = Path.Combine(IconCacheDir, $"{Path.GetFileNameWithoutExtension(path)}-{hash}.png");
+            if (File.Exists(png))
+            {
+                return png;
+            }
+
+            using var image = System.Drawing.Image.FromFile(path);
+            if (image.Width <= IconPixels && image.Height <= IconPixels)
+            {
+                return path;
+            }
+
+            // Fit inside the square, keeping the picture's shape.
+            var scale = Math.Min((double)IconPixels / image.Width, (double)IconPixels / image.Height);
+            int w = Math.Max(1, (int)Math.Round(image.Width * scale)), h = Math.Max(1, (int)Math.Round(image.Height * scale));
+            using var small = new System.Drawing.Bitmap(IconPixels, IconPixels, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = System.Drawing.Graphics.FromImage(small))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.DrawImage(image, (IconPixels - w) / 2, (IconPixels - h) / 2, w, h);
+            }
+
+            Directory.CreateDirectory(IconCacheDir);
+            small.Save(png, System.Drawing.Imaging.ImageFormat.Png);
+            return png;
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"icon: {path}: couldn't shrink it ({ex.Message}); using it as it is");
+            return path;
+        }
+    }
 
     private static IconSource Glyph(string glyph) =>
         new FontIconSource { Glyph = glyph, FontFamily = new FontFamily("Segoe Fluent Icons,Segoe MDL2 Assets") };

@@ -3,7 +3,15 @@ A precise, native terminal for Windows, built on Ghostty's core. Private alpha: 
 
 START
   Unzip this folder anywhere you like (Documents, or %LOCALAPPDATA%\Programs) and open zinc.exe.
-  There is nothing to install: everything Zinc needs is in the folder.
+  There is nothing to install: everything Zinc needs is in the folder, about 390 files and folders,
+  so unzip all of it (right-click the zip, Extract All) rather than opening zinc.exe from inside the
+  zip.
+
+  If nothing happens when you open zinc.exe, a file didn't make it out of the zip: Windows' Event
+  Viewer (Windows Logs > Application) then shows ".NET Runtime" with "Could not resolve CoreCLR path".
+  Check that coreclr.dll is next to zinc.exe; if it isn't, extract the zip again with Extract All,
+  and look in Windows Security > Virus & threat protection > Protection history in case something
+  removed it.
   Needs Windows 10 version 2004 or later, or Windows 11, on an x64 PC.
 
   Zinc isn't signed yet, so Windows may say "Windows protected your PC". Select More info, then
