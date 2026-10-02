@@ -160,6 +160,16 @@ public static class SettingsCatalog
                     new("Underline", "underline"), new("Hollow block", "block-hollow"),
                 ],
             },
+        new("appearance", "Window", "window.appearance", "Light or dark",
+            "Windows, menus and dialogs. The terminal keeps its color scheme. Applies when Zinc starts again.", SettingKind.Choice, "system")
+            {
+                Choices =
+                [
+                    new("As Windows is", "system", "Windows Settings > Personalization > Colors > Choose your mode."),
+                    new("Light", "light"),
+                    new("Dark", "dark"),
+                ],
+            },
         new("appearance", "Window", "window.accent", "Accent color",
             "Selections, focus lines, switches and buttons. Applies when Zinc starts again.", SettingKind.Choice, "zinc")
             {

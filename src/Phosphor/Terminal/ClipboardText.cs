@@ -115,7 +115,6 @@ public static partial class ClipboardText
         var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
         {
             XamlRoot = root,
-            RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
             Title = title,
             Content = new Microsoft.UI.Xaml.Controls.StackPanel
             {
@@ -177,7 +176,6 @@ public static partial class ClipboardText
             var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
             {
                 XamlRoot = root,
-                RequestedTheme = Microsoft.UI.Xaml.ElementTheme.Dark,
                 Title = "Let a program read the clipboard?",
                 Content = content,
                 PrimaryButtonText = "Allow once",

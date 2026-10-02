@@ -59,6 +59,7 @@ internal sealed partial class WelcomeWindow : Window
         _config = config;
         Title = "Welcome to Zinc";
         ExtendsContentIntoTitleBar = true;
+        Brand.StyleCaptionButtons(AppWindow.TitleBar);
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
         _firstRun = firstRun;
@@ -83,7 +84,7 @@ internal sealed partial class WelcomeWindow : Window
         _pages = [style, LookPage(), ShellPage()];
 
         // Header, the page (scrolls if the window is small), footer pinned at the bottom.
-        var root = new Grid { RequestedTheme = ElementTheme.Dark, Padding = new Thickness(40, 44, 40, 24), RowSpacing = 24 };
+        var root = new Grid { Padding = new Thickness(40, 44, 40, 24), RowSpacing = 24 };
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition());
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -285,8 +286,10 @@ internal sealed partial class WelcomeWindow : Window
     private static FrameworkElement Mockup(bool sidebar, bool panes)
     {
         Brush Fill(string key) => (Brush)Application.Current.Resources[key];
-        Border Block(double w, double h, string key = "ControlFillColorSecondaryBrush") =>
-            new() { Width = w, Height = h, CornerRadius = new CornerRadius(3), Background = Fill(key) };
+        // On a light card the usual control fill is near white: a grey that shows instead.
+        var blockKey = Application.Current.RequestedTheme == ApplicationTheme.Light ? "ControlStrongStrokeColorDisabledBrush" : "ControlFillColorSecondaryBrush";
+        Border Block(double w, double h, string? key = null) =>
+            new() { Width = w, Height = h, CornerRadius = new CornerRadius(3), Background = Fill(key ?? blockKey) };
 
         var grid = new Grid { Height = 96, ColumnSpacing = 6, RowSpacing = 6 };
         var terminal = new Grid { ColumnSpacing = 4 };

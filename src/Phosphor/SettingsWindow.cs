@@ -60,6 +60,7 @@ internal sealed partial class SettingsWindow : Window
         _section = SettingsCatalog.Sections.Any(s => s.Id == startSection) ? startSection! : SettingsCatalog.Sections[0].Id;
         Title = "Zinc Settings";
         ExtendsContentIntoTitleBar = true;
+        Brand.StyleCaptionButtons(AppWindow.TitleBar);
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
 
@@ -168,7 +169,7 @@ internal sealed partial class SettingsWindow : Window
         openFile.Click += (_, _) => OpenConfigFile();
         _problems.ActionButton = openFile;
 
-        var root = new Grid { RequestedTheme = ElementTheme.Dark };
+        var root = new Grid();
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition());
         Grid.SetRow(_nav, 1);
@@ -1414,7 +1415,7 @@ internal sealed partial class SettingsWindow : Window
 
     private static TextBlock ErrorText() => new()
     {
-        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0x99, 0xA4)),
+        Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"], // red that reads on light and dark
         TextWrapping = TextWrapping.Wrap,
         Visibility = Visibility.Collapsed,
         Margin = new Thickness(0, 6, 0, 0),

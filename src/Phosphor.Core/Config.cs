@@ -104,6 +104,17 @@ public enum BellMode
 }
 
 /// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
+/// <summary>Light or dark windows, menus and dialogs (the terminal's colors are the color scheme's).</summary>
+public enum ChromeAppearance
+{
+    /// <summary>As Windows' app mode is when Zinc starts.</summary>
+    System,
+
+    Light,
+
+    Dark,
+}
+
 /// <summary>What a window shows behind its content (and through a see-through terminal background).</summary>
 public enum WindowBackdrop
 {
@@ -384,6 +395,12 @@ public sealed record Config
     public bool ZincAccent { get; init; } = true;
 
     /// <summary>
+    /// Light or dark windows, menus and dialogs. Config: <c>[window] appearance = "system" | "light" | "dark"</c>
+    /// (global; applies when Zinc starts: WinUI sets an app's theme once).
+    /// </summary>
+    public ChromeAppearance Appearance { get; init; }
+
+    /// <summary>
     /// The tab dots' colors (null: Zinc's green, amber and red, darker on light themes): a command that
     /// finished or a program's notification, the bell, a failed command. Config: <c>[notify] finished-color</c>,
     /// <c>bell-color</c>, <c>failed-color</c> (global).
@@ -471,6 +488,7 @@ public sealed record Config
             "backdrop-tint" when TryDouble(value, out var tint) && tint is >= 0 and <= 1 => this with { BackdropTint = tint },
             "backdrop-color" when TryColor(value, out var glass) => this with { BackdropColor = glass },
             "accent" when value is "zinc" or "windows" => this with { ZincAccent = value == "zinc" },
+            "appearance" when TryMode<ChromeAppearance>(value, out var appearance) => this with { Appearance = appearance },
             "notify-finished-color" when TryColor(value, out var finished) => this with { DotFinishedColor = finished },
             "notify-bell-color" when TryColor(value, out var bell) => this with { DotBellColor = bell },
             "notify-failed-color" when TryColor(value, out var failed) => this with { DotFailedColor = failed },

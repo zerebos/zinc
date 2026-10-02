@@ -681,6 +681,7 @@ public sealed class ConfigFile
             ["window.backdrop-tint"] = ("backdrop-tint", v => Number(v)),
             ["window.backdrop-color"] = ("backdrop-color", v => v as string),
             ["window.accent"] = ("accent", v => v as string),
+            ["window.appearance"] = ("appearance", v => v as string),
             ["debug.logging"] = ("logging", v => Bool(v)),
             ["colors.find-highlight"] = ("search-background", v => v as string),
             ["colors.find-highlight-current"] = ("search-selected-background", v => v as string),

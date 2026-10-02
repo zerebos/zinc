@@ -5,13 +5,18 @@ namespace Phosphor;
 
 /// <summary>
 /// Text on the chrome's pane-colored surfaces (the selected tab flows into its terminal, so it
-/// takes the terminal's background or the tab's color). The chrome is dark, with white text; on a
-/// light surface (a light scheme, a yellow tab) the text needs to be dark instead. Accent marks
-/// (selection pills, focus lines) on those surfaces are kept visible the same way.
+/// takes the terminal's background or the tab's color). Dark chrome has white text, which a light
+/// surface (a light scheme, a yellow tab) turns dark; light chrome has dark text, which a dark surface
+/// (a dark scheme in a light window) turns white. Accent marks (selection pills, focus lines) on those
+/// surfaces are kept visible the same way.
 /// </summary>
 internal static class Contrast
 {
     private static readonly SolidColorBrush Dark = new(Color.FromArgb(0xE4, 0x00, 0x00, 0x00));
+    private static readonly SolidColorBrush Light = new(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+
+    /// <summary>The app's own text is dark (light windows, <c>[window] appearance</c>).</summary>
+    private static bool LightChrome => Microsoft.UI.Xaml.Application.Current.RequestedTheme == Microsoft.UI.Xaml.ApplicationTheme.Light;
 
     /// <summary>What an indicator needs against what's around it (WCAG 2.1, non-text contrast).</summary>
     private const double IndicatorRatio = 3;
@@ -22,8 +27,8 @@ internal static class Contrast
     public static bool IsLight(Color background) =>
         0.2126 * background.R + 0.7152 * background.G + 0.0722 * background.B > 150;
 
-    /// <summary>A dark text brush for a light <paramref name="background"/>; null (keep the chrome's own) otherwise.</summary>
-    public static Brush? TextOn(Color background) => IsLight(background) ? Dark : null;
+    /// <summary>Text for <paramref name="background"/> where the chrome's own would be hard to read; null keeps the chrome's.</summary>
+    public static Brush? TextOn(Color background) => IsLight(background) == LightChrome ? null : IsLight(background) ? Dark : Light;
 
     /// <summary>
     /// <paramref name="accent"/> as drawn on <paramref name="background"/>: itself if it stands out

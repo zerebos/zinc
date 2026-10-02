@@ -219,8 +219,9 @@ public sealed partial class MainWindow
 
         // Theme resources are resolved when the template applies; flipping the theme
         // makes the item re-resolve them now.
-        tab.Item.RequestedTheme = ElementTheme.Light;
-        tab.Item.RequestedTheme = ElementTheme.Dark;
+        var theme = Brand.IsDark(tab.Item) ? ElementTheme.Dark : ElementTheme.Light;
+        tab.Item.RequestedTheme = theme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+        tab.Item.RequestedTheme = theme;
         RefreshWorkspaceList();
     }
 

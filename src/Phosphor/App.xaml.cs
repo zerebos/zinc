@@ -31,6 +31,20 @@ public partial class App : Application
     {
         InitializeComponent();
 
+        // The config is read here, not in OnLaunched: an app's light or dark theme can only be set in its
+        // constructor (WinUI throws later), and every window, menu, dialog and code-fetched brush follows it.
+        WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
+        _config = ConfigFile.Load();
+        // ZINC_TEST_APPEARANCE=light|dark: captures of either look, whatever Windows and the config say.
+        var appearance = Config.TryMode<ChromeAppearance>(Environment.GetEnvironmentVariable("ZINC_TEST_APPEARANCE") ?? "", out var forced)
+            ? forced : _config.Global.Appearance;
+        RequestedTheme = appearance switch
+        {
+            ChromeAppearance.Light => ApplicationTheme.Light,
+            ChromeAppearance.Dark => ApplicationTheme.Dark,
+            _ => ConfigFile.SystemScheme == Ghostty.ColorScheme.Light ? ApplicationTheme.Light : ApplicationTheme.Dark,
+        };
+
         // Every exception that escapes leaves a record (crash.log, even without ZINC_LOG).
         // One on the UI thread is survived: a crash would take every terminal with it, and
         // most such failures belong to one action (a menu item, a palette command). Background
@@ -75,8 +89,6 @@ public partial class App : Application
         // Phosphor decides when to exit (see OnWindowClosed): closing the last window may
         // leave it running in the tray for the quick terminal.
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
-        WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
-        _config = ConfigFile.Load();
         Log.SetEnabled(_config.Global.Logging);
         AttentionDot.SetColors(_config.Global);
         if (_config.Global.ZincAccent)

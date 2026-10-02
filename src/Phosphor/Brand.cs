@@ -40,6 +40,24 @@ internal static class Brand
     public static Color OnAccent(bool dark) => dark ? Screen : Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
 
     /// <summary>
+    /// The caption buttons (minimize, maximize, close) of a window drawing its own title bar: glyphs in
+    /// the app's light or dark ink, a faint tint of it on hover and press, the background left to the window.
+    /// </summary>
+    public static void StyleCaptionButtons(Microsoft.UI.Windowing.AppWindowTitleBar titleBar)
+    {
+        var ink = Application.Current.RequestedTheme == ApplicationTheme.Light ? Color.FromArgb(0xFF, 0, 0, 0) : Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
+        var transparent = Color.FromArgb(0, 0, 0, 0);
+        titleBar.ButtonBackgroundColor = transparent;
+        titleBar.ButtonInactiveBackgroundColor = transparent;
+        titleBar.ButtonForegroundColor = ink;
+        titleBar.ButtonHoverForegroundColor = ink;
+        titleBar.ButtonPressedForegroundColor = ink;
+        titleBar.ButtonInactiveForegroundColor = Color.FromArgb(0x80, ink.R, ink.G, ink.B);
+        titleBar.ButtonHoverBackgroundColor = Color.FromArgb(0x20, ink.R, ink.G, ink.B);
+        titleBar.ButtonPressedBackgroundColor = Color.FromArgb(0x40, ink.R, ink.G, ink.B);
+    }
+
+    /// <summary>
     /// Replaces Windows' accent with Zinc's for every control in the app (switches, checkboxes,
     /// selections, focus lines, progress, links). WinUI's theme brushes are built from these colors:
     /// dark themes fill with Light2 and write text with Light3, light themes fill with Dark1 and write

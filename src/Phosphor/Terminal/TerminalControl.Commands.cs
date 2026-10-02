@@ -9,9 +9,19 @@ namespace Phosphor.Terminal;
 // commands (TerminalSession.Commands.cs).
 public sealed partial class TerminalControl
 {
-    private static readonly Color PromptTickColor = Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF);
-    private static readonly Color FailedColor = Color.FromArgb(0xFF, 0xFF, 0x6B, 0x6B);
-    private static readonly Color SucceededColor = Color.FromArgb(0x90, 0x3D, 0xDC, 0x97);
+    // The marks sit on the terminal's own background, so they follow its lightness (a light scheme gets dark
+    // ticks and the brand's darker red and green), not the window's.
+    private bool LightTerminal => Contrast.IsLight(TerminalRenderer.ToColor(_config.Theme.Background));
+    private Color PromptTickColor => LightTerminal ? Color.FromArgb(0x60, 0, 0, 0) : Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF);
+    private Color FailedColor => Brand.ErrorFor(!LightTerminal);
+    private Color SucceededColor
+    {
+        get
+        {
+            var green = Brand.Attention(!LightTerminal);
+            return Color.FromArgb(0x90, green.R, green.G, green.B);
+        }
+    }
 
     /// <summary>The shell started or finished a command (or showed a prompt). Raised on the UI thread.</summary>
     public event Action? CommandsChanged;

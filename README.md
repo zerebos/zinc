@@ -283,6 +283,10 @@ Windows notifications come from Zinc's tray icon and respect Do Not Disturb.
 finished command or a program's notification, the bell, and a failed command (default: Zinc's green, amber
 and red, darker in light mode).
 
+**Light or dark** (`[window] appearance`): `"system"` (default: as Windows' app mode is when Zinc starts),
+`"light"` or `"dark"`, for windows, menus and dialogs. The terminal keeps its color scheme (`theme = "light:X,dark:Y"`
+follows Windows live). Applies when Zinc starts again: WinUI sets an app's theme once.
+
 **Accent** (`[window] accent`): `"zinc"` (default: Zinc's green on selections, focus lines,
 switches and buttons) or `"windows"` (your Windows accent color). Applies when Zinc starts.
 

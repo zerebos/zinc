@@ -305,6 +305,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Glass: `[window] backdrop-tint` → `GlassBackdrop` (DesktopAcrylicController, tint = terminal bg, kept active) /
   `ClearBackdrop(tint)` (a transparent brush alone showed BLACK: the window also needs DWM blur-behind with an empty region + zero frame margins + WM_ERASEBKGND filled black, via a window subclass; redone on WM_DWMCOMPOSITIONCHANGED, undone on disconnect; as WinUIEx's TransparentTintBackdrop). Opacity reaches 0.
 - Brand look (docs/brand.md, section 14 = what the app does differently): `Brand.cs` (UI color tokens per theme,
+- Light/dark chrome (2026-10-02; before, every window forced Dark): `[window] appearance` system|light|dark →
+  `Application.RequestedTheme`, set in **App's constructor** (the config is loaded there now; WinUI throws if it's
+  set later), so code-fetched theme brushes agree with the windows. No `RequestedTheme = Dark` anywhere; caption
+  buttons via `Brand.StyleCaptionButtons`; `Contrast.TextOn` flips text both ways (white on a dark scheme in light
+  chrome); command marks follow the *terminal's* lightness. Live Windows-mode flips change the terminal pair only.
+  Captures: `ZINC_TEST_APPEARANCE=light|dark` + `.scratch/tools/theme-shots.ps1 -Appearance light`.
   `ApplyAccent` overrides WinUI's SystemAccentColor* before any window when `[window] accent = "zinc"` (default;
   restart to apply)). `AttentionDot`: lit-cell Rectangle, `Attention.Bell` (amber, from `OnBell`), colors from
   `[notify] *-color` via static `SetColors` (version counter recolors on the next Show), pulse = endless 1.6 s

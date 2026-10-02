@@ -19,7 +19,10 @@ public sealed partial class MainWindow : Window
     private ConfigFile _config; // replaced on a config reload (ApplyConfig)
     private readonly Keybindings _keybindings;
     /// <summary>Phosphor's line between split panes, unless <c>divider-color</c> says otherwise.</summary>
-    private static readonly Windows.UI.Color DefaultDividerColor = Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A);
+    // The line between split panes: a quiet grey on the app's light or dark (divider-color replaces it).
+    private static readonly Windows.UI.Color DefaultDividerColor = Application.Current.RequestedTheme == ApplicationTheme.Light
+        ? Windows.UI.Color.FromArgb(0xFF, 0xC8, 0xC8, 0xC8)
+        : Windows.UI.Color.FromArgb(0xFF, 0x3A, 0x3A, 0x3A);
 
     private readonly SolidColorBrush _dividerBrush = new(DefaultDividerColor);
     private readonly Brush _focusBrush;
@@ -197,11 +200,7 @@ public sealed partial class MainWindow : Window
         // Standard (32 px) caption buttons fit inside the ~41 px tab strip; Tall (48 px)
         // hung below it, so their hover highlight covered the top of the terminal.
         titleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
-        titleBar.ButtonBackgroundColor = Colors.Transparent;
-        titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-        titleBar.ButtonForegroundColor = Colors.White;
-        titleBar.ButtonHoverBackgroundColor = Windows.UI.Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF);
-        titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF);
+        Brand.StyleCaptionButtons(titleBar);
         ApplyBackdrop();
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));

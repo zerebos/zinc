@@ -240,7 +240,6 @@ public sealed partial class MainWindow
             var dialog = new ContentDialog
             {
                 XamlRoot = root,
-                RequestedTheme = ElementTheme.Dark,
                 Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running",
                 Content = $"{list}\n\nClosing stops {(running.Count == 1 ? "it" : "them")}.",
                 PrimaryButtonText = "Close",
