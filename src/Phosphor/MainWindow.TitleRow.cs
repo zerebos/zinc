@@ -17,6 +17,8 @@ namespace Phosphor;
 public sealed partial class MainWindow
 {
     private TextBlock? _commandContext;
+    private FontIcon? _searchGlyph;
+    private Microsoft.UI.Xaml.Shapes.Rectangle? _runningCell;
     private TextBlock? _commandShortcut;
     private bool _windowClosed;
     private ColumnDefinition? _markColumn;
@@ -68,7 +70,20 @@ public sealed partial class MainWindow
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         content.ColumnDefinitions.Add(new ColumnDefinition());
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        content.Children.Add(new FontIcon { Glyph = "", FontSize = 11, VerticalAlignment = VerticalAlignment.Center });
+        _searchGlyph = new FontIcon { Glyph = "", FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
+        content.Children.Add(_searchGlyph);
+        // While a command runs: a still lit cell in place of the search glyph (the pulse is for things that need you).
+        _runningCell = new Microsoft.UI.Xaml.Shapes.Rectangle
+        {
+            Width = 7,
+            Height = 7,
+            RadiusX = 0.84,
+            RadiusY = 0.84,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Visibility = Visibility.Collapsed,
+        };
+        content.Children.Add(_runningCell);
         Grid.SetColumn(_commandContext, 1);
         content.Children.Add(_commandContext);
         Grid.SetColumn(_commandShortcut, 2);
@@ -177,6 +192,13 @@ public sealed partial class MainWindow
         else
         {
             _commandClock?.Stop();
+        }
+
+        if (_runningCell != null && _searchGlyph != null)
+        {
+            _runningCell.Fill = new SolidColorBrush(Brand.Attention(Brand.IsDark(_runningCell)));
+            _runningCell.Visibility = running ? Visibility.Visible : Visibility.Collapsed;
+            _searchGlyph.Visibility = running ? Visibility.Collapsed : Visibility.Visible;
         }
 
         if (_commandContext.Text != text)

@@ -117,8 +117,26 @@ internal sealed partial class WelcomeWindow : Window
         };
     }
 
-    private static FrameworkElement Header() =>
-        new TextBlock { Text = "Welcome to Zinc", FontSize = 30, FontWeight = FontWeights.SemiBold };
+    /// <summary>
+    /// The page's title after the app icon (the tile you just clicked; docs/brand.md section 9 has the mark
+    /// large here: the user chose the icon over the mark, 2026-10-01). One tile works on light and dark.
+    /// </summary>
+    private static FrameworkElement Header() => new StackPanel
+    {
+        Orientation = Orientation.Horizontal,
+        Spacing = 16,
+        Children =
+        {
+            new Image
+            {
+                Width = 48,
+                Height = 48,
+                Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(Path.Combine(AppContext.BaseDirectory, "Brand", "quadrant-app-tile.svg"))),
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+            new TextBlock { Text = "Welcome to Zinc", FontSize = 30, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center },
+        },
+    };
 
     private static TextBlock SectionTitle(string text) => new() { Text = text, FontSize = 18, FontWeight = FontWeights.SemiBold };
 

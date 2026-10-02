@@ -46,9 +46,9 @@ public sealed partial class MainWindow
             return;
         }
 
-        if (Attention.Notified > pane.Attention)
+        if (Attention.Bell > pane.Attention)
         {
-            pane.Attention = Attention.Notified;
+            pane.Attention = Attention.Bell;
         }
 
         UpdateFocusBorders(tab);

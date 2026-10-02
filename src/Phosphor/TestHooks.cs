@@ -10,4 +10,7 @@ internal static class TestHooks
     /// shows through unfocused panes' transparent borders).
     /// </summary>
     public static readonly bool Deterministic = Environment.GetEnvironmentVariable("ZINC_TEST_DETERMINISTIC") == "1";
+
+    /// <summary>ZINC_TEST_STILL=1: attention dots don't pulse, so a capture shows them at full strength (Mica stays).</summary>
+    public static readonly bool Still = Deterministic || Environment.GetEnvironmentVariable("ZINC_TEST_STILL") == "1";
 }

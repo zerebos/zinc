@@ -592,6 +592,7 @@ public sealed partial class MainWindow : Window
         if (_workspaceList == null)
         {
             item.Header = tab.Header; // with the list, the header is shown there instead
+            _ = new TabItemDot(item, tab.Header); // the dot in the close button's place (the item's events keep it)
         }
 
         item.Tag = tab;

@@ -160,6 +160,15 @@ public static class SettingsCatalog
                     new("Underline", "underline"), new("Hollow block", "block-hollow"),
                 ],
             },
+        new("appearance", "Window", "window.accent", "Accent color",
+            "Selections, focus lines, switches and buttons. Applies when Zinc starts again.", SettingKind.Choice, "zinc")
+            {
+                Choices =
+                [
+                    new("Zinc green", "zinc"),
+                    new("Windows' accent color", "windows", "The one in Windows Settings > Personalization > Colors."),
+                ],
+            },
         new("appearance", "Background", "window.backdrop", "Window glass", "What's behind everything in the window: tabs, sidebar and terminal.",
             SettingKind.Choice, "mica")
             {
@@ -176,7 +185,7 @@ public static class SettingsCatalog
             { Minimum = 0, Maximum = 1, Step = 0.05 },
         new("appearance", "Background", "window.backdrop-color", "Glass color",
             "The color frosted or clear glass is tinted with.", SettingKind.Color, null)
-            { NullLabel = "The terminal's background" },
+            { NullLabel = "Use the terminal's background", Placeholder = "The terminal's background" },
         new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
             "How much of the window glass shows through the terminal (1: none; 0: only the glass, behind the text). Colored cells stay solid.",
             SettingKind.Number, 1.0)
@@ -329,6 +338,13 @@ public static class SettingsCatalog
         new("notifications", "Programs", "notify.programs", "Program notifications",
             "Sent with OSC 9 or OSC 777, e.g. by a build script.", SettingKind.Choice, "badge")
             { Choices = NotifyChoices },
+        new("notifications", "Dot colors", "notify.finished-color", "Finished or notified",
+            "A command finished, or a program sent a notification.", SettingKind.Color, null)
+            { NullLabel = "Use Zinc's green", Placeholder = "Zinc's green" },
+        new("notifications", "Dot colors", "notify.bell-color", "Bell", "A program rang the bell.", SettingKind.Color, null)
+            { NullLabel = "Use Zinc's amber", Placeholder = "Zinc's amber" },
+        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed.", SettingKind.Color, null)
+            { NullLabel = "Use Zinc's red", Placeholder = "Zinc's red" },
 
         // ---- Quick terminal
         new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides it from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text, "win+grave"),

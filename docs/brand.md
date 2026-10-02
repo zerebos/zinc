@@ -219,3 +219,19 @@ icon is `src/Phosphor/Assets/Zinc.ico` (a copy of `quadrant.ico`); the schemes a
 - Don't downscale the vector tile for 64 px and below; use the masters.
 - Don't set the wordmark in capitals or another typeface, or put the mark in front of it.
 - Don't call Zinc "Ghostty for Windows", or lead with speed claims.
+
+## 14. How the app applies it (decided 2026-10-01, after a side-by-side review)
+
+Where the app differs from the guide above, on purpose:
+
+- **No Geist Mono in the UI.** Window titles say "Zinc" in Segoe UI, like every native Windows app (the
+  Settings window too); counts and the command center use the system font. Geist Mono appears only as
+  outlined artwork: the wordmark in the About lockup.
+- **Attention dots are 8 epx after a title** (6 was easy to miss; 7 is the fallback). On an icon's corner
+  (the rail) they stay 9 epx with a ring. Their colors are settings (`[notify] finished-color`,
+  `bell-color`, `failed-color`), defaulting to the tokens in section 8. The pulse is the section 9 fade,
+  until the tab is viewed.
+- **Count pills** take the most urgent tab's color (red beats green), not always `attention`.
+- **The welcome page shows the app tile** before "Welcome to Zinc" (the icon people just clicked), not
+  the large mark.
+- **About's heading is the lockup**, centered, with no tagline under it.

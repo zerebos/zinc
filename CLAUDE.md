@@ -304,6 +304,16 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `UseScheme` (replaces one side of a light/dark pair) → editor; `DeleteScheme` (ContentDialog; user-only schemes).
   Glass: `[window] backdrop-tint` → `GlassBackdrop` (DesktopAcrylicController, tint = terminal bg, kept active) /
   `ClearBackdrop(tint)` (a transparent brush alone showed BLACK: the window also needs DWM blur-behind with an empty region + zero frame margins + WM_ERASEBKGND filled black, via a window subclass; redone on WM_DWMCOMPOSITIONCHANGED, undone on disconnect; as WinUIEx's TransparentTintBackdrop). Opacity reaches 0.
+- Brand look (docs/brand.md, section 14 = what the app does differently): `Brand.cs` (UI color tokens per theme,
+  `ApplyAccent` overrides WinUI's SystemAccentColor* before any window when `[window] accent = "zinc"` (default;
+  restart to apply)). `AttentionDot`: lit-cell Rectangle, `Attention.Bell` (amber, from `OnBell`), colors from
+  `[notify] *-color` via static `SetColors` (version counter recolors on the next Show), pulse = endless 1.6 s
+  fade of the inner shapes (**never animate the dot's own Opacity: hosts hide it with that on hover**), off
+  with Windows animations and under `TestHooks.Still` (ZINC_TEST_STILL=1, set by attn-shot.ps1). Top
+  workspace tabs: `TabItemDot` puts the dot in TabView's template CloseButton cell (button Opacity 0). About:
+  the lockup SVG is the heading. Welcome: the app tile SVG. Artwork ships from assets/brand to `Brand\`.
+  Review page: claude.ai/artifact/WnrBCkuKo2oECTe2eqXc7L; tools `brand-shots.ps1`, `brand-try.ps1`; unused
+  variants in .scratch/brand-extras.
 - Color settings (settings, not scheme keys: `ApplyFile` ignores them; Settings > Appearance > Readability):
   `[colors] minimum-contrast` (Core `MinimumContrast`: WCAG ratio, below it black/white; tested), `bold`,
   `bold-is-bright` (palette 0-7 → 8-15 from the frame's live palette), `faint-opacity`, `cursor-opacity`

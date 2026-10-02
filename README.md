@@ -273,6 +273,13 @@ ignores them. Programs that report progress (OSC 9;4)
 get a small ring on their tab and a progress bar on Zinc's taskbar button.
 Windows notifications come from Zinc's tray icon and respect Do Not Disturb.
 
+**Dot colors** (`[notify] finished-color`, `bell-color`, `failed-color`, `"#rrggbb"`): the tab dots for a
+finished command or a program's notification, the bell, and a failed command (default: Zinc's green, amber
+and red, darker in light mode).
+
+**Accent** (`[window] accent`): `"zinc"` (default: Zinc's green on selections, focus lines,
+switches and buttons) or `"windows"` (your Windows accent color). Applies when Zinc starts.
+
 **`[debug]`**: `logging = true` keeps a debug log in `%LOCALAPPDATA%\Zinc\logs\zinc.log`
 (moved aside to `zinc.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
 (the log with Zinc's version and Windows' on top, for a bug report) and Clear. `ZINC_LOG=<file>`

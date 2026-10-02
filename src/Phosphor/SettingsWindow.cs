@@ -254,6 +254,11 @@ internal sealed partial class SettingsWindow : Window
             Margin = new Thickness(0, 8, 0, 12),
         };
         _page.Children.Add(heading);
+        if (query.Length == 0 && _editingScheme == null && _section == "about")
+        {
+            heading.Visibility = Visibility.Collapsed; // About's lockup is its heading
+        }
+
         _page.Children.Add(_problems);
         UpdateBanners();
 
@@ -376,6 +381,19 @@ internal sealed partial class SettingsWindow : Window
 
     private void AboutPage()
     {
+        // The lockup (wordmark, then mark; docs/brand.md section 10) stands in for the page's heading, centered.
+        var lockup = Path.Combine(AppContext.BaseDirectory, "Brand",
+            Brand.IsDark(_page) ? "quadrant-zinc-dark.svg" : "quadrant-zinc-light.svg");
+        var image = new Image
+        {
+            Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(lockup)), // vector: the cells stay crisp at any scale
+            // The mark's cells show from 64 px up (docs/brand.md section 7; smaller, they blur together).
+            Height = 100,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 12, 0, 18),
+        };
+        AutomationProperties.SetName(image, "Zinc");
+        _page.Children.Add(image);
         _page.Children.Add(Row(TerminalSession.Version.Replace("zinc", "Zinc"),
             "Zinc: what makes ghosts glow in the dark. Built on libghostty, the terminal engine that powers Ghostty; the open-source software Zinc ships is listed below.",
             null));
@@ -1683,6 +1701,15 @@ internal sealed partial class SettingsWindow : Window
         var nullLabel = setting.NullLabel ?? (setting.Key == "window.unfocused-split-fill" ? "Use each pane's background" : "Use the scheme's color");
         Color NullColor()
         {
+            // The tab dots default to the brand's colors, not the scheme's.
+            var dark = Brand.IsDark(_page);
+            switch (setting.Key)
+            {
+                case "notify.finished-color": return Brand.Attention(dark);
+                case "notify.bell-color": return Brand.CautionFor(dark);
+                case "notify.failed-color": return Brand.ErrorFor(dark);
+            }
+
             var theme = SchemeTheme(profile);
             return SchemeTiles.ToColor(setting.Key switch
             {

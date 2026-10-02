@@ -377,6 +377,23 @@ public sealed record Config
     /// </summary>
     public double BackdropTint { get; init; } = 0.3;
 
+    /// <summary>
+    /// Zinc's green as the app's accent (selections, focus lines, switches), or Windows' accent color
+    /// (false). Config: <c>[window] accent = "zinc" | "windows"</c> (global; applies when Zinc starts).
+    /// </summary>
+    public bool ZincAccent { get; init; } = true;
+
+    /// <summary>
+    /// The tab dots' colors (null: Zinc's green, amber and red, darker on light themes): a command that
+    /// finished or a program's notification, the bell, a failed command. Config: <c>[notify] finished-color</c>,
+    /// <c>bell-color</c>, <c>failed-color</c> (global).
+    /// </summary>
+    public GhosttyColorRgb? DotFinishedColor { get; init; }
+
+    public GhosttyColorRgb? DotBellColor { get; init; }
+
+    public GhosttyColorRgb? DotFailedColor { get; init; }
+
     /// <summary>The glass's color; null: the terminal's background. Config: <c>[window] backdrop-color</c> (global).</summary>
     public GhosttyColorRgb? BackdropColor { get; init; }
 
@@ -453,6 +470,10 @@ public sealed record Config
             "backdrop" when TryMode<WindowBackdrop>(value, out var backdrop) => this with { Backdrop = backdrop },
             "backdrop-tint" when TryDouble(value, out var tint) && tint is >= 0 and <= 1 => this with { BackdropTint = tint },
             "backdrop-color" when TryColor(value, out var glass) => this with { BackdropColor = glass },
+            "accent" when value is "zinc" or "windows" => this with { ZincAccent = value == "zinc" },
+            "notify-finished-color" when TryColor(value, out var finished) => this with { DotFinishedColor = finished },
+            "notify-bell-color" when TryColor(value, out var bell) => this with { DotBellColor = bell },
+            "notify-failed-color" when TryColor(value, out var failed) => this with { DotFailedColor = failed },
             "logging" when bool.TryParse(value, out var logging) => this with { Logging = logging },
             "cursor-opacity" when TryDouble(value, out var cursorOpacity) && cursorOpacity is >= 0.1 and <= 1 =>
                 this with { CursorOpacity = cursorOpacity },

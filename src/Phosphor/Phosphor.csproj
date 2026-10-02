@@ -45,6 +45,9 @@
     <!-- The default font, Cascadia Mono NF (Microsoft's Nerd Font build), used without installing it. -->
     <Content Include="..\..\assets\fonts\*" Link="Fonts\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Brand artwork shown in the app: About's lockup, the welcome page's app tile (docs/brand.md). -->
+    <Content Include="..\..\assets\brand\lockups\*.svg;..\..\assets\brand\mark\quadrant-app-tile.svg"
+             Link="Brand\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- License texts of the open-source software Phosphor ships (Settings > About; OpenSourceNotices.cs). -->
     <Content Include="..\..\assets\licenses\*" Link="Licenses\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

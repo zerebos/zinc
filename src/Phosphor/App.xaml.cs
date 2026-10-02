@@ -71,6 +71,12 @@ public partial class App : Application
         WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
         _config = ConfigFile.Load();
         Log.SetEnabled(_config.Global.Logging);
+        AttentionDot.SetColors(_config.Global);
+        if (_config.Global.ZincAccent)
+        {
+            Brand.ApplyAccent(Resources); // before any window: controls resolve the accent when they're made
+        }
+
         CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
         LoadRecentCommands();
         _keybindings = _config.Keybindings;
@@ -680,6 +686,7 @@ public partial class App : Application
 
         var hotkeyChanged = fresh.Global.QuickTerminal.Hotkey != _config.Global.QuickTerminal.Hotkey;
         _config = fresh;
+        AttentionDot.SetColors(fresh.Global);
         LoginStartup.Apply(fresh.Global.LaunchAtLogin);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
         _keybindings.CopyFrom(fresh.Keybindings);
