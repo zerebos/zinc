@@ -49,6 +49,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
     private readonly Dictionary<(uint, int), int> _glyphCache = new();
+    // The first 2,048 codepoints (Latin, Greek, Cyrillic...) per variant: glyph index + 1, 0 = not looked up yet.
+    // Every cell of every frame asks; an array beats the dictionary's tuple hashing.
+    private readonly int[]?[] _glyphFast = new int[]?[4];
 
     // The bundled Cascadia Mono NF, tried before Windows' font fallback for cell-filling shapes
     // the configured font lacks (it covers most of Symbols for Legacy Computing, which no Windows
@@ -215,6 +218,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
 
         _glyphCache.Clear();
+        Array.Clear(_glyphFast);
         _bundledGlyphCache.Clear();
         ClearSprites(); // drawn for the old cell size
         if (_bundledFaces[0] != null)
@@ -912,10 +916,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         // Direct2D's grayscale contrast depends on the text's lightness: dark text has its own tiles.
         var dark = 0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B < 128;
-        if (_atlas.Get(ds, face, _fontSize, glyph, variant, dark) is not { } tile)
-        {
-            return;
-        }
+        var tile = _atlas.Get(ds, face, _fontSize, glyph, variant, dark);
 
         var m = Metrics;
         _frameSprites.Add((tile.Page, _atlas.Destination(_gridX + column * (int)m.WidthPx, _gridY + row * (int)m.HeightPx), tile.Source,
@@ -925,6 +926,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
     /// <summary>The frame's glyphs and box-drawing sprites, in one sprite batch.</summary>
     private void DrawFrameSprites(CanvasDrawingSession ds)
     {
+        _atlas.Flush(ds);
         if (_frameSprites.Count == 0)
         {
             return;
@@ -1264,6 +1266,17 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
     private int GlyphIndex(uint codepoint, int variant)
     {
+        if (codepoint < 0x800)
+        {
+            var fast = _glyphFast[variant] ??= new int[0x800];
+            if (fast[codepoint] == 0)
+            {
+                fast[codepoint] = (_faces[variant] is { } f ? f.GetGlyphIndices([codepoint])[0] : 0) + 1;
+            }
+
+            return fast[codepoint] - 1;
+        }
+
         if (_glyphCache.TryGetValue((codepoint, variant), out var index))
         {
             return index;

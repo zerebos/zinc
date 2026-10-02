@@ -521,7 +521,9 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
   between sections: judge by the frame total.
   Text goes through `GlyphAtlas` (Terminal/GlyphAtlas.cs; `ZINC_GLYPH_ATLAS=0` = the old glyph runs): each glyph drawn
   once (tile = 3x2 cells, the glyph's cell in the middle, at the grid's fractional pixel offset; a light and a dark
-  variant, Direct2D's grayscale contrast depends on the text color; stored as white coverage), then ONE
+  variant, Direct2D's grayscale contrast depends on the text color; stored as white coverage; new glyphs are only
+  reserved during the frame, `Flush` draws them all on a scratch page and whitens it onto the atlas page with one
+  ColorMatrixEffect draw: no GPU read-back, two sessions per frame. NB: CanvasBlend.Copy + an effect drew nothing), then ONE
   `CanvasSpriteBatch` per frame for all glyphs + box-drawing sprites, then decorations and the cursor over it
   (`_batching`; the cursor redraws its glyph directly). Fallback/emoji/clusters still DrawTextLayout immediately
   (before the batch). Reset with `ClearSprites`. Pixel diff vs glyph runs: mostly 1/255, colored text edges up to
