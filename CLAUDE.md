@@ -588,10 +588,15 @@ and read state after the write (see `_titleDirty`).
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
   metapackage release they came from.
 - Tester builds: `scripts/package.ps1` → `dist\Zinc-<version>-win-x64.zip` (gitignored): `dotnet publish
-  --self-contained true` (the .NET runtime inside; install.ps1's builds still need .NET 10 installed), one
+  --self-contained true` after clearing the app's obj\x64\Release (the .NET runtime inside; install.ps1 publishes self-contained too), one
   top-level folder, `README.txt` from `scripts/package-readme.txt` ({version} filled in), '+' in the version
   becomes '_' in the name. ~197 MB unzipped / 77 MB zipped (.NET + WinAppSDK; language folders are tiny).
   Smoke-test an unzipped copy with ZINC_CONFIG set to a fresh path (else it redirects into the user's Zinc).
+  **Both scripts take the `Local\ZincPublish` mutex (they share obj\).** A self-contained publish right after a
+  framework-dependent one reused its zinc.deps.json, which names no runtime: zinc.exe then dies with "Could not
+  resolve CoreCLR path" (Application event log, nothing on screen); the first zip sent to a tester was built so.
+  package.ps1 refuses a deps.json without `runtimepack.Microsoft.NETCore.App.Runtime`. Always smoke-test the zip
+  you send (.scratch/tools/zip-env-test.ps1 unzips it into a path like the tester's and starts it).
 - Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>` (install.ps1
   computes the version like Directory.Build.props; the timestamp keeps names sortable); the
   user's Start Menu shortcut points at the newest. A post-commit hook (if installed)

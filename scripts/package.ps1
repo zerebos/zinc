@@ -42,8 +42,23 @@ $zip = "$folder.zip"
 # ---- publish ----
 if (Test-Path $folder) { Remove-Item $folder -Recurse -Force }
 Write-Host "Publishing $version ..."
-$log = dotnet publish (Join-Path $repo 'src\Phosphor\Phosphor.csproj') -c Release -r win-x64 --self-contained true -o $folder -nologo 2>&1
-if ($LASTEXITCODE -ne 0) {
+# install.ps1 (the post-commit hook) publishes the same project without the runtime, into the same obj\
+# folder: one at a time (a shared lock), and a full rebuild here, since an incremental publish after one
+# of those reused its zinc.deps.json, which lists no .NET runtime: such a zip starts nowhere ("Could not
+# resolve CoreCLR path", 2026-10-02, a tester's machine and ours).
+$lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
+try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
+try {
+    # (dotnet publish has no --no-incremental: the app's Release state goes instead, rebuilt in full.)
+    $state = Join-Path $repo 'src\Phosphor\obj\x64\Release'
+    if (Test-Path $state) { Remove-Item $state -Recurse -Force }
+    $log = dotnet publish (Join-Path $repo 'src\Phosphor\Phosphor.csproj') -c Release -r win-x64 --self-contained true -o $folder -nologo 2>&1
+    $failed = $LASTEXITCODE -ne 0
+} finally {
+    $lock.ReleaseMutex()
+}
+
+if ($failed) {
     $log | Write-Host
     throw 'dotnet publish failed.'
 }
@@ -51,6 +66,12 @@ if ($LASTEXITCODE -ne 0) {
 # Everything a tester needs must be inside (a framework-dependent build would ask for .NET 10).
 foreach ($file in 'zinc.exe', 'coreclr.dll', 'hostfxr.dll', 'ghostty-vt.dll', 'phosphor-sprite.dll', 'zinc.pri', 'Microsoft.Graphics.Canvas.dll') {
     if (-not (Test-Path (Join-Path $folder $file))) { throw "$file is missing from the build: not packaging it." }
+}
+
+# ...and the launcher must be told about it: zinc.deps.json lists the runtime pack, coreclr.dll included.
+$deps = Get-Content (Join-Path $folder 'zinc.deps.json') -Raw
+if ($deps -notmatch 'runtimepack\.Microsoft\.NETCore\.App\.Runtime' -or $deps -notmatch '"coreclr\.dll"') {
+    throw 'zinc.deps.json lists no .NET runtime, so zinc.exe would not start: not packaging it.'
 }
 
 (Get-Content (Join-Path $PSScriptRoot 'package-readme.txt') -Raw).Replace('{version}', $version) |

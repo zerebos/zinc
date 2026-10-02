@@ -119,8 +119,17 @@ if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
 }
 
 Say "Publishing $name ..."
-$publishLog = dotnet publish (Join-Path $repo 'src\Phosphor\Phosphor.csproj') -c Release -r win-x64 -o $target -nologo 2>&1
-if ($LASTEXITCODE -ne 0) {
+# The same build as scripts/package.ps1's tester zip (the .NET runtime inside), one publish at a time: the
+# two share obj\, and a publish of the other kind there once left a file list naming no runtime.
+$lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
+try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
+try {
+    $publishLog = dotnet publish (Join-Path $repo 'src\Phosphor\Phosphor.csproj') -c Release -r win-x64 --self-contained true -o $target -nologo 2>&1
+    $publishFailed = $LASTEXITCODE -ne 0
+} finally {
+    $lock.ReleaseMutex()
+}
+if ($publishFailed) {
     $publishLog | Write-Host
     if (Test-Path $target) { Remove-Item $target -Recurse -Force }
     $firstError = ($publishLog | Select-String ' error ' | Select-Object -First 1) -replace '^.*?error ', ''

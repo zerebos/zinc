@@ -61,7 +61,7 @@ pwsh scripts/install.ps1 -Uninstall       # remove install, shortcut and hook (k
 
 Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Zinc\versions\`
 and repoints the Start Menu shortcut, so open windows are never disturbed; the three
-newest versions are kept (`-Keep N`). Requires .NET 10 (the runtime isn't bundled).
+newest versions are kept (`-Keep N`). Each carries its own .NET runtime, as the tester zip does.
 
 **Sharing a build.** `pwsh scripts/package.ps1` makes `dist\Zinc-<version>-win-x64.zip`: a portable
 copy with the .NET runtime and the Windows App SDK inside (about 77 MB), nothing to install. Unzip it
