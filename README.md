@@ -272,7 +272,8 @@ Windows notifications come from Phosphor's tray icon and respect Do Not Disturb.
 **`[debug]`**: `logging = true` keeps a debug log in `%LOCALAPPDATA%\Phosphor\logs\phosphor.log`
 (moved aside to `phosphor.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
 (the log with Phosphor's version and Windows' on top, for a bug report) and Clear. `PHOSPHOR_LOG=<file>`
-overrides it: always on, into that file.
+overrides it: always on, into that file. About also has a drawing benchmark: four 5-second tests
+in a window of their own (optionally again with software rendering), with results you can copy.
 
 **`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
 relative to this one. Settings in the including file win.

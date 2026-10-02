@@ -560,6 +560,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>Writes VT data straight to the screen, as if the child had printed it.</summary>
     public void WriteToScreen(string text) => Feed(Encoding.UTF8.GetBytes(text));
 
+    /// <summary>Shows <paramref name="output"/> as if the program had written it (the drawing benchmark feeds its workloads this way).</summary>
+    public void WriteToScreen(ReadOnlySpan<byte> output) => Feed(output);
+
     /// <summary>Sends user input to the child, snapping the viewport back to the live screen.</summary>
     public void SendInput(ReadOnlySpan<byte> data, bool scrollToBottom = true)
     {

@@ -28,6 +28,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
 {
     private Config _config;
 
+    /// <summary>Where frame times go while a pane is measured (PHOSPHOR_PERF, the benchmark); null otherwise.</summary>
+    internal FramePerf? Perf { get; set; }
+
     /// <summary>The settings drawn with (font family, padding); replaced on a config reload.</summary>
     public Config Config
     {
@@ -338,23 +341,23 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         var m = Metrics;
         var y = 0;
-        var perf = FramePerf.Enabled;
-        var t = perf ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
+        var perf = Perf;
+        var t = perf != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         while (Native.RowIteratorNext(_rowIterator) != 0 && y < rows)
         {
             var count = ReadRow(defaultFg, defaultBg);
-            if (perf) t = FramePerf.Mark(0, t);
+            if (perf != null) t = perf.Mark(0, t);
             var top = PadTop + y * m.Height;
             DrawBackgrounds(ds, count, top);
             DrawMatches(ds, y, count, top);
-            if (perf) t = FramePerf.Mark(1, t);
+            if (perf != null) t = perf.Mark(1, t);
             if (_rowHasPlaceholders)
             {
                 DrawPlaceholders(ds, count, top);
             }
 
             DrawText(ds, count, top);
-            if (perf) t = FramePerf.Mark(2, t);
+            if (perf != null) t = perf.Mark(2, t);
             DrawDecorations(ds, count, top);
             if (HoverLink?.ColumnsOn(y, count) is { } span)
             {
@@ -366,7 +369,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 DrawCursor(ds, cursor, count, top, cursorColor, defaultBg, presentation);
             }
 
-            if (perf) t = FramePerf.Mark(3, t);
+            if (perf != null) t = perf.Mark(3, t);
             y++;
         }
 

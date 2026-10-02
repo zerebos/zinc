@@ -3,55 +3,72 @@ using System.Diagnostics;
 namespace Phosphor.Terminal;
 
 /// <summary>
-/// Frame timing for performance work (PHOSPHOR_PERF=1 with PHOSPHOR_LOG): once a second, how many
-/// frames a pane drew and how long they took: our drawing (render state, glyph runs: the commands
-/// Direct2D records) and the flush (Direct2D rasterizing them: the GPU's work, or the CPU's with
-/// software rendering). Off, it costs one static check per frame.
+/// Frame timing for one pane: how long its frames took, our drawing (render state, glyph runs: the
+/// commands Direct2D records, split into <see cref="SectionNames"/>) and the flush (Direct2D
+/// rasterizing them: the GPU's work, or the CPU's with software rendering). Two uses: PHOSPHOR_PERF=1
+/// with PHOSPHOR_LOG logs every pane's numbers once a second (<see cref="LogsEverySecond"/>), and the
+/// drawing benchmark collects them for a run (<see cref="Snapshot"/>). Off, a pane has none and
+/// pays one null check per frame.
 /// </summary>
 internal sealed class FramePerf
 {
-    public static readonly bool Enabled = Log.Enabled && Environment.GetEnvironmentVariable("PHOSPHOR_PERF") == "1";
+    /// <summary>Whether every pane logs its frame times (PHOSPHOR_PERF=1 with PHOSPHOR_LOG).</summary>
+    public static readonly bool LogEnabled = Log.Enabled && Environment.GetEnvironmentVariable("PHOSPHOR_PERF") == "1";
 
-    // (Before Sections: static fields initialize in order.)
     public static readonly string[] SectionNames = ["read", "backgrounds", "text", "decorations"];
 
-    /// <summary>Where drawing time goes (ms, summed over the frames since the last log line): the renderer adds to these.</summary>
-    public static readonly double[] Sections = new double[SectionNames.Length];
-
-    /// <summary>Adds the time since <paramref name="since"/> to section <paramref name="section"/>; returns now.</summary>
-    public static long Mark(int section, long since)
-    {
-        var now = Stopwatch.GetTimestamp();
-        Sections[section] += Stopwatch.GetElapsedTime(since, now).TotalMilliseconds;
-        return now;
-    }
+    /// <summary>Where drawing time went (ms, summed over the frames since the last reset): the renderer adds to these.</summary>
+    private readonly double[] _sections = new double[SectionNames.Length];
 
     private readonly List<double> _draw = [];
     private readonly List<double> _flush = [];
     private long _windowStart = Stopwatch.GetTimestamp();
 
+    public bool LogsEverySecond { get; init; }
+
+    /// <summary>Adds the time since <paramref name="since"/> to section <paramref name="section"/>; returns now.</summary>
+    public long Mark(int section, long since)
+    {
+        var now = Stopwatch.GetTimestamp();
+        _sections[section] += Stopwatch.GetElapsedTime(since, now).TotalMilliseconds;
+        return now;
+    }
+
     public void Add(double drawMs, double flushMs)
     {
         _draw.Add(drawMs);
         _flush.Add(flushMs);
+        if (!LogsEverySecond)
+        {
+            return;
+        }
+
         var elapsed = Stopwatch.GetElapsedTime(_windowStart);
         if (elapsed.TotalSeconds < 1)
         {
             return;
         }
 
-        static string Stats(List<double> ms)
-        {
-            ms.Sort();
-            return $"avg {ms.Average():0.0} p95 {ms[(int)(ms.Count * 0.95)]:0.0} max {ms[^1]:0.0} ms";
-        }
+        var (draw, flush, sections) = Snapshot();
+        var split = string.Join(", ", sections.Select(s => $"{s.Name} {s.Ms:0.0}"));
+        Log.Write($"perf: {_draw.Count / elapsed.TotalSeconds:0} fps, draw {draw}, flush {flush}; per frame: {split} ms");
+        Reset();
+    }
 
-        var frames = _draw.Count;
-        var split = string.Join(", ", SectionNames.Select((name, i) => $"{name} {Sections[i] / frames:0.0}"));
-        Array.Clear(Sections);
-        Log.Write($"perf: {frames / elapsed.TotalSeconds:0} fps, draw {Stats(_draw)}, flush {Stats(_flush)}; per frame: {split} ms");
+    /// <summary>The frames since the last reset: draw and flush times, and the sections per frame.</summary>
+    public (TimeStats Draw, TimeStats Flush, IReadOnlyList<(string Name, double Ms)> Sections) Snapshot()
+    {
+        var frames = Math.Max(1, _draw.Count);
+        return (TimeStats.Of(_draw), TimeStats.Of(_flush), SectionNames.Select((name, i) => (name, _sections[i] / frames)).ToList());
+    }
+
+    public int Frames => _draw.Count;
+
+    public void Reset()
+    {
         _draw.Clear();
         _flush.Clear();
+        Array.Clear(_sections);
         _windowStart = Stopwatch.GetTimestamp();
     }
 }

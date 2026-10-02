@@ -29,6 +29,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   folder / Copy / Clear) → `Log.SetEnabled` → `%LOCALAPPDATA%\Phosphor\logs\phosphor.log` (dated
   lines, moved to phosphor.old.log at 4 MB). PHOSPHOR_LOG wins (always on, short times: tools read
   them). Test it with `.scratch/tools/log-test.ps1` (no PHOSPHOR_LOG; removes the logs folder after).
+- Drawing benchmark (Settings > About, under the logs): Core `Terminal/Benchmark.cs` (`BenchmarkWorkloads`:
+  Colors / Synchronized / Text / Scrolling, seeded, a port of `.scratch/perf/load.py`; `TimeStats`,
+  `BenchmarkResult`, `BenchmarkReport.Text()` = what Copy gives; tested) → App `BenchmarkWindow` (its own
+  1200x760 window, `TerminalControl.Benchmark(config, software)` = a preview pane with a `FramePerf`;
+  each workload written from a background thread for 5 s via `WriteForBenchmark`, no ConPTY) →
+  `SettingsWindow.Benchmark.cs` (Run, "Also with software rendering", last results + Copy; logs
+  `benchmark: …`). `FramePerf` is per pane now (`TerminalRenderer.Perf`); PHOSPHOR_PERF=1 + PHOSPHOR_LOG
+  still logs every pane once a second. Test: `.scratch/tools/bench-test.ps1 [-Software]`.
 - Config: `%APPDATA%\Phosphor\config.toml` (TOML, grouped sections, `[profile.<id>]`; font
   size and padding are *points*; README has the reference). User schemes in `themes\` next to
   it, bundled ones (assets/themes, iTerm2-Color-Schemes' Ghostty-format files) in `Themes\`

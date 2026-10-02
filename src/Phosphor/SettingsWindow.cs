@@ -390,6 +390,7 @@ internal sealed partial class SettingsWindow : Window
 
         _page.Children.Add(LogFileRow());
         _page.Children.Add(Row("Crash log", Log.CrashPath, ButtonRow(("Open folder", () => Reveal(Log.CrashPath)))));
+        BenchmarkRows();
         OpenSourceList();
     }
 

@@ -473,6 +473,36 @@ public sealed partial class TerminalControl : UserControl
 
     private FramePerf? _perf;
 
+    /// <summary>
+    /// A terminal for the drawing benchmark: runs nothing (its workloads arrive through
+    /// <see cref="WriteForBenchmark"/>), measures every frame, draws with the processor when
+    /// <paramref name="software"/>.
+    /// </summary>
+    public static TerminalControl Benchmark(Config config, bool software)
+    {
+        var shared = CanvasLifetime.SoftwareRendering;
+        CanvasLifetime.SoftwareRendering = software; // read once, by the canvas the constructor makes
+        try
+        {
+            var control = Preview(config, "");
+            control._perf = new FramePerf();
+            return control;
+        }
+        finally
+        {
+            CanvasLifetime.SoftwareRendering = shared;
+        }
+    }
+
+    /// <summary>The benchmark's grid once its session has started (columns, rows), else null.</summary>
+    public (int Cols, int Rows)? BenchmarkGrid => _session != null ? (_cols, _rows) : null;
+
+    /// <summary>The benchmark pane's frame timer.</summary>
+    internal FramePerf? BenchmarkPerf => _perf;
+
+    /// <summary>Output for the benchmark pane, as its program would write it (any thread).</summary>
+    public void WriteForBenchmark(ReadOnlySpan<byte> output) => _session?.WriteToScreen(output);
+
     /// <summary>Frames that failed to draw (only the first is logged).</summary>
     private int _drawFailures;
 
@@ -503,16 +533,18 @@ public sealed partial class TerminalControl : UserControl
 
         // Test captures draw every cursor as focused: whether a new window gets focus varies.
         var presentation = new CursorPresentation(_focused || TestHooks.Deterministic || _previewScript != null, _blinkOn);
-        var started = FramePerf.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
+        var perf = _perf ??= FramePerf.LogEnabled ? new FramePerf { LogsEverySecond = true } : null;
+        _renderer.Perf = perf;
+        var started = perf != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
         var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
         PlaceInputBox(); // follows the cursor
         DrawCommandMarks(args.DrawingSession, session);
         DrawSearchTicks(args.DrawingSession, session);
-        if (FramePerf.Enabled)
+        if (perf != null)
         {
             var drawn = System.Diagnostics.Stopwatch.GetTimestamp();
             args.DrawingSession.Flush(); // rasterize now, to time it (else it happens after this returns)
-            (_perf ??= new()).Add(System.Diagnostics.Stopwatch.GetElapsedTime(started, drawn).TotalMilliseconds,
+            perf.Add(System.Diagnostics.Stopwatch.GetElapsedTime(started, drawn).TotalMilliseconds,
                 System.Diagnostics.Stopwatch.GetElapsedTime(drawn).TotalMilliseconds);
         }
         UpdateBlinkTimer(blinking);
