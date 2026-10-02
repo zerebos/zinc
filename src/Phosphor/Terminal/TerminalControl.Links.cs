@@ -39,8 +39,8 @@ public sealed partial class TerminalControl
             return null;
         }
 
-        var col = (int)Math.Floor((pos.X - _config.PaddingLeft) / m.Width);
-        var row = (int)Math.Floor((pos.Y - _config.PaddingTop) / m.Height);
+        var col = (int)Math.Floor((pos.X - _gridLeft) / m.Width);
+        var row = (int)Math.Floor((pos.Y - _gridTop) / m.Height);
         return col >= 0 && col < _cols && row >= 0 && row < _rows ? session.LinkAt((ushort)col, (uint)row) : null;
     }
 

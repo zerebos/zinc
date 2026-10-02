@@ -204,6 +204,9 @@ public static class SettingsCatalog
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
+        new("appearance", "Spacing", "terminal.padding-balance", "Balance the padding",
+            "Text fills whole character cells, so a little room is usually left over. Off: it stays on the right and bottom. On: it's split between both sides.",
+            SettingKind.Toggle, false),
 
         // ---- Layout
         new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice, "top")

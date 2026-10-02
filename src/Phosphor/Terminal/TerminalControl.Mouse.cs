@@ -293,8 +293,8 @@ public sealed partial class TerminalControl
 
         var widthPx = (uint)(_canvas.ActualWidth * m.Scale);
         var heightPx = (uint)(_canvas.ActualHeight * m.Scale);
-        var padLeftPx = (uint)(_config.PaddingLeft * m.Scale);
-        var padTopPx = (uint)(_config.PaddingTop * m.Scale);
+        var padLeftPx = (uint)(_gridLeft * m.Scale);
+        var padTopPx = (uint)(_gridTop * m.Scale);
         var size = new GhosttyMouseEncoderSize
         {
             ScreenWidth = widthPx,
@@ -328,7 +328,7 @@ public sealed partial class TerminalControl
         {
             Columns = _cols,
             CellWidth = m.WidthPx,
-            PaddingLeft = (uint)(_config.PaddingLeft * m.Scale),
+            PaddingLeft = (uint)(_gridLeft * m.Scale),
             ScreenHeight = (uint)(_canvas.ActualHeight * m.Scale),
         };
         var nowNs = (ulong)(Stopwatch.GetTimestamp() * (1_000_000_000.0 / Stopwatch.Frequency));
@@ -356,7 +356,7 @@ public sealed partial class TerminalControl
     private (int Col, int Row) CellAt(Windows.Foundation.Point pos)
     {
         var m = _renderer.Metrics;
-        return (Math.Clamp((int)((pos.X - _config.PaddingLeft) / m.Width), 0, _cols - 1),
-            Math.Clamp((int)((pos.Y - _config.PaddingTop) / m.Height), 0, _rows - 1));
+        return (Math.Clamp((int)((pos.X - _gridLeft) / m.Width), 0, _cols - 1),
+            Math.Clamp((int)((pos.Y - _gridTop) / m.Height), 0, _rows - 1));
     }
 }

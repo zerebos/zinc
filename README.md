@@ -214,6 +214,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 
 **`[terminal]`**
 - `padding-x`, `padding-y`: points; one number, or `[left, right]` / `[top, bottom]`.
+- `padding-balance`: `false` (default) or `true`. Text fills whole cells, so up to a cell of room is
+  left over; it stays on the right and bottom, or with `true` is split between both sides (Ghostty's
+  `window-padding-balance`).
 - `mouse-pointer`: `"arrow"` (default, like Windows Terminal) or `"text"` (an I-beam over text,
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
 - `copy-on-select`: `false` (default) or `true`: selecting text with the mouse copies it (the

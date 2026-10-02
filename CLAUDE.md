@@ -294,6 +294,9 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   first with a press alone (Ghostty/kitty send only the press). App: plain left click (no modifiers,
   no drag, no selection, pane already focused) in `TerminalControl.Mouse.cs`; `test:click:col:row`;
   `.scratch/tools/click-test.ps1 -Shell ... -Clicks "c:r",...` types a marker after each click.
+- Grid placement: Core `Terminal/GridLayout.cs` (whole cells inside the padding; `[terminal] padding-balance` splits the
+  leftover between both sides, in whole device pixels so the atlas's subpixel offset never changes; tested) →
+  `TerminalControl._gridLeft/_gridTop` (every pointer → cell conversion) and `TerminalRenderer.SetGridOrigin`.
 - Resizes: `TerminalSession.Resize` resizes libghostty at once (live reflow) but ConPTY (the shell's
   SIGWINCH) only after 100 ms without another (`PtyResizeSettle`, a threadpool Timer): a drag's many
   sizes made p10k redraw its full-width frame each time and stale copies piled up (Windows Terminal does

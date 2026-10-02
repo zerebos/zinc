@@ -211,6 +211,9 @@ public sealed partial class TerminalControl : UserControl
         UpdateGrid();
     }
 
+    // The grid's top-left corner in DIPs (the padding, balanced or not): what pointer positions are measured from.
+    private float _gridLeft, _gridTop;
+
     private void UpdateGrid()
     {
         var m = _renderer.Metrics;
@@ -220,10 +223,13 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        var cols = (ushort)Math.Clamp((int)((_canvas.ActualWidth - _config.PaddingLeft - _config.PaddingRight) / m.Width), 2, 1000);
-        var rows = (ushort)Math.Clamp((int)((_canvas.ActualHeight - _config.PaddingTop - _config.PaddingBottom) / m.Height), 1, 1000);
+        var place = GridLayout.Place(_canvas.ActualWidth, _canvas.ActualHeight, _config.PaddingLeft, _config.PaddingRight,
+            _config.PaddingTop, _config.PaddingBottom, m.Width, m.Height, m.Scale, _config.PaddingBalance);
+        var (cols, rows) = (place.Columns, place.Rows);
         _cols = cols;
         _rows = rows;
+        (_gridLeft, _gridTop) = (place.Left, place.Top);
+        _renderer.SetGridOrigin(place.Left, place.Top);
         _renderer.EnsureColumns(cols);
 
         if (_session == null)

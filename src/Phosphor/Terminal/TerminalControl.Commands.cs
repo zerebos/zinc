@@ -191,7 +191,7 @@ public sealed partial class TerminalControl
         var m = _renderer.Metrics;
         var top = (long)sb.Offset;
         var bottom = top + (long)sb.Len - 1;
-        var barX = MathF.Max(0, (_config.PaddingLeft - 2) / 2);
+        var barX = MathF.Max(0, (_gridLeft - 2) / 2);
         foreach (var command in commands)
         {
             var finished = command.Ran && !command.Running && command.ExitCode != null;
@@ -207,7 +207,7 @@ public sealed partial class TerminalControl
                 continue;
             }
 
-            ds.FillRectangle(barX, _config.PaddingTop + (first - top) * m.Height, 2, (last - first + 1) * m.Height,
+            ds.FillRectangle(barX, _gridTop + (first - top) * m.Height, 2, (last - first + 1) * m.Height,
                 command.Failed ? FailedColor : SucceededColor);
         }
     }

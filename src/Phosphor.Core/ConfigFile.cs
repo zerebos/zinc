@@ -651,6 +651,7 @@ public sealed class ConfigFile
             ["terminal.input-method"] = ("input-method", v => Bool(v)),
             ["terminal.padding-x"] = ("window-padding-x", v => Pair(v)),
             ["terminal.padding-y"] = ("window-padding-y", v => Pair(v)),
+            ["terminal.padding-balance"] = ("window-padding-balance", v => Bool(v)),
             ["terminal.mouse-pointer"] = ("mouse-pointer", v => v as string),
             ["terminal.clipboard-read"] = ("clipboard-read", v => Permission(v)),
             ["terminal.clipboard-write"] = ("clipboard-write", v => Permission(v)),

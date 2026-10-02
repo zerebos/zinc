@@ -435,6 +435,9 @@ public sealed record Config
     public float PaddingTop { get; init; } = 8;
     public float PaddingBottom { get; init; } = 8;
 
+    /// <summary>Split the room left over by whole cells between both sides, instead of leaving it right and bottom.</summary>
+    public bool PaddingBalance { get; init; }
+
     public static string DefaultPath => ConfigFile.DefaultPath;
 
     /// <summary>Loads the global settings (see <see cref="ConfigFile"/> for profiles).</summary>
@@ -551,6 +554,7 @@ public sealed record Config
                 this with { PaddingLeft = left, PaddingRight = right },
             "window-padding-y" when TryPadding(value, out var top, out var bottom) =>
                 this with { PaddingTop = top, PaddingBottom = bottom },
+            "window-padding-balance" when bool.TryParse(value, out var balance) => this with { PaddingBalance = balance },
             _ => null,
         };
     }

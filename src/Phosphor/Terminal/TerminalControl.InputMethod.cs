@@ -224,7 +224,7 @@ public sealed partial class TerminalControl
         }
 
         var m = _renderer.Metrics;
-        var margin = new Thickness(_config.PaddingLeft + cell.Column * m.Width, _config.PaddingTop + cell.Row * m.Height, 0, 0);
+        var margin = new Thickness(_gridLeft + cell.Column * m.Width, _gridTop + cell.Row * m.Height, 0, 0);
         if (box.Margin != margin)
         {
             box.Margin = margin;

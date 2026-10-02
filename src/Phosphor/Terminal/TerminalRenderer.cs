@@ -131,8 +131,13 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
     public bool HasResources => _brush != null && Metrics.Width > 0;
 
-    private float PadLeft => _config.PaddingLeft;
-    private float PadTop => _config.PaddingTop;
+    // The grid's top-left corner (DIPs): the padding, plus half the spare room with padding-balance (SetGridOrigin).
+    private float? _gridLeft, _gridTop;
+    private float PadLeft => _gridLeft ?? _config.PaddingLeft;
+    private float PadTop => _gridTop ?? _config.PaddingTop;
+
+    /// <summary>Where the pane put the grid (<see cref="GridLayout"/>).</summary>
+    public void SetGridOrigin(float left, float top) => (_gridLeft, _gridTop) = (left, top);
 
     public void CreateResources(ICanvasResourceCreator device)
     {
