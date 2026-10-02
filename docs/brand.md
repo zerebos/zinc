@@ -57,7 +57,7 @@ Two square blocks that share exactly one corner point, like the ▚ "legacy comp
 **Lit cell (pixel) geometry**
 - A rounded square **86% of the grid pitch** (so the gap is 14%), with corner radius **12% of the pitch**.
 - Rich treatment: vertical gradient `#C6FFD0` (top) to `#2FE07A` (bottom), spanning the whole mark's height.
-- Flat treatment: solid `#3DF2A0` on dark; ink `#0F1311` on light.
+- Flat treatment: solid `#3DF2A0` on dark; `#0B7A4B` on light. Ink `#0F1311` is for one-colour reproduction only.
 - Optional glow, on lit cells only: a rounded square 1.5× the pitch, radius 50% of the pitch, `#3DF2A0` at ~6% opacity.
 
 **Unlit dot (screen texture):** a circle with radius **20% of the pitch**, `#3DF2A0` at **10%**, in every grid cell not occupied by a lit cell. The grid must align with the mark.
@@ -147,7 +147,9 @@ Brand colours apply to the **app chrome only**. They never touch terminal conten
 - The mark's height equals the ascender height (baseline to the top of the `h`), and it sits on the baseline.
 - The gap is half a monospace character's advance, measured from the end of the text.
 - Clear space is 25% of the ascender height on every side, measured from visible ink.
-- Dark lockup: Paper wordmark and rich mark. Light lockup: Screen-ink wordmark and ink mark.
+- **Dark lockup:** Paper wordmark, rich mark.
+- **Light lockup:** Screen-ink wordmark, mark in the light-theme accent `#0B7A4B` (bright block 100%, dim block 50%). The mark stays green on light grounds.
+- **Mono lockup** (`quadrant-zinc-mono.svg`): everything in ink, for one-colour print, embossing or stamps only. It reads as greyscale, so never use it as the everyday light version.
 
 ## 11. Bundled colour schemes: Lit Cell
 
@@ -203,7 +205,8 @@ icon is `src/Phosphor/Assets/Zinc.ico` (a copy of `quadrant.ico`); the schemes a
 | `quadrant-{16..256}.png` | Per-size masters (MSIX assets, title bar, tray) |
 | `quadrant-app-tile.svg` | Vector tile master (96 px and up) |
 | `quadrant-flat.svg`, `-glow.svg`, `-ink.svg`, `-rich.svg` | Mark treatments |
-| `quadrant-zinc-dark.svg`, `quadrant-zinc-light.svg` | Lockups (outlined) |
+| `quadrant-zinc-dark.svg`, `quadrant-zinc-light.svg` | Lockups (outlined); light uses the green accent |
+| `quadrant-zinc-mono.svg` | One-colour lockup for print only |
 | `quadrant-construction.png` | Construction sheet |
 | `Lit Cell`, `Lit Cell Light` | Ghostty-format scheme files |
 | `lit-cell*.windows-terminal.json` | The same schemes for Windows Terminal |
