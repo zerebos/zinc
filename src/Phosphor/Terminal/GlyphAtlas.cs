@@ -45,6 +45,9 @@ internal sealed class GlyphAtlas : IDisposable
     /// <summary>Glyphs reserved since the last <see cref="Flush"/>, not drawn yet.</summary>
     private readonly List<(CanvasFontFace Face, float FontSize, int Glyph, bool Dark, int Page, Vector2 Origin)> _pending = [];
 
+    /// <summary>Pages not cleared yet: a new render target can come with recycled GPU memory, an old atlas's tiles in it.</summary>
+    private readonly HashSet<int> _unclearedPages = [];
+
     private CanvasRenderTarget? _scratch;
     private ColorMatrixEffect? _whiten;
     private int _next; // the next free tile slot on the last page
@@ -100,6 +103,7 @@ internal sealed class GlyphAtlas : IDisposable
         if (_pages.Count == 0 || _next >= _perPage)
         {
             _pages.Add(new CanvasRenderTarget(device, PagePixels / s, PagePixels / s, 96 * s));
+            _unclearedPages.Add(_pages.Count - 1);
             _next = 0;
         }
 
@@ -151,10 +155,17 @@ internal sealed class GlyphAtlas : IDisposable
             }
 
             // ...then onto the page as white coverage. Normal blending: everything else in the scratch is transparent,
-            // and each tile is written once. (CanvasBlend.Copy with an effect drew nothing, 2026-10-02.)
+            // and each tile is written once. (CanvasBlend.Copy with an effect drew nothing, 2026-10-02.) A new page is
+            // cleared first: it may hold a previous atlas's tiles (after a zoom step, the old pages' freed memory came
+            // back with them, and new glyphs were blended over the fragments: garbled text).
             _whiten.Source = _scratch;
             using (var ds = _pages[page].CreateDrawingSession())
             {
+                if (_unclearedPages.Remove(page))
+                {
+                    ds.Clear(Color.FromArgb(0, 0, 0, 0));
+                }
+
                 ds.DrawImage(_whiten);
             }
         }
@@ -172,6 +183,7 @@ internal sealed class GlyphAtlas : IDisposable
         _pages.Clear();
         _tiles.Clear();
         _pending.Clear();
+        _unclearedPages.Clear();
         Array.Clear(_slots);
         _scratch?.Dispose();
         _scratch = null;
