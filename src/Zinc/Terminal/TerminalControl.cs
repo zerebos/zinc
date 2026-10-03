@@ -70,11 +70,42 @@ public sealed partial class TerminalControl : UserControl
     /// </summary>
     public Func<ActionInvocation, bool>? ActionHandler { get; set; }
 
-    /// <summary>The last title the app set (OSC 0/2), or "" if none.</summary>
-    /// <summary>The title the program set, or "" (also while <c>program-titles</c> is off).</summary>
-    public string Title => _config.ProgramTitles ? _programTitle : "";
+    /// <summary>
+    /// What the tab is called (<see cref="ShellTitle"/>): with <c>shell-titles</c>, the folder at the prompt and the command
+    /// while one runs; else the title the program set; "" for the profile's name.
+    /// </summary>
+    public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt,
+        ShellDirectory.Parse(ReportedDirectory), RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
+
+    private static readonly string UserHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     private string _programTitle = "";
+
+    /// <summary>The program's title was set while the running command ran (vim's own name wins over the command's).</summary>
+    private bool _programTitleSinceCommand;
+
+    /// <summary>When the command the title knows of started (a new one forgets the program's title).</summary>
+    private DateTime? _titledCommand;
+
+    private string? _shownTitle;
+
+    /// <summary>Tells the app when <see cref="Title"/> changed (any of its inputs: the program, the marks, the folder, settings).</summary>
+    private void NoteTitle()
+    {
+        var running = RunningCommand?.Started;
+        if (running != _titledCommand)
+        {
+            _titledCommand = running;
+            _programTitleSinceCommand = false;
+        }
+
+        var title = Title;
+        if (title != _shownTitle)
+        {
+            _shownTitle = title;
+            TitleChanged?.Invoke(title);
+        }
+    }
 
     /// <summary>The working directory the shell last reported, as sent (see <see cref="TerminalSession.ReportedDirectory"/>).</summary>
     public string? ReportedDirectory => _session?.ReportedDirectory;
@@ -388,13 +419,16 @@ public sealed partial class TerminalControl : UserControl
             }
 
             _programTitle = title;
-            if (_config.ProgramTitles)
-            {
-                TitleChanged?.Invoke(title);
-            }
+            NoteTitle(); // a new command's start first, so the title it set counts as the command's own
+            _programTitleSinceCommand = RunningCommand != null;
+            NoteTitle();
         });
         session.Bell += () => dq.SafeEnqueue(OnBell);
-        session.DirectoryChanged += () => dq.SafeEnqueue(() => DirectoryChanged?.Invoke());
+        session.DirectoryChanged += () => dq.SafeEnqueue(() =>
+        {
+            NoteTitle();
+            DirectoryChanged?.Invoke();
+        });
         session.CommandsChanged += () => dq.SafeEnqueue(OnCommandsChanged);
         ForwardProgramNotifications(session);
         session.ProcessExited += code => dq.SafeEnqueue(() => OnProcessExited(code));
@@ -490,9 +524,9 @@ public sealed partial class TerminalControl : UserControl
             }
         }
 
-        if (old.ProgramTitles != config.ProgramTitles && _programTitle.Length > 0)
+        if (old.ProgramTitles != config.ProgramTitles || old.ShellTitles != config.ShellTitles)
         {
-            TitleChanged?.Invoke(Title);
+            NoteTitle();
         }
 
         if (old.WordBoundaries != config.WordBoundaries)

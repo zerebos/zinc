@@ -131,6 +131,7 @@ public sealed partial class TerminalControl
             }
         }
 
+        NoteTitle(); // at the prompt, or a command started
         CommandsChanged?.Invoke();
         Redraw();
     }

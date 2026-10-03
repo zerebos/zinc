@@ -269,6 +269,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   to the terminal.
 - `program-titles`: `true` (default) lets shells and programs set the tab's title; `false` keeps the
   profile's name (a name you give a tab always wins).
+- `shell-titles`: `true` (default) names the tab from the shell's marks (shell integration, ours or the
+  shell's own): the folder at the prompt (`~` for your home), the command while one runs. A title the
+  running program sets itself (vim, htop) still wins until it ends. Shells without marks keep their own titles.
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the

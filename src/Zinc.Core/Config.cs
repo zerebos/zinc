@@ -276,6 +276,12 @@ public sealed record Config
     public bool ProgramTitles { get; init; } = true;
 
     /// <summary>
+    /// The tab shows the folder at the shell's prompt and the command while one runs (from the shell's marks; a title the
+    /// running program sets still wins). Config: <c>shell-titles</c>.
+    /// </summary>
+    public bool ShellTitles { get; init; } = true;
+
+    /// <summary>
     /// Whether programs may read the clipboard with OSC 52: anything running in the terminal, e.g.
     /// over ssh, could read it, so by default each read asks. Config: <c>clipboard-read = ask | allow | deny</c>.
     /// </summary>
@@ -551,6 +557,7 @@ public sealed record Config
             "screen-flash-bell" when bool.TryParse(value, out var screenFlash) => this with { ScreenFlashBell = screenFlash },
             "input-method" when bool.TryParse(value, out var ime) => this with { InputMethod = ime },
             "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
+            "shell-titles" when bool.TryParse(value, out var shellTitles) => this with { ShellTitles = shellTitles },
             "selection-background" when TryColor(value, out var c) => this with { Theme = theme with { SelectionBackground = c } },
             "selection-foreground" when TryColor(value, out var c) => this with { Theme = theme with { SelectionForeground = c } },
             "clipboard-read" when TryMode<ClipboardAccess>(value, out var read) => this with { ClipboardRead = read },

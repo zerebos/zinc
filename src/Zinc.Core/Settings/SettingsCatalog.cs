@@ -279,6 +279,9 @@ public static class SettingsCatalog
         new("terminal", "Shell", "terminal.program-titles", "Programs name the tab",
             "Shells and programs set the tab's title (often the folder or the running command). Off: the profile's name.",
             SettingKind.Toggle, true),
+        new("terminal", "Shell", "terminal.shell-titles", "Folder and command as the title",
+            "At the prompt, the tab shows the folder; while a command runs, the command (a title the program sets itself still wins). For shells with shell integration.",
+            SettingKind.Toggle, true),
         new("terminal", "Scrollback", "terminal.scrollback-lines", "Scrollback lines", "How far back you can scroll.",
             SettingKind.Number, (long)Config.DefaultScrollbackLines)
             { Minimum = 0, Maximum = Config.MaxScrollbackLines, Step = 1000 },

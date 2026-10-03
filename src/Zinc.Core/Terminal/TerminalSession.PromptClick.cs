@@ -22,8 +22,27 @@ public sealed unsafe partial class TerminalSession
     /// </summary>
     private PromptClickMode? _announcedClick;
 
+    /// <summary>A mark has been seen: the shell marks its prompts (shell integration, its own or ours).</summary>
+    private bool _sawPromptMark;
+
+    /// <summary>
+    /// From the marks: true while the shell waits at its prompt (or between a command's end and the next prompt), false while
+    /// a command runs; null if the shell has marked nothing.
+    /// </summary>
+    public bool? AtPrompt
+    {
+        get
+        {
+            lock (Lock)
+            {
+                return !_sawPromptMark ? null : _promptState != PromptState.Running;
+            }
+        }
+    }
+
     private void NotePromptState(ShellMark mark)
     {
+        _sawPromptMark = true;
         if (mark.Kind is 'A' or 'N')
         {
             _announcedClick = mark.Click;
