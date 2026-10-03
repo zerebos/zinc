@@ -27,7 +27,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - `ZINC_LOG=<file>` appends diagnostics from `Log.Write` (Core). Cheap to add a line
   when something "doesn't happen" (e.g. pane lifecycle: Loaded / CreateResources / sizes).
   Users get the same log from `[debug] logging` (Settings > About > Troubleshooting: switch, Open
-  folder / Copy / Clear) → `Log.SetEnabled` → `%LOCALAPPDATA%\Zinc\logs\zinc.log` (dated
+  folder / Copy / Clear) → `Log.SetEnabled` → `%APPDATA%\Zinc\logs\zinc.log` (dated
   lines, moved to zinc.old.log at 4 MB). ZINC_LOG wins (always on, short times: tools read
   them). Test it with `.scratch/tools/log-test.ps1` (no ZINC_LOG; removes the logs folder after).
 - Drawing benchmark (Settings > About, under the logs): Core `Terminal/Benchmark.cs` (`BenchmarkWorkloads`:
@@ -632,6 +632,22 @@ and read state after the write (see `_titleDirty`).
   resolve CoreCLR path" (Application event log, nothing on screen); the first zip sent to a tester was built so.
   package.ps1 refuses a deps.json without `runtimepack.Microsoft.NETCore.App.Runtime`. Always smoke-test the zip
   you send (.scratch/tools/zip-env-test.ps1 unzips it into a path like the tester's and starts it).
+- Installer + updates (Velopack 1.2.161; plan: claude.ai/code/artifact/33953d1b-1792-4f70-aeef-07dc7d80bcb0):
+  `scripts/release.ps1` (refuses a dirty tree unless -AllowDirty; publish as package.ps1 under the same mutex;
+  `dotnet vpk pack` → `<id>-win-Setup.exe`, full/delta nupkg, `releases.win.json`, portable zip; -From fetches the
+  previous release for deltas; `vpk` pinned in root `dotnet-tools.json`, keep it equal to the PackageReference).
+  Package id `Zinc` installs to `%LOCALAPPDATA%\Zinc` (Velopack replaces/removes that whole folder on
+  install/uninstall), so **everything of the user's lives in `%APPDATA%\Zinc`** (Core `AppFolders`: logs, crash
+  log, icon cache; `MoveOldLocalData` moves the old Local ones once, after the single-instance check, not in
+  test runs). `Program.Main` starts with `VelopackApp...Run()`; `BeforeUninstall` → Core `Pty/InstallCleanup`
+  (sign-in entry, default terminal: only what points into the install root; tested on a scratch key).
+  `Updater` (App): `ZINC_UPDATE_URL` (folder or URL) else the built-in address; only copies the installer put
+  in place update (`UpdateManager.IsInstalled`). Test: `.scratch/tools/update-roundtrip.ps1` (packs
+  `Zinc.Test` 0.1.0-test.1/.2 with no shortcuts into .scratch/feed, installs silently into .scratch/update-test,
+  `test:update`, checks the restart, uninstalls and checks the real registrations are unchanged). **Never
+  install a `Zinc`-id package on this machine** (it would take the dev install's Start Menu shortcut, sign-in
+  entry and default terminal), and run every Setup/Update.exe with ZINC_CONFIG set: the installer starts Zinc,
+  which would otherwise hand itself to the user's running Zinc.
 - Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>` (install.ps1
   computes the version like Directory.Build.props; the timestamp keeps names sortable); the
   user's Start Menu shortcut points at the newest. A post-commit hook (if installed)
@@ -706,7 +722,7 @@ and read state after the write (see `_titleDirty`).
   guard it too. Native callbacks (`UnmanagedCallersOnly`, the `MessageWindow` WndProc, ConPty's
   reader/exit threads) catch everything themselves. XAML event handlers do reach
   `App.UnhandledException`, which now marks them handled and shows the ErrorNotice. Every
-  escaped exception goes to `Log.Crash` → `%LOCALAPPDATA%\Zinc\crash.log` (always, even
+  escaped exception goes to `Log.Crash` → `%APPDATA%\Zinc\crash.log` (always, even
   without ZINC_LOG; `ZINC_CRASH_LOG=<file>` for tests). Code reachable after a window
   closes checks `_windowClosed` (its AppWindow is null); `Closed` stops the timers and unwires
   every terminal first. Config/theme reads share access and retry (an editor mid-save); an

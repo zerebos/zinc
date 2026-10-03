@@ -25,16 +25,15 @@ public static class Log
     /// <summary>Whether ZINC_LOG decides (then the setting changes nothing).</summary>
     public static bool FromEnvironment => EnvironmentPath != null;
 
-    private static string Folder { get; } =
-        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Zinc");
+    private static string Folder => AppFolders.Data;
 
-    /// <summary>The debug log: ZINC_LOG's file, else %LOCALAPPDATA%\Zinc\logs\zinc.log.</summary>
+    /// <summary>The debug log: ZINC_LOG's file, else %APPDATA%\Zinc\logs\zinc.log.</summary>
     public static string FilePath { get; } = EnvironmentPath ?? System.IO.Path.Combine(Folder, "logs", "zinc.log");
 
     /// <summary>The debug log before its last move aside.</summary>
     public static string OldFilePath => System.IO.Path.ChangeExtension(FilePath, ".old.log");
 
-    /// <summary>%LOCALAPPDATA%\Zinc\crash.log (ZINC_CRASH_LOG=&lt;file&gt; for test runs).</summary>
+    /// <summary>%APPDATA%\Zinc\crash.log (ZINC_CRASH_LOG=&lt;file&gt; for test runs).</summary>
     public static string CrashPath { get; } =
         Environment.GetEnvironmentVariable("ZINC_CRASH_LOG") is { Length: > 0 } crash ? crash : System.IO.Path.Combine(Folder, "crash.log");
 

@@ -19,8 +19,7 @@ internal static class ProfileIcons
     private const string TerminalGlyph = "\uE756";
 
     private static readonly Dictionary<Profile, IconSource> Cache = new();
-    private static readonly string IconCacheDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Zinc", "cache", "icons");
+    private static readonly string IconCacheDir = Path.Combine(AppFolders.Data, "cache", "icons");
 
     public static IconSource For(Profile profile)
     {

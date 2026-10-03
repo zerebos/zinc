@@ -24,11 +24,11 @@ START
 WHERE ZINC KEEPS THINGS
   Settings          %APPDATA%\Zinc\config.toml (Settings > About > Config file opens it)
   Your themes       %APPDATA%\Zinc\themes\
-  Logs, crash log   %LOCALAPPDATA%\Zinc\
+  Logs, crash log   %APPDATA%\Zinc\
 
 SENDING FEEDBACK
   Something wrong: Settings > About > Debug log, turn it on, make the problem happen, then Copy,
-  and paste it with your note. If Zinc crashed, crash.log is in %LOCALAPPDATA%\Zinc.
+  and paste it with your note. If Zinc crashed, crash.log is in %APPDATA%\Zinc.
   Slow drawing: Settings > About > Drawing benchmark, Run (check "Also with software rendering"
   too if you have a minute), then Copy the results.
   Screenshots help, and so does saying which shell you use (PowerShell, WSL, Git Bash, ...).
@@ -45,5 +45,4 @@ REMOVING ZINC
   1. In Settings > Layout, turn off "Default terminal app", and set "When you sign in to Windows"
      to "Don't start Zinc".
   2. Quit Zinc: right-click its tray icon, Quit Zinc.
-  3. Delete the folder. To remove your settings and logs too, delete %APPDATA%\Zinc and
-     %LOCALAPPDATA%\Zinc.
+  3. Delete the folder. To remove your settings and logs too, delete %APPDATA%\Zinc.

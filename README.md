@@ -292,7 +292,7 @@ follows Windows live). Applies when Zinc starts again: WinUI sets an app's theme
 **Accent** (`[window] accent`): `"zinc"` (default: Zinc's green on selections, focus lines,
 switches and buttons) or `"windows"` (your Windows accent color). Applies when Zinc starts.
 
-**`[debug]`**: `logging = true` keeps a debug log in `%LOCALAPPDATA%\Zinc\logs\zinc.log`
+**`[debug]`**: `logging = true` keeps a debug log in `%APPDATA%\Zinc\logs\zinc.log`
 (moved aside to `zinc.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
 (the log with Zinc's version and Windows' on top, for a bug report) and Clear. `ZINC_LOG=<file>`
 overrides it: always on, into that file. About also has a drawing benchmark: four 5-second tests

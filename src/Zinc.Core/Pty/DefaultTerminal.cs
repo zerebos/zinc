@@ -124,6 +124,13 @@ public sealed class DefaultTerminal(RegistryKey root)
         }
     }
 
+    /// <summary>The exe Zinc's class starts (null: not registered).</summary>
+    public string? RegisteredExe()
+    {
+        using var server = root.OpenSubKey(ClassKey + @"\LocalServer32");
+        return InstallCleanup.ExeOf(server?.GetValue(null) as string);
+    }
+
     /// <summary>What COM adds to the command line when it starts Zinc to receive a console.</summary>
     public const string EmbeddingFlag = "-Embedding";
 }

@@ -1102,6 +1102,22 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>test:update: the update round trip, logged (`update: ...`).</summary>
+    private static async Task UpdateForTestAsync()
+    {
+        try
+        {
+            if (await Updater.CheckAndDownloadAsync() is { } update)
+            {
+                Updater.ApplyAndRestart(update);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"update: failed: {ex.Message}");
+        }
+    }
+
     /// <summary>
     /// Test hook: ZINC_TEST_KEYS="alt+shift+plus,alt+left" replays chords (one per second)
     /// through the keybindings and action handler, as if pressed in the focused pane.
@@ -1237,6 +1253,14 @@ public sealed partial class MainWindow : Window
                 var gc = GC.GetGCMemoryInfo();
                 Log.Write($"test {chord}: private {self.PrivateMemorySize64 / 1048576} MB, working set {self.WorkingSet64 / 1048576} MB, " +
                     $".NET heap {gc.HeapSizeBytes / 1048576} MB (committed {gc.TotalCommittedBytes / 1048576} MB), panes {AllTabs().Sum(t => t.Workspace.Tabs.Count())}");
+                return;
+            }
+
+            if (chord == "test:update")
+            {
+                // Check, download and, if there's a newer version, restart into it (the update round trip test).
+                Log.Write($"test {chord}");
+                _ = UpdateForTestAsync();
                 return;
             }
 

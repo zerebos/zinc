@@ -48,6 +48,8 @@ public static class OpenSourceNotices
             "MIT", "https://github.com/dotnet/runtime", @"Licenses\dotnet.txt", ["System.Drawing.Common"]),
         new("Tomlyn", "2.10.1", "Reads and edits config.toml",
             "BSD-2-Clause", "https://github.com/xoofx/Tomlyn", @"Licenses\Tomlyn.txt", ["Tomlyn"]),
+        new("Velopack", "1.2.161", "Installs Zinc and keeps it up to date",
+            "MIT", "https://github.com/velopack/velopack", @"Licenses\Velopack.txt", ["Velopack"]),
         new("Heroicons", "", "The reset arrow in Settings",
             "MIT", "https://heroicons.com", @"Licenses\Heroicons.txt", []),
     ];
