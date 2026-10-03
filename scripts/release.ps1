@@ -20,10 +20,11 @@
   -Publish does the whole thing from release.local.json (next to this repo's root; not in git):
     { "updateUrl": "https://example.com/zinc/",
       "ftp": "ftp://host/path/to/zinc/",
-      "ftpPin": "sha256//<base64 of the server's public key>" }
+      "ftpPin": "sha256//<base64 of the server's public key>" }   (optional, see below)
   It builds into a fresh dist\release with -UpdateUrl and -From set to updateUrl, then uploads over FTPS (curl,
-  your login from %USERPROFILE%\.netrc, the server's key pinned, so an expired or self-signed certificate still
-  gives an encrypted connection to that server only): .htaccess once (scripts/release-htaccess), the new files,
+  your login from %USERPROFILE%\.netrc, the server's certificate checked as usual; with ftpPin, that key instead,
+  so an expired or self-signed certificate still gives an encrypted connection to that server only. A pin breaks
+  at every renewal: use it only while a host's certificate is broken): .htaccess once (scripts/release-htaccess), the new files,
   then releases.win.json last, under another name and renamed, so a copy checking mid-upload never sees a
   release whose files aren't there yet. Packages the new list doesn't mention are deleted from the server.
 
@@ -139,7 +140,8 @@ if (-not $Publish) { return }
 $ftp = $settings.ftp.TrimEnd('/') + '/'
 $curl = Join-Path $env:SystemRoot 'System32\curl.exe' # Windows' own, whatever else is on PATH
 function Ftp {
-    $output = & $curl -s -S -n --ssl-reqd --insecure --pinnedpubkey $settings.ftpPin --ftp-create-dirs --max-time 900 @args 2>&1
+    $trust = if ($settings.ftpPin) { '--insecure', '--pinnedpubkey', $settings.ftpPin } else { @() }
+    $output = & $curl -s -S -n --ssl-reqd @trust --ftp-create-dirs --max-time 900 @args 2>&1
     if ($LASTEXITCODE -ne 0) { throw "FTP failed ($LASTEXITCODE): $output" }
     $output
 }
