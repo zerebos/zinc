@@ -22,6 +22,9 @@
     <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.dll" Link="zinc-sprite.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.pdb" Link="zinc-sprite.pdb" CopyToOutputDirectory="PreserveNewest" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-sprite.pdb')" />
+    <!-- Both import the Visual C++ runtime, which isn't part of Windows (a fresh PC lacks it: "Unable to load
+         DLL 'ghostty-vt'"); it ships beside them, app-local (scripts/copy-vcruntime.sh). -->
+    <None Include="$(GhosttyNativeDir)vcruntime140.dll" Link="vcruntime140.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
   <Target Name="CheckGhostty" BeforeTargets="Build">
@@ -29,6 +32,8 @@
            Text="ghostty-vt.dll not found in $(GhosttyNativeDir). Run: scripts/build-libghostty.sh $(GhosttyArch)" />
     <Error Condition="!Exists('$(GhosttyNativeDir)zinc-sprite.dll')"
            Text="zinc-sprite.dll not found in $(GhosttyNativeDir). Run: scripts/build-sprites.sh $(GhosttyArch)" />
+    <Error Condition="!Exists('$(GhosttyNativeDir)vcruntime140.dll')"
+           Text="vcruntime140.dll not found in $(GhosttyNativeDir). Run: scripts/copy-vcruntime.sh $(GhosttyArch)" />
   </Target>
 
   <ItemGroup>

@@ -29,7 +29,8 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 - Windows 10 1809+ (developed on Windows 11 24H2), x64 or ARM64
 - .NET SDK 10
 - Visual Studio Build Tools with the MSVC toolchain and a Windows 10/11 SDK
-  (used by Zig to link the DLL)
+  (used by Zig to link the DLL; its redistributable Visual C++ runtime, `vcruntime140.dll`, ships
+  beside the DLLs, since a fresh Windows doesn't have it)
 - [Zig](https://ziglang.org) **0.16.x** on `PATH` (Ghostty's minimum)
 - Git Bash (or any POSIX shell) for the build script
 
@@ -753,6 +754,7 @@ until a key is pressed; a clean exit closes it.
 
 ```
 scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
+scripts/copy-vcruntime.sh         the Visual C++ runtime the native DLLs need, next to them
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
 assets/brand/                     icon frames, mark and lockups (docs/brand.md)
 src/Zinc.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects

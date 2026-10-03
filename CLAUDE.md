@@ -8,7 +8,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 ## Build / run
 
 - `scripts/build-libghostty.sh x64` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit).
-  `external/` (ghostty clone) and `native/` are gitignored build products.
+  `external/` (ghostty clone) and `native/` are gitignored build products. Both native DLLs (ghostty-vt,
+  zinc-sprite) are built for `windows-msvc` and import **`vcruntime140.dll`, which a fresh Windows lacks**
+  (Windows Sandbox: "Unable to load DLL 'ghostty-vt'"; every dev PC has it from something else, so it
+  never shows here): `scripts/copy-vcruntime.sh` (run by build-libghostty.sh) copies VS's redistributable
+  one into native/<arch>/, Zinc.Native.targets ships it app-local (build error if missing), release.ps1
+  checks it. Check new native dependencies with pefile (`.scratch/vcdeps.py <folder>`).
 - `dotnet build` (Zinc.slnx; add `-c Release` for perf work). App output:
   `src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
