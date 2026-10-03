@@ -45,7 +45,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   order (with examples), swallowed, plus send→last output and output reads per key (a shell answers a key in
   several reads: pwsh 7-9 within ~1 ms). Posted WM_CHAR (keys.ps1) counts as "unexpected" (no key press).
   `.scratch/tools/typing-trace.ps1 [-LowLatency]` types into pwsh and prints them.
-- `[window] low-latency-drawing` (experimental, off): `Terminal/SwapChainSurface.cs` replaces the pane's
+- `[window] low-latency-drawing` (**default on since 2026-10-03**; off = the CanvasControl fallback): `Terminal/SwapChainSurface.cs` replaces the pane's
   CanvasControl with a CanvasSwapChainPanel + CanvasSwapChain on Win2D's shared device; a frame is presented at
   once (High-priority enqueue) once output has paused 0.5 ms (max 3 ms wait, re-enqueued so the UI thread runs),
   at most one per refresh (after a present, the next waits for `CompositionTarget.Rendering`, hooked only while

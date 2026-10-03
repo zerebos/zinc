@@ -307,11 +307,11 @@ public sealed record Config
     public bool SoftwareRendering { get; init; }
 
     /// <summary>
-    /// Experimental: each terminal presents from a swap chain of its own as soon as a frame is ready, instead of
-    /// waiting for the window's next render tick (typing shows up about a refresh sooner). Config:
-    /// <c>[window] low-latency-drawing = true</c> (global; terminals opened from now on).
+    /// Each terminal presents from a swap chain of its own as soon as a frame is ready, instead of waiting for the
+    /// window's next render tick (typing shows up about a refresh sooner). On by default since 2026-10-03; off = the
+    /// CanvasControl path, kept as a fallback. Config: <c>[window] low-latency-drawing</c> (global; terminals opened from now on).
     /// </summary>
-    public bool LowLatencyDrawing { get; init; }
+    public bool LowLatencyDrawing { get; init; } = true;
 
     /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
     public GroupTabStrip GroupTabStrip { get; init; }

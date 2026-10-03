@@ -279,9 +279,9 @@ features they control below; `focus-follows-mouse = true`, which focuses a pane 
 enters it (only while focus is in another pane, not in the palette or a find box); and `software-rendering = true`, which draws with the processor
 instead of the graphics card (for broken graphics drivers, some virtual machines and remote desktop
 glitches; slower; applies to terminals opened after it's set). `low-latency-drawing = true`
-(experimental) has each terminal present its frames from a swap chain of its own as soon as they're
-drawn, instead of at the window's next render tick, so typing shows up about a refresh sooner (terminals
-opened after it's set).
+(the default) has each terminal present its frames from a swap chain of its own as soon as they're
+drawn, instead of at the window's next render tick, so typing shows up about a refresh sooner; `false`
+goes back to the previous drawing, as a fallback (terminals opened after it's set).
 
 **`[notify]`**: `command-finished`, `command-finished-after` (see
 [Shell integration](#shell-integration)), and `programs`: notifications that programs send
