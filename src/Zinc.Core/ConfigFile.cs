@@ -515,7 +515,12 @@ public sealed class ConfigFile
                     // off: nothing to run. Kept, hidden from menus, and the settings say why.
                     missing = ProfileDiscovery.IsOn(discovery, source) ? ProfileMissing.NotFound : ProfileMissing.SearchOff;
                     name = ProfileDiscovery.NameFor(id); // what the search called it (a name of its own still wins below)
-                    Log.Write($"config: profile '{id}' {(missing == ProfileMissing.SearchOff ? $"is from the {source} search, which is off" : "wasn't found on this machine")}; hiding it");
+                    // Only when this read looked: a read without discovery (Settings checking a value) finds nothing,
+                    // and logged a dozen false warnings per check (half of a user's debug log).
+                    if (discover != null)
+                    {
+                        Log.Write($"config: profile '{id}' {(missing == ProfileMissing.SearchOff ? $"is from the {source} search, which is off" : "wasn't found on this machine")}; hiding it");
+                    }
                 }
 
                 foreach (var e in entries)
