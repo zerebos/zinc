@@ -790,7 +790,7 @@ Run in a Zinc terminal, a command acts on that terminal (its pane, workspace, wi
 window used last and says which on stderr. `--profile`, `--cwd`, and `-- program args` (run instead of the shell; for
 a WSL profile, inside that distro) shape what opens; commands that open a terminal print its id. `close` asks first
 when a command is running (`--force` doesn't). `terminal send` types its text as if typed (escapes: `\r` Enter,
-`\e` Esc, `\t`, `\n`, `\xHH`, `\\`; `-` reads stdin as is); `--paste` sends it as a paste, which shells insert
+`\e` Esc, `\t`, `\n`, `\xHH`, `\\`; `-` reads stdin as is; `--` before text starting with a dash, e.g. `-- -`); `--paste` sends it as a paste, which shells insert
 without running. `terminal read` prints the screen, `--lines N` the last N lines with the scrollback, `--ansi` with
 colors. `terminal title ""` and `workspace rename ""` give the name back. `--json` prints lists for scripts;
 `zn <thing> --help` lists the rest. Exit codes: 0 done, 1 refused or failed, 2 wrong usage, 3 Zinc isn't running,

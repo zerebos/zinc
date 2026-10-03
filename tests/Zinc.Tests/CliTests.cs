@@ -247,6 +247,7 @@ public class CliTests
         Assert.Equal("ls\r", Request("terminal", "send", "ls\\r").Text);
         Assert.True(Request("terminal", "send", "--paste", "a\\nb").Paste);
         Assert.Equal("--help", Request("terminal", "send", "--", "--help").Text); // text that looks like an option
+        Assert.Equal("-", Request("terminal", "send", "--", "-").Text); // a dash itself, not stdin
         var stdin = Request("terminal", "send", "-");
         Assert.Null(stdin.Text);
         Assert.True(CliCommandLine.SendsStdin(stdin));

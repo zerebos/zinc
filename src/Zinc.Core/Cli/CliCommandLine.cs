@@ -70,7 +70,7 @@ public static class CliCommandLine
         new("pane", "close", "Closes a pane and all its terminals (asks first if commands are running)", "zn pane close", Targets + " force"),
         new("terminal", "list", "Terminals: ids, titles, folders, profiles", "zn terminal list", "json window workspace pane"),
         new("terminal", "new", "Opens a terminal as a new tab in a pane", "zn terminal new", Targets + " profile cwd command"),
-        new("terminal", "send", "Types text into a terminal (\\r = Enter, \\e = Esc, \\t, \\n, \\xHH, \\\\; - reads stdin as is)",
+        new("terminal", "send", "Types text into a terminal (\\r = Enter, \\e = Esc, \\t, \\n, \\xHH, \\\\; - reads stdin as is; -- before text that starts with a dash)",
             "zn terminal send TEXT|-", Targets + " paste", "text"),
         new("terminal", "read", "Prints a terminal's screen", "zn terminal read", Targets + " lines ansi"),
         new("terminal", "title", "Names a terminal's tab (\"\" gives it back to the program)", "zn terminal title TITLE", Targets, "title"),
@@ -110,6 +110,7 @@ public static class CliCommandLine
         var allowed = verb.Options.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var json = false;
         string? positional = null;
+        var literal = false; // after --: the text as given, even "-"
         for (var i = at + 1; i < args.Count; i++)
         {
             var arg = args[i];
@@ -124,6 +125,7 @@ public static class CliCommandLine
                 {
                     // Text that might look like an option: zn terminal send -- "--help".
                     positional = string.Join(' ', args.Skip(i + 1));
+                    literal = true;
                     break;
                 }
 
@@ -272,7 +274,7 @@ public static class CliCommandLine
             case "text" when string.IsNullOrEmpty(positional):
                 return Usage("What to send? For example: zn terminal send \"ls\\r\" (or - to read it from stdin).");
             case "text":
-                request.Text = positional == "-" ? null : Unescape(positional); // "-": zn reads stdin
+                request.Text = positional == "-" && !literal ? null : Unescape(positional); // "-": zn reads stdin
                 break;
             case "title" or "name" when positional == null:
                 return Usage($"Which {verb.Positional}? \"\" gives it back.");

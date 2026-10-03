@@ -135,9 +135,13 @@ public sealed unsafe partial class TerminalSession
         {
             var end = _markScanner.Next(data, out var mark);
             var chunk = end < 0 ? data : data[..end];
-            fixed (byte* p = chunk)
+            if (end >= 0 && mark.Kind is 'A' or 'N')
             {
-                Native.TerminalVtWrite(_terminal, p, (nuint)chunk.Length);
+                WritePromptStart(chunk);
+            }
+            else
+            {
+                VtWrite(chunk);
             }
 
             if (_eraseWatch.Seen(chunk) is var erased and not Erased.None)
@@ -156,6 +160,39 @@ public sealed unsafe partial class TerminalSession
 
         // Screen rows shift as the scrollback fills and prunes.
         _commandSnapshot = null;
+    }
+
+    private void VtWrite(ReadOnlySpan<byte> data)
+    {
+        fixed (byte* p = data)
+        {
+            Native.TerminalVtWrite(_terminal, p, (nuint)data.Length);
+        }
+    }
+
+    private static ReadOnlySpan<byte> MarkPrefix => "\e]133;"u8;
+    private static ReadOnlySpan<byte> PromptStartOnly => "\e]133;P\a"u8;
+
+    /// <summary>
+    /// Writes output ending in a prompt-start mark (A or N), minus its fresh line. Per the spec (FinalTerm, kitty),
+    /// libghostty starts a new line for one that arrives mid-line; under ConPTY that's a move ConPTY never hears of, so
+    /// the two screens disagree from there on: a tester's prompt, drawn with Write-Host before PowerShell's marks, left
+    /// the cursor (and the typing PSReadLine draws) a line below the prompt. Windows Terminal does no fresh line either.
+    /// Mid-line, libghostty gets a plain prompt start (P) instead; Zinc's own tracking reads the mark as sent.
+    /// </summary>
+    private void WritePromptStart(ReadOnlySpan<byte> chunk)
+    {
+        var at = chunk.LastIndexOf(MarkPrefix);
+        if (at < 0)
+        {
+            VtWrite(chunk); // the mark began in an earlier read, already written
+            return;
+        }
+
+        VtWrite(chunk[..at]);
+        ushort x = 0;
+        Native.TerminalGet(_terminal, TerminalData.CursorX, &x);
+        VtWrite(x == 0 ? chunk[at..] : PromptStartOnly);
     }
 
     private void OnShellMark(ShellMark mark)
