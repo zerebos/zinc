@@ -64,6 +64,25 @@ public class InputLatencyTests
     }
 
     [Fact]
+    public void AnEchoInSeveralPiecesIsTimedToItsLastPiece()
+    {
+        // A letter whose echo comes in three reads (the letter, a recoloured line, a prediction), the last 40 ms after
+        // the send; output after the echo window (a program's own output later on) doesn't count.
+        var trace = new InputLatency();
+        trace.KeyDown(0, 0, "a");
+        trace.Sent(0);
+        trace.Output(2);
+        trace.Output(15);
+        trace.Output(40);
+        trace.Output(900);
+
+        var line = trace.Summary(10_000)!;
+        Assert.Contains("send→output median 2", line);
+        Assert.Contains("send→last output median 40", line);
+        Assert.Contains("output reads per key median 3, p95 3, max 3;", line);
+    }
+
+    [Fact]
     public void ASummaryWaitsForAStretchOfTyping()
     {
         var trace = new InputLatency();

@@ -300,6 +300,13 @@ public sealed record Config
     /// </summary>
     public bool SoftwareRendering { get; init; }
 
+    /// <summary>
+    /// Experimental: each terminal presents from a swap chain of its own as soon as a frame is ready, instead of
+    /// waiting for the window's next render tick (typing shows up about a refresh sooner). Config:
+    /// <c>[window] low-latency-drawing = true</c> (global; terminals opened from now on).
+    /// </summary>
+    public bool LowLatencyDrawing { get; init; }
+
     /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
     public GroupTabStrip GroupTabStrip { get; init; }
 
@@ -473,6 +480,7 @@ public sealed record Config
                 this with { QuitAfterLastWindowClosed = quit },
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
             "software-rendering" when bool.TryParse(value, out var software) => this with { SoftwareRendering = software },
+            "low-latency-drawing" when bool.TryParse(value, out var lowLatency) => this with { LowLatencyDrawing = lowLatency },
             "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
                 this with { GroupTabStrip = strip },
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,

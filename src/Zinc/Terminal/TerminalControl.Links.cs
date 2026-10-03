@@ -28,7 +28,7 @@ public sealed partial class TerminalControl
         _renderer.HoverLink = link;
         UpdatePointerCursor(_arrowCursor);
         ShowLinkTip(link);
-        _canvas.Invalidate();
+        Redraw();
     }
 
     private LinkMatch? LinkUnder(Windows.Foundation.Point pos)

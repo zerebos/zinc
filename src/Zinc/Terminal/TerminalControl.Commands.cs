@@ -129,7 +129,7 @@ public sealed partial class TerminalControl
         }
 
         CommandsChanged?.Invoke();
-        _canvas.Invalidate();
+        Redraw();
     }
 
     private bool RunCommandAction(ActionInvocation invocation, TerminalSession session)
@@ -142,7 +142,7 @@ public sealed partial class TerminalControl
                     session.ScrollLines(invocation.Index); // no shell integration: a line at a time
                 }
 
-                _canvas.Invalidate();
+                Redraw();
                 return true;
             case TerminalAction.SelectOutput or TerminalAction.CopyOutput:
                 if (session.CommandInView() is { } command && session.SelectOutput(command))
@@ -152,7 +152,7 @@ public sealed partial class TerminalControl
                         CopySelection();
                     }
 
-                    _canvas.Invalidate();
+                    Redraw();
                 }
 
                 return true;
@@ -179,8 +179,8 @@ public sealed partial class TerminalControl
         if (sb.Total > sb.Len)
         {
             var total = (float)sb.Total;
-            var height = (float)_canvas.ActualHeight;
-            var x = (float)_canvas.ActualWidth - 7;
+            var height = (float)Surface.ActualHeight;
+            var x = (float)Surface.ActualWidth - 7;
             foreach (var command in commands)
             {
                 var y = MathF.Round(height * command.PromptRow / total);

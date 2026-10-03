@@ -22,8 +22,29 @@ public sealed partial class TerminalControl : UserControl
     private readonly Keybindings _keybindings;
     private readonly string _commandLine;
     private readonly string? _workingDirectory;
-    private CanvasControl _canvas;
+    // What the pane draws on: a CanvasControl, or (low-latency-drawing) a swap chain of its own. One of the two.
+    private CanvasControl? _canvas;
+    private readonly SwapChainSurface? _swap;
     private readonly Grid _root; // canvas, scrollbar, find box
+
+    /// <summary>The drawing surface as an element: its size, and where pointer positions are measured from.</summary>
+    private FrameworkElement Surface => _swap?.Panel ?? (FrameworkElement)_canvas!;
+
+    /// <summary>What device-bound resources (fonts, text layouts) are made with.</summary>
+    private Microsoft.Graphics.Canvas.ICanvasResourceCreator Creator => _swap?.Device ?? (Microsoft.Graphics.Canvas.ICanvasResourceCreator)_canvas!;
+
+    /// <summary>Asks for a new frame.</summary>
+    private void Redraw()
+    {
+        if (_swap != null)
+        {
+            _swap.Invalidate();
+        }
+        else
+        {
+            _canvas!.Invalidate();
+        }
+    }
     private readonly TerminalRenderer _renderer;
     private readonly DispatcherTimer _blinkTimer;
 
@@ -98,16 +119,32 @@ public sealed partial class TerminalControl : UserControl
         // The scrollbar handles its own pointer events; proximity tracking must see them too.
         AddHandler(PointerMovedEvent, new PointerEventHandler(TrackScrollBarProximity), handledEventsToo: true);
 
-        _canvas = CreateCanvas();
+        if (SwapChainSurface.Enabled)
+        {
+            _swap = new SwapChainSurface(CanvasLifetime.SoftwareRendering, creator => CreateResourcesOn(creator, "swap chain"),
+                ds => DrawSafely(ds, _swap!.Device), () => DisplayScale,
+                () => System.Diagnostics.Stopwatch.GetElapsedTime(Volatile.Read(ref _lastOutputAt)).TotalMilliseconds) { ClearColor = ClearColor(config) };
+            _swap.Panel.SizeChanged += OnCanvasSizeChanged;
+        }
+        else
+        {
+            _canvas = CreateCanvas();
+        }
+
         EnableFileDrop();
         // The scrollbar overlays the canvas's right edge (inside the padding when idle).
-        Content = _root = new Grid { Children = { _canvas, CreateScrollBar() } };
+        Content = _root = new Grid { Children = { Surface, CreateScrollBar() } };
+        if (_swap != null)
+        {
+            // Hit-testable for the pointer (a swap chain's panel can't have a background of its own).
+            _root.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        }
 
         _blinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
         _blinkTimer.Tick += (_, _) =>
         {
             _blinkOn = !_blinkOn;
-            _canvas.Invalidate();
+            Redraw();
         };
 
         // Hosts like TabView unload hidden content and reload it when shown again, and
@@ -167,6 +204,11 @@ public sealed partial class TerminalControl : UserControl
     /// </summary>
     private void OnCanvasLoaded(object sender, RoutedEventArgs e)
     {
+        if (_canvas == null)
+        {
+            return;
+        }
+
         var loads = CanvasLifetime.LoadCount(_canvas);
         if (!ReferenceEquals(sender, _canvas) || loads > 0)
         {
@@ -187,27 +229,31 @@ public sealed partial class TerminalControl : UserControl
 
     // ---------------------------------------------------------------- setup
 
-    private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args)
+    private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args) => CreateResourcesOn(sender, args.Reason.ToString());
+
+    /// <summary>Device-bound resources: the first time, and after a lost device.</summary>
+    private void CreateResourcesOn(Microsoft.Graphics.Canvas.ICanvasResourceCreator creator, string reason)
     {
-        Log.Write($"pane: CreateResources ({args.Reason})");
-        _renderer.CreateResources(sender);
+        Log.Write($"pane: CreateResources ({reason})");
+        _renderer.CreateResources(creator);
         var size = _renderer.FontSize > 0 ? _renderer.FontSize : Math.Clamp(_config.FontSizeDip, MinFontSize, MaxFontSize);
-        _renderer.SetFont(sender, size, DisplayScale);
+        _renderer.SetFont(creator, size, DisplayScale);
         UpdateGrid();
     }
 
     private void UpdateScale()
     {
+        _swap?.Resize(); // its buffers follow the window's scale
         if (_renderer.HasResources && Math.Abs(DisplayScale - _renderer.Metrics.Scale) > 0.001f)
         {
-            _renderer.SetFont(_canvas, _renderer.FontSize, DisplayScale);
+            _renderer.SetFont(Creator, _renderer.FontSize, DisplayScale);
             UpdateGrid();
         }
     }
 
     private void SetFontSize(float size)
     {
-        _renderer.SetFont(_canvas, Math.Clamp(size, MinFontSize, MaxFontSize), DisplayScale);
+        _renderer.SetFont(Creator, Math.Clamp(size, MinFontSize, MaxFontSize), DisplayScale);
         UpdateGrid();
     }
 
@@ -217,13 +263,13 @@ public sealed partial class TerminalControl : UserControl
     private void UpdateGrid()
     {
         var m = _renderer.Metrics;
-        if (m.Width <= 0 || _canvas.ActualWidth <= 0 || _canvas.ActualHeight <= 0)
+        if (m.Width <= 0 || Surface.ActualWidth <= 0 || Surface.ActualHeight <= 0)
         {
-            Log.Write($"pane: UpdateGrid skipped (cell {m.Width}, canvas {_canvas.ActualWidth}x{_canvas.ActualHeight})");
+            Log.Write($"pane: UpdateGrid skipped (cell {m.Width}, canvas {Surface.ActualWidth}x{Surface.ActualHeight})");
             return;
         }
 
-        var place = GridLayout.Place(_canvas.ActualWidth, _canvas.ActualHeight, _config.PaddingLeft, _config.PaddingRight,
+        var place = GridLayout.Place(Surface.ActualWidth, Surface.ActualHeight, _config.PaddingLeft, _config.PaddingRight,
             _config.PaddingTop, _config.PaddingBottom, m.Width, m.Height, m.Scale, _config.PaddingBalance);
         var (cols, rows) = (place.Columns, place.Rows);
         _cols = cols;
@@ -243,7 +289,7 @@ public sealed partial class TerminalControl : UserControl
             _session.Resize(cols, rows, m.WidthPx, m.HeightPx);
         }
 
-        _canvas.Invalidate();
+        Redraw();
     }
 
     /// <summary>The canvas's color before its first frame: the background, as see-through as it's drawn.</summary>
@@ -368,7 +414,14 @@ public sealed partial class TerminalControl : UserControl
         var old = _config;
         _config = config;
         _renderer.Config = config;
-        _canvas.ClearColor = ClearColor(config);
+        if (_canvas != null)
+        {
+            _canvas.ClearColor = ClearColor(config);
+        }
+        else
+        {
+            _swap!.ClearColor = ClearColor(config);
+        }
         if (_session is { } session)
         {
             session.SetTheme(config.Theme);
@@ -401,13 +454,13 @@ public sealed partial class TerminalControl : UserControl
             if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize)
             {
                 var size = old.FontSize != config.FontSize ? ZoomedFontSize() : _renderer.FontSize;
-                _renderer.SetFont(_canvas, size, DisplayScale);
+                _renderer.SetFont(Creator, size, DisplayScale);
             }
 
             UpdateGrid(); // padding may have changed
         }
 
-        _canvas.Invalidate();
+        Redraw();
     }
 
     private void OnProcessExited(uint code)
@@ -439,12 +492,16 @@ public sealed partial class TerminalControl : UserControl
         var timer = DispatcherQueue.CreateTimer();
         timer.Interval = TimeSpan.FromMilliseconds(TerminalRenderer.RenderHoldTimeoutMs + 50);
         timer.IsRepeating = false;
-        timer.OnTick(_ => _canvas.Invalidate());
+        timer.OnTick(_ => Redraw());
         return timer;
     }
 
+    /// <summary>When the program's output last arrived (Stopwatch ticks; the swap chain waits for a pause in it).</summary>
+    private long _lastOutputAt;
+
     private void RequestRedraw()
     {
+        Volatile.Write(ref _lastOutputAt, System.Diagnostics.Stopwatch.GetTimestamp());
         _inputLatency?.Output(TraceNow); // on the reader thread: the shell's output just arrived
 
         // Coalesce bursts of PTY output into a single invalidate per UI tick.
@@ -453,7 +510,7 @@ public sealed partial class TerminalControl : UserControl
             DispatcherQueue.SafeEnqueue(() =>
             {
                 Volatile.Write(ref _invalidatePending, 0);
-                _canvas.Invalidate();
+                Redraw();
                 ScheduleSearchRefresh();
             });
         }
@@ -481,7 +538,12 @@ public sealed partial class TerminalControl : UserControl
         _renderer.Dispose();
         // Still in the tree here (its Unloaded comes later); CanvasLifetime holds it until
         // Win2D has let go of the window.
-        RetireCanvas(_canvas);
+        if (_canvas != null)
+        {
+            RetireCanvas(_canvas);
+        }
+
+        _swap?.Close();
     }
 
     // ------------------------------------------------------------ rendering
@@ -521,23 +583,25 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>Frames that failed to draw (only the first is logged).</summary>
     private int _drawFailures;
 
-    private void OnDraw(CanvasControl sender, CanvasDrawEventArgs args)
+    private void OnDraw(CanvasControl sender, CanvasDrawEventArgs args) => DrawSafely(args.DrawingSession, sender.Device);
+
+    private void DrawSafely(Microsoft.Graphics.Canvas.CanvasDrawingSession ds, Microsoft.Graphics.Canvas.CanvasDevice device)
     {
         // An exception leaving the Draw event leaves Win2D's drawing session open, and every frame
         // after fails ("The last drawing session ... must be disposed"): a pane that never draws
         // again. Catching it costs this frame only.
         try
         {
-            DrawFrame(args);
+            DrawFrame(ds);
         }
         catch (Exception ex)
         {
-            if (sender.Device.IsDeviceLost(ex.HResult))
+            if (device.IsDeviceLost(ex.HResult))
             {
                 // Win2D recreates the device (CreateResources) when a lost device's exception leaves Draw; caught
-                // here, it has to be told.
+                // here, it has to be told (the swap chain surface makes its own new device on the same event).
                 Log.Write($"pane: device lost while drawing ({ex.HResult:X8})");
-                sender.Device.RaiseDeviceLost();
+                device.RaiseDeviceLost();
                 return;
             }
 
@@ -548,7 +612,7 @@ public sealed partial class TerminalControl : UserControl
         }
     }
 
-    private void DrawFrame(CanvasDrawEventArgs args)
+    private void DrawFrame(Microsoft.Graphics.Canvas.CanvasDrawingSession ds)
     {
         if (_session is not { } session)
         {
@@ -560,14 +624,14 @@ public sealed partial class TerminalControl : UserControl
         var perf = _perf ??= FramePerf.LogEnabled ? new FramePerf { LogsEverySecond = true } : null;
         _renderer.Perf = perf;
         var started = perf != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
-        var blinking = _renderer.Draw(args.DrawingSession, session, _rows, presentation);
+        var blinking = _renderer.Draw(ds, session, _rows, presentation);
         PlaceInputBox(); // follows the cursor
-        DrawCommandMarks(args.DrawingSession, session);
-        DrawSearchTicks(args.DrawingSession, session);
+        DrawCommandMarks(ds, session);
+        DrawSearchTicks(ds, session);
         if (perf != null)
         {
             var drawn = System.Diagnostics.Stopwatch.GetTimestamp();
-            args.DrawingSession.Flush(); // rasterize now, to time it (else it happens after this returns)
+            ds.Flush(); // rasterize now, to time it (else it happens after this returns)
             perf.Add(System.Diagnostics.Stopwatch.GetElapsedTime(started, drawn).TotalMilliseconds,
                 System.Diagnostics.Stopwatch.GetElapsedTime(drawn).TotalMilliseconds);
         }
@@ -626,7 +690,7 @@ public sealed partial class TerminalControl : UserControl
         _focused = true;
         ResetBlink();
         SendFocusEvent(true);
-        _canvas.Invalidate();
+        Redraw();
     }
 
     protected override void OnLostFocus(RoutedEventArgs e)
@@ -639,7 +703,7 @@ public sealed partial class TerminalControl : UserControl
         _focused = false;
         CancelSequence();
         SendFocusEvent(false);
-        _canvas.Invalidate();
+        Redraw();
     }
 
     /// <summary>Whether keyboard focus is on the pane itself or its input box (the find box counts as elsewhere, as before).</summary>

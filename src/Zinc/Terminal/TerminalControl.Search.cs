@@ -200,7 +200,7 @@ public sealed partial class TerminalControl
     {
         _renderer.SearchMatches = _matches.Count > 0 ? _matches : null;
         _renderer.CurrentMatch = _currentMatch;
-        _canvas.Invalidate();
+        Redraw();
     }
 
     /// <summary>Marks each match's position beside the scrollbar, so clusters show at a glance.</summary>
@@ -212,8 +212,8 @@ public sealed partial class TerminalControl
         }
 
         var total = Math.Max(1ul, session.GetScrollbar().Total);
-        var height = (float)_canvas.ActualHeight;
-        var x = (float)_canvas.ActualWidth - 7;
+        var height = (float)Surface.ActualHeight;
+        var x = (float)Surface.ActualWidth - 7;
         var lastY = float.NaN;
         for (var i = 0; i < _matches.Count; i++)
         {

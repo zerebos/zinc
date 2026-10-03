@@ -22,11 +22,18 @@ public sealed class InputLatency
     /// <summary>Characters still expected for key presses that went to the character path, oldest first.</summary>
     private readonly List<(string Text, double At)> _expected = [];
 
-    private readonly List<double> _queue = [], _keyToChar = [], _handling = [], _toOutput = [], _toScreen = [];
+    private readonly List<double> _queue = [], _keyToChar = [], _handling = [], _toOutput = [], _toSettled = [], _pieces = [], _toScreen = [];
     private readonly List<string> _examples = [];
     private readonly object _gate = new();
     private int _keys, _characters, _outOfOrder, _swallowed, _unexpected;
     private double _firstAt = -1, _sentAt = -1, _outputAt = -1;
+
+    // The current key's echo: from its send to the last output read within EchoWindow, and how many reads.
+    private double _echoFrom = -1, _echoLast = -1;
+    private int _echoReads;
+
+    /// <summary>How long after a send output still counts as its echo (a shell may answer in several pieces).</summary>
+    private const double EchoWindow = 250;
 
     /// <summary>How long expected characters are kept: older ones never came (a dead key, an IME).</summary>
     private const double ExpectFor = 2000;
@@ -124,6 +131,9 @@ public sealed class InputLatency
             {
                 _sentAt = at;
             }
+
+            CloseEcho();
+            _echoFrom = at;
         }
     }
 
@@ -137,6 +147,12 @@ public sealed class InputLatency
                 _toOutput.Add(at - _sentAt);
                 _sentAt = -1;
                 _outputAt = at;
+            }
+
+            if (_echoFrom >= 0 && at - _echoFrom <= EchoWindow)
+            {
+                _echoLast = at;
+                _echoReads++;
             }
         }
     }
@@ -167,11 +183,18 @@ public sealed class InputLatency
                 return null;
             }
 
+            if (_echoFrom >= 0 && now - _echoFrom > EchoWindow)
+            {
+                CloseEcho(); // the last key's echo is complete
+            }
+
             var line = new StringBuilder($"input: {_keys} keys, {_characters} characters");
             Add(line, "queue", _queue);
             Add(line, "key→char", _keyToChar);
             Add(line, "handling", _handling);
             Add(line, "send→output", _toOutput);
+            Add(line, "send→last output", _toSettled);
+            Add(line, "output reads per key", _pieces, "");
             Add(line, "output→frame", _toScreen);
             line.Append(CultureInfo.InvariantCulture, $"; out of order {_outOfOrder}, swallowed {_swallowed}, unexpected {_unexpected}");
             if (_examples.Count > 0)
@@ -185,13 +208,28 @@ public sealed class InputLatency
             _keyToChar.Clear();
             _handling.Clear();
             _toOutput.Clear();
+            _toSettled.Clear();
+            _pieces.Clear();
             _toScreen.Clear();
             _examples.Clear();
             return line.ToString();
         }
     }
 
-    private static void Add(StringBuilder line, string name, List<double> ms)
+    /// <summary>Ends the current key's echo: how long until its last piece arrived, and in how many reads.</summary>
+    private void CloseEcho()
+    {
+        if (_echoFrom >= 0 && _echoLast >= 0)
+        {
+            _toSettled.Add(_echoLast - _echoFrom);
+            _pieces.Add(_echoReads);
+        }
+
+        _echoFrom = _echoLast = -1;
+        _echoReads = 0;
+    }
+
+    private static void Add(StringBuilder line, string name, List<double> ms, string unit = " ms")
     {
         if (ms.Count == 0)
         {
@@ -200,7 +238,7 @@ public sealed class InputLatency
 
         ms.Sort();
         double At(double p) => ms[Math.Min(ms.Count - 1, (int)Math.Ceiling(p * ms.Count) - 1)];
-        line.Append(CultureInfo.InvariantCulture, $"; {name} median {At(0.5):0.#}, p95 {At(0.95):0.#}, max {ms[^1]:0.#} ms");
+        line.Append(CultureInfo.InvariantCulture, $"; {name} median {At(0.5):0.#}, p95 {At(0.95):0.#}, max {ms[^1]:0.#}{unit}");
     }
 
     private static string Show(string text) => text == " " ? "space" : text;

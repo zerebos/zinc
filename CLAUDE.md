@@ -42,7 +42,19 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   on, each pane's Core `Input/InputLatency` (tested) gets key presses (with `GetMessageTime` queue delay and
   the character expected), characters, sends, output arrival and drawn frames (`TerminalControl.InputTrace.cs`)
   and logs `input: …` per stretch of typing: queue, key→char, handling, send→output, output→frame, out of
-  order (with examples), swallowed. Posted WM_CHAR (keys.ps1) counts as "unexpected" (no key press).
+  order (with examples), swallowed, plus send→last output and output reads per key (a shell answers a key in
+  several reads: pwsh 7-9 within ~1 ms). Posted WM_CHAR (keys.ps1) counts as "unexpected" (no key press).
+  `.scratch/tools/typing-trace.ps1 [-LowLatency]` types into pwsh and prints them.
+- `[window] low-latency-drawing` (experimental, off): `Terminal/SwapChainSurface.cs` replaces the pane's
+  CanvasControl with a CanvasSwapChainPanel + CanvasSwapChain on Win2D's shared device; a frame is presented at
+  once (High-priority enqueue) once output has paused 0.5 ms (max 3 ms wait, re-enqueued so the UI thread runs),
+  at most one per refresh (after a present, the next waits for `CompositionTarget.Rendering`, hooked only while
+  frames come). The pane goes through `Surface`/`Creator`/`Redraw()` in both modes; `_canvas` is null in swap
+  mode (CanvasLifetime is canvas-only). A SwapChainPanel can't take a Background (WinUI throws): the pane's root
+  grid gets the transparent one for hit-testing. Lost device: `DeviceLost` → new shared device, resources, swap
+  chain. Verified: visual suite identical in both modes (`visual.ps1 -WindowSettings 'low-latency-drawing =
+  true'`), benchmark 144 fps capped in both, moving a workspace to a new window, echo→frame 1.3-1.6 ms vs a
+  CanvasControl frame that still waits for WinUI's commit. `bench-test.ps1 -Config` (.scratch/settings-lowlat).
 - Drawing benchmark (Settings > About, under the logs): Core `Terminal/Benchmark.cs` (`BenchmarkWorkloads`:
   Colors / Synchronized / Text / Scrolling, seeded, a port of `.scratch/perf/load.py`; `TimeStats`,
   `BenchmarkResult`, `BenchmarkReport.Text()` = what Copy gives; tested) → App `BenchmarkWindow` (its own

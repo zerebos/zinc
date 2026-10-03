@@ -48,7 +48,7 @@ public sealed partial class TerminalControl
             }
 
             session.ScrollToRow((ulong)Math.Max(0, Math.Round(e.NewValue)));
-            _canvas.Invalidate();
+            Redraw();
         };
         // Held down on the bar, it stays expanded wherever the pointer goes (dragging the thumb
         // along the bar, or off it); released, it's where the pointer is that counts again.

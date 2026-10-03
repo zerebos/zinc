@@ -337,7 +337,7 @@ public sealed partial class TerminalControl
             case TerminalAction.ScrollPageUp:
             case TerminalAction.ScrollPageDown:
                 session.ScrollLines(action == TerminalAction.ScrollPageUp ? -(_rows - 1) : _rows - 1);
-                _canvas.Invalidate();
+                Redraw();
                 return true;
             case TerminalAction.JumpToPrompt or TerminalAction.SelectOutput or TerminalAction.CopyOutput:
                 return RunCommandAction(invocation, session);
@@ -347,7 +347,7 @@ public sealed partial class TerminalControl
                 {
                     Tag = action == TerminalAction.ScrollToTop ? ScrollViewportTag.Top : ScrollViewportTag.Bottom,
                 });
-                _canvas.Invalidate();
+                Redraw();
                 return true;
             default:
                 return ActionHandler?.Invoke(invocation) ?? false;
@@ -368,7 +368,7 @@ public sealed partial class TerminalControl
 
         ClipboardText.Set(text);
         _session!.ClearSelection();
-        _canvas.Invalidate();
+        Redraw();
     }
 
     /// <summary>Pastes <paramref name="text"/> as if it came from the clipboard (test hook).</summary>

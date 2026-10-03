@@ -30,7 +30,7 @@ public sealed partial class TerminalControl
             return;
         }
 
-        var point = e.GetCurrentPoint(_canvas);
+        var point = e.GetCurrentPoint(Surface);
         var props = point.Properties;
         e.Handled = true;
         if (props.IsLeftButtonPressed && (e.KeyModifiers & VirtualKeyModifiers.Control) != 0 &&
@@ -80,7 +80,7 @@ public sealed partial class TerminalControl
             return;
         }
 
-        var point = e.GetCurrentPoint(_canvas);
+        var point = e.GetCurrentPoint(Surface);
         _pointerPosition = point.Position;
         UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0);
         var reporting = !_selecting && ShouldReportMouse(session, e);
@@ -111,7 +111,7 @@ public sealed partial class TerminalControl
         if (_selecting)
         {
             _selecting = false;
-            var position = e.GetCurrentPoint(_canvas).Position;
+            var position = e.GetCurrentPoint(Surface).Position;
             Select(GesturePhase.Release, position);
 
             // Copy on select: the text goes to the clipboard, and stays selected.
@@ -145,7 +145,7 @@ public sealed partial class TerminalControl
         }
 
         e.Handled = true;
-        var delta = e.GetCurrentPoint(_canvas).Properties.MouseWheelDelta;
+        var delta = e.GetCurrentPoint(Surface).Properties.MouseWheelDelta;
 
         // Ctrl+wheel zooms (before programs' mouse reporting, as in Windows Terminal). A precision
         // touchpad sends small steps: they add up to a notch (120) per point of font size.
@@ -204,7 +204,7 @@ public sealed partial class TerminalControl
 
         session.ScrollLines((up ? -3 : 3) * notches);
         UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0); // new text under the pointer
-        _canvas.Invalidate();
+        Redraw();
     }
 
     /// <summary>
@@ -285,14 +285,14 @@ public sealed partial class TerminalControl
         bool anyPressed)
     {
         var m = _renderer.Metrics;
-        var pos = e.GetCurrentPoint(_canvas).Position;
+        var pos = e.GetCurrentPoint(Surface).Position;
         var mods = GhosttyMods.None;
         if ((e.KeyModifiers & VirtualKeyModifiers.Shift) != 0) mods |= GhosttyMods.Shift;
         if ((e.KeyModifiers & VirtualKeyModifiers.Control) != 0) mods |= GhosttyMods.Ctrl;
         if ((e.KeyModifiers & VirtualKeyModifiers.Menu) != 0) mods |= GhosttyMods.Alt;
 
-        var widthPx = (uint)(_canvas.ActualWidth * m.Scale);
-        var heightPx = (uint)(_canvas.ActualHeight * m.Scale);
+        var widthPx = (uint)(Surface.ActualWidth * m.Scale);
+        var heightPx = (uint)(Surface.ActualHeight * m.Scale);
         var padLeftPx = (uint)(_gridLeft * m.Scale);
         var padTopPx = (uint)(_gridTop * m.Scale);
         var size = new GhosttyMouseEncoderSize
@@ -329,12 +329,12 @@ public sealed partial class TerminalControl
             Columns = _cols,
             CellWidth = m.WidthPx,
             PaddingLeft = (uint)(_gridLeft * m.Scale),
-            ScreenHeight = (uint)(_canvas.ActualHeight * m.Scale),
+            ScreenHeight = (uint)(Surface.ActualHeight * m.Scale),
         };
         var nowNs = (ulong)(Stopwatch.GetTimestamp() * (1_000_000_000.0 / Stopwatch.Frequency));
 
         _selection.Handle(phase, (ushort)col, (uint)row, pos.X * m.Scale, pos.Y * m.Scale, geometry, nowNs, 4.0 * m.Scale);
-        _canvas.Invalidate();
+        Redraw();
     }
 
     /// <summary>

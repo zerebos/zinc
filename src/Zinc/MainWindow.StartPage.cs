@@ -36,6 +36,8 @@ public sealed partial class MainWindow
             IconSource = new FontIconSource { Glyph = ((char)0xE710).ToString() },
             Tag = page,
             Content = page,
+            // Test captures: its focus outline showed only when the window happened to be in front.
+            UseSystemFocusVisuals = !TestHooks.Deterministic,
         };
         page.Started += choice => Ui.Guard("starting a workspace", () => StartWorkspace(item, choice));
         page.Cancelled += () => Ui.Guard("leaving the new workspace page", () => LeaveStartPage(item));

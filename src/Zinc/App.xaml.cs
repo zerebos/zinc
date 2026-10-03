@@ -97,6 +97,7 @@ public partial class App : Application
         }
 
         CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
+        SwapChainSurface.Enabled = _config.Global.LowLatencyDrawing;
         LoadRecentCommands();
         _keybindings = _config.Keybindings;
         foreach (var warning in _config.Warnings)
@@ -255,6 +256,7 @@ public partial class App : Application
                 _config = ConfigFile.Load(path);
                 Log.SetEnabled(_config.Global.Logging);
                 CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
+                SwapChainSurface.Enabled = _config.Global.LowLatencyDrawing;
                 _keybindings.CopyFrom(_config.Keybindings);
                 OpenWindow(_config.DefaultProfile);
                 WatchConfig(); // the folder exists now
@@ -712,6 +714,7 @@ public partial class App : Application
         LoginStartup.Apply(fresh.Global.LaunchAtLogin);
         Updater.Schedule(fresh.Global.UpdateCheck);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
+        SwapChainSurface.Enabled = fresh.Global.LowLatencyDrawing;
         _keybindings.CopyFrom(fresh.Keybindings);
         windows.ForEach(w => w.ApplyConfig(fresh));
         if (hotkeyChanged)
