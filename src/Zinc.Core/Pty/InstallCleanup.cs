@@ -4,7 +4,7 @@ namespace Zinc.Pty;
 
 /// <summary>
 /// What an uninstall takes back from Windows before the installer removes Zinc's files: the sign-in entry
-/// (launch at login) and the default-terminal registration. Only what points into the install being removed:
+/// (launch at login), the default-terminal registration and zn's PATH entry. Only what points into the install being removed:
 /// another copy (the dev install, a zip) may own them, and they stay its.
 /// </summary>
 public static class InstallCleanup
@@ -31,6 +31,13 @@ public static class InstallCleanup
             var wasDefault = terminal.Current() == DefaultTerminal.State.Zinc;
             terminal.Disable();
             done.Add(wasDefault ? "gave the default terminal back" : "removed the default-terminal class");
+        }
+
+        var path = new UserPath(root);
+        if (path.Entry is { } entry && IsInside(Path.Combine(entry, "zn.exe"), installDir))
+        {
+            path.Apply(null);
+            done.Add("took zn off PATH");
         }
 
         return done;

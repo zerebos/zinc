@@ -50,6 +50,33 @@ public sealed class CliRequest
 
     /// <summary>close: without asking, even with commands running.</summary>
     public bool Force { get; set; }
+
+    /// <summary>terminal send's text, escapes already turned into characters.</summary>
+    public string? Text { get; set; }
+
+    /// <summary>terminal send: as a paste (bracketed when the program asked), not as typed.</summary>
+    public bool Paste { get; set; }
+
+    /// <summary>terminal read: the last this many lines, scrollback included; null: the screen.</summary>
+    public int? Lines { get; set; }
+
+    /// <summary>terminal read: with colors and styles (VT sequences).</summary>
+    public bool Ansi { get; set; }
+
+    /// <summary>terminal title's text ("" gives the title back to the program).</summary>
+    public string? Title { get; set; }
+
+    /// <summary>workspace color: a color's name, a #RRGGBB, or "none".</summary>
+    public string? Color { get; set; }
+
+    /// <summary>workspace icon: an icon's name, or "none".</summary>
+    public string? Icon { get; set; }
+
+    /// <summary>terminal move: the pane to move into.</summary>
+    public int? ToPane { get; set; }
+
+    /// <summary>workspace move: a window's id, or "new".</summary>
+    public string? ToWindow { get; set; }
 }
 
 /// <summary>The answer.</summary>
@@ -68,6 +95,9 @@ public sealed class CliReply
 
     /// <summary>list's answer.</summary>
     public CliTree? Tree { get; set; }
+
+    /// <summary>terminal read's answer.</summary>
+    public string? Text { get; set; }
 
     /// <summary>The running Zinc's version.</summary>
     public string? Version { get; set; }

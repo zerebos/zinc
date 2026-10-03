@@ -285,8 +285,7 @@ internal sealed partial class GroupView : Grid
     /// <summary>Lets go of the shown terminal (the group is moving to another window).</summary>
     public void Release() => _content.Child = null;
 
-    public static string TitleOf(MainWindow.TerminalTab tab) =>
-        string.IsNullOrWhiteSpace(tab.Control.Title) ? tab.Profile.Name : tab.Control.Title;
+    public static string TitleOf(MainWindow.TerminalTab tab) => tab.Title;
 
     private TabItem Item(MainWindow.TerminalTab tab)
     {

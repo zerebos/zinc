@@ -306,7 +306,8 @@ installs the next time you quit. `false`: only Settings > About > Check for upda
 installed by the installer (a dev build, `scripts/install.ps1`'s) never update.
 
 **`[cli]`**: `remote-control = true` lets `zn` (below) control this Zinc; off by default, when only
-`zn version` answers. Settings > Terminal > Command line has the switch.
+`zn version` answers. `path = true` puts `zn` on your user PATH for other terminals. Settings > Terminal >
+Command line has both.
 
 **`[debug]`**: `logging = true` keeps a debug log in `%APPDATA%\Zinc\logs\zinc.log`
 (moved aside to `zinc.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
@@ -758,26 +759,45 @@ until a key is pressed; a clean exit closes it.
 
 ### zn: controlling Zinc from scripts
 
-`zn` (in development: built as `src\Zinc.Cliind\Debug
-et10.0\win-x64\zn.exe`, not shipped yet) opens,
-focuses and closes windows, workspaces, panes and terminals in the running Zinc, once `[cli] remote-control` is on:
+`zn` (in `bin\` next to `zinc.exe`) opens, arranges and closes windows, workspaces, panes and terminals in the running
+Zinc, types into terminals and reads them, once `[cli] remote-control` is on (Settings > Terminal > Command line):
 
 ```text
-zn list                                     everything open, with ids ((*) = focused)
-zn pane split right -- htop                 a pane beside this one, running htop
-zn terminal new --pane 4 --profile wsl:Fedora   a Fedora tab in pane 4
-zn workspace new --name api --cwd .         a workspace in this folder
-zn action "zoom-in"                         any action, by its name
+zn list                                       everything open, with ids ((*) = focused)
+zn pane split right -- htop                   a pane beside this one, running htop
+zn terminal new --pane 4 --profile wsl:Fedora a Fedora tab in pane 4
+zn workspace new --name api --cwd .           a workspace in this folder
+zn terminal send --terminal 5 ":w\r"          types into terminal 5 (\r = Enter)
+zn terminal read --terminal 7 --lines 20      the last 20 lines of terminal 7
+zn workspace color teal                       this workspace's color (rename and icon work alike)
+zn action "zoom-in"                           any action, by its name
 ```
 
-Commands are `zn <thing> <verb>`: `window`, `workspace`, `pane` and `terminal`, each with `list`, `new` (`pane
-split`), `focus` and `close` (`--force`: without asking). Run in a Zinc terminal, a command acts on that terminal
-(its pane, workspace, window); `--terminal`, `--pane`, `--workspace`, `--window` (ids from `zn list`) aim elsewhere;
-outside Zinc it acts on the window used last and says which on stderr. `--profile`, `--cwd`, and `-- program args`
-(run instead of the shell; for a WSL profile, inside that distro) shape what opens; commands that open a terminal
-print its id. `--json` prints lists for scripts; `zn <thing> --help` lists the rest. Exit codes: 0 done, 1 refused
-or failed, 2 wrong usage, 3 Zinc isn't running, 4 remote control is off. Every terminal's shell gets
-`ZINC_TERMINAL_ID` and `ZINC_PIPE` (passed into WSL), which is how `zn` knows where it runs.
+Commands are `zn <thing> <verb>`:
+
+| Thing | Verbs |
+| --- | --- |
+| `window` | `list`, `new`, `focus`, `close` |
+| `workspace` | `list`, `new`, `focus`, `close`, `rename`, `color`, `icon`, `move --to-window N\|new` |
+| `pane` | `list`, `split right\|left\|down\|up`, `focus`, `close` |
+| `terminal` | `list`, `new`, `send`, `read`, `title`, `focus`, `move --to-pane N`, `close` |
+
+Run in a Zinc terminal, a command acts on that terminal (its pane, workspace, window); `--terminal`, `--pane`,
+`--workspace`, `--window` (ids from `zn list`; they last while Zinc runs) aim elsewhere; outside Zinc it acts on the
+window used last and says which on stderr. `--profile`, `--cwd`, and `-- program args` (run instead of the shell; for
+a WSL profile, inside that distro) shape what opens; commands that open a terminal print its id. `close` asks first
+when a command is running (`--force` doesn't). `terminal send` types its text as if typed (escapes: `\r` Enter,
+`\e` Esc, `\t`, `\n`, `\xHH`, `\\`; `-` reads stdin as is); `--paste` sends it as a paste, which shells insert
+without running. `terminal read` prints the screen, `--lines N` the last N lines with the scrollback, `--ansi` with
+colors. `terminal title ""` and `workspace rename ""` give the name back. `--json` prints lists for scripts;
+`zn <thing> --help` lists the rest. Exit codes: 0 done, 1 refused or failed, 2 wrong usage, 3 Zinc isn't running,
+4 remote control is off.
+
+Every terminal gets `ZINC_TERMINAL_ID` and `ZINC_PIPE` (how `zn` knows where it runs), and `zn`'s folder at the end
+of its PATH. In WSL, where Windows' PATH may not be shared (`appendWindowsPath`), Zinc's shell integration for bash
+and zsh defines `zn` from `ZINC_ZN` (zn.exe's path, passed in); in other WSL shells, `alias zn="$ZINC_ZN"`. For other
+terminals, **Use zn in other terminals** (`[cli] path = true`) puts it on your user PATH (taken off again when turned
+off, or on uninstall). With the debug log on, each command is logged, never the text sent.
 
 ## Layout
 

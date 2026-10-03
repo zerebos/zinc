@@ -112,6 +112,7 @@ public partial class App : Application
         var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
                               Environment.GetEnvironmentVariable("ZINC_SHELL") is { Length: > 0 };
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
+        ApplyZnPath(_config.Global.ZnOnPath);
         Updater.Schedule(_config.Global.UpdateCheck);
         ListenForConsoles();
         if (ShellResolver.LaunchedForHandoff && !explicitCommand)
@@ -714,6 +715,7 @@ public partial class App : Application
         _config = fresh;
         AttentionDot.SetColors(fresh.Global);
         LoginStartup.Apply(fresh.Global.LaunchAtLogin);
+        ApplyZnPath(fresh.Global.ZnOnPath);
         Updater.Schedule(fresh.Global.UpdateCheck);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
         SwapChainSurface.Enabled = fresh.Global.LowLatencyDrawing;

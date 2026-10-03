@@ -108,7 +108,7 @@ if ($failed) {
     throw 'dotnet publish failed.'
 }
 
-foreach ($file in 'zinc.exe', 'coreclr.dll', 'hostfxr.dll', 'ghostty-vt.dll', 'zinc-sprite.dll', 'zinc.pri', 'Microsoft.Graphics.Canvas.dll', 'Velopack.dll', 'vcruntime140.dll') {
+foreach ($file in 'zinc.exe', 'coreclr.dll', 'hostfxr.dll', 'ghostty-vt.dll', 'zinc-sprite.dll', 'zinc.pri', 'Microsoft.Graphics.Canvas.dll', 'Velopack.dll', 'vcruntime140.dll', 'bin\zn.exe') {
     if (-not (Test-Path (Join-Path $publishDir $file))) { throw "$file is missing from the build: not releasing it." }
 }
 

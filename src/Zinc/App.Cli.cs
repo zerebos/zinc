@@ -33,6 +33,39 @@ public partial class App
         });
     }
 
+    /// <summary>
+    /// <c>[cli] path</c>: zn's folder on the user's PATH (this copy's: installs are versioned folders), or off it. At every
+    /// start and reload; never in test runs (ZINC_CONFIG), as they never touch the sign-in entry either.
+    /// </summary>
+    private static void ApplyZnPath(bool on)
+    {
+        if (Environment.GetEnvironmentVariable("ZINC_CONFIG") is { Length: > 0 })
+        {
+            return;
+        }
+
+        try
+        {
+            var path = Zinc.Pty.UserPath.ForUser();
+            var folder = on ? CliServer.ZnFolder : null;
+            if (on && folder == null)
+            {
+                Log.Write("cli: no zn next to this zinc.exe to put on PATH");
+                return;
+            }
+
+            if (path.Apply(folder))
+            {
+                Log.Write(folder != null ? $"cli: zn on PATH: {folder}" : "cli: zn taken off PATH");
+                _ = Task.Run(Zinc.Pty.UserPath.Announce); // a broadcast: kept off the UI thread
+            }
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or System.Security.SecurityException)
+        {
+            Log.Write($"cli: couldn't change PATH: {ex.Message}");
+        }
+    }
+
     /// <summary>Every exception is caught here: this runs as queued work, where one would end the process.</summary>
     private async void RunCli(CliRequest request, TaskCompletionSource<CliReply> done)
     {
@@ -158,6 +191,11 @@ public partial class App
         var shown = front.ShownWorkspace;
         return new CliTarget(front, shown, shown?.Workspace.ActiveGroup, shown?.Active) { Defaulted = true };
     }
+
+    /// <summary>Pane <paramref name="id"/>, wherever it is (terminal move's destination).</summary>
+    internal CliTarget? FindCliPane(int id) => FindCliTarget(new CliRequest { Pane = id });
+
+    internal MainWindow? FindCliWindow(int id) => CliWindows.FirstOrDefault(w => w.Id == id);
 
     private string NotFound(CliRequest request) =>
         request.Terminal is { } t ? $"No terminal {t}. zn list shows the open ones."

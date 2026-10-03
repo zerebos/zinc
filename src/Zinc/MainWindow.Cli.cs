@@ -103,6 +103,48 @@ public sealed partial class MainWindow
 
                 ClosePane(tab, pane);
                 return CliReply.Done();
+            case "terminal send":
+                return pane.Control.SendText(request.Text ?? "", request.Paste)
+                    ? CliReply.Done()
+                    : CliReply.Fail(CliCodes.Failed, $"Nothing runs in terminal {pane.Id} (its program ended).");
+            case "terminal read":
+                return pane.Control.ReadText(request.Lines, request.Ansi) is { } text
+                    ? new CliReply { Ok = true, Text = text }
+                    : CliReply.Fail(CliCodes.Failed, $"Terminal {pane.Id} hasn't started yet: it starts once it's shown.");
+            case "terminal title":
+                pane.CustomTitle = string.IsNullOrEmpty(request.Title) ? null : request.Title;
+                UpdateTitle(tab);
+                UpdateFocusBorders(tab); // its pane's strip shows it too
+                return CliReply.Done();
+            case "terminal move":
+                return CliMoveTerminal(request, tab, group, pane);
+            case "workspace rename":
+                tab.CustomTitle = string.IsNullOrEmpty(request.Name) ? null : request.Name;
+                UpdateTitle(tab);
+                RefreshWorkspaceList();
+                return CliReply.Done();
+            case "workspace color":
+                if (!TryWorkspaceColor(request.Color!, out var color))
+                {
+                    return CliReply.Fail(CliCodes.Usage, $"No color \"{request.Color}\": " +
+                        string.Join(", ", WorkspaceColors.All.Select(c => c.Name.ToLowerInvariant())) + ", #RRGGBB or none.");
+                }
+
+                SetTabColor(tab, color);
+                return CliReply.Done();
+            case "workspace icon":
+                var icon = request.Icon!.Equals("none", StringComparison.OrdinalIgnoreCase) ? null
+                    : WorkspaceIcons.All.FirstOrDefault(i => i.Name.Equals(request.Icon, StringComparison.OrdinalIgnoreCase)).Name;
+                if (icon == null && !request.Icon.Equals("none", StringComparison.OrdinalIgnoreCase))
+                {
+                    return CliReply.Fail(CliCodes.Usage, $"No icon \"{request.Icon}\": " +
+                        string.Join(", ", WorkspaceIcons.All.Select(i => i.Name)) + " or none.");
+                }
+
+                SetWorkspaceIcon(tab, icon);
+                return CliReply.Done();
+            case "workspace move":
+                return CliMoveWorkspace(request, tab);
             case "pane split":
                 return CliSplit(request, tab, group, pane);
             case "terminal new":
@@ -169,6 +211,80 @@ public sealed partial class MainWindow
         group.Add(pane);
         ShowGroupTab(tab, pane);
         return CliReply.Done(pane.Id);
+    }
+
+    /// <summary>Into another pane (in any window), as its newest tab, shown; the way a tab dropped on a pane's strip moves.</summary>
+    private CliReply CliMoveTerminal(CliRequest request, WorkspaceTab tab, TabGroup<TerminalTab> group, TerminalTab pane)
+    {
+        if (!_config.Global.TabGroups)
+        {
+            return CliReply.Fail(CliCodes.Failed, "Tab groups are off ([window] tab-groups), so a pane holds one terminal.");
+        }
+
+        if (App.Instance.FindCliPane(request.ToPane!.Value) is not { Workspace: { } toTab, Pane: { } toGroup } to)
+        {
+            return CliReply.Fail(CliCodes.Failed, $"No pane {request.ToPane}. zn list shows the open ones.");
+        }
+
+        if (toGroup == group)
+        {
+            return CliReply.Fail(CliCodes.Failed, $"Terminal {pane.Id} is in pane {group.Id} already.");
+        }
+
+        to.Window.MoveTerminalTab(this, pane, toTab, toGroup, null);
+        to.Window.FocusActive(toTab);
+        return CliReply.Done();
+    }
+
+    /// <summary>To another window (as its last workspace, shown), or a new one; as dragging its tab there does.</summary>
+    private CliReply CliMoveWorkspace(CliRequest request, WorkspaceTab tab)
+    {
+        if (request.ToWindow == "new")
+        {
+            MoveToNewWindow(tab);
+            return CliReply.Done();
+        }
+
+        if (!int.TryParse(request.ToWindow, out var id) || App.Instance.FindCliWindow(id) is not { } target)
+        {
+            return CliReply.Fail(CliCodes.Failed, $"No window {request.ToWindow}. zn list shows the open ones.");
+        }
+
+        if (target == this)
+        {
+            return CliReply.Fail(CliCodes.Failed, $"Workspace {tab.Id} is in window {Id} already.");
+        }
+
+        var transfer = DetachWorkspace(tab);
+        target.FocusActive(target.AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, folder: transfer.Folder,
+            icon: transfer.Icon, id: transfer.Id));
+        CloseIfEmpty();
+        target.BringForward();
+        return CliReply.Done();
+    }
+
+    /// <summary>A workspace color by name (red…pink), as #RRGGBB, or none (null).</summary>
+    private static bool TryWorkspaceColor(string text, out Windows.UI.Color? color)
+    {
+        color = null;
+        if (text.Equals("none", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (WorkspaceColors.All.FirstOrDefault(c => c.Name.Equals(text, StringComparison.OrdinalIgnoreCase)) is { Name: not null } named)
+        {
+            color = WorkspaceLookPickers.ToColor(named.Rgb);
+            return true;
+        }
+
+        if (text.StartsWith('#') && Config.TryColor(text, out var rgb))
+        {
+            color = Windows.UI.Color.FromArgb(0xFF, rgb.R, rgb.G, rgb.B);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>A folder zn sent (a full Windows path; from WSL, the distro's share) in the profile's terms; null if none.</summary>

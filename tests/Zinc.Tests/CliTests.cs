@@ -240,4 +240,98 @@ public class CliTests
         Assert.Empty(CliText.Filter(Tree(), new CliRequest { Workspace = 9 }).Windows);
         Assert.Equal(2, CliText.Filter(Tree(), new CliRequest()).Windows.Count);
     }
+
+    [Fact]
+    public void SendTakesTextWithEscapes()
+    {
+        Assert.Equal("ls\r", Request("terminal", "send", "ls\\r").Text);
+        Assert.True(Request("terminal", "send", "--paste", "a\\nb").Paste);
+        Assert.Equal("--help", Request("terminal", "send", "--", "--help").Text); // text that looks like an option
+        var stdin = Request("terminal", "send", "-");
+        Assert.Null(stdin.Text);
+        Assert.True(CliCommandLine.SendsStdin(stdin));
+        Assert.False(CliCommandLine.SendsStdin(Request("terminal", "send", "x")));
+        Assert.Contains("What to send", Error("terminal", "send"));
+        Assert.Contains("What to send", Error("terminal", "send", ""));
+    }
+
+    [Theory]
+    [InlineData("ls\\r", "ls\r")]
+    [InlineData("a\\tb\\nc", "a\tb\nc")]
+    [InlineData("\\e[A", "\x1b[A")]
+    [InlineData("\\x1b:q", "\x1b:q")]
+    [InlineData("\\u00e9t\\u00e9", "été")]
+    [InlineData("C:\\\\x", "C:\\x")]
+    [InlineData("C:\\Users", "C:\\Users")]   // \U isn't an escape: it stays
+    [InlineData("\\xZZ \\", "\\xZZ \\")]     // nor a broken \x, nor a last backslash
+    public void Escapes(string written, string sent)
+    {
+        Assert.Equal(sent, CliCommandLine.Unescape(written));
+    }
+
+    [Fact]
+    public void ReadTitleAndTheWorkspaceLook()
+    {
+        var read = Request("terminal", "read", "--lines", "20", "--ansi");
+        Assert.Equal((20, true), (read.Lines, read.Ansi));
+        Assert.Contains("number of lines", Error("terminal", "read", "--lines", "all"));
+        Assert.Equal("", Request("terminal", "title", "").Title); // "" gives it back
+        Assert.Contains("Which title", Error("terminal", "title"));
+        Assert.Equal("api", Request("workspace", "rename", "api").Name);
+        Assert.Equal("green", Request("workspace", "color", "green").Color);
+        Assert.Equal("bug", Request("workspace", "icon", "bug").Icon);
+        Assert.Contains("Which color", Error("workspace", "color"));
+    }
+
+    [Fact]
+    public void MovesSayWhere()
+    {
+        Assert.Equal(4, Request("terminal", "move", "--to-pane", "4").ToPane);
+        Assert.Equal("new", Request("workspace", "move", "--to-window", "new").ToWindow);
+        Assert.Equal("2", Request("workspace", "move", "--to-window=2").ToWindow);
+        Assert.Contains("--to-window takes", Error("workspace", "move", "--to-window", "next"));
+        Assert.Contains("Where to? --to-pane", Error("terminal", "move"));
+        Assert.Contains("Where to? --to-window", Error("workspace", "move"));
+        Assert.Contains("doesn't take --to-pane", Error("workspace", "move", "--to-pane", "3"));
+    }
+
+    [Fact]
+    public void ZnGoesAtTheEndOfPath()
+    {
+        var env = new Dictionary<string, string?>();
+        CliEnvironment.Add(env, 1, "p", name => name == "PATH" ? @"C:\Windows;C:\Tools" : null, @"C:\Zinc\bin");
+        Assert.Equal(@"C:\Windows;C:\Tools;C:\Zinc\bin", env["PATH"]);
+        Assert.Equal(@"C:\Zinc\bin\zn.exe", env["ZINC_ZN"]);
+        Assert.Equal("ZINC_TERMINAL_ID:ZINC_PIPE:ZINC_ZN/p", env["WSLENV"]); // WSL gets it as /mnt/c/...
+
+        env = [];
+        CliEnvironment.Add(env, 1, "p", name => name == "PATH" ? @"C:\Zinc\bin\;C:\Tools" : null, @"C:\Zinc\bin");
+        Assert.False(env.ContainsKey("PATH")); // there already
+
+        env = [];
+        CliEnvironment.Add(env, 1, "p", _ => null);
+        Assert.False(env.ContainsKey("PATH")); // no zn here: PATH untouched
+    }
+
+    [Fact]
+    public void ReadGivesTheScreenOrTheLastLines()
+    {
+        using var session = new Zinc.Terminal.TerminalSession(20, 5, Zinc.Terminal.TerminalTheme.Default);
+        session.WriteToScreen("a\r\nb\r\nc");
+        Assert.Equal("a\nb\nc", session.ReadText());
+        for (var i = 0; i < 10; i++)
+        {
+            session.WriteToScreen($"\r\nline{i}");
+        }
+
+        Assert.Equal("line5\nline6\nline7\nline8\nline9", session.ReadText()); // the screen, not the scrollback
+        Assert.Equal("line8\nline9", session.ReadText(2));
+        Assert.Equal(13, session.ReadText(100).Split('\n').Length);
+
+        session.WriteToScreen("\x1b[2J\x1b[H\x1b[31mred\x1b[0m");
+        Assert.Equal("red", session.ReadText()); // blank rows below don't count
+        var styled = session.ReadText(styled: true);
+        Assert.Contains("red", styled);
+        Assert.Contains("\x1b[", styled);
+    }
 }

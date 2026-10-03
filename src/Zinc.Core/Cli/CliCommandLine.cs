@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace Zinc.Cli;
@@ -13,7 +14,10 @@ public static class CliCommandLine
 {
     private const string Targets = "terminal pane workspace window";
 
-    /// <summary>A command: its thing ("" for the top-level ones), verb, what it does, its arguments and its options.</summary>
+    /// <summary>
+    /// A command: its thing ("" for the top-level ones), verb, what it does, its arguments and its options.
+    /// <paramref name="Positional"/> names its one argument (direction, action, text, title, name, color, icon).
+    /// </summary>
     private sealed record Verb(string Thing, string Name, string Summary, string Usage, string Options, string? Positional = null);
 
     // Options by name: what each takes and says in help.
@@ -29,14 +33,22 @@ public static class CliCommandLine
         ["size"] = "--size 30%       the new pane's share of the space",
         ["force"] = "--force          closes without asking, even with commands running",
         ["json"] = "--json           prints JSON for scripts",
+        ["paste"] = "--paste          sends it as a paste: shells insert it without running it",
+        ["lines"] = "--lines N        the last N lines, scrollback included (default: the screen)",
+        ["ansi"] = "--ansi           with colors and styles, as escape sequences",
+        ["to-pane"] = "--to-pane N      the pane to move it into",
+        ["to-window"] = "--to-window N    the window to move it to, or \"new\"",
         ["command"] = "-- COMMAND ...   runs this program instead of the profile's shell",
     };
+
+    // Options that are switches (no value).
+    private static readonly string[] Switches = ["json", "force", "paste", "ansi"];
 
     private static readonly Verb[] Verbs =
     [
         new("", "list", "Everything open: windows, workspaces, panes and terminals", "zn list", "json"),
         new("", "action", "Runs any action by its name, as a key would", "zn action \"NAME [ARGS]\"", Targets, "action"),
-        new("", "version", "zn's version and the running Zinc's", "zn version", ""),
+        new("", "version", "zn's version and the running Zinc's", "zn version", "json"),
         new("window", "list", "Windows, with their workspaces", "zn window list", "json"),
         new("window", "new", "Opens a window", "zn window new", "profile cwd command"),
         new("window", "focus", "Brings a window to the front", "zn window focus", Targets),
@@ -45,6 +57,12 @@ public static class CliCommandLine
         new("workspace", "new", "Opens a workspace in a window", "zn workspace new", Targets + " name profile cwd command"),
         new("workspace", "focus", "Shows a workspace", "zn workspace focus", Targets),
         new("workspace", "close", "Closes a workspace (asks first if commands are running)", "zn workspace close", Targets + " force"),
+        new("workspace", "rename", "Names a workspace (\"\" gives it back to its shell)", "zn workspace rename NAME", Targets, "name"),
+        new("workspace", "color", "Colors a workspace: red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB or none",
+            "zn workspace color COLOR", Targets, "color"),
+        new("workspace", "icon", "Gives a workspace an icon (none: its profile's)", "zn workspace icon NAME", Targets, "icon"),
+        new("workspace", "move", "Moves a workspace to another window, or a new one", "zn workspace move --to-window N|new",
+            Targets + " to-window"),
         new("pane", "list", "Panes, with their terminals", "zn pane list", "json window workspace"),
         new("pane", "split", "Opens a pane beside another, with one terminal", "zn pane split right|left|down|up",
             Targets + " profile cwd size command", "direction"),
@@ -52,7 +70,12 @@ public static class CliCommandLine
         new("pane", "close", "Closes a pane and all its terminals (asks first if commands are running)", "zn pane close", Targets + " force"),
         new("terminal", "list", "Terminals: ids, titles, folders, profiles", "zn terminal list", "json window workspace pane"),
         new("terminal", "new", "Opens a terminal as a new tab in a pane", "zn terminal new", Targets + " profile cwd command"),
+        new("terminal", "send", "Types text into a terminal (\\r = Enter, \\e = Esc, \\t, \\n, \\xHH, \\\\; - reads stdin as is)",
+            "zn terminal send TEXT|-", Targets + " paste", "text"),
+        new("terminal", "read", "Prints a terminal's screen", "zn terminal read", Targets + " lines ansi"),
+        new("terminal", "title", "Names a terminal's tab (\"\" gives it back to the program)", "zn terminal title TITLE", Targets, "title"),
         new("terminal", "focus", "Shows and focuses a terminal", "zn terminal focus", Targets),
+        new("terminal", "move", "Moves a terminal into another pane, as a tab", "zn terminal move --to-pane N", Targets + " to-pane"),
         new("terminal", "close", "Closes a terminal (asks first if a command is running)", "zn terminal close", Targets + " force"),
     ];
 
@@ -97,6 +120,13 @@ public static class CliCommandLine
 
             if (arg == "--")
             {
+                if (verb.Positional is "text" or "title" or "name" && positional == null && i + 1 < args.Count)
+                {
+                    // Text that might look like an option: zn terminal send -- "--help".
+                    positional = string.Join(' ', args.Skip(i + 1));
+                    break;
+                }
+
                 if (!allowed.Contains("command"))
                 {
                     return Usage($"{Name(verb)} doesn't run a command.");
@@ -127,22 +157,20 @@ public static class CliCommandLine
                         : $"Unknown option {arg}. {Name(verb)} --help lists its options.");
                 }
 
-                if (name is "json" or "force")
+                if (Switches.Contains(name))
                 {
                     if (value != null)
                     {
                         return Usage($"--{name} takes no value.");
                     }
 
-                    if (name == "json")
+                    _ = name switch
                     {
-                        json = true;
-                    }
-                    else
-                    {
-                        request.Force = true;
-                    }
-
+                        "json" => json = true,
+                        "force" => request.Force = true,
+                        "paste" => request.Paste = true,
+                        _ => request.Ansi = true,
+                    };
                     continue;
                 }
 
@@ -156,20 +184,34 @@ public static class CliCommandLine
                     value = args[++i];
                 }
 
-                if (name is "terminal" or "pane" or "workspace" or "window")
+                if (name is "terminal" or "pane" or "workspace" or "window" or "to-pane" or "lines" ||
+                    name == "to-window" && value != "new")
                 {
-                    if (!int.TryParse(value, out var id) || id <= 0)
+                    if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var number) || number <= 0)
                     {
-                        return Usage($"--{name} takes a number from zn list, not \"{value}\".");
+                        return Usage(name switch
+                        {
+                            "lines" => $"--lines takes a number of lines, not \"{value}\".",
+                            "to-window" => $"--to-window takes a window's number from zn list, or new; not \"{value}\".",
+                            _ => $"--{name} takes a number from zn list, not \"{value}\".",
+                        });
                     }
 
                     _ = name switch
                     {
-                        "terminal" => request.Terminal = id,
-                        "pane" => request.Pane = id,
-                        "workspace" => request.Workspace = id,
-                        _ => request.Window = id,
+                        "terminal" => request.Terminal = number,
+                        "pane" => request.Pane = number,
+                        "workspace" => request.Workspace = number,
+                        "window" => request.Window = number,
+                        "to-pane" => request.ToPane = number,
+                        "lines" => request.Lines = number,
+                        _ => null,
                     };
+                    if (name == "to-window")
+                    {
+                        request.ToWindow = value;
+                    }
+
                     continue;
                 }
 
@@ -180,6 +222,9 @@ public static class CliCommandLine
 
                 switch (name)
                 {
+                    case "to-window":
+                        request.ToWindow = value;
+                        break;
                     case "profile":
                         request.Profile = value;
                         break;
@@ -224,17 +269,109 @@ public static class CliCommandLine
             case "action":
                 request.Action = positional;
                 break;
+            case "text" when string.IsNullOrEmpty(positional):
+                return Usage("What to send? For example: zn terminal send \"ls\\r\" (or - to read it from stdin).");
+            case "text":
+                request.Text = positional == "-" ? null : Unescape(positional); // "-": zn reads stdin
+                break;
+            case "title" or "name" when positional == null:
+                return Usage($"Which {verb.Positional}? \"\" gives it back.");
+            case "title":
+                request.Title = positional;
+                break;
+            case "name":
+                request.Name = positional;
+                break;
+            case "color" or "icon" when string.IsNullOrWhiteSpace(positional):
+                return Usage(verb.Positional == "color"
+                    ? "Which color? red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB or none."
+                    : "Which icon? zn workspace icon --help, or Zinc's answer to a wrong one, lists them; none removes it.");
+            case "color":
+                request.Color = positional;
+                break;
+            case "icon":
+                request.Icon = positional;
+                break;
+        }
+
+        if (verb.Name == "move" && request.ToPane == null && request.ToWindow == null)
+        {
+            return Usage(thing == "terminal" ? "Where to? --to-pane N (ids: zn list)." : "Where to? --to-window N, or --to-window new.");
         }
 
         return new CliParse(request, json);
     }
 
+    /// <summary>Whether this send reads its text from stdin (<c>zn terminal send -</c>).</summary>
+    public static bool SendsStdin(CliRequest request) => request.Cmd == "terminal send" && request.Text == null;
+
+    /// <summary>
+    /// terminal send's escapes: <c>\r</c> (Enter), <c>\n</c>, <c>\t</c>, <c>\e</c> (Esc), <c>\xHH</c>, <c>\uHHHH</c>,
+    /// <c>\\</c>. Anything else after a backslash stays as written.
+    /// </summary>
+    public static string Unescape(string text)
+    {
+        var sb = new StringBuilder(text.Length);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c != '\\' || i + 1 >= text.Length)
+            {
+                sb.Append(c);
+                continue;
+            }
+
+            var next = text[i + 1];
+            switch (next)
+            {
+                case 'r':
+                    sb.Append('\r');
+                    i++;
+                    break;
+                case 'n':
+                    sb.Append('\n');
+                    i++;
+                    break;
+                case 't':
+                    sb.Append('\t');
+                    i++;
+                    break;
+                case 'e':
+                    sb.Append('\x1b');
+                    i++;
+                    break;
+                case '\\':
+                    sb.Append('\\');
+                    i++;
+                    break;
+                case 'x' when Hex(text, i + 2, 2) is { } x:
+                    sb.Append((char)x);
+                    i += 3;
+                    break;
+                case 'u' when Hex(text, i + 2, 4) is { } u:
+                    sb.Append((char)u);
+                    i += 5;
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static int? Hex(string text, int start, int length) =>
+        start + length <= text.Length &&
+        int.TryParse(text.AsSpan(start, length), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+
     /// <summary>A pane share: "30%" or "0.3", between 10% and 90%; null if it isn't one.</summary>
     public static double? ParseSize(string text)
     {
         var percent = text.EndsWith('%');
-        if (!double.TryParse(percent ? text[..^1] : text, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var value))
+        if (!double.TryParse(percent ? text[..^1] : text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
         {
             return null;
         }

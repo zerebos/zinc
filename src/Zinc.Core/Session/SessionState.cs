@@ -60,7 +60,8 @@ public sealed record PaneState(List<TabState> Tabs, int Shown, bool Focused);
 /// A tab: its profile, the command it ran, the folder it started in, and the folder its shell
 /// last reported (decoded; POSIX for WSL), which it reopens in when usable.
 /// </summary>
-public sealed record TabState(string Profile, string Command, string? StartDirectory, string? Directory, string? ColorScheme = null);
+public sealed record TabState(string Profile, string Command, string? StartDirectory, string? Directory, string? ColorScheme = null,
+    string? Title = null);
 
 [JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, UseStringEnumConverter = true)]

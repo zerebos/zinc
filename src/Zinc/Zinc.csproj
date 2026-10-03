@@ -78,4 +78,35 @@
   <ItemGroup Condition="'$(ZincUpdateUrl)' != ''">
     <AssemblyMetadata Include="ZincUpdateUrl" Value="$(ZincUpdateUrl)" />
   </ItemGroup>
+
+  <!-- zn, the command-line tool, in bin\ next to zinc.exe (a folder of its own, so putting it on PATH exposes nothing
+       else; terminals get it appended to theirs: CliServer). Builds copy its framework-dependent build (dev machines have .NET);
+       publishes (install.ps1, release.ps1) publish it ahead of time: one self-contained zn.exe. -->
+  <PropertyGroup>
+    <ZnProject>$(MSBuildThisFileDirectory)..\Zinc.Cli\Zinc.Cli.csproj</ZnProject>
+  </PropertyGroup>
+
+  <Target Name="CopyZn" AfterTargets="Build">
+    <MSBuild Projects="$(ZnProject)" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64">
+      <Output TaskParameter="TargetOutputs" ItemName="_ZnBuilt" />
+    </MSBuild>
+    <PropertyGroup>
+      <_ZnDir>@(_ZnBuilt->'%(RootDir)%(Directory)')</_ZnDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ZnFiles Include="$(_ZnDir)zn.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ZnFiles)" DestinationFolder="$(OutDir)bin" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Its own dotnet publish, with vswhere.exe's folder on PATH: Native AOT's link step finds MSVC through it. -->
+  <Target Name="PublishZn" AfterTargets="Publish">
+    <PropertyGroup>
+      <_ZnPublishDir>$([MSBuild]::EnsureTrailingSlash('$(PublishDir)'))bin</_ZnPublishDir>
+    </PropertyGroup>
+    <Exec Command="dotnet publish &quot;$(ZnProject)&quot; -c $(Configuration) -r win-x64 -p:Platform=x64 -o &quot;$(_ZnPublishDir)&quot; -nologo"
+          EnvironmentVariables="PATH=$([MSBuild]::Escape('$(PATH);$(MSBuildProgramFiles32)\Microsoft Visual Studio\Installer'))" />
+    <Delete Files="$(_ZnPublishDir)\zn.pdb" />
+    <Error Condition="!Exists('$(_ZnPublishDir)\zn.exe')" Text="zn.exe wasn't published into $(_ZnPublishDir)." />
+  </Target>
 </Project>

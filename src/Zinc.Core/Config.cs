@@ -430,6 +430,9 @@ public sealed record Config
     /// <summary>Whether zn may control this Zinc (anything but <c>zn version</c>). Config: <c>[cli] remote-control</c> (global).</summary>
     public bool RemoteControl { get; init; }
 
+    /// <summary>Whether zn's folder is on the user's PATH, for other terminals. Config: <c>[cli] path</c> (global).</summary>
+    public bool ZnOnPath { get; init; }
+
     /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
     public double CursorOpacity { get; init; } = 1;
 
@@ -512,6 +515,7 @@ public sealed record Config
             "logging" when bool.TryParse(value, out var logging) => this with { Logging = logging },
             "update-check" when bool.TryParse(value, out var check) => this with { UpdateCheck = check },
             "remote-control" when bool.TryParse(value, out var remote) => this with { RemoteControl = remote },
+            "zn-path" when bool.TryParse(value, out var znPath) => this with { ZnOnPath = znPath },
             "cursor-opacity" when TryDouble(value, out var cursorOpacity) && cursorOpacity is >= 0.1 and <= 1 =>
                 this with { CursorOpacity = cursorOpacity },
             "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },

@@ -175,7 +175,7 @@ public sealed partial class MainWindow
             {
                 App.Instance.Drag = null;
                 var transfer = drag.Window.DetachWorkspace(tab);
-                AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index, transfer.Folder, transfer.Icon);
+                AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index, transfer.Folder, transfer.Icon, transfer.Id);
                 drag.Window.CloseIfEmpty();
                 Activate();
                 break;

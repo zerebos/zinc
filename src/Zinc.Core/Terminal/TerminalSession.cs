@@ -879,6 +879,27 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>
+    /// What <c>zn terminal read</c> prints: the live screen (not the scrollback), or with <paramref name="lines"/> the
+    /// last that many lines, scrollback included. Blank rows at the bottom don't count. <paramref name="styled"/>: with
+    /// colors and styles as VT sequences.
+    /// </summary>
+    public string ReadText(int? lines = null, bool styled = false)
+    {
+        lock (Lock)
+        {
+            var options = GhosttyFormatterTerminalOptions.Init();
+            options.Emit = styled ? 1 : 0; // GHOSTTY_FORMATTER_FORMAT_VT : _PLAIN
+            options.Trim = 1;
+            // One line per row, scrollback first; the formatter leaves out the blank rows at the bottom.
+            var all = Format(options).Replace("\r\n", "\n").Split('\n');
+            GhosttyTerminalScrollbar sb;
+            Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
+            var first = lines is { } n ? Math.Max(0, all.Length - n) : (int)Math.Min((ulong)all.Length, sb.Total - sb.Len);
+            return string.Join('\n', all[first..]);
+        }
+    }
+
+    /// <summary>
     /// Finds <paramref name="pattern"/> in the active screen and its scrollback, oldest first.
     /// Matches may span soft wraps but not real line breaks. Rows are screen rows: 0 is the
     /// oldest scrollback row, in the scrollbar's units.

@@ -20,6 +20,10 @@ internal static class CliServer
     /// <summary>This Zinc's pipe (every terminal's ZINC_PIPE); null until it listens.</summary>
     public static string? PipeName { get; private set; }
 
+    /// <summary>zn's folder (bin\ next to zinc.exe), if this copy has one.</summary>
+    public static string? ZnFolder { get; } = Path.Combine(AppContext.BaseDirectory, "bin") is var bin && File.Exists(Path.Combine(bin, "zn.exe"))
+        ? bin : null;
+
     /// <summary>A new terminal's id; its shell will start with it and the pipe's name in its environment.</summary>
     public static int NewTerminal(TerminalControl control)
     {
@@ -28,7 +32,7 @@ internal static class CliServer
         {
             if (PipeName is { } pipe)
             {
-                CliEnvironment.Add(environment, id, pipe, Environment.GetEnvironmentVariable);
+                CliEnvironment.Add(environment, id, pipe, Environment.GetEnvironmentVariable, ZnFolder);
             }
         };
         return id;

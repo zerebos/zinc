@@ -33,6 +33,13 @@ if [[ -n "${__zinc_si_loaded-}" || $- != *i* ]]; then
 fi
 __zinc_si_loaded=1
 
+# zn, Zinc's command-line tool, is a Windows program: WSL finds it only when Windows' PATH is appended
+# (appendWindowsPath), and then as zn.exe. Zinc passes its path in ZINC_ZN; `zn` runs it, unless a zn exists
+# (Git Bash and MSYS2 find zn.exe on PATH as zn).
+if [[ -n "${ZINC_ZN-}" ]] && ! builtin type -P zn >/dev/null 2>&1 && ! builtin declare -F zn >/dev/null; then
+    zn() { "$ZINC_ZN" "$@"; }
+fi
+
 # Already there: marks or folder reports your prompt sends itself.
 __zinc_si_theirs="$PS0$PS1${PROMPT_COMMAND[*]-}$(builtin declare -f)"
 __zinc_si_marks=1

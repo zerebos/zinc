@@ -29,6 +29,13 @@ internal static class Program
             request.Caller = caller;
         }
 
+        if (CliCommandLine.SendsStdin(request))
+        {
+            // As is: no escapes (a file's backslashes are its own).
+            Console.InputEncoding = new UTF8Encoding(false);
+            request.Text = Console.In.ReadToEnd();
+        }
+
         if (request.Cwd is { } cwd)
         {
             // Relative to where zn runs (from WSL, a \\wsl.localhost\… path: Zinc maps it back).
@@ -73,6 +80,10 @@ internal static class Program
                 Console.Out.Write(parsed.Json
                     ? JsonSerializer.Serialize(shown, CliJsonIndented.Default.CliTree) + Environment.NewLine
                     : CliText.List(shown, request.Cmd.Split(' ')[0] is var level && level != "list" ? level : ""));
+                break;
+            case "terminal read":
+                Console.Out.Write(reply.Text ?? "");
+                Console.Out.WriteLine();
                 break;
             default:
                 if (reply.Id is { } id)

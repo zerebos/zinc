@@ -496,14 +496,25 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   source** (no Core reference: keep those four free of other Core types). Core `Cli/`: request/reply JSON lines
   (source-gen), pipe names (`CliPipe`: `<InstanceKey>.cli` per session, `Zinc.p<pid>.cli` without one;
   `SessionStore.DefaultPath/InstanceKey` delegate here), the parser (`zn <thing> <verb>`, per-verb option lists,
-  help), list tables, `CliEnvironment` (ZINC_TERMINAL_ID/ZINC_PIPE + WSLENV), `CliLaunch.WithProgram` (a `--`
-  program under a WSL profile runs in its distro); all tested in `CliTests`. App: `CliServer` (pipe thread, ACL =
+  help, send's escapes), list tables, `CliEnvironment` (ZINC_TERMINAL_ID/ZINC_PIPE, zn's folder at the end of PATH,
+  ZINC_ZN = zn.exe; WSLENV passes the ids and ZINC_ZN/p: **WSL may not append Windows' PATH** (the user's Fedora has
+  appendWindowsPath = false), so the bash/zsh integration scripts define `zn` from ZINC_ZN), `CliLaunch.WithProgram`
+  (a `--` program under a WSL profile runs in its distro); all tested in `CliTests`. `TerminalSession.ReadText`
+  (terminal read: the formatter gives one line per row, scrollback first, blank bottom rows left out, so the screen
+  starts at row Total - Len). `Pty/UserPath` (`[cli] path`: zn's folder on HKCU Environment Path, the entry
+  remembered in HKCU\Software\Zinc so moves/off/uninstall take back only it; `InstallCleanup` too; tested on a
+  scratch key; never in ZINC_CONFIG runs). App: `CliServer` (pipe thread, ACL =
   current user, network denied; one request per connection; `NewTerminal` hands out terminal ids and sets
   `TerminalControl.LaunchEnvironment`) → `App.Cli.cs` (UI thread: version always, else `[cli] remote-control`;
   `FindCliTarget`: flag > caller's terminal > window used last (`Defaulted` → `Target` note); `CliTree`) →
   `MainWindow.Cli.cs` (commands through CreatePane/Wire/Split/ClosePane/ConfirmClose/BringToPane, so they behave like
-  keys). Ids: `TerminalTab.Id`, `TabGroup.Id` (pane), `WorkspaceTab.Id`, `MainWindow.Id`, per run.
-  E2E: `.scratch/tools/zn-test.ps1` (own config + session, so its own pipe; 27 checks).
+  keys). Ids: `TerminalTab.Id`, `TabGroup.Id` (pane), `WorkspaceTab.Id` (kept through `WorkspaceTransfer` when a
+  workspace moves window), `MainWindow.Id`, per run. `TerminalTab.CustomTitle` (terminal title; saved in TabState.Title)
+  feeds `TerminalTab.Title`, which every title display uses. Shipping: Zinc.csproj's `CopyZn` puts zn's
+  framework-dependent build in `bin\` on every build; `PublishZn` runs its own AOT `dotnet publish` into the publish
+  folder's `bin\` with vswhere's folder on PATH (**ILCompiler's link step fails without it**; Exec's
+  EnvironmentVariables needs the PATH MSBuild-escaped); release.ps1 checks `bin\zn.exe`.
+  E2E: `.scratch/tools/zn-test.ps1 [-Zn <exe>]` (own config + session, so its own pipe; 46 checks incl. WSL Fedora).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

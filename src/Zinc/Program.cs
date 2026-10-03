@@ -131,6 +131,8 @@ public static partial class Program
             {
                 Log.Write($"uninstall: {step}");
             }
+
+            Zinc.Pty.UserPath.Announce();
         }
         catch (Exception ex)
         {

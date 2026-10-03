@@ -14,6 +14,12 @@
 'builtin' 'typeset' -g __zinc_si_loaded=1
 'builtin' 'autoload' -Uz add-zsh-hook
 
+# zn, Zinc's command-line tool, is a Windows program: WSL finds it only when Windows' PATH is appended
+# (appendWindowsPath), and then as zn.exe. Zinc passes its path in ZINC_ZN; `zn` runs it, unless a zn exists.
+if [[ -n "${ZINC_ZN-}" ]] && ! (( $+commands[zn] )); then
+    zn() { "$ZINC_ZN" "$@"; }
+fi
+
 __zinc_si_boot() {
     add-zsh-hook -d precmd __zinc_si_boot
     'builtin' 'local' f marks=1 folder=1

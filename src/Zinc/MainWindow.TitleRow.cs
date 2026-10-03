@@ -171,7 +171,7 @@ public sealed partial class MainWindow
             }
             else
             {
-                var title = string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title;
+                var title = pane.Title;
                 var folder = ShellDirectory.Parse(pane.Control.ReportedDirectory);
                 text = folder != null && !title.Contains(folder, StringComparison.OrdinalIgnoreCase) ? $"{title}  ·  {folder}" : title;
             }

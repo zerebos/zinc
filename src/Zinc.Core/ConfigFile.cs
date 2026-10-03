@@ -687,6 +687,7 @@ public sealed class ConfigFile
             ["debug.logging"] = ("logging", v => Bool(v)),
             ["updates.check"] = ("update-check", v => Bool(v)),
             ["cli.remote-control"] = ("remote-control", v => Bool(v)),
+            ["cli.path"] = ("zn-path", v => Bool(v)),
             ["colors.find-highlight"] = ("search-background", v => v as string),
             ["colors.find-highlight-current"] = ("search-selected-background", v => v as string),
             ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),

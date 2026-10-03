@@ -39,6 +39,12 @@ public sealed partial class MainWindow : Window
         /// <summary>The terminal's number for zn while Zinc runs (its shell gets it as ZINC_TERMINAL_ID).</summary>
         public int Id { get; } = CliServer.NewTerminal(control);
 
+        /// <summary>A title given to this tab (zn terminal title), over the program's; null: the program's.</summary>
+        public string? CustomTitle { get; set; }
+
+        /// <summary>What its tab says: the given title, else the program's, else the profile's name.</summary>
+        public string Title => CustomTitle ?? (string.IsNullOrWhiteSpace(Control.Title) ? Profile.Name : Control.Title);
+
         /// <summary>A console Windows handed over (default terminal): not saved with the session.</summary>
         public bool HandedOver { get; set; }
 
@@ -60,7 +66,7 @@ public sealed partial class MainWindow : Window
     /// the old window's elements and events.
     /// </summary>
     internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color,
-        WorkspaceFolder? Folder = null, string? Icon = null);
+        WorkspaceFolder? Folder = null, string? Icon = null, int? Id = null);
 
     /// <summary>A title-bar tab and the workspace it shows.</summary>
     private static int s_lastWorkspaceId, s_lastWindowId;
@@ -72,8 +78,8 @@ public sealed partial class MainWindow : Window
     {
         public TabViewItem Item { get; } = item;
 
-        /// <summary>The workspace's number for zn while Zinc runs.</summary>
-        public int Id { get; } = Interlocked.Increment(ref s_lastWorkspaceId);
+        /// <summary>The workspace's number for zn while Zinc runs (kept when it moves to another window).</summary>
+        public required int Id { get; init; }
 
         /// <summary>
         /// The tab's content, set once. Layouts are rebuilt inside it so pane hosts only
@@ -180,7 +186,7 @@ public sealed partial class MainWindow : Window
     internal MainWindow(ConfigFile config, Keybindings keybindings, WorkspaceTransfer adopt)
         : this(config, keybindings, quick: false)
     {
-        AddWorkspace(adopt.Workspace, adopt.CustomTitle, adopt.Color, folder: adopt.Folder, icon: adopt.Icon);
+        AddWorkspace(adopt.Workspace, adopt.CustomTitle, adopt.Color, folder: adopt.Folder, icon: adopt.Icon, id: adopt.Id);
     }
 
     private MainWindow(ConfigFile config, Keybindings keybindings, bool quick)
@@ -597,12 +603,15 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Shows a workspace (new, or moved from another window) as a new, selected tab.</summary>
     private WorkspaceTab AddWorkspace(Workspace<TerminalTab> workspace, string? customTitle = null, Windows.UI.Color? color = null,
-        int? index = null, WorkspaceFolder? folder = null, string? icon = null)
+        int? index = null, WorkspaceFolder? folder = null, string? icon = null, int? id = null)
     {
         // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
         // to its header, and Stretch pushed the label above the icon.
         var item = new TabViewItem();
-        var tab = new WorkspaceTab(item, workspace) { CustomTitle = customTitle, Color = color, Folder = folder, Icon = icon };
+        var tab = new WorkspaceTab(item, workspace)
+        {
+            Id = id ?? Interlocked.Increment(ref s_lastWorkspaceId), CustomTitle = customTitle, Color = color, Folder = folder, Icon = icon,
+        };
         tab.Header.SetIcon(WorkspaceIcons.Glyph(icon));
         if (_workspaceList == null)
         {
@@ -647,7 +656,7 @@ public sealed partial class MainWindow : Window
             pane.Unwire?.Invoke();
         }
 
-        var transfer = new WorkspaceTransfer(tab.Workspace, tab.CustomTitle, tab.Color, tab.Folder, tab.Icon);
+        var transfer = new WorkspaceTransfer(tab.Workspace, tab.CustomTitle, tab.Color, tab.Folder, tab.Icon, tab.Id);
         RemoveTab(tab, closeWhenEmpty: false);
         return transfer;
     }
@@ -945,8 +954,7 @@ public sealed partial class MainWindow : Window
     private void UpdateTitle(WorkspaceTab tab, bool fromShell = false)
     {
         var pane = tab.Active;
-        var title = tab.CustomTitle ??
-                    (string.IsNullOrWhiteSpace(pane.Control.Title) ? pane.Profile.Name : pane.Control.Title);
+        var title = tab.CustomTitle ?? pane.Title;
 
         // Updated in place (see TabHeader): no header transition, no icon re-decode.
         tab.Header.SetTitle(title);
