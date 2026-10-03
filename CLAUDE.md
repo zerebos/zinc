@@ -292,6 +292,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   "toast" = `TrayIcon.ShowNotification` (NIF_INFO balloon, shown as a Windows notification;
   click = NIN_BALLOONUSERCLICK → `App.Notify`'s callback → `BringToPane`). Not AppNotificationManager:
   an unpackaged app's identity follows its exe path, and installs are versioned folders.
+  **No fresh line on 133;A/N mid-line** (`WritePromptStart` hands libghostty 133;P: a move ConPTY never hears of
+  desyncs the screens; docs/shell-integration.md has the why and the tradeoff).
   PSReadLine: B/C must be written from a `PSConsoleHostReadLine` wrapper; a B inside the prompt
   string broke PSReadLine's prompt redraw after a failed command (text overwrote `> `).
 - Automatic shell integration (`shell-integration = auto|off`, per profile): `Terminal/ShellIntegration.cs`

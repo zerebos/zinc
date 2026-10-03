@@ -101,6 +101,28 @@ Ideas from Ghostty's side:
 - **Marking each line of a multi-line bash PS1** (`P;k=s`): skipped. ConPTY repaints multi-line
   prompts on resize (above), and everything we build on marks starts from the prompt's first row.
 
+### No fresh line for a prompt mark (2026-10-03)
+
+The spec (FinalTerm; kitty and Ghostty follow it) says a prompt-start mark (`133;A`, and `133;N`)
+first does a *fresh line*: if the cursor isn't at the start of a line, move to a new one.
+libghostty does exactly that. **Zinc doesn't**: when an `A` or `N` arrives with the cursor mid-line,
+libghostty is given `133;P` (prompt start, no movement) instead.
+
+Why: Zinc always runs behind ConPTY, which keeps its own copy of the screen and repaints from it. A
+cursor move that ConPTY didn't make, and never hears of, leaves the two screens a line apart from
+then on. A tester's PowerShell prompt drew itself with `Write-Host`, so our marks (in the prompt's
+return value) came after its text; the fresh line put the cursor, and everything PSReadLine drew
+after it, a line below the prompt. Windows Terminal does no fresh line either, so a prompt that
+works there works here. Repro: `.scratch/tools/pwsh-profile-cursor.ps1` (the prompt in the
+2026-10-03 note).
+
+The tradeoff: a prompt whose text comes before its mark (a `Write-Host` prompt in PowerShell, or
+any shell whose previous output didn't end its line) is recorded as starting where the mark landed,
+at the end of the prompt line rather than its start. Nothing visible changes: Zinc keeps a prompt's
+*row* (jump to prompt, failure bars, scrollbar ticks, clear handling all go by rows), and the
+command's text is read from where typing starts (`B`). What a spec-following terminal would do, put
+such a prompt on a line of its own, can't be done safely under ConPTY.
+
 ## Features beyond marks
 
 Ghostty's `shell-integration-features` (defaults in brackets) and where Zinc stands:
