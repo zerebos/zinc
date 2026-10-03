@@ -112,10 +112,27 @@ public sealed partial class TerminalControl
 
             e.Cancel = true;
             var text = e.NewText;
+            var at = _inputLatency != null ? TraceNow : 0;
             if (text.Length > 0 && !_charHandledByKeyDown && _session is { } session)
             {
                 session.SendInput(text);
                 ResetBlink();
+                if (_inputLatency is { } trace)
+                {
+                    foreach (var c in text) // the box may hand over several at once
+                    {
+                        trace.Character(at, c.ToString());
+                    }
+
+                    trace.Sent(at);
+                }
+            }
+            else if (text.Length > 0 && _charHandledByKeyDown)
+            {
+                foreach (var c in text)
+                {
+                    _inputLatency?.Swallowed(c.ToString());
+                }
             }
         };
         box.TextCompositionStarted += (_, _) =>

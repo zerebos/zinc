@@ -445,6 +445,8 @@ public sealed partial class TerminalControl : UserControl
 
     private void RequestRedraw()
     {
+        _inputLatency?.Output(TraceNow); // on the reader thread: the shell's output just arrived
+
         // Coalesce bursts of PTY output into a single invalidate per UI tick.
         if (Interlocked.Exchange(ref _invalidatePending, 1) == 0)
         {
@@ -571,6 +573,11 @@ public sealed partial class TerminalControl : UserControl
         }
         UpdateBlinkTimer(blinking);
         UpdateScrollBar(session);
+        if (_inputLatency is { } trace)
+        {
+            trace.Drawn(TraceNow); // the frame is recorded; it reaches the screen at the next refresh
+            TraceSummary();
+        }
     }
 
     private void UpdateBlinkTimer(bool blinking)

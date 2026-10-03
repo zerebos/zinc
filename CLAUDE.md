@@ -35,6 +35,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   folder / Copy / Clear) → `Log.SetEnabled` → `%APPDATA%\Zinc\logs\zinc.log` (dated
   lines, moved to zinc.old.log at 4 MB). ZINC_LOG wins (always on, short times: tools read
   them). Test it with `.scratch/tools/log-test.ps1` (no ZINC_LOG; removes the logs folder after).
+  `Log.Write` only queues: a background thread appends batches (it used to open/append/close per line on
+  the caller's thread: every keystroke paid a file write with logging on). `Log.Flush` before reading,
+  clearing, after a crash and at exit; a killed process loses at most what's still queued (milliseconds).
+  Typing trace (a tester's "sluggish typing, a space lands before the last letter", 2026-10-03): with the log
+  on, each pane's Core `Input/InputLatency` (tested) gets key presses (with `GetMessageTime` queue delay and
+  the character expected), characters, sends, output arrival and drawn frames (`TerminalControl.InputTrace.cs`)
+  and logs `input: …` per stretch of typing: queue, key→char, handling, send→output, output→frame, out of
+  order (with examples), swallowed. Posted WM_CHAR (keys.ps1) counts as "unexpected" (no key press).
 - Drawing benchmark (Settings > About, under the logs): Core `Terminal/Benchmark.cs` (`BenchmarkWorkloads`:
   Colors / Synchronized / Text / Scrolling, seeded, a port of `.scratch/perf/load.py`; `TimeStats`,
   `BenchmarkResult`, `BenchmarkReport.Text()` = what Copy gives; tested) → App `BenchmarkWindow` (its own

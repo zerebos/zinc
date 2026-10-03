@@ -64,6 +64,32 @@ public sealed partial class TerminalControl
     /// <summary>A key press, from the pane or (with input methods on) its input box, before the box sees it.</summary>
     private void HandleKeyDown(KeyRoutedEventArgs e)
     {
+        if (InputTrace is not { } trace)
+        {
+            HandleKeyPress(e);
+            return;
+        }
+
+        // Timed for the debug log, with the character it should produce if it goes to the character path.
+        var at = TraceNow;
+        var queued = QueuedFor();
+        _traceExpect = null;
+        _traceModifier = false;
+        HandleKeyPress(e);
+        if (!_traceModifier)
+        {
+            trace.KeyDown(at, queued, _traceExpect);
+            trace.Handled(TraceNow - at);
+            TraceSummary();
+        }
+    }
+
+    // What HandleKeyPress tells the trace: the character a key press should produce, and that it was a modifier.
+    private string? _traceExpect;
+    private bool _traceModifier;
+
+    private void HandleKeyPress(KeyRoutedEventArgs e)
+    {
         // Pressed (or auto-repeating) here now: from this press on, the key is ours.
         _foreignKeys.Remove(e.Key);
 
@@ -93,6 +119,7 @@ public sealed partial class TerminalControl
         var vk = (int)e.Key;
         if (Keyboard.IsModifierKey(vk))
         {
+            _traceModifier = true;
             if (IsCtrlKey(e.Key))
             {
                 UpdateHoverLink(ctrl: true);
@@ -139,6 +166,7 @@ public sealed partial class TerminalControl
 
         if (KeyDecision.Route(press, session.KittyKeyboardFlags != 0, out var request) == KeyRoute.Character)
         {
+            _traceExpect = press.Text;
             return;
         }
 
@@ -147,6 +175,7 @@ public sealed partial class TerminalControl
         if (bytes.Length > 0)
         {
             session.SendInput(bytes);
+            _inputLatency?.Sent(TraceNow);
             ResetBlink();
             e.Handled = true;
             _charHandledByKeyDown = true;
@@ -218,8 +247,15 @@ public sealed partial class TerminalControl
         }
 
         e.Handled = true;
+        var trace = InputTrace;
+        var at = trace != null ? TraceNow : 0;
         if (_charHandledByKeyDown || IsForeignChar(e.Character))
         {
+            if (_charHandledByKeyDown)
+            {
+                trace?.Swallowed(e.Character.ToString()); // counted only if it was a typed character's
+            }
+
             return;
         }
 
@@ -251,6 +287,12 @@ public sealed partial class TerminalControl
 
         session.SendInput(text);
         ResetBlink();
+        if (trace != null)
+        {
+            trace.Character(at, text);
+            trace.Sent(at);
+            trace.Handled(TraceNow - at);
+        }
     }
 
     /// <summary>

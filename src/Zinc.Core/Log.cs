@@ -71,13 +71,70 @@ public static class Log
         $"{Zinc.Terminal.TerminalSession.Version}, Windows {Environment.OSVersion.Version}, " +
         $"{System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}, {AppContext.BaseDirectory}";
 
+    /// <summary>
+    /// Adds a line. It's queued and written by a background thread, so logging never holds up the caller (it used
+    /// to open, append to and close the file on the caller's thread for every line: with logging on, every
+    /// keystroke paid for a file write, and an antivirus scan of it, on the UI thread).
+    /// </summary>
     public static void Write(string message)
     {
         if (_path is { } path)
         {
             // ZINC_LOG's lines keep their short time (test tools read them); the debug log may span days.
             var time = FromEnvironment ? $"{DateTime.Now:HH:mm:ss.fff}" : $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}";
-            Append(path, $"{time} [{Environment.CurrentManagedThreadId}] {message}", rotate: !FromEnvironment);
+            Pending.Enqueue((path, $"{time} [{Environment.CurrentManagedThreadId}] {message}"));
+            StartWriter();
+            Wake.Set();
+        }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<(string Path, string Line)> Pending = new();
+    private static readonly AutoResetEvent Wake = new(false);
+    private static int _writerStarted;
+
+    private static void StartWriter()
+    {
+        if (Interlocked.Exchange(ref _writerStarted, 1) == 1)
+        {
+            return;
+        }
+
+        new Thread(() =>
+        {
+            while (true)
+            {
+                Wake.WaitOne();
+                Flush();
+            }
+        }) { IsBackground = true, Name = "Zinc log writer" }.Start();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => Flush(); // what's queued when Zinc quits
+    }
+
+    /// <summary>Writes out every queued line now (before reading or clearing the log, or after a crash).</summary>
+    public static void Flush()
+    {
+        lock (Gate)
+        {
+            // In batches, one file open per batch: consecutive lines for the same file.
+            var batch = new System.Text.StringBuilder();
+            string? batchPath = null;
+            while (Pending.TryPeek(out var next))
+            {
+                if (batchPath != null && next.Path != batchPath)
+                {
+                    Append(batchPath, batch.ToString(), rotate: !FromEnvironment);
+                    batch.Clear();
+                }
+
+                Pending.TryDequeue(out _);
+                batchPath = next.Path;
+                batch.Append(next.Line).Append(Environment.NewLine);
+            }
+
+            if (batchPath != null)
+            {
+                Append(batchPath, batch.ToString(), rotate: !FromEnvironment);
+            }
         }
     }
 
@@ -87,6 +144,7 @@ public static class Log
     /// </summary>
     public static string ReadText(int limit = 1024 * 1024)
     {
+        Flush();
         lock (Gate)
         {
             var text = string.Concat(ReadShared(OldFilePath), ReadShared(FilePath));
@@ -97,6 +155,7 @@ public static class Log
     /// <summary>Empties the debug log (both parts), so it holds only what happens next.</summary>
     public static void Clear()
     {
+        Flush(); // nothing queued from before lands after the clear
         lock (Gate)
         {
             try
@@ -143,6 +202,7 @@ public static class Log
     {
         var message = $"crash ({where}): {exception}";
         Write(message);
+        Flush(); // the process may be about to end
         try
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(CrashPath)!);
@@ -154,7 +214,7 @@ public static class Log
             }
 
             Append(CrashPath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{Environment.CurrentManagedThreadId}] {message}{Environment.NewLine}" +
-                $"  process {Environment.ProcessId}, {Zinc.Terminal.TerminalSession.Version}, {AppContext.BaseDirectory}", rotate: false);
+                $"  process {Environment.ProcessId}, {Zinc.Terminal.TerminalSession.Version}, {AppContext.BaseDirectory}{Environment.NewLine}", rotate: false);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -162,14 +222,15 @@ public static class Log
         }
     }
 
-    private static void Append(string path, string line, bool rotate)
+    /// <summary>Appends <paramref name="text"/> (whole lines, each ending in a line break) to <paramref name="path"/>.</summary>
+    private static void Append(string path, string text, bool rotate)
     {
         try
         {
             lock (Gate)
             {
-                // Checked every few hundred lines, not on each one.
-                if (rotate && ++_sinceSizeCheck >= 500)
+                // Checked every few dozen batches, not on each one.
+                if (rotate && ++_sinceSizeCheck >= 50)
                 {
                     _sinceSizeCheck = 0;
                     if (File.Exists(path) && new FileInfo(path).Length > LogLimit)
@@ -178,7 +239,7 @@ public static class Log
                     }
                 }
 
-                File.AppendAllText(path, line + Environment.NewLine);
+                File.AppendAllText(path, text);
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
