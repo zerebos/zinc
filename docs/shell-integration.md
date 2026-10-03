@@ -25,10 +25,10 @@ What fish and nushell send by themselves, traced in Zinc (`ZINC_TRACE`) on 2026-
   `133;P;k=r` (right prompt), `133;B`, `133;C` (no command text), `133;D;<status>`, a title (OSC 2).
   The folder report is OSC 7 on Linux and OSC 9;9 on Windows (its `osc7`/`osc9_9` defaults). It
   redraws the prompt (A/P/B again) on every key. Zinc reads the command text back from the
-  input cells, so the command list works without C's `cmdline_url`. nushell also sends OSC 633
-  (VS Code's protocol, which carries the command line in `633;E`) when `osc633` is on, and it's
-  on by default. We don't parse 633; it's the way to get exact text if reading back the cells
-  ever falls short.
+  input cells, so the command list works without C's `cmdline_url`. nushell's OSC 633
+  (VS Code's protocol, whose `633;E` carries the command line) goes out only inside VS Code
+  (`TERM_PROGRAM=vscode`), so Zinc never sees it (traced 2026-10-03). Reading the cells back
+  gives the exact text, `;` and double spaces included.
 
 Gaps:
 - An older fish without its own marks (Ghostty enables `click_events` only from 4.1; we checked 4.3) gets none, and we load nothing into it. If that
@@ -38,10 +38,11 @@ Gaps:
   The script must leave the defaults (`/usr/local/share:/usr/share`) in place when the variable
   was unset.
 - Our variables (`PROMPT_COMMAND`, `ZDOTDIR`, `ZINC_SHELL_INTEGRATION_DIR`) are removed by
-  our bash/zsh scripts once they run. A profile whose shell is fish or nu never runs them, so
-  that shell and its children inherit the variables. A zsh started from there still works
-  (our `.zshenv` restores the user's), but a cleaner fix is to skip the variables when
-  `Prepare` can see the shell is fish/nu. It can't see that through `wsl.exe` or a launcher.
+  our bash/zsh scripts once they run, which fish and nu never do. **Since 2026-10-03** `Prepare`
+  leaves them out when the command line shows the shell is fish or nu (`fish.exe`, `nu.exe`,
+  `wsl.exe -- fish`, `-e`/`--exec`). It can't see a distro whose login shell is fish (plain
+  `wsl.exe`): that one still inherits them (a zsh started from there still works: our `.zshenv`
+  restores the user's).
 
 ## The marks themselves
 
@@ -54,7 +55,7 @@ Gaps:
 | Command end | `133;D;<status>`, only after a prompt was shown | `133;D;<status>` (+ `aid` in bash) |
 | Folder | `7;file://host/<percent-encoded path>`; pwsh: `9;9;"<path>"` | `7;kitty-shell-cwd://host<path>` (raw path, no encoding) |
 | String terminator | BEL for marks, ESC\ for zsh's OSC 7 | BEL everywhere |
-| Title | none (programs and prompts set their own; `program-titles` decides what we show) | `title` feature: folder at the prompt, command while it runs |
+| Title | `shell-titles` (2026-10-03): folder at the prompt, command while it runs, done in Zinc from the marks (no script), so every marking shell gets it; a title the running program sets wins | `title` feature in each script: folder at the prompt, command while it runs |
 
 Why ours differ:
 - **`cmdline_url`**: our command center, palette and attention dots show what ran. Ghostty keeps
@@ -92,9 +93,13 @@ Ideas from Ghostty's side:
   several lines back from the screen: it kept only the first line (the blank rest of each row
   looked like a decoration gap); rows are now read one by one.
 - **Writing marks to a dedicated TTY descriptor** (zsh: `sysopen -o cloexec /dev/tty`), so they
-  still reach the terminal when the user redirects stdout in a hook. We print to stdout.
+  still reach the terminal when the user redirects stdout in a hook. **Done 2026-10-03** (stdout
+  when /dev/tty can't be opened).
 - **Not sending D from zle-invoked precmd** (zsh plugins that re-run precmd to refresh the
-  prompt). Worth checking against our zsh script if a prompt plugin ever doubles D marks.
+  prompt). **Done 2026-10-03**: our precmd sends nothing while zle is active (`zle` succeeds only
+  then), but puts B back on a prompt the theme rebuilt.
+- **Marking each line of a multi-line bash PS1** (`P;k=s`): skipped. ConPTY repaints multi-line
+  prompts on resize (above), and everything we build on marks starts from the prompt's first row.
 
 ## Features beyond marks
 
@@ -103,11 +108,11 @@ Ghostty's `shell-integration-features` (defaults in brackets) and where Zinc sta
 | Feature | What it does | Zinc |
 |---|---|---|
 | `cursor` [on] | bar cursor at the prompt (DECSCUSR 5/6), reset before a command runs | **done terminal-side** (2026-10-01): `cursor-style-at-prompt` (default "same"), from the marks, so it works for every marking shell without scripts; a program's DECSCUSR still wins |
-| `title` [on] | title = folder at the prompt, command while running | not done; titles come from the shell/prompt itself |
+| `title` [on] | title = folder at the prompt, command while running | **done terminal-side** (2026-10-03): `shell-titles` (default on), from the marks and folder reports (`ShellTitle.cs`); a title the running program sets still wins |
 | `sudo` [off] | `sudo` wrapper keeping `TERMINFO`, so Ghostty's terminfo works as root | not needed: we use `TERM=xterm-256color` |
 | `ssh-env` [off] | `ssh` wrapper: TERM fallback, forwards COLORTERM/TERM_PROGRAM | partly moot (no custom TERM); forwarding `TERM_PROGRAM` could matter once we set it |
 | `ssh-terminfo` [off] | installs Ghostty's terminfo on the remote host with `tic` | not needed (no custom terminfo) |
-| `path` [on] | puts the `ghostty` binary on PATH | we have no CLI to put there |
+| `path` [on] | puts the `ghostty` binary on PATH | **done** (2026-10-03): `zn`'s folder at the end of every terminal's PATH, `ZINC_ZN` for WSL (bash/zsh scripts define `zn`) |
 
 Both use the marks for close confirmation: closing at a prompt doesn't ask. Ours asks only when a
 pane has a running command (C without D yet, `TerminalControl.RunningCommand`).

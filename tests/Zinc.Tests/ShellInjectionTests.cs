@@ -62,6 +62,27 @@ public class ShellInjectionTests
         Assert.False(launch.Environment.ContainsKey("ZINC_ZDOTDIR"));
     }
 
+    [Theory]
+    [InlineData(@"""C:\Program Files\fish\fish.exe""")]
+    [InlineData("nu.exe --login")]
+    [InlineData("wsl.exe -d Fedora -- fish")]
+    [InlineData("wsl.exe --distribution-id {1234} --cd ~ -e /usr/bin/nu")]
+    [InlineData("wsl.exe -d Fedora --exec fish -l")]
+    public void FishAndNushellGetNoBashOrZshVariables(string command)
+    {
+        // They mark their prompts themselves, and would never take the variables back out.
+        var launch = Prepare(command);
+        Assert.Equal(command, launch.CommandLine);
+        Assert.Empty(launch.Environment);
+    }
+
+    [Fact]
+    public void WslRunningSomethingElseStillGetsThem()
+    {
+        Assert.NotEmpty(Prepare("wsl.exe -d Fedora -- zsh").Environment);
+        Assert.NotEmpty(Prepare("wsl.exe -d Fedora --cd /home/fish").Environment); // a folder named fish isn't the shell
+    }
+
     [Fact]
     public void KeepsTheUsersWslenvAndZdotdir()
     {

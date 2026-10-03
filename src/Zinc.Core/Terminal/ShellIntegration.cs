@@ -54,6 +54,15 @@ public static class ShellIntegration
             };
         }
 
+        // fish and nushell send their own marks, and never run the scripts that take our variables back out: they'd
+        // be left for every program started from them. Only when the command line says so (wsl.exe -- fish); a distro
+        // whose login shell is fish still gets them.
+        if (MarksItself(exe) || (exe == "wsl" && ProgramAfterOptions(args) is { } program &&
+                                 MarksItself(Path.GetFileNameWithoutExtension(program).ToLowerInvariant())))
+        {
+            return none;
+        }
+
         // The rest (bash, zsh, and wsl.exe, cmd.exe or a launcher script starting one): variables.
         // Forward slashes: MSYS programs read C:/x as a path, and WSLENV's /p translates it (/mnt/c/x).
         var dir = scripts.Replace('\\', '/').TrimEnd('/');
@@ -119,6 +128,15 @@ public static class ShellIntegration
     }
 
     /// <summary>A command line split into arguments (double quotes group, and are removed).</summary>
+    private static bool MarksItself(string exe) => exe is "fish" or "nu";
+
+    /// <summary>What wsl.exe is told to run (after <c>--</c>, <c>-e</c> or <c>--exec</c>); null for the login shell.</summary>
+    private static string? ProgramAfterOptions(List<string> args)
+    {
+        var at = args.FindIndex(1, a => a is "--" or "-e" or "--exec");
+        return at >= 0 && at + 1 < args.Count ? args[at + 1] : null;
+    }
+
     internal static List<string> Split(string commandLine)
     {
         var args = new List<string>();

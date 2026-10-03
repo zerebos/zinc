@@ -44,6 +44,17 @@ __zinc_si_boot() {
     fi
 }
 
+# Marks and folder reports go straight to the terminal, so they arrive even while a hook's output is
+# redirected; to stdout when /dev/tty can't be opened. Close-on-exec: programs don't inherit it.
+'builtin' 'zmodload' zsh/system 2>/dev/null && 'builtin' 'sysopen' -o cloexec -wu __zinc_si_fd -- /dev/tty 2>/dev/null
+__zinc_si_out() {
+    if [[ -n "${__zinc_si_fd-}" ]]; then
+        'builtin' 'print' -nru "$__zinc_si_fd" -- "$1"
+    else
+        'builtin' 'print' -nr -- "$1"
+    fi
+}
+
 # Percent-encoded, byte by byte (for OSC 7 and C's cmdline_url).
 __zinc_si_encode() {
     'builtin' 'emulate' -L zsh -o extended_glob
@@ -54,7 +65,7 @@ __zinc_si_encode() {
 __zinc_si_report_folder() {
     'builtin' 'local' REPLY
     __zinc_si_encode "$PWD"
-    'builtin' 'print' -nr -- $'\e]7;file://'"${HOST-}$REPLY"$'\e\\'
+    __zinc_si_out $'\e]7;file://'"${HOST-}$REPLY"$'\e\\'
 }
 
 __zinc_si_status() { __zinc_si_last=$? }
@@ -62,16 +73,22 @@ __zinc_si_status() { __zinc_si_last=$? }
 typeset -g __zinc_si_b=$'%{\e]133;B\a%}'
 
 __zinc_si_precmd() {
-    [[ -z "${__zinc_si_prompted-}" ]] || 'builtin' 'print' -nr -- $'\e]133;D;'"${__zinc_si_last-0}"$'\a'
+    # A plugin re-running the prompt hooks from the line editor (to refresh the prompt): nothing new has started or
+    # ended, so no second D and A; B goes back on a prompt the theme rebuilt. (zle succeeds only while it's active.)
+    if 'builtin' 'zle'; then
+        [[ "$PS1" == *"$__zinc_si_b" ]] || PS1+=$__zinc_si_b
+        'builtin' 'return' 0
+    fi
+    [[ -z "${__zinc_si_prompted-}" ]] || __zinc_si_out $'\e]133;D;'"${__zinc_si_last-0}"$'\a'
     __zinc_si_prompted=1
-    'builtin' 'print' -nr -- $'\e]133;A;aid='"$$"$'\a'
+    __zinc_si_out $'\e]133;A;aid='"$$"$'\a'
     [[ "$PS1" == *"$__zinc_si_b" ]] || PS1+=$__zinc_si_b
 }
 
 __zinc_si_preexec() {
     'builtin' 'local' REPLY
     __zinc_si_encode "$1"
-    'builtin' 'print' -nr -- $'\e]133;C;cmdline_url='"$REPLY"$'\a'
+    __zinc_si_out $'\e]133;C;cmdline_url='"$REPLY"$'\a'
 }
 
 add-zsh-hook precmd __zinc_si_boot
