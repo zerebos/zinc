@@ -125,7 +125,7 @@ if ($deps -notmatch 'runtimepack\.Microsoft\.NETCore\.App\.Runtime' -or $deps -n
 Write-Host "Packing $PackId $Version ..."
 # The title is what Settings > Apps shows: a test package says so, never a second "Zinc".
 $title = if ($PackId -eq 'Zinc') { 'Zinc' } else { $PackId }
-dotnet vpk pack --packId $PackId --packVersion $Version --packTitle $title --packAuthors Zinc `
+dotnet vpk pack --packId $PackId --packVersion $Version --packTitle $title --packAuthors Zinc --runtime win-x64 `
     --packDir $publishDir --mainExe zinc.exe --icon (Join-Path $repo 'src\Zinc\Assets\Zinc.ico') `
     --shortcuts $Shortcuts --outputDir $Out
 if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed.' }
