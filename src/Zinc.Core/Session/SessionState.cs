@@ -179,29 +179,13 @@ public static class SessionStore
     /// %APPDATA%\Zinc — unless <c>ZINC_CONFIG</c> points elsewhere (a test run), where
     /// nothing is saved or restored, so test instances never touch the real session.
     /// </summary>
-    public static string? DefaultPath(Func<string, string?>? getEnv = null)
-    {
-        getEnv ??= Environment.GetEnvironmentVariable;
-        if (getEnv("ZINC_SESSION") is { Length: > 0 } explicitPath)
-        {
-            return explicitPath;
-        }
-
-        if (getEnv("ZINC_CONFIG") is { Length: > 0 })
-        {
-            return null;
-        }
-
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zinc", "session.json");
-    }
+    public static string? DefaultPath(Func<string, string?>? getEnv = null) => Cli.CliPipe.SessionPath(getEnv);
 
     /// <summary>
     /// The name that one running Zinc per session file goes by: its single-instance key,
     /// and the name of the lock guarding the file. Same file, same key, however the path is cased.
     /// </summary>
-    public static string InstanceKey(string path) =>
-        "Zinc." + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())))[..16];
+    public static string InstanceKey(string path) => Cli.CliPipe.InstanceKey(path);
 
     public static string Serialize(SessionState state) => JsonSerializer.Serialize(state, Json.SessionState);
 

@@ -305,6 +305,9 @@ version once a day and download it in the background; a notice then offers to re
 installs the next time you quit. `false`: only Settings > About > Check for updates looks. Copies not
 installed by the installer (a dev build, `scripts/install.ps1`'s) never update.
 
+**`[cli]`**: `remote-control = true` lets `zn` (below) control this Zinc; off by default, when only
+`zn version` answers. Settings > Terminal > Command line has the switch.
+
 **`[debug]`**: `logging = true` keeps a debug log in `%APPDATA%\Zinc\logs\zinc.log`
 (moved aside to `zinc.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy
 (the log with Zinc's version and Windows' on top, for a bug report) and Clear. `ZINC_LOG=<file>`
@@ -752,6 +755,29 @@ The drop area is highlighted while you drag.
 
 If the shell exits with a non-zero code, the window stays open showing the code
 until a key is pressed; a clean exit closes it.
+
+### zn: controlling Zinc from scripts
+
+`zn` (in development: built as `src\Zinc.Cliind\Debug
+et10.0\win-x64\zn.exe`, not shipped yet) opens,
+focuses and closes windows, workspaces, panes and terminals in the running Zinc, once `[cli] remote-control` is on:
+
+```text
+zn list                                     everything open, with ids ((*) = focused)
+zn pane split right -- htop                 a pane beside this one, running htop
+zn terminal new --pane 4 --profile wsl:Fedora   a Fedora tab in pane 4
+zn workspace new --name api --cwd .         a workspace in this folder
+zn action "zoom-in"                         any action, by its name
+```
+
+Commands are `zn <thing> <verb>`: `window`, `workspace`, `pane` and `terminal`, each with `list`, `new` (`pane
+split`), `focus` and `close` (`--force`: without asking). Run in a Zinc terminal, a command acts on that terminal
+(its pane, workspace, window); `--terminal`, `--pane`, `--workspace`, `--window` (ids from `zn list`) aim elsewhere;
+outside Zinc it acts on the window used last and says which on stderr. `--profile`, `--cwd`, and `-- program args`
+(run instead of the shell; for a WSL profile, inside that distro) shape what opens; commands that open a terminal
+print its id. `--json` prints lists for scripts; `zn <thing> --help` lists the rest. Exit codes: 0 done, 1 refused
+or failed, 2 wrong usage, 3 Zinc isn't running, 4 remote control is off. Every terminal's shell gets
+`ZINC_TERMINAL_ID` and `ZINC_PIPE` (passed into WSL), which is how `zn` knows where it runs.
 
 ## Layout
 

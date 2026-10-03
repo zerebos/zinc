@@ -56,6 +56,9 @@ public sealed partial class TerminalControl
     /// </summary>
     public string? StartupInput { get; set; }
 
+    /// <summary>Adds variables to the program's environment as it starts (zn's: the terminal's id and the pipe).</summary>
+    public Action<IDictionary<string, string?>>? LaunchEnvironment { get; set; }
+
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _startupInputTimer;
     private long _lastOutputTicks, _startedTicks;
 

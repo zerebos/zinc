@@ -36,6 +36,9 @@ public sealed partial class MainWindow : Window
         public string WorkingDirectory { get; } = workingDirectory;
         public TerminalControl Control { get; } = control;
 
+        /// <summary>The terminal's number for zn while Zinc runs (its shell gets it as ZINC_TERMINAL_ID).</summary>
+        public int Id { get; } = CliServer.NewTerminal(control);
+
         /// <summary>A console Windows handed over (default terminal): not saved with the session.</summary>
         public bool HandedOver { get; set; }
 
@@ -60,9 +63,17 @@ public sealed partial class MainWindow : Window
         WorkspaceFolder? Folder = null, string? Icon = null);
 
     /// <summary>A title-bar tab and the workspace it shows.</summary>
+    private static int s_lastWorkspaceId, s_lastWindowId;
+
+    /// <summary>The window's number for zn while Zinc runs.</summary>
+    internal int Id { get; } = Interlocked.Increment(ref s_lastWindowId);
+
     internal sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
     {
         public TabViewItem Item { get; } = item;
+
+        /// <summary>The workspace's number for zn while Zinc runs.</summary>
+        public int Id { get; } = Interlocked.Increment(ref s_lastWorkspaceId);
 
         /// <summary>
         /// The tab's content, set once. Layouts are rebuilt inside it so pane hosts only

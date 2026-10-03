@@ -491,6 +491,19 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `UTurnArrow` (Heroicons' arrow-uturn-left shape, drawn as a Path). Tools:
   `.scratch/tools/settings-open.ps1`, `settings-remember.ps1`, `uia-scrollpct.ps1`. Test: `.scratch/tools/find-window.ps1` + `uia.ps1 -Window
   "Zinc Settings"` (invoke toggles/selects nav items), config copy in .scratch/settings-test.
+- zn, the CLI (design: claude.ai/code/artifact/1ee17a45-fbe4-4e67-874c-b2bf68270445): `src/Zinc.Cli` = zn.exe
+  (Native AOT on publish, net10.0, **compiles Core's `Cli/CliProtocol|CliPipe|CliCommandLine|CliText.cs` in as linked
+  source** (no Core reference: keep those four free of other Core types). Core `Cli/`: request/reply JSON lines
+  (source-gen), pipe names (`CliPipe`: `<InstanceKey>.cli` per session, `Zinc.p<pid>.cli` without one;
+  `SessionStore.DefaultPath/InstanceKey` delegate here), the parser (`zn <thing> <verb>`, per-verb option lists,
+  help), list tables, `CliEnvironment` (ZINC_TERMINAL_ID/ZINC_PIPE + WSLENV), `CliLaunch.WithProgram` (a `--`
+  program under a WSL profile runs in its distro); all tested in `CliTests`. App: `CliServer` (pipe thread, ACL =
+  current user, network denied; one request per connection; `NewTerminal` hands out terminal ids and sets
+  `TerminalControl.LaunchEnvironment`) → `App.Cli.cs` (UI thread: version always, else `[cli] remote-control`;
+  `FindCliTarget`: flag > caller's terminal > window used last (`Defaulted` → `Target` note); `CliTree`) →
+  `MainWindow.Cli.cs` (commands through CreatePane/Wire/Split/ClosePane/ConfirmClose/BringToPane, so they behave like
+  keys). Ids: `TerminalTab.Id`, `TabGroup.Id` (pane), `WorkspaceTab.Id`, `MainWindow.Id`, per run.
+  E2E: `.scratch/tools/zn-test.ps1` (own config + session, so its own pipe; 27 checks).
 - `Commands/` — `FuzzyMatch` (in-order, word-start/consecutive scoring, match positions) and
   `CommandFilter` for the command palette (tested). `KeyChord.ToString()` / `Keybindings.ChordFor`
   give shortcut labels.

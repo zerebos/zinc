@@ -7,6 +7,10 @@ namespace Zinc.Panes;
 public sealed class TabGroup<T> where T : class
 {
     private readonly List<T> _tabs = [];
+    private static int s_lastId;
+
+    /// <summary>The pane's number for zn while Zinc runs (1, 2, 3…; never reused in a run).</summary>
+    public int Id { get; } = Interlocked.Increment(ref s_lastId);
 
     public TabGroup(T first)
     {

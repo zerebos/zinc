@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- zn.exe: controls the running Zinc over its pipe. A console program compiled ahead of time (starts in
+       milliseconds, no .NET install needed); the protocol's source is shared with Core (src/Zinc.Core/Cli), not
+       referenced, so zn carries nothing else. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>zn</AssemblyName>
+    <RootNamespace>Zinc.Cli</RootNamespace>
+    <Platforms>x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == '' or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <!-- Nothing zn doesn't use: smaller, faster to start. -->
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <StackTraceSupport>false</StackTraceSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Zinc.Core\Cli\CliProtocol.cs" Link="Shared\CliProtocol.cs" />
+    <Compile Include="..\Zinc.Core\Cli\CliPipe.cs" Link="Shared\CliPipe.cs" />
+    <Compile Include="..\Zinc.Core\Cli\CliCommandLine.cs" Link="Shared\CliCommandLine.cs" />
+    <Compile Include="..\Zinc.Core\Cli\CliText.cs" Link="Shared\CliText.cs" />
+  </ItemGroup>
+</Project>

@@ -379,7 +379,9 @@ public sealed partial class TerminalControl : UserControl
                 }
             }
 
-            session.Start(launch.CommandLine, _workingDirectory, cols, rows, launch.Environment);
+            var environment = new Dictionary<string, string?>(launch.Environment);
+            LaunchEnvironment?.Invoke(environment);
+            session.Start(launch.CommandLine, _workingDirectory, cols, rows, environment);
             TypeStartupInputWhenReady(session);
         }
         catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)

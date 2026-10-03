@@ -105,6 +105,7 @@ public partial class App : Application
             Log.Write($"config: {warning}"); // shown in the window once settings reload on save
         }
         _messageWindow = new MessageWindow();
+        StartCliServer(); // before any terminal starts: each gets the pipe's name
         var profile = _config.DefaultProfile;
         // A command given on our command line (or ZINC_SHELL) is asked for explicitly: open
         // it rather than the saved session. Otherwise reopen what was open last time.
@@ -454,6 +455,7 @@ public partial class App : Application
 
         _quitting = true;
         TerminalHandoff.StopListening();
+        CliServer.Stop();
         foreach (var window in _windows.ToList())
         {
             window.CloseWithoutAsking();

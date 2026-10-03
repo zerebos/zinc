@@ -6,6 +6,9 @@
     <Project Path="src/Zinc.Core/Zinc.Core.csproj">
       <Platform Solution="*|x64" Project="x64" />
     </Project>
+    <Project Path="src/Zinc.Cli/Zinc.Cli.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+    </Project>
     <Project Path="src/Zinc/Zinc.csproj">
       <Platform Solution="*|x64" Project="x64" />
     </Project>
