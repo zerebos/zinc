@@ -73,4 +73,9 @@
     <!-- Installer and updates (Program.cs, Updater.cs). Keep its version equal to vpk's in dotnet-tools.json. -->
     <PackageReference Include="Velopack" Version="1.2.161" />
   </ItemGroup>
+
+  <!-- Where release builds look for updates (scripts/release.ps1 -UpdateUrl); dev builds have none (Updater.Source). -->
+  <ItemGroup Condition="'$(ZincUpdateUrl)' != ''">
+    <AssemblyMetadata Include="ZincUpdateUrl" Value="$(ZincUpdateUrl)" />
+  </ItemGroup>
 </Project>

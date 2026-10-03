@@ -417,6 +417,9 @@ public sealed record Config
     /// <summary>Whether Zinc keeps a debug log (<see cref="Log.FilePath"/>). Config: <c>[debug] logging</c> (global).</summary>
     public bool Logging { get; init; }
 
+    /// <summary>Whether an installed Zinc checks for updates on its own (once a day). Config: <c>[updates] check</c> (global).</summary>
+    public bool UpdateCheck { get; init; } = true;
+
     /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
     public double CursorOpacity { get; init; } = 1;
 
@@ -496,6 +499,7 @@ public sealed record Config
             "notify-bell-color" when TryColor(value, out var bell) => this with { DotBellColor = bell },
             "notify-failed-color" when TryColor(value, out var failed) => this with { DotFailedColor = failed },
             "logging" when bool.TryParse(value, out var logging) => this with { Logging = logging },
+            "update-check" when bool.TryParse(value, out var check) => this with { UpdateCheck = check },
             "cursor-opacity" when TryDouble(value, out var cursorOpacity) && cursorOpacity is >= 0.1 and <= 1 =>
                 this with { CursorOpacity = cursorOpacity },
             "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },

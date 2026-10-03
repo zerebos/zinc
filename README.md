@@ -62,11 +62,15 @@ Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Zinc\versi
 and repoints the Start Menu shortcut, so open windows are never disturbed; the three
 newest versions are kept (`-Keep N`). Each carries its own .NET runtime, as the tester zip does.
 
-**Sharing a build.** `pwsh scripts/package.ps1` makes `dist\Zinc-<version>-win-x64.zip`: a portable
-copy with the .NET runtime and the Windows App SDK inside (about 77 MB), nothing to install. Unzip it
-anywhere and open `zinc.exe`. Its `README.txt` (from `scripts/package-readme.txt`) tells testers how to
-start it past SmartScreen (the build isn't signed), where settings and logs go, how to send a debug log
-and benchmark results with feedback, and how to remove it.
+**Sharing a build.** `pwsh scripts/release.ps1 -UpdateUrl <address>` makes a release in
+`dist\release` with [Velopack](https://velopack.io): `Zinc-win-Setup.exe` (a per-user install, no admin
+prompt), the update packages, `releases.win.json` (what installed copies check daily) and
+`Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are inside (about 77 MB). Put the
+folder's contents at the address; installed copies then update themselves (Settings > About > Updates).
+`-From <address>` fetches the previous release first so the new one also gets a small delta package.
+`README.txt` (from `scripts/package-readme.txt`) tells testers how to install past SmartScreen (the
+build isn't signed), how updates work, where settings and logs go, how to send a debug log and
+benchmark results with feedback, and how to remove it.
 
 **Versions.** `ZincVersion` in `Directory.Build.props` is the release being worked toward. A build
 of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
@@ -291,6 +295,11 @@ follows Windows live). Applies when Zinc starts again: WinUI sets an app's theme
 
 **Accent** (`[window] accent`): `"zinc"` (default: Zinc's green on selections, focus lines,
 switches and buttons) or `"windows"` (your Windows accent color). Applies when Zinc starts.
+
+**`[updates]`**: `check = true` (default) lets a Zinc installed with its installer look for a new
+version once a day and download it in the background; a notice then offers to restart into it, or it
+installs the next time you quit. `false`: only Settings > About > Check for updates looks. Copies not
+installed by the installer (a dev build, `scripts/install.ps1`'s) never update.
 
 **`[debug]`**: `logging = true` keeps a debug log in `%APPDATA%\Zinc\logs\zinc.log`
 (moved aside to `zinc.old.log` at 4 MB). Settings > About has the switch and Open folder, Copy

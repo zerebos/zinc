@@ -110,6 +110,7 @@ public partial class App : Application
         var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
                               Environment.GetEnvironmentVariable("ZINC_SHELL") is { Length: > 0 };
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
+        Updater.Schedule(_config.Global.UpdateCheck);
         ListenForConsoles();
         if (ShellResolver.LaunchedForHandoff && !explicitCommand)
         {
@@ -360,9 +361,10 @@ public partial class App : Application
 
     /// <summary>
     /// Quits (asking first if commands are running); <paramref name="fresh"/>: without saving the
-    /// windows, so the next start opens a new one.
+    /// windows, so the next start opens a new one; <paramref name="restartForUpdate"/>: the ready update
+    /// installs and Zinc starts again (Updater.RestartNow).
     /// </summary>
-    internal async void AskQuit(bool fresh)
+    internal async void AskQuit(bool fresh, bool restartForUpdate = false)
     {
         if (_windows.LastOrDefault() is { } front && _windows.Any(w => w.RunningCommands().Any()))
         {
@@ -373,7 +375,7 @@ public partial class App : Application
             }
         }
 
-        Ui.Guard("quitting", () => Quit(fresh));
+        Ui.Guard("quitting", () => Quit(fresh, restartForUpdate));
     }
 
     internal void Quit() => Quit(fresh: false);
@@ -432,7 +434,7 @@ public partial class App : Application
         }
     }
 
-    private void Quit(bool fresh)
+    private void Quit(bool fresh, bool restartForUpdate = false)
     {
         if (_quitting)
         {
@@ -459,6 +461,7 @@ public partial class App : Application
         _tray?.Dispose();
         _hotkey?.Dispose();
         _messageWindow?.Dispose();
+        Updater.ApplyOnExit(restartForUpdate); // a downloaded update installs once this process ends
         Exit();
     }
 
@@ -707,6 +710,7 @@ public partial class App : Application
         _config = fresh;
         AttentionDot.SetColors(fresh.Global);
         LoginStartup.Apply(fresh.Global.LaunchAtLogin);
+        Updater.Schedule(fresh.Global.UpdateCheck);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
         _keybindings.CopyFrom(fresh.Keybindings);
         windows.ForEach(w => w.ApplyConfig(fresh));

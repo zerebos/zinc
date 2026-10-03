@@ -37,6 +37,14 @@ public static partial class Program
             MoveOldLocalData();
         }
 
+        if (OlderCopyRunning() is { } other)
+        {
+            Log.Write($"startup: another Zinc runs from {other}; asking to quit it first");
+            MessageBoxW(0, $"Zinc is already running from another folder:\n\n{other}\n\n" +
+                "Quit that copy first (right-click its tray icon, Quit Zinc), then start Zinc again.", "Zinc", 0x40 /* MB_ICONINFORMATION */);
+            return 0;
+        }
+
         Microsoft.UI.Xaml.Application.Start(_ =>
         {
             SynchronizationContext.SetSynchronizationContext(new DispatcherQueueSynchronizationContext(DispatcherQueue.GetForCurrentThread()));
@@ -44,6 +52,55 @@ public static partial class Program
         });
         return 0;
     }
+
+    /// <summary>
+    /// The folder of another Zinc that owns this session, when this copy came from the installer and that one runs from
+    /// somewhere else: a zip copy left open while installing. The two don't hand launches to each other (an installed
+    /// copy has an app identity of its own), so without this the new one would open without the windows while the old
+    /// one kept running in the tray. Null otherwise; test runs (no session) never check.
+    /// </summary>
+    private static string? OlderCopyRunning()
+    {
+        try
+        {
+            var root = VelopackLocator.Current.RootAppDir;
+            if (root == null || VelopackLocator.Current.IsPortable || !File.Exists(Path.Combine(root, "Update.exe")) ||
+                !Zinc.Pty.InstallCleanup.IsInside(Environment.ProcessPath, root) || SessionStore.DefaultPath() is not { } session ||
+                !Mutex.TryOpenExisting(@"Local\" + SessionStore.InstanceKey(session) + ".Session", out var owner))
+            {
+                return null;
+            }
+
+            owner.Dispose();
+            foreach (var process in System.Diagnostics.Process.GetProcessesByName("zinc"))
+            {
+                using (process)
+                {
+                    try
+                    {
+                        if (process.Id != Environment.ProcessId && process.MainModule?.FileName is { } path &&
+                            !Zinc.Pty.InstallCleanup.IsInside(path, root))
+                        {
+                            return Path.GetDirectoryName(path);
+                        }
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+                    {
+                        // Gone, or not ours to look at.
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"startup: couldn't look for another copy ({ex.Message})");
+        }
+
+        return null;
+    }
+
+    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int MessageBoxW(nint hwnd, string text, string caption, uint type);
 
     /// <summary>Logs, crash log and icon cache used to live in %LOCALAPPDATA%\Zinc, now the installer's folder (AppFolders).</summary>
     private static void MoveOldLocalData()

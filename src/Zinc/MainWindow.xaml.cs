@@ -221,6 +221,7 @@ public sealed partial class MainWindow : Window
 
         BuildNewTabMenu();
         SetUpConfigNotice();
+        SetUpUpdateNotice();
         ApplyDividerColor();
 
         Closed += (_, _) =>
@@ -235,6 +236,7 @@ public sealed partial class MainWindow : Window
             }
 
             _windowClosed = true;
+            Updater.Changed -= ShowUpdateNotice;
             _chromeTimer?.Stop();
             _commandClock?.Stop();
             _commandSettle?.Stop();
@@ -1102,22 +1104,6 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>test:update: the update round trip, logged (`update: ...`).</summary>
-    private static async Task UpdateForTestAsync()
-    {
-        try
-        {
-            if (await Updater.CheckAndDownloadAsync() is { } update)
-            {
-                Updater.ApplyAndRestart(update);
-            }
-        }
-        catch (Exception ex)
-        {
-            Log.Write($"update: failed: {ex.Message}");
-        }
-    }
-
     /// <summary>
     /// Test hook: ZINC_TEST_KEYS="alt+shift+plus,alt+left" replays chords (one per second)
     /// through the keybindings and action handler, as if pressed in the focused pane.
@@ -1258,9 +1244,17 @@ public sealed partial class MainWindow : Window
 
             if (chord == "test:update")
             {
-                // Check, download and, if there's a newer version, restart into it (the update round trip test).
+                // Check and download, as the daily check does (the update round trip test).
                 Log.Write($"test {chord}");
-                _ = UpdateForTestAsync();
+                _ = Updater.CheckAsync();
+                return;
+            }
+
+            if (chord == "test:update-restart")
+            {
+                // The notice's Restart now.
+                Log.Write($"test {chord}");
+                Updater.RestartNow();
                 return;
             }
 

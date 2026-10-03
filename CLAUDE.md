@@ -622,18 +622,18 @@ and read state after the write (see `_titleDirty`).
   not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
   metapackage release they came from.
-- Tester builds: `scripts/package.ps1` → `dist\Zinc-<version>-win-x64.zip` (gitignored): `dotnet publish
-  --self-contained true` after clearing the app's obj\x64\Release (the .NET runtime inside; install.ps1 publishes self-contained too), one
-  top-level folder, `README.txt` from `scripts/package-readme.txt` ({version} filled in), '+' in the version
-  becomes '_' in the name. ~197 MB unzipped / 77 MB zipped (.NET + WinAppSDK; language folders are tiny).
-  Smoke-test an unzipped copy with ZINC_CONFIG set to a fresh path (else it redirects into the user's Zinc).
-  **Both scripts take the `Local\ZincPublish` mutex (they share obj\).** A self-contained publish right after a
-  framework-dependent one reused its zinc.deps.json, which names no runtime: zinc.exe then dies with "Could not
-  resolve CoreCLR path" (Application event log, nothing on screen); the first zip sent to a tester was built so.
-  package.ps1 refuses a deps.json without `runtimepack.Microsoft.NETCore.App.Runtime`. Always smoke-test the zip
-  you send (.scratch/tools/zip-env-test.ps1 unzips it into a path like the tester's and starts it).
+- Tester builds = `scripts/release.ps1` (below; package.ps1, the zip-only script, is gone): `dotnet publish
+  --self-contained true` after clearing the app's obj\x64\Release (the .NET runtime inside; install.ps1 publishes
+  self-contained too), `README.txt` from `scripts/package-readme.txt` ({version} filled in). ~197 MB installed /
+  77 MB packed (.NET + WinAppSDK; language folders are tiny). Smoke-test with ZINC_CONFIG set to a fresh path
+  (else it redirects into the user's Zinc). **install.ps1 and release.ps1 take the `Local\ZincPublish` mutex (they
+  share obj\).** A self-contained publish right after a framework-dependent one reused its zinc.deps.json, which
+  names no runtime: zinc.exe then dies with "Could not resolve CoreCLR path" (Application event log, nothing on
+  screen); the first zip sent to a tester was built so. release.ps1 refuses a deps.json without
+  `runtimepack.Microsoft.NETCore.App.Runtime`.
 - Installer + updates (Velopack 1.2.161; plan: claude.ai/code/artifact/33953d1b-1792-4f70-aeef-07dc7d80bcb0):
-  `scripts/release.ps1` (refuses a dirty tree unless -AllowDirty; publish as package.ps1 under the same mutex;
+  `scripts/release.ps1` (refuses a dirty tree unless -AllowDirty; `-UpdateUrl` is built in via the `ZincUpdateUrl`
+  MSBuild property → AssemblyMetadata, required for the `Zinc` id; publish under the mutex above;
   `dotnet vpk pack` → `<id>-win-Setup.exe`, full/delta nupkg, `releases.win.json`, portable zip; -From fetches the
   previous release for deltas; `vpk` pinned in root `dotnet-tools.json`, keep it equal to the PackageReference).
   Package id `Zinc` installs to `%LOCALAPPDATA%\Zinc` (Velopack replaces/removes that whole folder on
@@ -641,10 +641,21 @@ and read state after the write (see `_titleDirty`).
   log, icon cache; `MoveOldLocalData` moves the old Local ones once, after the single-instance check, not in
   test runs). `Program.Main` starts with `VelopackApp...Run()`; `BeforeUninstall` → Core `Pty/InstallCleanup`
   (sign-in entry, default terminal: only what points into the install root; tested on a scratch key).
-  `Updater` (App): `ZINC_UPDATE_URL` (folder or URL) else the built-in address; only copies the installer put
-  in place update (`UpdateManager.IsInstalled`). Test: `.scratch/tools/update-roundtrip.ps1` (packs
-  `Zinc.Test` 0.1.0-test.1/.2 with no shortcuts into .scratch/feed, installs silently into .scratch/update-test,
-  `test:update`, checks the restart, uninstalls and checks the real registrations are unchanged). **Never
+  `Updater` (App, UI thread): `ZINC_UPDATE_URL` (folder or URL) else the built-in address; only copies the installer
+  put in place update (`UpdateManager.IsInstalled`, else `UpdateStatus.NotInstalled`). `[updates] check` (default on)
+  → `Schedule`: first check 1 min after start, then daily; `CheckAsync` downloads a newer version → `Ready` →
+  `MainWindow.Updates.cs` notice (not in the quick terminal; Restart now / Later = `DismissNotice`) and About's
+  Updates card (`SettingsWindow.UpdatesGroup`, live via `Updater.Changed`). Installing always goes through App's
+  quit: `RestartNow` = `AskQuit(restartForUpdate: true)`; `Quit` calls `ApplyOnExit` last thing
+  (`WaitExitThenApplyUpdates`: Update.exe waits for the process to end, installs, restarts if asked), so any quit
+  installs a ready update. `test:update` (check), `test:update-restart` (Restart now). An installed copy has its
+  own app identity (Velopack's AppUserModelID), so AppInstance never hands launches between an installed copy and
+  a zip/dev copy (copies of one install still do): `Program.OlderCopyRunning` (installed copy + the session's lock
+  already held + a zinc.exe outside the install) shows a message and exits, instead of a second Zinc without the
+  session. A silent Setup.exe doesn't start the app (the interactive one does). Tests:
+  `.scratch/tools/update-roundtrip.ps1` (packs `Zinc.Test` test.1-3 with no shortcuts into .scratch/feed,
+  installs silently into .scratch/update-test; A: Restart now, B: Later + palette Quit; uninstall; checks the real
+  registrations are unchanged), `updates-card-shot.ps1`, `oldcopy-test.ps1`. **Never
   install a `Zinc`-id package on this machine** (it would take the dev install's Start Menu shortcut, sign-in
   entry and default terminal), and run every Setup/Update.exe with ZINC_CONFIG set: the installer starts Zinc,
   which would otherwise hand itself to the user's running Zinc.

@@ -63,6 +63,8 @@ internal sealed partial class SettingsWindow : Window
         Brand.StyleCaptionButtons(AppWindow.TitleBar);
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
+        Updater.Changed += ShowUpdateStatus;
+        Closed += (_, _) => Updater.Changed -= ShowUpdateStatus;
 
         // Title bar: the app's mark and the window's name, in the caption area.
         var titleBar = new StackPanel
@@ -401,7 +403,8 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
         _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
             ButtonRow(("Open", () => App.Instance.ShowWelcome(firstRun: false)))));
-        AddGroup("Troubleshooting", SettingsCatalog.All.Where(s => s.Section == "about"));
+        UpdatesGroup();
+        AddGroup("Troubleshooting", SettingsCatalog.All.Where(s => s.Section == "about" && s.Group == "Troubleshooting"));
         if (Log.FromEnvironment)
         {
             _page.Children.Add(Note("ZINC_LOG is set, so the log is always on, in the file it names."));
@@ -412,6 +415,48 @@ internal sealed partial class SettingsWindow : Window
         MemoryRow();
         BenchmarkRows();
         OpenSourceList();
+    }
+
+    // The Updates card's live parts (replaced on every render; ShowUpdateStatus updates them in place).
+    private TextBlock? _updateStatus;
+    private Button? _updateCheck, _updateRestart;
+
+    /// <summary>Updates: where things stand (live), Check for updates / Restart now, and the automatic-check switch.</summary>
+    private void UpdatesGroup()
+    {
+        var at = _page.Children.Count;
+        AddGroup("Updates", SettingsCatalog.All.Where(s => s.Section == "about" && s.Group == "Updates"));
+
+        _updateStatus = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 12,
+            IsTextSelectionEnabled = true,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+        };
+        _updateCheck = new Button { Content = "Check for updates" };
+        _updateCheck.Click += (_, _) => _ = Updater.CheckAsync();
+        _updateRestart = new Button { Content = "Restart now", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        AutomationProperties.SetName(_updateRestart, "Restart to update");
+        _updateRestart.Click += (_, _) => Updater.RestartNow();
+        var text = new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Status", TextWrapping = TextWrapping.Wrap }, _updateStatus } };
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _updateRestart, _updateCheck } };
+        _page.Children.Insert(at + 1, CardBorder(TextAndControl(text, buttons))); // under the group's title
+        ShowUpdateStatus();
+    }
+
+    private void ShowUpdateStatus()
+    {
+        if (_updateStatus == null || _updateCheck == null || _updateRestart == null)
+        {
+            return;
+        }
+
+        var status = Updater.Status;
+        _updateStatus.Text = Updater.Describe();
+        _updateCheck.Visibility = status == UpdateStatus.NotInstalled ? Visibility.Collapsed : Visibility.Visible;
+        _updateCheck.IsEnabled = status is not (UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Ready);
+        _updateRestart.Visibility = status == UpdateStatus.Ready ? Visibility.Visible : Visibility.Collapsed;
     }
 
     /// <summary>The debug log's file: show it, copy it (with the version and Windows on top) for a bug report, or start it afresh.</summary>

@@ -119,7 +119,7 @@ if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
 }
 
 Say "Publishing $name ..."
-# The same build as scripts/package.ps1's tester zip (the .NET runtime inside), one publish at a time: the
+# The same build as scripts/release.ps1's (the .NET runtime inside), one publish at a time: the
 # two share obj\, and a publish of the other kind there once left a file list naming no runtime.
 $lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
 try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }

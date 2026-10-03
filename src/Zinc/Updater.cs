@@ -1,38 +1,108 @@
+using System.Reflection;
+using Microsoft.UI.Dispatching;
 using Velopack;
 
 namespace Zinc;
 
+/// <summary>What the updater is doing, for About's card and the windows' notice.</summary>
+internal enum UpdateStatus
+{
+    /// <summary>This copy can't update: not installed by the installer (a dev build, install.ps1's), or no update address.</summary>
+    NotInstalled,
+
+    /// <summary>Hasn't checked yet.</summary>
+    Idle,
+
+    Checking,
+    Downloading,
+
+    /// <summary>A newer version is downloaded: it installs on restart, or when Zinc quits.</summary>
+    Ready,
+
+    UpToDate,
+
+    /// <summary>The last check or download failed (no network, the address gone); the next one tries again.</summary>
+    Failed,
+}
+
 /// <summary>
-/// Updates for copies the installer put in place (Velopack): check, download in the background, apply on restart.
-/// A copy it didn't install (the dev install, a dev build, a zip) has no updates. The source is
-/// <c>ZINC_UPDATE_URL</c> (tests: a local folder or a URL), else the address built into release builds.
+/// Updates for copies the installer put in place (Velopack): a check a minute after startup and every day after
+/// (<c>[updates] check</c>), or when asked (About); a newer version downloads in the background and waits. It
+/// installs when Zinc quits, or at once through <see cref="RestartNow"/> (App's quit: confirmation, session
+/// saved), never by surprise. The address is built into release builds (<c>ZincUpdateUrl</c>, release.ps1);
+/// <c>ZINC_UPDATE_URL</c> (a folder or a URL) overrides it for tests. Everything here runs on the UI thread.
 /// </summary>
 internal static class Updater
 {
-    /// <summary>Where release builds look for updates (set when hosting exists; empty: none).</summary>
-    private const string BuiltInSource = "";
+    private static readonly TimeSpan FirstCheck = TimeSpan.FromMinutes(1), Interval = TimeSpan.FromDays(1);
 
-    public static string? Source =>
+    public static string? Source { get; } =
         Environment.GetEnvironmentVariable("ZINC_UPDATE_URL") is { Length: > 0 } url ? url
-        : BuiltInSource.Length > 0 ? BuiltInSource : null;
+        : typeof(Updater).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(a => a.Key == "ZincUpdateUrl")?.Value is { Length: > 0 } builtIn ? builtIn : null;
 
-    private static UpdateManager? _manager;
-
-    /// <summary>The installer's update manager, or null when this copy can't update (not installed by it, or no source).</summary>
-    public static UpdateManager? Manager
+    public static UpdateStatus Status
     {
         get
         {
-            if (_manager == null && Source is { } source)
+            _ = Manager; // decides NotInstalled
+            return _status;
+        }
+    }
+
+    private static UpdateStatus _status = UpdateStatus.Idle;
+
+    /// <summary>The version downloading or ready.</summary>
+    public static string? NewVersion { get; private set; }
+
+    /// <summary>Download progress, 0-100.</summary>
+    public static int Progress { get; private set; }
+
+    public static DateTime? LastChecked { get; private set; }
+
+    public static string? Error { get; private set; }
+
+    /// <summary>The ready update's notice was put off ("Later"): windows don't show it again this run.</summary>
+    public static bool NoticeDismissed { get; private set; }
+
+    /// <summary>"Later" on the notice: every window hides it; the update still installs when Zinc quits.</summary>
+    public static void DismissNotice()
+    {
+        NoticeDismissed = true;
+        Changed?.Invoke();
+    }
+
+    /// <summary>Something above changed (on the UI thread).</summary>
+    public static event Action? Changed;
+
+    private static UpdateManager? _manager;
+    private static bool _managerTried;
+    private static UpdateInfo? _ready;
+    private static DispatcherQueueTimer? _timer;
+
+    /// <summary>The installer's update manager, or null when this copy can't update.</summary>
+    private static UpdateManager? Manager
+    {
+        get
+        {
+            if (!_managerTried)
             {
+                _managerTried = true;
                 try
                 {
-                    var manager = new UpdateManager(source);
-                    _manager = manager.IsInstalled ? manager : null;
+                    if (Source is { } source && new UpdateManager(source) is { IsInstalled: true } manager)
+                    {
+                        _manager = manager;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Log.Write($"update: no update manager ({ex.Message})");
+                }
+
+                if (_manager == null)
+                {
+                    _status = UpdateStatus.NotInstalled;
                 }
             }
 
@@ -40,32 +110,128 @@ internal static class Updater
         }
     }
 
-    /// <summary>The newer version, downloaded and ready to apply; null when there's none (or no updates here).</summary>
-    public static async Task<UpdateInfo?> CheckAndDownloadAsync()
+    /// <summary>The installed version (null when this copy can't update).</summary>
+    public static string? CurrentVersion => Manager?.CurrentVersion?.ToString();
+
+    /// <summary>Starts or stops the daily check (<c>[updates] check</c>); call at startup and on every config reload.</summary>
+    public static void Schedule(bool automatic)
     {
-        if (Manager is not { } manager)
+        if (Manager == null)
         {
-            Log.Write("update: this copy wasn't installed by the installer (or has no update source)");
-            return null;
+            return;
         }
 
-        var update = await manager.CheckForUpdatesAsync();
-        if (update == null)
+        if (!automatic)
         {
-            Log.Write($"update: up to date ({manager.CurrentVersion})");
-            return null;
+            _timer?.Stop();
+            return;
         }
 
-        Log.Write($"update: {manager.CurrentVersion} -> {update.TargetFullRelease.Version}, downloading");
-        await manager.DownloadUpdatesAsync(update);
-        Log.Write($"update: {update.TargetFullRelease.Version} downloaded");
-        return update;
+        if (_timer == null)
+        {
+            // A field, not a local: a timer only a local holds is collected and stops firing.
+            _timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
+            _timer.Interval = FirstCheck;
+            _timer.OnTick(timer =>
+            {
+                timer.Interval = Interval;
+                _ = CheckAsync();
+            });
+        }
+
+        if (!_timer.IsRunning)
+        {
+            _timer.Start();
+        }
     }
 
-    /// <summary>Exits, lets the installer swap the files, and starts the new version.</summary>
-    public static void ApplyAndRestart(UpdateInfo update)
+    /// <summary>Checks, and downloads a newer version; does nothing while busy or once one is ready.</summary>
+    public static async Task CheckAsync()
     {
-        Log.Write($"update: applying {update.TargetFullRelease.Version} and restarting");
-        Manager!.ApplyUpdatesAndRestart(update);
+        if (Manager is not { } manager || Status is UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Ready)
+        {
+            return;
+        }
+
+        var queue = DispatcherQueue.GetForCurrentThread();
+        Set(UpdateStatus.Checking);
+        try
+        {
+            var update = await manager.CheckForUpdatesAsync();
+            LastChecked = DateTime.Now;
+            if (update == null)
+            {
+                Log.Write($"update: up to date ({manager.CurrentVersion})");
+                Set(UpdateStatus.UpToDate);
+                return;
+            }
+
+            NewVersion = update.TargetFullRelease.Version.ToString().Split('+')[0]; // without the commit hash
+            Progress = 0;
+            Log.Write($"update: {manager.CurrentVersion} -> {NewVersion}, downloading");
+            Set(UpdateStatus.Downloading);
+            await manager.DownloadUpdatesAsync(update, percent => queue.SafeEnqueue(() =>
+            {
+                if (Status == UpdateStatus.Downloading)
+                {
+                    Progress = percent;
+                    Changed?.Invoke();
+                }
+            }));
+
+            _ready = update;
+            Log.Write($"update: {NewVersion} downloaded; installs on restart or when Zinc quits");
+            Set(UpdateStatus.Ready);
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+            Log.Write($"update: failed: {ex.Message}");
+            Set(UpdateStatus.Failed);
+        }
+    }
+
+    /// <summary>
+    /// Called last thing as Zinc quits: hands a ready update to the installer, which waits for this process to end,
+    /// installs it, and starts the new version if <paramref name="restart"/>.
+    /// </summary>
+    public static void ApplyOnExit(bool restart)
+    {
+        if (_ready is not { } update || Manager is not { } manager)
+        {
+            return;
+        }
+
+        try
+        {
+            Log.Write($"update: installing {NewVersion} after exit{(restart ? ", then restarting" : "")}");
+            manager.WaitExitThenApplyUpdates(update, silent: true, restart: restart);
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"update: couldn't hand the update over: {ex.Message}");
+        }
+    }
+
+    /// <summary>Restarts into the ready version through the normal quit (asks first if commands are running).</summary>
+    public static void RestartNow() => App.Instance.AskQuit(fresh: false, restartForUpdate: true);
+
+    /// <summary>One line for About's card.</summary>
+    public static string Describe() => Status switch
+    {
+        UpdateStatus.NotInstalled => "Updates come with Zinc's installer: this copy wasn't installed by it.",
+        UpdateStatus.Idle => $"Version {CurrentVersion}.",
+        UpdateStatus.Checking => "Checking for updates...",
+        UpdateStatus.Downloading => $"Downloading {NewVersion}: {Progress}%",
+        UpdateStatus.Ready => $"{NewVersion} is ready: it installs when you restart Zinc, or the next time you quit.",
+        UpdateStatus.UpToDate => $"Up to date ({CurrentVersion}). Checked {LastChecked:t}.",
+        UpdateStatus.Failed => $"Couldn't check for updates: {Error}",
+        _ => "",
+    };
+
+    private static void Set(UpdateStatus status)
+    {
+        _status = status;
+        Changed?.Invoke();
     }
 }
