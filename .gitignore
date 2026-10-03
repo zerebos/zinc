@@ -11,3 +11,6 @@ native-src/*/zig-pkg/
 .scratch/
 
 dist/
+
+# Where releases go (scripts/release.ps1 -Publish): your server, not the repo.
+release.local.json

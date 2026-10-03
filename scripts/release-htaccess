@@ -1,0 +1,11 @@
+# Zinc's release folder (scripts/release.ps1 -Publish uploads this as .htaccess once).
+# No folder listing. The files that keep their name from release to release must never be cached, by the
+# server or by a CDN in front of it (Cloudflare caches .exe and .zip by default): a cached release list keeps
+# installed copies on an old version, a cached Setup.exe hands out one. Packages carry their version in the
+# name and never change, so they may be cached.
+Options -Indexes
+<IfModule mod_headers.c>
+    <FilesMatch "^(releases\..+\.json|assets\..+\.json|RELEASES|.+-Setup\.exe|.+-Portable\.zip)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+</IfModule>
