@@ -179,6 +179,7 @@ public sealed partial class TerminalControl : UserControl
         canvas.Draw += OnDraw;
         canvas.SizeChanged += OnCanvasSizeChanged;
         canvas.Loaded += OnCanvasLoaded;
+        canvas.Unloaded += OnCanvasUnloaded;
         return canvas;
     }
 
@@ -189,6 +190,7 @@ public sealed partial class TerminalControl : UserControl
         canvas.Draw -= OnDraw;
         canvas.SizeChanged -= OnCanvasSizeChanged;
         canvas.Loaded -= OnCanvasLoaded;
+        canvas.Unloaded -= OnCanvasUnloaded;
         CanvasLifetime.Retire(canvas);
     }
 
@@ -215,8 +217,55 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        Log.Write($"pane: canvas unloaded more often than loaded ({loads}); replacing it");
-        var old = _canvas;
+        ReplaceCanvas($"canvas unloaded more often than loaded ({loads})");
+    }
+
+    /// <summary>
+    /// The other way a canvas stops: an extra Unloaded while it stays on screen, so no Loaded follows to catch it above.
+    /// Closing the shown tab of a restored pane did it (2026-10-03): the tab behind it, not drawn since the restore, got
+    /// a Loaded and an Unloaded as the pane was rebuilt, and showed only its cursor's outline until you switched away and
+    /// back. Checked once the layout has settled: still in the window with Win2D's count at zero means it's stuck.
+    /// </summary>
+    private void OnCanvasUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not CanvasControl canvas || !ReferenceEquals(canvas, _canvas) || CanvasLifetime.LoadCount(canvas) > 0)
+        {
+            return;
+        }
+
+        DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            if (ReferenceEquals(canvas, _canvas) && _session != null && CanvasLifetime.LoadCount(canvas) <= 0 && InWindow(canvas))
+            {
+                ReplaceCanvas($"canvas unloaded while still shown ({CanvasLifetime.LoadCount(canvas)})");
+            }
+        });
+    }
+
+    /// <summary>Whether <paramref name="element"/> is in its window's live tree (its parents lead up to the window's content).</summary>
+    private static bool InWindow(DependencyObject element)
+    {
+        if ((element as UIElement)?.XamlRoot?.Content is not { } top)
+        {
+            return false;
+        }
+
+        for (var node = element; node != null; node = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, top))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>A fresh canvas in the old one's place: the session, scrollback and everything else stay.</summary>
+    private void ReplaceCanvas(string why)
+    {
+        Log.Write($"pane: {why}; replacing it");
+        var old = _canvas!;
         _canvas = CreateCanvas();
         var index = _root.Children.IndexOf(old);
         _root.Children.RemoveAt(index);
