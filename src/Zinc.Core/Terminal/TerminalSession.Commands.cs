@@ -50,6 +50,9 @@ public sealed unsafe partial class TerminalSession
         public DateTime? Started, Ended;
         public int? Exit;
         public string? Text;
+
+        /// <summary>Its prompt row was erased: left out of snapshots, and freed at the next prune.</summary>
+        public bool Erased;
         public bool Closed;
 
         public void Free()
@@ -66,6 +69,65 @@ public sealed unsafe partial class TerminalSession
         }
     }
 
+    private readonly EraseWatch _eraseWatch = new();
+
+    /// <summary>
+    /// Rows were erased: finished commands whose prompt went with them are gone, failure bars and all. Checked now,
+    /// before the next prompt (often on the same row: <c>clear</c> puts it at the top) flags that row again. A wiped
+    /// scrollback forgets every finished command (their rows' places aren't reliable after it). Ones still running stay
+    /// (the <c>clear</c> itself, a nested shell's host): their D and the next prompt close them.
+    /// </summary>
+    private void NoteErased(Erased erased)
+    {
+        if (erased.HasFlag(Erased.Scrollback))
+        {
+            ForgetFinishedCommands();
+            return;
+        }
+
+        // Erasing part of a row (from the cursor) clears its cells but not its prompt flag: the cursor's row counts as
+        // erased when nothing is left on it. Only that row: an old prompt's first row can be empty by design (themes
+        // that start with a blank line), and only after a clear is an old prompt ever on the cursor's row.
+        nuint history = 0;
+        ushort cursorY = 0, cols = 0;
+        Native.TerminalGet(_terminal, TerminalData.ScrollbackRows, &history);
+        Native.TerminalGet(_terminal, TerminalData.CursorY, &cursorY);
+        Native.TerminalGet(_terminal, TerminalData.Cols, &cols);
+        var cursorRow = (long)history + cursorY;
+        foreach (var command in _commands)
+        {
+            if (command.Closed && !command.Erased && TryScreen(command.Prompt, out var prompt) &&
+                (!IsPromptRow(prompt.Y) ||
+                 prompt.Y == cursorRow && string.IsNullOrWhiteSpace(RowText.Read(_terminal, PointTag.Screen, (uint)prompt.Y, cols).Text)))
+            {
+                command.Erased = true;
+                _commandSnapshot = null;
+                _commandsChanged = true;
+            }
+        }
+    }
+
+    private void ForgetFinishedCommands()
+    {
+        var kept = 0;
+        for (var i = 0; i < _commands.Count; i++)
+        {
+            var command = _commands[i];
+            if (command.Closed)
+            {
+                command.Free();
+            }
+            else
+            {
+                _commands[kept++] = command;
+            }
+        }
+
+        _commands.RemoveRange(kept, _commands.Count - kept);
+        _commandSnapshot = null;
+        _commandsChanged = true; // announced after the write, outside the lock
+    }
+
     /// <summary>Writes PTY output, noting the cursor at each OSC 133 mark. Hold the lock.</summary>
     private void WriteWithMarks(ReadOnlySpan<byte> data)
     {
@@ -76,6 +138,11 @@ public sealed unsafe partial class TerminalSession
             fixed (byte* p = chunk)
             {
                 Native.TerminalVtWrite(_terminal, p, (nuint)chunk.Length);
+            }
+
+            if (_eraseWatch.Seen(chunk) is var erased and not Erased.None)
+            {
+                NoteErased(erased);
             }
 
             if (end < 0)
@@ -242,6 +309,18 @@ public sealed unsafe partial class TerminalSession
         return Native.TerminalGridRefTrack(_terminal, point, out var tracked) == GhosttyResult.Success ? tracked : null;
     }
 
+    /// <summary>Whether screen row <paramref name="y"/> still holds a prompt (libghostty flags the row a prompt mark lands on; erasing it clears that).</summary>
+    private bool IsPromptRow(long y)
+    {
+        var gridRef = GhosttyGridRef.Init();
+        var point = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)y };
+        int semantic;
+        return Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success &&
+               Native.GridRefRow(&gridRef, out var row) == GhosttyResult.Success &&
+               Native.ScreenRowGet(row, RowData.SemanticPrompt, &semantic) == GhosttyResult.Success &&
+               semantic != (int)RowSemanticPrompt.None;
+    }
+
     private static bool TryScreen(nint tracked, out GhosttyPointCoordinate point)
     {
         point = default;
@@ -309,7 +388,7 @@ public sealed unsafe partial class TerminalSession
     {
         for (var i = _commands.Count - 1; i >= 0; i--)
         {
-            if (!TryScreen(_commands[i].Prompt, out _))
+            if (_commands[i].Erased || !TryScreen(_commands[i].Prompt, out _))
             {
                 _commands[i].Free();
                 _commands.RemoveAt(i);
@@ -347,6 +426,11 @@ public sealed unsafe partial class TerminalSession
             if (!TryScreen(c.Prompt, out var prompt))
             {
                 continue;
+            }
+
+            if (c.Erased)
+            {
+                continue; // its rows were erased: nothing of it to show
             }
 
             long? output = TryScreen(c.Output, out var o) ? o.Y : null;
