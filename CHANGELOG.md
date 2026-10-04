@@ -22,6 +22,7 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Fixed
 - Alt+F4 typed an escape sequence into the terminal (and rang its bell) instead of closing the window.
 - The quick terminal came out too big, or too small, the first time it opened on a monitor with another scale.
+- Box-drawing lines (prompt frames, `─`) had a gap in every cell after a window moved to a monitor with another scale.
 
 ## 0.1.0-dev.228 (2026-10-04)
 

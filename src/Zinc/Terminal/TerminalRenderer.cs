@@ -67,6 +67,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
     // one white coverage bitmap per codepoint at the current cell size (null: drew nothing),
     // tinted per cell by a sprite batch. This row's sprite cells wait in _rowSprites.
     private readonly Dictionary<uint, (CanvasBitmap Bitmap, int X, int Y)?> _sprites = new();
+
+    // The cell size _sprites were drawn for. SetFont clears them, but a frame can still be drawn before it has the new
+    // size (loading a font lets the UI thread's queue run): moved to a 125% monitor, lines kept their 100% width and
+    // showed a gap in every cell.
+    private CellMetrics _spritesFor;
     private readonly List<(int Column, uint Codepoint, Color Color)> _rowSprites = [];
     private bool _spriteBatchSupported;
     private CanvasSolidColorBrush? _brush;
@@ -182,6 +187,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private void ClearSprites()
     {
         ReleaseAtlas(); // same reasons: font, cell size, device (the next frame takes the matching shared one)
+        ClearSpriteBitmaps();
+    }
+
+    private void ClearSpriteBitmaps()
+    {
         foreach (var sprite in _sprites.Values)
         {
             sprite?.Bitmap.Dispose();
@@ -884,12 +894,18 @@ public sealed unsafe class TerminalRenderer : IDisposable
     /// <summary>The sprite for <paramref name="codepoint"/> at the current cell size, made on first use.</summary>
     private (CanvasBitmap Bitmap, int X, int Y)? Sprite(ICanvasResourceCreator device, uint codepoint)
     {
+        var m = Metrics;
+        if (m != _spritesFor)
+        {
+            ClearSpriteBitmaps();
+            _spritesFor = m;
+        }
+
         if (_sprites.TryGetValue(codepoint, out var cached))
         {
             return cached;
         }
 
-        var m = Metrics;
         var ascent = (int)MathF.Round(m.Baseline * m.Scale);
         // Lines as thick as the font's underline in device pixels, rounded up: Ghostty's rule
         // (Metrics.zig: box_thickness = max(1, ceil(underline thickness))).

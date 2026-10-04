@@ -243,7 +243,10 @@ public sealed partial class MainWindow
 
     private double Scale() => Root.XamlRoot?.RasterizationScale ?? 1;
 
-    /// <summary>Windows' shadow around the window (its non-client rendering), off while the content isn't whole.</summary>
+    /// <summary>
+    /// Windows' shadow around the window, off while the content isn't whole. A frameless window's shadow comes with its
+    /// rounded corners (turning off non-client rendering left it there): square while fading, rounded once whole.
+    /// </summary>
     private void SetShadow(bool on)
     {
         if (_windowClosed)
@@ -251,8 +254,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        var policy = on ? 2 : 1; // DWMNCRP_ENABLED : DWMNCRP_DISABLED
-        DwmSetWindowAttribute(WinRT.Interop.WindowNative.GetWindowHandle(this), 2 /* DWMWA_NCRENDERING_POLICY */, ref policy, sizeof(int));
+        var corners = on ? 2 : 1; // DWMWCP_ROUND : DWMWCP_DONOTROUND
+        DwmSetWindowAttribute(WinRT.Interop.WindowNative.GetWindowHandle(this), 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref corners, sizeof(int));
     }
 
     /// <summary>
