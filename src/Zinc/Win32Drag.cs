@@ -30,14 +30,18 @@ internal static unsafe partial class Win32Drag
         _cursor = LoadCursorW(0, cursorId);
         _moved = moved;
         _ended = ended;
-        SetWindowSubclass(hwnd, &Proc, SubclassId, 0);
+        var subclassed = SetWindowSubclass(hwnd, &Proc, SubclassId, 0);
         SetCursor(_cursor);
+        Log.Write($"drag: start on {hwnd:X} (subclassed {subclassed}, capture {GetCapture():X})");
+        _seen.Clear();
         queue.SafeEnqueue(DispatcherQueuePriority.High, () =>
         {
             if (_hwnd == hwnd)
             {
+                var before = GetCapture();
                 SetCapture(hwnd);
                 SetCursor(_cursor);
+                Log.Write($"drag: capture {before:X} -> {GetCapture():X}");
             }
         });
     }
@@ -52,6 +56,7 @@ internal static unsafe partial class Win32Drag
 
         var hwnd = _hwnd;
         var ended = _ended;
+        Log.Write($"drag: end (capture {GetCapture():X})");
         _hwnd = 0;
         _moved = _ended = null;
         RemoveWindowSubclass(hwnd, &Proc, SubclassId);
@@ -64,12 +69,18 @@ internal static unsafe partial class Win32Drag
     }
 
     private const nuint SubclassId = 0x5144524D; // "QDRM"
+    private static readonly HashSet<uint> _seen = [];
 
     [UnmanagedCallersOnly(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvStdcall)])]
     private static nint Proc(nint hwnd, uint msg, nint wParam, nint lParam, nuint id, nuint data)
     {
         try
         {
+            if (_seen.Add(msg) && msg is 0x0020 or 0x0200 or 0x0202 or 0x0215 or 0x0245 or 0x0247)
+            {
+                Log.Write($"drag: first message {msg:X4}");
+            }
+
             switch (msg)
             {
                 case 0x0020: // WM_SETCURSOR

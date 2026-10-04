@@ -107,10 +107,43 @@ internal static unsafe partial class PointerTrace
     }
 
     private const nuint SubclassId = 0x50545243; // "PTRC"
+    private static nint _lastHwnd;
+    private static uint _lastMsg;
+
+    private static string? MessageName(uint msg) => msg switch
+    {
+        0x0200 => "WM_MOUSEMOVE", 0x0201 => "WM_LBUTTONDOWN", 0x0202 => "WM_LBUTTONUP", 0x0203 => "WM_LBUTTONDBLCLK",
+        0x0215 => "WM_CAPTURECHANGED", 0x02A1 => "WM_MOUSEHOVER", 0x02A3 => "WM_MOUSELEAVE",
+        0x00A0 => "WM_NCMOUSEMOVE", 0x00A1 => "WM_NCLBUTTONDOWN",
+        0x0241 => "WM_POINTERENTER", 0x0242 => "WM_POINTERLEAVE", 0x0245 => "WM_POINTERUPDATE", 0x0246 => "WM_POINTERDOWN",
+        0x0247 => "WM_POINTERUP", 0x0249 => "WM_POINTERENTER(nc)", 0x024C => "WM_POINTERCAPTURECHANGED",
+        0x024D => "WM_POINTERACTIVATE",
+        _ => null,
+    };
+
+    [LibraryImport("user32.dll")]
+    private static partial nint GetCapture();
 
     [UnmanagedCallersOnly(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvStdcall)])]
     private static nint SubclassProc(nint hwnd, uint msg, nint wParam, nint lParam, nuint id, nuint data)
     {
+        if (MessageName(msg) is { } input)
+        {
+            // Mouse and pointer messages: which window gets them, and who holds the capture (repeats skipped).
+            if (hwnd != _lastHwnd || msg != _lastMsg)
+            {
+                _lastHwnd = hwnd;
+                _lastMsg = msg;
+                try
+                {
+                    Log.Write($"pointer: {input} -> {hwnd:X} {ClassOf(hwnd)} (capture {GetCapture():X})");
+                }
+                catch
+                {
+                }
+            }
+        }
+
         if (msg != 0x0020 /* WM_SETCURSOR */)
         {
             return DefSubclassProc(hwnd, msg, wParam, lParam);
