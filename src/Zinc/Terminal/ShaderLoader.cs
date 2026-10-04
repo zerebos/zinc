@@ -37,7 +37,10 @@ internal static class ShaderLoader
     public static event Action<string>? FileChanged;
 
     private static readonly Dictionary<string, FileSystemWatcher> Watchers = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, Timer> Settling = new(StringComparer.OrdinalIgnoreCase);
+    // Per changed file: its timer, and when it's due (an event re-arms it; the timer checks the due time itself, since
+    // a re-arm could land while the callback was already waiting for the lock and be lost).
+    private static readonly Dictionary<string, (Timer Timer, long Due)> Settling = new(StringComparer.OrdinalIgnoreCase);
+    private const int SettleMs = 300;
 
     private static void Watch(string file)
     {
@@ -79,23 +82,37 @@ internal static class ShaderLoader
                 return; // not a shader anyone uses
             }
 
-            if (Settling.TryGetValue(path, out var timer))
+            var due = Environment.TickCount64 + SettleMs;
+            if (Settling.TryGetValue(path, out var settling))
             {
-                timer.Change(300, Timeout.Infinite);
+                Settling[path] = (settling.Timer, due);
+                settling.Timer.Change(SettleMs, Timeout.Infinite);
                 return;
             }
 
-            Settling[path] = new Timer(_ =>
+            Settling[path] = (new Timer(_ =>
             {
                 lock (Gate)
                 {
-                    Settling.Remove(path, out var done);
-                    done?.Dispose();
+                    if (!Settling.TryGetValue(path, out var mine))
+                    {
+                        return;
+                    }
+
+                    var left = mine.Due - Environment.TickCount64;
+                    if (left > 0)
+                    {
+                        mine.Timer.Change(left, Timeout.Infinite); // another event came meanwhile
+                        return;
+                    }
+
+                    Settling.Remove(path);
+                    mine.Timer.Dispose();
                 }
 
                 Log.Write($"shader: {Path.GetFileName(path)} changed");
                 FileChanged?.Invoke(path);
-            }, null, 300, Timeout.Infinite);
+            }, null, SettleMs, Timeout.Infinite), due);
         }
     }
 
@@ -160,6 +177,13 @@ internal static class ShaderLoader
         {
             Log.Write($"shader: no translator: {ex.Message}");
             return (null, $"{name}: Zinc's shader translator (zinc-shader.dll) is missing or broken; reinstalling Zinc should bring it back");
+        }
+        catch (Exception ex)
+        {
+            // Anything else is this file's problem, not every pane's: a faulted task cached here would reach each new
+            // pane and each reload as a "something went wrong" notice.
+            Log.Crash($"shader {name}", ex);
+            return (null, $"{name}: couldn't be compiled ({ex.Message})");
         }
     }
 

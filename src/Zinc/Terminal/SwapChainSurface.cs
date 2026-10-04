@@ -76,9 +76,11 @@ internal sealed class SwapChainSurface
             }
 
             Resize();
+            // Shown again (a tab selected, a pane moved): frames asked for while it was hidden weren't drawn.
+            Invalidate();
             if (Animating)
             {
-                HookRendering(); // shown again
+                HookRendering();
             }
         };
         Panel.SizeChanged += (_, _) => Resize();
@@ -176,22 +178,35 @@ internal sealed class SwapChainSurface
     public void Resize()
     {
         var (width, height, dpi) = ((float)Panel.ActualWidth, (float)Panel.ActualHeight, 96 * _scale());
-        if (_closed || width <= 0 || height <= 0)
+        // Compared in whole pixels (DIP floats differ by rounding at scales like 125%: a needless ResizeBuffers and
+        // full redraw on every window change), and at least a pixel each way (a 0-pixel swap chain throws).
+        var (pixelsWide, pixelsHigh) = ((int)Math.Round(width * dpi / 96), (int)Math.Round(height * dpi / 96));
+        if (_closed || pixelsWide < 1 || pixelsHigh < 1)
         {
             return;
         }
 
-        if (_chain == null)
+        try
         {
-            _chain = new CanvasSwapChain(Device, width, height, dpi, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2, CanvasAlphaMode.Premultiplied);
-            Panel.SwapChain = _chain;
+            if (_chain == null)
+            {
+                _chain = new CanvasSwapChain(Device, width, height, dpi, DirectXPixelFormat.B8G8R8A8UIntNormalized, 2, CanvasAlphaMode.Premultiplied);
+                Panel.SwapChain = _chain;
+            }
+            else if (_chain.SizeInPixels.Width != pixelsWide || _chain.SizeInPixels.Height != pixelsHigh || _chain.Dpi != dpi)
+            {
+                _chain.ResizeBuffers(width, height, dpi);
+            }
+            else
+            {
+                return;
+            }
         }
-        else if (_chain.Size.Width != width || _chain.Size.Height != height || _chain.Dpi != dpi)
+        catch (Exception ex) when (Device.IsDeviceLost(ex.HResult))
         {
-            _chain.ResizeBuffers(width, height, dpi);
-        }
-        else
-        {
+            // Found lost here first (a resize after a driver reset, while idle): the rebuild resizes again.
+            Log.Write($"pane: swap chain: device lost while resizing ({ex.HResult:X8})");
+            Device.RaiseDeviceLost();
             return;
         }
 
@@ -228,6 +243,14 @@ internal sealed class SwapChainSurface
             }
 
             _drawQueued = false;
+            if (_presentedThisTick)
+            {
+                // A refresh's frame went out while this waited (an animation tick): this one waits for the next.
+                _dirty = true;
+                HookRendering();
+                return;
+            }
+
             Present();
         }
 
@@ -241,6 +264,13 @@ internal sealed class SwapChainSurface
     {
         if (_closed || _chain is not { } chain)
         {
+            return;
+        }
+
+        if (!Panel.IsLoaded)
+        {
+            // A hidden tab (TabView unloads it) or a pane between hosts: nobody would see the frame. Loaded draws one.
+            _stale = true;
             return;
         }
 
@@ -339,7 +369,9 @@ internal sealed class SwapChainSurface
     {
         Panel.DispatcherQueue.SafeEnqueue(() =>
         {
-            if (_closed)
+            // One loss is raised several times (each pane's draw, each surface), and every raise queues this: only the
+            // first, from the device in use, rebuilds; the rest would each subscribe again to the new device.
+            if (_closed || !ReferenceEquals(sender, Device))
             {
                 return;
             }

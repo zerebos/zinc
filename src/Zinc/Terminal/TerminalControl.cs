@@ -186,6 +186,11 @@ public sealed partial class TerminalControl : UserControl
         Loaded += (_, _) =>
         {
             Log.Write($"pane: Loaded ({ActualWidth}x{ActualHeight})");
+            if (_closing.IsCancellationRequested)
+            {
+                return;
+            }
+
             if (XamlRoot != _xamlRoot)
             {
                 // First load, or moved to another window (which may be on a monitor with a
@@ -197,12 +202,16 @@ public sealed partial class TerminalControl : UserControl
 
                 _xamlRoot = XamlRoot;
                 _xamlRoot.Changed += OnXamlRootChanged;
-                UpdateScale();
             }
+
+            // Every load, not just a new window's: a tab detached from the tree while its window changed monitors
+            // missed the change (cheap when nothing did).
+            UpdateScale();
         };
     }
 
-    private float DisplayScale => (float)(XamlRoot?.RasterizationScale ?? 1.0);
+    // Out of the tree (a group's hidden tab) there's no XamlRoot: keep the scale it has rather than fall to 100%.
+    private float DisplayScale => (float)(XamlRoot?.RasterizationScale ?? (_renderer.Metrics.Scale > 0 ? _renderer.Metrics.Scale : 1.0));
 
     private CanvasControl CreateCanvas()
     {
@@ -325,6 +334,11 @@ public sealed partial class TerminalControl : UserControl
 
     private void UpdateScale()
     {
+        if (_closing.IsCancellationRequested)
+        {
+            return;
+        }
+
         _swap?.Resize(); // its buffers follow the window's scale
         if (_renderer.HasResources && Math.Abs(DisplayScale - _renderer.Metrics.Scale) > 0.001f)
         {
@@ -344,6 +358,11 @@ public sealed partial class TerminalControl : UserControl
 
     private void UpdateGrid()
     {
+        if (_closing.IsCancellationRequested)
+        {
+            return; // closed: never (re)start a session, never touch the disposed renderer
+        }
+
         var m = _renderer.Metrics;
         if (m.Width <= 0 || Surface.ActualWidth <= 0 || Surface.ActualHeight <= 0)
         {
@@ -498,6 +517,11 @@ public sealed partial class TerminalControl : UserControl
     /// </summary>
     public void ApplyConfig(Config config)
     {
+        if (_closing.IsCancellationRequested)
+        {
+            return;
+        }
+
         var old = _config;
         _config = config;
         _renderer.Config = config;
@@ -610,20 +634,38 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>Ends the session (killing the child if still running) and frees resources.</summary>
     public void Close()
     {
-        _closing.Cancel(); // a clipboard question still open: the answer is no
-        StopShaders();
-        _blinkTimer.Stop();
-        var session = _session;
-        if (session == null)
+        if (_closing.IsCancellationRequested)
         {
             return;
         }
 
-        _session = null;
-        // The gesture holds references into the terminal: free it first.
-        _selection?.Dispose();
-        _selection = null;
-        session.Dispose();
+        _closing.Cancel(); // a clipboard question still open: the answer is no (and UpdateGrid/UpdateScale stop)
+        StopShaders();
+        _blinkTimer.Stop();
+        // The window's events would otherwise reach a closed pane (a monitor change re-ran SetFont on the disposed
+        // renderer) and keep it alive for the window's life.
+        if (_xamlRoot != null)
+        {
+            _xamlRoot.Changed -= OnXamlRootChanged;
+            _xamlRoot = null;
+        }
+
+        if (_swap != null)
+        {
+            _swap.Panel.SizeChanged -= OnCanvasSizeChanged;
+        }
+
+        // A pane that never started (a restored tab never shown) still has a renderer and a surface to free; only the
+        // session's own teardown depends on there being one.
+        if (_session is { } session)
+        {
+            _session = null;
+            // The gesture holds references into the terminal: free it first.
+            _selection?.Dispose();
+            _selection = null;
+            session.Dispose();
+        }
+
         _renderer.Dispose();
         // Still in the tree here (its Unloaded comes later); CanvasLifetime holds it until
         // Win2D has let go of the window.

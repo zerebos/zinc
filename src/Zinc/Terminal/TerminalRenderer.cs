@@ -144,6 +144,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
     public void CreateResources(ICanvasResourceCreator device)
     {
+        _brush?.Dispose(); // the old device's (a lost device, a replaced canvas)
         _brush = new CanvasSolidColorBrush(device, Colors.White);
         // Bitmaps belong to the old device.
         foreach (var entry in _bitmaps.Values)
@@ -206,6 +207,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var weight = (v & 1) != 0 ? FontWeights.Bold : FontWeights.Normal;
             var style = (v & 2) != 0 ? FontStyle.Italic : FontStyle.Normal;
             var italic = (v & 2) != 0;
+            _formats[v]?.Dispose(); // the previous size's (each zoom step, each scale change)
             _formats[v] = new CanvasTextFormat
             {
                 FontFamily = bundled ? BundledFonts.FormatFamily(italic) : _fontFamily,

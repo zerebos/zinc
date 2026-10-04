@@ -20,11 +20,13 @@ internal sealed class ShaderPass : IDisposable
     private readonly ID3D11Device _device;
     private readonly ID3D11DeviceContext _context;
     private readonly ID3D11VertexShader _vertex;
-    private readonly ID3D11PixelShader[] _pixels;
+    private readonly List<ID3D11PixelShader> _pixels = [];
     private readonly ID3D11Buffer _constants;
     private readonly ID3D11SamplerState _sampler;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
-    private CanvasRenderTarget? _frame, _between;
+    // The terminal's picture (only ever drawn by the terminal: animation frames run the shaders over it again), and
+    // two scratch targets the shaders between the first and the last write into, in turn.
+    private CanvasRenderTarget? _frame, _scratchA, _scratchB;
     private int _frameCount;
     private double _lastTime, _focusChanged;
     private bool _focused;
@@ -43,13 +45,25 @@ internal sealed class ShaderPass : IDisposable
         _canvasDevice = canvasDevice;
         Shaders = shaders;
         UsesTime = shaders.Any(s => s.UsesTime);
-        _device = new ID3D11Device(DxgiInterface(canvasDevice, typeof(ID3D11Device).GUID));
-        _context = _device.ImmediateContext;
-        _vertex = _device.CreateVertexShader(ShaderLoader.VertexShader.Value);
-        _pixels = [.. shaders.Select(s => _device.CreatePixelShader(s.Bytecode))];
-        _constants = _device.CreateBuffer(new BufferDescription(ShaderUniforms.Size, BindFlags.ConstantBuffer, ResourceUsage.Dynamic,
-            CpuAccessFlags.Write));
-        _sampler = _device.CreateSamplerState(SamplerDescription.LinearClamp);
+        try
+        {
+            _device = new ID3D11Device(DxgiInterface(canvasDevice, typeof(ID3D11Device).GUID));
+            _context = _device.ImmediateContext;
+            _vertex = _device.CreateVertexShader(ShaderLoader.VertexShader.Value);
+            foreach (var shader in shaders)
+            {
+                _pixels.Add(_device.CreatePixelShader(shader.Bytecode));
+            }
+
+            _constants = _device.CreateBuffer(new BufferDescription(ShaderUniforms.Size, BindFlags.ConstantBuffer, ResourceUsage.Dynamic,
+                CpuAccessFlags.Write));
+            _sampler = _device.CreateSamplerState(SamplerDescription.LinearClamp);
+        }
+        catch
+        {
+            Dispose(); // what was made before the failure (a lost device, say)
+            throw;
+        }
     }
 
     /// <summary>
@@ -134,12 +148,13 @@ internal sealed class ShaderPass : IDisposable
         _context.PSSetConstantBuffer(1, _constants);
         _context.PSSetSampler(0, _sampler);
 
-        // Picture so far -> next: the frame, then back and forth with a second texture, the last into the back buffer.
+        // Picture so far -> next: from the frame, back and forth between the scratch targets, the last into the back
+        // buffer. Never into the frame: animation frames reuse it, and with 3+ shaders the effects compounded.
         var source = frame;
-        for (var i = 0; i < _pixels.Length; i++)
+        for (var i = 0; i < _pixels.Count; i++)
         {
-            var last = i == _pixels.Length - 1;
-            var target = last ? null : ReferenceEquals(source, frame) ? Sized(ref _between, chain) : frame;
+            var last = i == _pixels.Count - 1;
+            var target = last ? null : ReferenceEquals(source, _scratchA) ? Sized(ref _scratchB, chain) : Sized(ref _scratchA, chain);
             using var input = TextureOf(source);
             using var view = _device.CreateShaderResourceView(input);
             using var swapChain = last ? SwapChainOf(chain) : null;
@@ -154,22 +169,30 @@ internal sealed class ShaderPass : IDisposable
             _context.OMSetRenderTargets((ID3D11RenderTargetView)null!);
             source = target!;
         }
+
+        // The device's context is shared (Win2D, every pane): leave nothing of ours bound, so nothing outlives the pass.
+        _context.VSSetShader(null);
+        _context.PSSetShader(null);
+        _context.PSSetConstantBuffer(1, null);
+        _context.PSSetSampler(0, null);
     }
 
     public void Dispose()
     {
+        // Null-tolerant: the constructor calls it after a failure partway.
         _frame?.Dispose();
-        _between?.Dispose();
-        _sampler.Dispose();
-        _constants.Dispose();
+        _scratchA?.Dispose();
+        _scratchB?.Dispose();
+        _sampler?.Dispose();
+        _constants?.Dispose();
         foreach (var pixel in _pixels)
         {
             pixel.Dispose();
         }
 
-        _vertex.Dispose();
-        _context.Dispose();
-        _device.Dispose();
+        _vertex?.Dispose();
+        _context?.Dispose();
+        _device?.Dispose();
     }
 
     // ---------------------------------------------------------------- Win2D -> Direct3D

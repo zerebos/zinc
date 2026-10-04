@@ -288,9 +288,21 @@ internal sealed partial class SettingsWindow
         }
 
         _shaderWatch = true;
-        void Changed(string _) => DispatcherQueue.SafeEnqueue(() => _shaderRows?.Invoke());
+        var closed = false;
+        void Changed(string _) => DispatcherQueue.SafeEnqueue(() =>
+        {
+            if (!closed)
+            {
+                _shaderRows?.Invoke();
+            }
+        });
         ShaderLoader.FileChanged += Changed;
-        Closed += (_, _) => ShaderLoader.FileChanged -= Changed;
+        Closed += (_, _) =>
+        {
+            closed = true; // a notice already queued, or a row's check still running, finds the window gone
+            _shaderRows = null;
+            ShaderLoader.FileChanged -= Changed;
+        };
     }
 
     private async Task<IReadOnlyList<string>> PickShaders()
