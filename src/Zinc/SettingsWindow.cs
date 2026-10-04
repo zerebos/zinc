@@ -159,16 +159,31 @@ internal sealed partial class SettingsWindow : Window
         }
 
         _nav.SelectedItem = _nav.MenuItems.Concat(_nav.FooterMenuItems).OfType<NavigationViewItem>().First(i => (string)i.Tag == _section);
+        void Navigate(string id)
+        {
+            _section = id;
+            _editing = null;
+            _editingScheme = null;
+            _search.Text = "";
+            Render();
+            _scroller.ChangeView(null, 0, null, disableAnimation: true);
+        }
+
         _nav.SelectionChanged += (_, e) =>
         {
             if (!_navigating && e.SelectedItem is NavigationViewItem { Tag: string id })
             {
-                _section = id;
-                _editing = null;
-                _editingScheme = null;
-                _search.Text = "";
-                Render();
-                _scroller.ChangeView(null, 0, null, disableAnimation: true);
+                Navigate(id);
+            }
+        };
+        // The section already selected, clicked while search results or a sub-page (a profile, a scheme) show: back to
+        // it. (No selection change, so SelectionChanged never came: the section stayed out of reach.)
+        _nav.ItemInvoked += (_, e) =>
+        {
+            if (!_navigating && e.InvokedItemContainer is NavigationViewItem { Tag: string id } item && ReferenceEquals(item, _nav.SelectedItem) &&
+                (_search.Text.Trim().Length > 0 || _editing != null || _editingScheme != null))
+            {
+                Navigate(id);
             }
         };
 
