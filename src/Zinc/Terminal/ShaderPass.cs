@@ -52,6 +52,22 @@ internal sealed class ShaderPass : IDisposable
         _sampler = _device.CreateSamplerState(SamplerDescription.LinearClamp);
     }
 
+    /// <summary>
+    /// Whether the shaders' clock (iTime) runs. Paused while the animation is (an unfocused terminal): a frame drawn
+    /// meanwhile, because the terminal changed, then shows the shader where it stopped instead of jumping ahead.
+    /// </summary>
+    public void SetClock(bool running)
+    {
+        if (running)
+        {
+            _clock.Start();
+        }
+        else
+        {
+            _clock.Stop();
+        }
+    }
+
     /// <summary>The terminal gained or lost focus (iFocus, iTimeFocus).</summary>
     public void SetFocus(bool focused)
     {

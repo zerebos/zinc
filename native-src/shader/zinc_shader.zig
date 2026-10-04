@@ -16,6 +16,7 @@ const spvc = struct {
     const backend_hlsl: c_int = 2;
     const capture_take_ownership: c_int = 1;
     const option_hlsl_shader_model: c_int = 13 | 0x4000000;
+    const option_force_zero_initialized_variables: c_int = 54 | 0x1000000;
     const ErrorCallback = *const fn (?*anyopaque, [*:0]const u8) callconv(.c) void;
     extern fn spvc_context_create(ctx: *Context) c_int;
     extern fn spvc_context_destroy(ctx: Context) void;
@@ -24,6 +25,7 @@ const spvc = struct {
     extern fn spvc_context_create_compiler(ctx: Context, backend: c_int, ir: Ir, mode: c_int, compiler: *Compiler) c_int;
     extern fn spvc_compiler_create_compiler_options(compiler: Compiler, options: *Options) c_int;
     extern fn spvc_compiler_options_set_uint(options: Options, option: c_int, value: c_uint) c_int;
+    extern fn spvc_compiler_options_set_bool(options: Options, option: c_int, value: u8) c_int;
     extern fn spvc_compiler_install_compiler_options(compiler: Compiler, options: Options) c_int;
     extern fn spvc_compiler_compile(compiler: Compiler, source: *[*:0]const u8) c_int;
 };
@@ -151,6 +153,9 @@ fn hlslFromSpirv(spirv: []const u32) ![:0]u8 {
     if (spvc.spvc_compiler_create_compiler_options(compiler, &options) != spvc.success) return error.SpvcFailed;
     // Shader model 5.0: what D3D11 feature level 11 runs, and what D3DCompile's ps_5_0 takes.
     if (spvc.spvc_compiler_options_set_uint(options, spvc.option_hlsl_shader_model, 50) != spvc.success) return error.SpvcFailed;
+    // Every variable starts at zero: Direct3D's compiler refuses one that's assigned on only some paths (error X4000,
+    // "used without having been initialized"), which GLSL allows (matrix-hallway.glsl in a Ghostty collection).
+    if (spvc.spvc_compiler_options_set_bool(options, spvc.option_force_zero_initialized_variables, 1) != spvc.success) return error.SpvcFailed;
     if (spvc.spvc_compiler_install_compiler_options(compiler, options) != spvc.success) return error.SpvcFailed;
 
     var result: [*:0]const u8 = undefined;

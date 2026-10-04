@@ -70,5 +70,10 @@ public sealed partial class TerminalControl
             ShaderAnimation.Never => false,
             _ => _focused,
         };
+
+        // Paused with the animation while unfocused: hovering a program's links or scrollbar redraws the terminal, and
+        // with a running clock each of those frames showed the shader jumped ahead. With animation off (Ghostty's
+        // false) time still runs: frames drawn on change show it moving, as in Ghostty.
+        _swap.SetClock(_config.ShaderAnimation != ShaderAnimation.Focused || _focused);
     }
 }

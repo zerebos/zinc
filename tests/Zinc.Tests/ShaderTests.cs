@@ -125,6 +125,15 @@ public class ShaderTests : IDisposable
     }
 
     [Fact]
+    public void VariablesStartAtZero()
+    {
+        // GLSL allows a variable assigned on only some paths; Direct3D's compiler refuses it (X4000, matrix-hallway.glsl).
+        Assert.True(ShaderTranslator.TryTranslate("void mainImage(out vec4 c, in vec2 p) {\n float x;\n if (p.x > 1.0) x = 1.0;\n c = vec4(x);\n}\n",
+            "paths.glsl", out var hlsl, out var error), error);
+        Assert.Contains("float x = 0.0f;", hlsl);
+    }
+
+    [Fact]
     public void UniformOffsetsMatchTheTranslation()
     {
         // SPIRV-Cross writes the whole block with each member's packoffset: "float iTime : packoffset(c0.w);".

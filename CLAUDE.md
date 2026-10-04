@@ -332,7 +332,8 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   device: the frame drawn into a CanvasRenderTarget, then each shader as a full-screen triangle, ping-pong, the last
   into the swap chain's back buffer; y down as Ghostty's Metal), `SwapChainSurface.SetShaders/Animate/SetFocus` (an
   animation frame with nothing new reruns the shaders over the last picture: redrawing the terminal each refresh
-  cost ~30% of a core; no animation on unloaded = hidden tabs), `TerminalControl.Shaders.cs` (load on start, after
+  cost ~30% of a core; no animation on unloaded = hidden tabs; the shader clock pauses with a focus-paused
+  animation, so hover redraws in an unfocused pane don't jump it; SPIRV-Cross zero-initializes variables: fxc's X4000), `TerminalControl.Shaders.cs` (load on start, after
   the window wired the pane, and on every config reload; `ShaderProblems` -> `MainWindow.Shaders.cs` notice, deduped,
   dismissed problems stay quiet until a reload). Test: `.scratch/tools/shader-shot.ps1 -Shaders a.glsl,b.glsl
   [-Extra 'animation = false'] [-Window ...] [-KeepOpen]`; samples in .scratch/shaders.
