@@ -76,35 +76,147 @@ public static class QuickTerminalLayout
 {
     public readonly record struct Rect(int X, int Y, int Width, int Height);
 
-    public static Rect Place(Rect work, QuickTerminalSettings s)
+    /// <summary>
+    /// Its place on <paramref name="work"/> (a monitor's work area): the configured size, or <paramref name="size"/> (one
+    /// given by dragging its edges) clamped to the screen; against its edge, or centered on the other axes.
+    /// </summary>
+    public static Rect Place(Rect work, QuickTerminalSettings s, (int Width, int Height)? size = null)
     {
-        // Defaults: half the screen from an edge, or 70% x 60% centered.
-        switch (s.Position)
+        var (w, h) = size is { } given
+            ? (Math.Clamp(given.Width, 1, work.Width), Math.Clamp(given.Height, 1, work.Height))
+            : ConfiguredSize(work, s);
+        var x = s.Position switch
         {
-            case QuickTerminalPosition.Top or QuickTerminalPosition.Bottom:
-            {
-                var h = (s.Primary ?? new QuickTerminalLength(50, true)).Resolve(work.Height);
-                var w = (s.Secondary ?? new QuickTerminalLength(100, true)).Resolve(work.Width);
-                var x = work.X + (work.Width - w) / 2;
-                var y = s.Position == QuickTerminalPosition.Top ? work.Y : work.Y + work.Height - h;
-                return new Rect(x, y, w, h);
-            }
-            case QuickTerminalPosition.Left or QuickTerminalPosition.Right:
-            {
-                var w = (s.Primary ?? new QuickTerminalLength(50, true)).Resolve(work.Width);
-                var h = (s.Secondary ?? new QuickTerminalLength(100, true)).Resolve(work.Height);
-                var x = s.Position == QuickTerminalPosition.Left ? work.X : work.X + work.Width - w;
-                var y = work.Y + (work.Height - h) / 2;
-                return new Rect(x, y, w, h);
-            }
-            default:
-            {
-                var w = (s.Primary ?? new QuickTerminalLength(70, true)).Resolve(work.Width);
-                var h = (s.Secondary ?? new QuickTerminalLength(60, true)).Resolve(work.Height);
-                return new Rect(work.X + (work.Width - w) / 2, work.Y + (work.Height - h) / 2, w, h);
-            }
+            QuickTerminalPosition.Left => work.X,
+            QuickTerminalPosition.Right => work.X + work.Width - w,
+            _ => work.X + (work.Width - w) / 2,
+        };
+        var y = s.Position switch
+        {
+            QuickTerminalPosition.Top => work.Y,
+            QuickTerminalPosition.Bottom => work.Y + work.Height - h,
+            _ => work.Y + (work.Height - h) / 2,
+        };
+        return new Rect(x, y, w, h);
+    }
+
+    // Defaults: half the screen from an edge, or 70% x 60% centered.
+    private static (int Width, int Height) ConfiguredSize(Rect work, QuickTerminalSettings s) => s.Position switch
+    {
+        QuickTerminalPosition.Top or QuickTerminalPosition.Bottom =>
+            ((s.Secondary ?? new QuickTerminalLength(100, true)).Resolve(work.Width), (s.Primary ?? new QuickTerminalLength(50, true)).Resolve(work.Height)),
+        QuickTerminalPosition.Left or QuickTerminalPosition.Right =>
+            ((s.Primary ?? new QuickTerminalLength(50, true)).Resolve(work.Width), (s.Secondary ?? new QuickTerminalLength(100, true)).Resolve(work.Height)),
+        _ => ((s.Primary ?? new QuickTerminalLength(70, true)).Resolve(work.Width), (s.Secondary ?? new QuickTerminalLength(60, true)).Resolve(work.Height)),
+    };
+}
+
+/// <summary>An edge or corner of the quick terminal, dragged to resize it.</summary>
+public enum QuickTerminalEdge
+{
+    Left,
+    Right,
+    Top,
+    Bottom,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+
+/// <summary>
+/// Resizing the quick terminal by its edges (it has no frame: Zinc does it). It keeps its place while it changes size:
+/// against its screen edge, centered on the other axes, so a centered one grows on both sides of the dragged edge.
+/// </summary>
+public static class QuickTerminalResize
+{
+    /// <summary>The edges it can be dragged by: all but the side (and corners) against the screen edge it sits on.</summary>
+    public static IReadOnlyList<QuickTerminalEdge> Edges(QuickTerminalPosition position) =>
+        Enum.GetValues<QuickTerminalEdge>().Where(e => !Touches(e, position)).ToList();
+
+    private static bool Touches(QuickTerminalEdge edge, QuickTerminalPosition position) => position switch
+    {
+        QuickTerminalPosition.Top => edge is QuickTerminalEdge.Top or QuickTerminalEdge.TopLeft or QuickTerminalEdge.TopRight,
+        QuickTerminalPosition.Bottom => edge is QuickTerminalEdge.Bottom or QuickTerminalEdge.BottomLeft or QuickTerminalEdge.BottomRight,
+        QuickTerminalPosition.Left => edge is QuickTerminalEdge.Left or QuickTerminalEdge.TopLeft or QuickTerminalEdge.BottomLeft,
+        QuickTerminalPosition.Right => edge is QuickTerminalEdge.Right or QuickTerminalEdge.TopRight or QuickTerminalEdge.BottomRight,
+        _ => false,
+    };
+
+    /// <summary>
+    /// The size after dragging <paramref name="edge"/> by (<paramref name="dx"/>, <paramref name="dy"/>) pixels from
+    /// <paramref name="start"/>: at least <paramref name="min"/>, at most <paramref name="max"/> (the work area).
+    /// </summary>
+    public static (int Width, int Height) Size(QuickTerminalPosition position, QuickTerminalEdge edge, (int Width, int Height) start,
+        int dx, int dy, (int Width, int Height) min, (int Width, int Height) max)
+    {
+        // A centered axis grows on both sides: the dragged edge follows the pointer, the opposite one mirrors it.
+        var xFactor = position is QuickTerminalPosition.Left or QuickTerminalPosition.Right ? 1 : 2;
+        var yFactor = position is QuickTerminalPosition.Top or QuickTerminalPosition.Bottom ? 1 : 2;
+        var w = start.Width;
+        var h = start.Height;
+        if (edge is QuickTerminalEdge.Left or QuickTerminalEdge.TopLeft or QuickTerminalEdge.BottomLeft)
+        {
+            w -= dx * xFactor;
+        }
+        else if (edge is QuickTerminalEdge.Right or QuickTerminalEdge.TopRight or QuickTerminalEdge.BottomRight)
+        {
+            w += dx * xFactor;
+        }
+
+        if (edge is QuickTerminalEdge.Top or QuickTerminalEdge.TopLeft or QuickTerminalEdge.TopRight)
+        {
+            h -= dy * yFactor;
+        }
+        else if (edge is QuickTerminalEdge.Bottom or QuickTerminalEdge.BottomLeft or QuickTerminalEdge.BottomRight)
+        {
+            h += dy * yFactor;
+        }
+
+        return (Math.Clamp(w, Math.Min(min.Width, max.Width), max.Width), Math.Clamp(h, Math.Min(min.Height, max.Height), max.Height));
+    }
+}
+
+/// <summary>A size the quick terminal was given by dragging, on one monitor, while the config placed it as <see cref="Base"/>.</summary>
+public sealed record QuickTerminalSize(string Monitor, int Width, int Height, string Base);
+
+/// <summary>
+/// The sizes the quick terminal was dragged to, one per monitor (physical pixels; saved with the session). A size holds
+/// only while the config places it as it did then: an edited position or size in the config wins.
+/// </summary>
+public sealed class QuickTerminalSizes
+{
+    public const int Capacity = 8;
+
+    private readonly List<QuickTerminalSize> _sizes = [];
+
+    public QuickTerminalSizes(IEnumerable<QuickTerminalSize>? saved = null) => _sizes.AddRange((saved ?? []).Take(Capacity));
+
+    public IReadOnlyList<QuickTerminalSize> All => _sizes;
+
+    /// <summary>What a size depends on in the config: the position and the configured size.</summary>
+    public static string BaseOf(QuickTerminalSettings s) =>
+        string.Join(' ', s.Position.ToString().ToLowerInvariant(), Text(s.Primary), Text(s.Secondary));
+
+    private static string Text(QuickTerminalLength? length) => length is { } l
+        ? l.Value.ToString(CultureInfo.InvariantCulture) + (l.Percent ? "%" : "px")
+        : "-";
+
+    public (int Width, int Height)? For(string monitor, QuickTerminalSettings s) =>
+        _sizes.FirstOrDefault(e => e.Monitor == monitor) is { } e && e.Base == BaseOf(s) ? (e.Width, e.Height) : null;
+
+    public void Remember(string monitor, QuickTerminalSettings s, int width, int height)
+    {
+        Forget(monitor);
+        _sizes.Insert(0, new QuickTerminalSize(monitor, width, height, BaseOf(s)));
+        if (_sizes.Count > Capacity)
+        {
+            _sizes.RemoveAt(_sizes.Count - 1);
         }
     }
+
+    /// <summary>Back to the configured size on <paramref name="monitor"/>; false if it had none of its own.</summary>
+    public bool Forget(string monitor) => _sizes.RemoveAll(e => e.Monitor == monitor) > 0;
 }
 
 /// <summary>A system-wide hotkey: RegisterHotKey modifiers plus a virtual key.</summary>

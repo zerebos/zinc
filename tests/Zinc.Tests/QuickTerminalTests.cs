@@ -123,6 +123,88 @@ public class QuickTerminalTests
     }
 
     [Fact]
+    public void ADraggedSizeKeepsItsPlace()
+    {
+        // Centered stays centered; against an edge stays there (and centered along it); too big = the screen.
+        Assert.Equal(new Rect(1920 + 460, 170, 1000, 700), Place(Work, S(QuickTerminalPosition.Center), (1000, 700)));
+        Assert.Equal(new Rect(1920 + 460, 0, 1000, 300), Place(Work, S(QuickTerminalPosition.Top), (1000, 300)));
+        Assert.Equal(new Rect(1920, 740, 1920, 300), Place(Work, S(QuickTerminalPosition.Bottom), (1920, 300)));
+        Assert.Equal(new Rect(3840 - 500, 270, 500, 500), Place(Work, S(QuickTerminalPosition.Right), (500, 500)));
+        Assert.Equal(new Rect(1920, 0, 1920, 1040), Place(Work, S(QuickTerminalPosition.Center), (9000, 9000)));
+    }
+
+    [Fact]
+    public void EdgesAgainstTheScreenDontDrag()
+    {
+        Assert.Equal(8, QuickTerminalResize.Edges(QuickTerminalPosition.Center).Count);
+        Assert.Equal(
+            [QuickTerminalEdge.Left, QuickTerminalEdge.Right, QuickTerminalEdge.Bottom, QuickTerminalEdge.BottomLeft, QuickTerminalEdge.BottomRight],
+            QuickTerminalResize.Edges(QuickTerminalPosition.Top));
+        Assert.DoesNotContain(QuickTerminalEdge.TopRight, QuickTerminalResize.Edges(QuickTerminalPosition.Right));
+    }
+
+    [Fact]
+    public void DraggingAnEdgeResizes()
+    {
+        (int, int) start = (1000, 600), min = (300, 150), max = (1920, 1040);
+        // Centered: both sides move, so the dragged edge follows the pointer.
+        Assert.Equal((1100, 600), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Right, start, 50, 30, min, max));
+        Assert.Equal((1100, 600), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Left, start, -50, 30, min, max));
+        Assert.Equal((1000, 540), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Top, start, 0, 30, min, max));
+        Assert.Equal((900, 660), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.BottomLeft, start, 50, 30, min, max));
+        // Against the top: the bottom edge moves alone; the sides still grow both ways.
+        Assert.Equal((1000, 630), QuickTerminalResize.Size(QuickTerminalPosition.Top, QuickTerminalEdge.Bottom, start, 0, 30, min, max));
+        Assert.Equal((1100, 630), QuickTerminalResize.Size(QuickTerminalPosition.Top, QuickTerminalEdge.BottomRight, start, 50, 30, min, max));
+        // Against the left: the right edge moves alone.
+        Assert.Equal((1050, 600), QuickTerminalResize.Size(QuickTerminalPosition.Left, QuickTerminalEdge.Right, start, 50, 0, min, max));
+        // Limits.
+        Assert.Equal((300, 600), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Right, start, -2000, 0, min, max));
+        Assert.Equal((1920, 1040), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.BottomRight, start, 2000, 2000, min, max));
+    }
+
+    [Fact]
+    public void SizesAreRememberedPerMonitorWhileTheConfigStands()
+    {
+        var center = S(QuickTerminalPosition.Center);
+        var sizes = new QuickTerminalSizes();
+        sizes.Remember("0,0,2560x1440", center, 1200, 700);
+        sizes.Remember("2560,0,2560x1440", center, 900, 500);
+        Assert.Equal((1200, 700), sizes.For("0,0,2560x1440", center));
+        Assert.Equal((900, 500), sizes.For("2560,0,2560x1440", center));
+        Assert.Null(sizes.For("elsewhere", center));
+
+        // Dragged again: replaced, not added.
+        sizes.Remember("0,0,2560x1440", center, 1300, 750);
+        Assert.Equal(2, sizes.All.Count);
+        Assert.Equal((1300, 750), sizes.For("0,0,2560x1440", center));
+
+        // The config moved it or gave it another size: the config's size again.
+        Assert.Null(sizes.For("0,0,2560x1440", S(QuickTerminalPosition.Top)));
+        Assert.Null(sizes.For("0,0,2560x1440", S(QuickTerminalPosition.Center, "60%,50%")));
+
+        Assert.True(sizes.Forget("0,0,2560x1440"));
+        Assert.False(sizes.Forget("0,0,2560x1440"));
+        Assert.Null(sizes.For("0,0,2560x1440", center));
+
+        for (var i = 0; i < 20; i++)
+        {
+            sizes.Remember($"m{i}", center, 800, 400);
+        }
+
+        Assert.Equal(QuickTerminalSizes.Capacity, sizes.All.Count);
+        Assert.Equal("center 60% 50%", QuickTerminalSizes.BaseOf(S(QuickTerminalPosition.Center, "60%,50%")));
+    }
+
+    [Fact]
+    public void SizesSurviveTheSessionFile()
+    {
+        var state = new Zinc.Session.SessionState(Zinc.Session.SessionState.CurrentVersion, [],
+            QuickTerminalSizes: [new QuickTerminalSize("0,0,2560x1440", 1200, 700, "center - -")]);
+        var back = Zinc.Session.SessionStore.Deserialize(Zinc.Session.SessionStore.Serialize(state));
+        Assert.Equal(state.QuickTerminalSizes, back!.QuickTerminalSizes);
+    }
+
+    [Fact]
     public void AppearsFromWhereItIs()
     {
         Assert.Equal((0.7, 0.0, 0.0), QuickTerminalAppear.Start(QuickTerminalPosition.Center, 1200, 600));

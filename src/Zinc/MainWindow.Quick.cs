@@ -131,7 +131,9 @@ public sealed partial class MainWindow
                 ? DisplayArea.Primary
                 : DisplayArea.GetFromPoint(new PointInt32(cursor.X, cursor.Y), DisplayAreaFallback.Nearest);
             var work = area.WorkArea;
-            var r = QuickTerminalLayout.Place(new QuickTerminalLayout.Rect(work.X, work.Y, work.Width, work.Height), settings);
+            var r = QuickTerminalLayout.Place(new QuickTerminalLayout.Rect(work.X, work.Y, work.Width, work.Height), settings,
+                App.Instance.QuickTerminalSizes.For(MonitorKey(area), settings)); // the size its edges were dragged to there
+            UpdateResizeEdges();
             var rect = new RectInt32(r.X, r.Y, r.Width, r.Height);
             AppWindow.MoveAndResize(rect);
             // Onto a monitor with another scale, Windows resizes it by the change of scale once it's there (too big on

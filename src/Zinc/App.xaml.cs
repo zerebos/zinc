@@ -764,6 +764,9 @@ public partial class App : Application
     /// <summary>Windows closed lately, for reopening (saved with the session).</summary>
     internal ClosedWindows ClosedWindows { get; private set; } = new();
 
+    /// <summary>The sizes the quick terminal's edges were dragged to, per monitor (saved with the session).</summary>
+    internal QuickTerminalSizes QuickTerminalSizes { get; private set; } = new();
+
     /// <summary>
     /// A window is closing (before its terminals end): it can be reopened. Not when quitting
     /// (the session keeps every window) or when its last workspace left (nothing to bring back).
@@ -815,6 +818,7 @@ public partial class App : Application
         RecentFolders = new RecentFolders(saved?.RecentFolders);
         ClosedWorkspaces = new ClosedWorkspaces(saved?.ClosedWorkspaces);
         ClosedWindows = new ClosedWindows(saved?.ClosedWindows);
+        QuickTerminalSizes = new QuickTerminalSizes(saved?.QuickTerminalSizes);
         _settingsPreviewHidden = saved?.SettingsPreviewHidden ?? false;
     }
 
@@ -924,7 +928,7 @@ public partial class App : Application
         {
             SessionStore.Save(_sessionPath, SessionStore.Serialize(
                 new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds, _settingsPreviewHidden,
-                    [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All])));
+                    [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All], [.. QuickTerminalSizes.All])));
             Log.Write("session: windows forgotten; the next start opens a new one");
         }
         catch (Exception ex)
@@ -949,7 +953,7 @@ public partial class App : Application
             }
 
             var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds,
-                _settingsPreviewHidden, [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All]));
+                _settingsPreviewHidden, [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All], [.. QuickTerminalSizes.All]));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);

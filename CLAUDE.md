@@ -601,7 +601,13 @@ the reverse then AppWindow.Hide after `animation-duration` (`_fadeOutTimer`). A 
 it showed a white classic frame. AppWindow.Closing cancelled -> hide unless `App.Quitting` or no tabs left; foreground
 handed back to `_previousForeground` on a dismissal (not on autohide); placed twice when the size came out wrong (a
 monitor with another scale). One terminal: `NotInQuickTerminal` (tab/workspace actions no-op), `ShowsStrip` false,
-palette drops tab/workspace commands. Test: `.scratch/tools/quick-test.ps1` (summon, WM_CLOSE hides, same session). `MessageWindow` is a hidden *top-level* window (message-only windows
+palette drops tab/workspace commands. Shadow: comes with DWMWCP_ROUND, so `SetShadow` = square corners while fading,
+round once whole (DWMWA_NCRENDERING_POLICY did nothing). Resize (`MainWindow.QuickResize.cs`): no frame, so
+`QuickResizeEdge` strips (6 DIPs, ZIndex 5; none against its screen edge) drag it via GetCursorPos deltas -> Core
+`QuickTerminalResize.Size` (centered axes grow both ways) -> `Place(work, settings, size)`; remembered per monitor
+(OuterBounds key) in Core `QuickTerminalSizes` (session.json `quickTerminalSizes`, valid while `BaseOf(settings)`
+matches; tested); double-click an edge / palette "Reset quick terminal size". Drags can't be automated: the user tests.
+Test: `.scratch/tools/quick-test.ps1` (summon, WM_CLOSE hides, same session), `quick-size-test.ps1` (a saved size applies). `MessageWindow` is a hidden *top-level* window (message-only windows
 miss Explorer's TaskbarCreated broadcast) that logs its hwnd and dispatches WM_HOTKEY and the
 `TrayIcon` callbacks. App lifetime: `DispatcherShutdownMode.OnExplicitShutdown`;
 `App.OnWindowClosed` decides stay-in-tray vs `Quit()` (tray icon must be removed on exit).

@@ -18,6 +18,8 @@ is the version it builds, and hands it to the installer as the release notes).
   fading and growing into place (Settings > Quick terminal > Animation). It's one terminal: splits yes, tabs and
   workspaces no. Dismissing it gives the foreground back to the window you came from, and closing it only hides
   it, so its shells and scrollback are still there next time.
+- Resize the quick terminal by dragging its edges. Each monitor remembers its size; double-click an edge (or run
+  "Reset quick terminal size") to go back to the configured one.
 
 ### Fixed
 - Alt+F4 typed an escape sequence into the terminal (and rang its bell) instead of closing the window.

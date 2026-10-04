@@ -577,6 +577,10 @@ public sealed partial class MainWindow
         if (_quick)
         {
             commands.RemoveAll(c => AboutTabsOrWorkspaces(c.Title)); // one terminal: no tabs, no workspaces
+            if (HasQuickSize())
+            {
+                Custom("Reset quick terminal size", ResetQuickSize);
+            }
         }
 
         return commands;

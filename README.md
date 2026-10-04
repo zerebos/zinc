@@ -421,7 +421,12 @@ by default. It's one terminal: you can split it, but tabs and workspaces stay in
 (their keys do nothing here). Dismissing it gives the
 foreground back to the window you came from. It stays out of the taskbar and Alt+Tab, and it
 keeps running while hidden: closing it (Alt+F4) only hides it, so its shells and scrollback are
-there next time; it's gone only when Zinc quits or its last tab closes. In `[quick-terminal]`:
+there next time; it's gone only when Zinc quits or its last tab closes.
+
+Drag its edges to resize it: it keeps its place (a centered one grows on both sides), and each monitor
+remembers the size you gave it. Double-click an edge, or run "Reset quick terminal size" from the
+palette, to go back to the configured size; changing `position` or `size` in the config does too.
+In `[quick-terminal]`:
 
 - `hotkey`: e.g. `"win+grave"`, `"ctrl+alt+t"` (needs a modifier).
 - `position`: `"center"` (default), `"top"`, `"bottom"`, `"left"`, `"right"`.
