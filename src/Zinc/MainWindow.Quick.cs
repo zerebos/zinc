@@ -207,11 +207,6 @@ public sealed partial class MainWindow
         }
 
         _quickShown = false;
-        if (Win32Drag.Active)
-        {
-            Win32Drag.Stop(); // hidden mid-drag (the hotkey): the drag ends here
-        }
-
         var previous = restoreFocus ? _previousForeground : 0;
         void Hidden()
         {

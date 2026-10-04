@@ -7,7 +7,7 @@ namespace Zinc;
 
 /// <summary>
 /// An invisible strip along one edge (or a square at one corner) of the quick terminal, with the resize pointer: the
-/// window has no frame to resize it by, so the window drags these itself (MainWindow.QuickResize.cs, through Win32Drag).
+/// window has no frame to resize it by, so the window drags these itself (MainWindow.QuickResize.cs, through Windows' size loop).
 /// </summary>
 internal sealed partial class QuickResizeEdge : Grid
 {
