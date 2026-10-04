@@ -34,7 +34,11 @@ namespace Zinc.Terminal;
 /// their own, drawn in color (keyed by the text's color too, for the occasional plain glyph in an emoji font) and
 /// copied untinted. Drawing a layout per cell per frame made a screen of CJK or emoji take ~200 ms a frame.
 ///
-/// Per renderer, in 512 px pages (about 1 MB each; larger only if one tile is) added as needed; <see cref="Clear"/>
+/// Shared by every pane drawing the same font at the same size, scale and sub-pixel offset on the same device
+/// (<see cref="GlyphAtlases"/>): ten panes used to rasterize and keep the same letters ten times. All on the UI
+/// thread, one frame at a time: a pane's frame reserves tiles and flushes them before the next pane's frame runs.
+///
+/// In 512 px pages (about 1 MB each; larger only if one tile is) added as needed; <see cref="Clear"/>
 /// on any change of font, cell size, scale, device or padding offset, and after a flush that failed halfway.
 /// </summary>
 internal sealed class GlyphAtlas : IDisposable
@@ -87,12 +91,20 @@ internal sealed class GlyphAtlas : IDisposable
     /// <summary>Pages in use (glyphs and emoji).</summary>
     public int PageCount => _pages.Count + _colorPages.Count;
 
-    /// <summary>At a frame's start (no tile of this frame handed out yet): starts over if the atlas has grown past <see cref="MaxPages"/>.</summary>
+    /// <summary>
+    /// At a frame's start (no tile of this frame handed out yet): starts over if the atlas has grown past
+    /// <see cref="MaxPages"/>, or if a frame failed between reserving tiles and drawing them (they'd be drawn later
+    /// with another pane's fonts, which may be gone by then).
+    /// </summary>
     public void Trim()
     {
         if (PageCount > MaxPages)
         {
             Log.Write($"atlas: {PageCount} pages, starting over");
+            Clear();
+        }
+        else if (_pending.Count + _pendingText.Count + _pendingColor.Count > 0)
+        {
             Clear();
         }
     }
@@ -366,4 +378,60 @@ internal sealed class GlyphAtlas : IDisposable
     }
 
     public void Dispose() => Clear();
+}
+
+/// <summary>
+/// The glyph atlases panes share (UI thread only): one per (device, font, size, cell metrics, sub-pixel offset), kept
+/// while a pane uses it. A pane whose font, zoom, scale or padding changes moves to the atlas for its new settings.
+/// </summary>
+internal static class GlyphAtlases
+{
+    /// <summary>
+    /// What decides an atlas's tiles. The device by its native pointer (a projected object may come back as another
+    /// wrapper of the same device); the font as the text format names it (the bundled font by file).
+    /// </summary>
+    public readonly record struct Key(nint Device, string Font, float Size, CellMetrics Metrics, float FracX, float FracY)
+    {
+        public static nint DeviceOf(CanvasDevice device) => ((WinRT.IWinRTObject)device).NativeObject.ThisPtr;
+    }
+
+    private static readonly Dictionary<Key, (GlyphAtlas Atlas, int Users)> Shared = [];
+
+    /// <summary>Panes per atlas now (diagnostics).</summary>
+    public static string Describe() => string.Join(", ", Shared.Values.Select(s => $"{s.Users} pane(s), {s.Atlas.PageCount} page(s)"));
+
+    /// <summary>The atlas for <paramref name="key"/>, made if no pane has it; pair with <see cref="Release"/>.</summary>
+    public static GlyphAtlas Acquire(Key key)
+    {
+        if (Shared.TryGetValue(key, out var shared))
+        {
+            Shared[key] = (shared.Atlas, shared.Users + 1);
+            return shared.Atlas;
+        }
+
+        var atlas = new GlyphAtlas();
+        atlas.Prepare(key.Metrics, key.FracX, key.FracY);
+        Shared[key] = (atlas, 1);
+        Log.Write($"atlas: new for {key.Size:0.##} DIP at {key.Metrics.Scale:0.##}x ({Shared.Count} in use)");
+        return atlas;
+    }
+
+    /// <summary>A pane stopped using <paramref name="key"/>'s atlas: freed once no pane does.</summary>
+    public static void Release(Key key)
+    {
+        if (!Shared.TryGetValue(key, out var shared))
+        {
+            return;
+        }
+
+        if (shared.Users > 1)
+        {
+            Shared[key] = (shared.Atlas, shared.Users - 1);
+            return;
+        }
+
+        Shared.Remove(key);
+        shared.Atlas.Dispose();
+        Log.Write($"atlas: freed ({Shared.Count} in use)");
+    }
 }

@@ -614,7 +614,10 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
   or cluster text); emoji (`IsEmoji`: VS16/ZWJ/keycap, wide pictographs) on color pages of their own (`GetColor`, keyed
   by text color too, copied untinted). A layout per cell per frame cost ~205 ms a frame on a CJK/emoji screen
   (benchmark "Wide characters", 2026-10-04) -> 1.2 ms. Capped at `GlyphAtlas.MaxPages` (32, ~1 MB each): past it
-  `Trim` (frame start, before Prepare) starts over with what's on screen (logs `atlas: N pages, starting over`). Still immediate: the bundled box-drawing fallback, the glyph
+  `Trim` (frame start, before Prepare) starts over with what's on screen (logs `atlas: N pages, starting over`).
+  Shared between panes (2026-10-04): `GlyphAtlases.Acquire/Release` by (device's native pointer, font, size,
+  CellMetrics, sub-pixel offset), ref-counted, UI thread only; a pane whose key changes (zoom, font, scale, device)
+  moves to the matching atlas (`ReleaseAtlas` in ClearSprites/Dispose). Logs `atlas: new for ... (N in use)` / `freed`. Still immediate: the bundled box-drawing fallback, the glyph
   under a block cursor. Reset with `ClearSprites`. Pixel diff vs glyph runs: mostly 1/255, colored text edges up to
   ~24/255. Colors workload 9.5 -> 2.9 ms (GPU), 16.7 -> 3.5 ms (software).
   Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,

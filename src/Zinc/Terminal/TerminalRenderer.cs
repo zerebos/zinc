@@ -91,7 +91,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
     // Text through the glyph atlas: each frame's glyphs (and box-drawing sprites) are collected while the rows
     // are drawn, then copied in one sprite batch. ZINC_GLYPH_ATLAS=0 keeps the glyph runs (for comparisons).
     private static readonly bool AtlasEnabled = Environment.GetEnvironmentVariable("ZINC_GLYPH_ATLAS") != "0";
-    private readonly GlyphAtlas _atlas = new();
+    // The shared atlas this pane draws from (GlyphAtlases), and what it was picked by; null until the first frame.
+    private GlyphAtlas _atlas = new();
+    private GlyphAtlases.Key? _atlasKey;
     private bool _batching;
     private int _gridX, _gridY; // the grid's top-left device pixel (the padding, rounded down)
     private readonly List<(CanvasBitmap Bitmap, Rect Destination, Rect? Source, Vector4 Tint)> _frameSprites = [];
@@ -163,9 +165,20 @@ public sealed unsafe class TerminalRenderer : IDisposable
         }
     }
 
+    /// <summary>Lets go of the shared atlas (the last pane using one frees it).</summary>
+    private void ReleaseAtlas()
+    {
+        if (_atlasKey is { } key)
+        {
+            GlyphAtlases.Release(key);
+            _atlasKey = null;
+            _atlas = new GlyphAtlas(); // unused until the next frame acquires one
+        }
+    }
+
     private void ClearSprites()
     {
-        _atlas.Clear(); // same reasons: font, cell size, device
+        ReleaseAtlas(); // same reasons: font, cell size, device (the next frame takes the matching shared one)
         foreach (var sprite in _sprites.Values)
         {
             sprite?.Bitmap.Dispose();
@@ -422,6 +435,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var padY = PadTop * m.Scale;
             _gridX = (int)MathF.Floor(padX);
             _gridY = (int)MathF.Floor(padY);
+            // The shared atlas for this font, size, scale and offset (another pane's, if one draws the same).
+            var key = new GlyphAtlases.Key(GlyphAtlases.Key.DeviceOf(ds.Device), TextFontFamily, _fontSize, m, padX - _gridX, padY - _gridY);
+            if (_atlasKey != key)
+            {
+                ReleaseAtlas();
+                _atlas = GlyphAtlases.Acquire(key);
+                _atlasKey = key;
+            }
+
             _atlas.Trim(); // before Prepare: a cleared atlas takes the metrics again
             _atlas.Prepare(m, padX - _gridX, padY - _gridY);
         }
@@ -503,7 +525,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         _bitmaps.Clear();
         ClearSprites();
         _bgBitmap?.Dispose();
-        _atlas.Dispose();
+        ReleaseAtlas();
         Native.RowCellsFree(_rowCells);
         Native.RowIteratorFree(_rowIterator);
         Native.RenderStateFree(_renderState);
