@@ -19,9 +19,9 @@ public sealed partial class MainWindow
     private Grid? _resizeEdges;
     private QuickTerminalPosition? _edgesFor;
 
-    // The drag in progress (Windows' size loop): the edge, where the pointer and the size started (physical pixels), and
-    // the monitor.
+    // The drag in progress: the edge, where the pointer and the size started (physical pixels), and the monitor.
     private QuickResizeEdge? _resizing;
+    private QuickResizeEdge? _resizeCover;
     private CursorPoint _resizeFrom;
     private (int Width, int Height) _resizeStart;
     private DisplayArea? _resizeArea;
@@ -53,6 +53,9 @@ public sealed partial class MainWindow
         {
             var strip = new QuickResizeEdge(edge);
             strip.PointerPressed += OnResizePressed;
+            strip.PointerMoved += OnResizeMoved;
+            strip.PointerReleased += OnResizeEnded;
+            strip.PointerCaptureLost += OnResizeEnded;
             _resizeEdges.Children.Add(strip);
         }
     }
@@ -82,64 +85,71 @@ public sealed partial class MainWindow
             return;
         }
 
-        // From here Windows runs the drag in its own size loop (NativeSizeLoop says why), after XAML is done with the
-        // press. The loop returns when the button comes up.
+        if (!strip.CapturePointer(e.Pointer))
+        {
+            return;
+        }
+
         _resizing = strip;
+        _resizeCover = new QuickResizeEdge(strip.Edge, cover: true);
+        _resizeEdges?.Children.Add(_resizeCover);
         _resizeFrom = from;
         _resizeStart = (AppWindow.Size.Width, AppWindow.Size.Height);
         _resizeArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.High, () =>
-        {
-            if (_resizing != strip || _windowClosed)
-            {
-                return;
-            }
-
-            NativeSizeLoop.Run(hwnd, WmszFor(strip.Edge), ResizeStep);
-            ResizeEnded();
-        });
     }
 
-    // WM_SIZING's edge numbers (WMSZ_*), also SC_SIZE's.
-    private static int WmszFor(QuickTerminalEdge edge) => edge switch
+    private void OnResizeMoved(object sender, PointerRoutedEventArgs e)
     {
-        QuickTerminalEdge.Left => 1,
-        QuickTerminalEdge.Right => 2,
-        QuickTerminalEdge.Top => 3,
-        QuickTerminalEdge.TopLeft => 4,
-        QuickTerminalEdge.TopRight => 5,
-        QuickTerminalEdge.Bottom => 6,
-        QuickTerminalEdge.BottomLeft => 7,
-        _ => 8,
-    };
-
-    /// <summary>One step of the drag: the size the pointer gives, placed as the window belongs (the loop applies it).</summary>
-    private NativeSizeLoop.Rect ResizeStep()
-    {
-        var now = new NativeSizeLoop.Rect
+        if (!ReferenceEquals(sender, _resizing) || _resizeArea is not { } area || _windowClosed || !GetCursorPos(out var at))
         {
-            Left = AppWindow.Position.X, Top = AppWindow.Position.Y,
-            Right = AppWindow.Position.X + AppWindow.Size.Width, Bottom = AppWindow.Position.Y + AppWindow.Size.Height,
-        };
-        if (_resizing is not { } strip || _resizeArea is not { } area || _windowClosed || !GetCursorPos(out var at))
-        {
-            return now;
+            return;
         }
 
+        e.Handled = true;
         var settings = _config.Global.QuickTerminal;
         var work = area.WorkArea;
         var scale = Scale();
-        var size = QuickTerminalResize.Size(settings.Position, strip.Edge, _resizeStart, at.X - _resizeFrom.X, at.Y - _resizeFrom.Y,
+        var size = QuickTerminalResize.Size(settings.Position, _resizing.Edge, _resizeStart, at.X - _resizeFrom.X, at.Y - _resizeFrom.Y,
             ((int)Math.Round(QuickMinWidth * scale), (int)Math.Round(QuickMinHeight * scale)), (work.Width, work.Height));
         var r = QuickTerminalLayout.Place(new QuickTerminalLayout.Rect(work.X, work.Y, work.Width, work.Height), settings, size);
-        return new NativeSizeLoop.Rect { Left = r.X, Top = r.Y, Right = r.X + r.Width, Bottom = r.Y + r.Height };
+        if (r.Width != AppWindow.Size.Width || r.Height != AppWindow.Size.Height || r.X != AppWindow.Position.X || r.Y != AppWindow.Position.Y)
+        {
+            AppWindow.MoveAndResize(new RectInt32(r.X, r.Y, r.Width, r.Height));
+            // Moving a window makes Windows refresh the pointer, and a WinUI window answers that with the arrow until
+            // the next pointer move (Task Manager's once-a-second redraw does the same to every WinUI app): the drag's
+            // pointer flickered. The resize shape again, at once.
+            SetCursor(LoadCursorW(0, _resizing.Edge switch
+            {
+                QuickTerminalEdge.Left or QuickTerminalEdge.Right => 32644, // IDC_SIZEWE
+                QuickTerminalEdge.Top or QuickTerminalEdge.Bottom => 32645, // IDC_SIZENS
+                QuickTerminalEdge.TopLeft or QuickTerminalEdge.BottomRight => 32642, // IDC_SIZENWSE
+                _ => 32643, // IDC_SIZENESW
+            }));
+        }
     }
 
-    /// <summary>The drag is over: the size is remembered for this monitor (unless it didn't change).</summary>
-    private void ResizeEnded()
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint SetCursor(nint cursor);
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint LoadCursorW(nint instance, nint name);
+
+    private void OnResizeEnded(object sender, PointerRoutedEventArgs e)
     {
+        if (!ReferenceEquals(sender, _resizing))
+        {
+            return;
+        }
+
+        var strip = _resizing;
         _resizing = null;
+        strip.ReleasePointerCaptures();
+        if (_resizeCover != null)
+        {
+            _resizeEdges?.Children.Remove(_resizeCover);
+            _resizeCover = null;
+        }
+
         if (_resizeArea is not { } area || _windowClosed)
         {
             return;
