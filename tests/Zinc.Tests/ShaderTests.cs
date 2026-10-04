@@ -3,6 +3,7 @@ using Zinc.Shaders;
 namespace Zinc.Tests;
 
 /// <summary>Custom shaders: the [shaders] settings, Ghostty's prefix, glslang's errors in the file's own lines, and GLSL to HLSL.</summary>
+[Collection("ShaderPaths.BundledFolder")] // tests that point it elsewhere take turns
 public class ShaderTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("zinc-shaders-").FullName;

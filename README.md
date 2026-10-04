@@ -294,9 +294,15 @@ shaders written for Ghostty work unchanged
   `"always"`, focused or not; `false`, never: they hold still (cursor effects included) and are drawn only
   when the terminal changes (unlike Ghostty's `false`, where each such frame shows them further along).
   Shaders that don't use time draw only when the terminal changes anyway.
-- Settings > Appearance > Shaders has both: add files, reorder or remove them, open one in your editor,
-  and see whether each compiles (and why not); the preview at the top runs them. A profile's page has
-  the same, inherited until you change it there.
+- Settings > Appearance > Shaders has both: add, reorder or remove shaders, open one in your editor, and see
+  whether each compiles (and why not); the preview at the top runs them. A profile's page has the same,
+  inherited until you change it there. **Add** opens a picker: Zinc's shaders, yours (`shaders\` next to
+  config.toml) and those in folders you added, with a line about each (its first comment) and whether it moves
+  on its own. Point at one (or arrow to it) and the preview runs it after yours, with whether it compiles; a
+  click or Enter adds it, and the picker stays open for more.
+- `folders`: folders of shaders the picker lists, a collection you cloned for instance
+  (`folders = ["~/dev/ghostty-shaders"]`). The picker's "Add a folder…" and "Folders" (to stop listing one)
+  write it for you.
 - Profiles can have their own (`[profile.x.shaders]`, `files = []` for none). Shaders need
   `low-latency-drawing` (the default). What a shader gets: all of Ghostty's uniforms: the picture so far
   (`iChannel0`), size, time, frame, date, focus, the cursor (where and how it's drawn, the previous one and

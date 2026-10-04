@@ -349,6 +349,12 @@ public sealed record Config
     /// <summary><see cref="Shaders"/> as a list.</summary>
     public IReadOnlyList<string> ShaderFiles => Shaders.Length == 0 ? [] : Shaders.Split('\n');
 
+    /// <summary>
+    /// Folders of shaders the picker in Settings lists (full paths, one per line, "" for none): a collection you cloned,
+    /// say. Config: <c>[shaders] folders = ["~/dev/ghostty-shaders"]</c>, relative ones from the config file's folder.
+    /// </summary>
+    public string ShaderFolders { get; init; } = "";
+
     /// <summary>When time-based shaders redraw on their own. Config: <c>[shaders] animation</c>.</summary>
     public ShaderAnimation ShaderAnimation { get; init; }
 
@@ -536,6 +542,7 @@ public sealed record Config
             "free-hidden-after" when TryDuration(value, out var hiddenFor) && hiddenFor >= TimeSpan.FromSeconds(1) =>
                 this with { FreeHiddenAfter = hiddenFor },
             "custom-shader" => this with { Shaders = string.Join('\n', value.Split('\n').Select(f => f.Trim()).Where(f => f.Length > 0)) },
+            "shader-folders" => this with { ShaderFolders = string.Join('\n', value.Split('\n').Select(f => f.Trim()).Where(f => f.Length > 0)) },
             "custom-shader-animation" when bool.TryParse(value, out var animate) =>
                 this with { ShaderAnimation = animate ? ShaderAnimation.Focused : ShaderAnimation.Never },
             "custom-shader-animation" when value.Equals("always", StringComparison.OrdinalIgnoreCase) =>

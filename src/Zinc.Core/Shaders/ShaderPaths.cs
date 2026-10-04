@@ -68,6 +68,23 @@ public static class ShaderPaths
         return path.Length == 0 ? "" : Path.GetFullPath(path, Path.GetDirectoryName(Path.GetFullPath(configFile)) ?? ".");
     }
 
+    /// <summary>A folder as written in <paramref name="configFile"/> (<c>[shaders] folders</c>), made full.</summary>
+    public static string ResolveFolder(string written, string configFile)
+    {
+        var path = Environment.ExpandEnvironmentVariables(written.Trim());
+        if (path == "~")
+        {
+            return Home;
+        }
+
+        if (path.StartsWith("~/") || path.StartsWith("~\\"))
+        {
+            path = Path.Combine(Home, path[2..]);
+        }
+
+        return path.Length == 0 ? "" : Path.GetFullPath(path, Path.GetDirectoryName(Path.GetFullPath(configFile)) ?? ".").TrimEnd('\\');
+    }
+
     /// <summary>
     /// How Settings writes <paramref name="full"/> into <paramref name="configFile"/>: relative to its folder when
     /// inside it ("shaders/crt.glsl"), else from your home ("~/dev/shaders/crt.glsl"), else the whole path.

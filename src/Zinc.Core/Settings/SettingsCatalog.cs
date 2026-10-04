@@ -437,6 +437,7 @@ public static class SettingsCatalog
     public static IReadOnlyDictionary<string, string> FileOnly { get; } = new Dictionary<string, string>
     {
         ["colors.palette"] = "Palette colors by number (palette.1 = \"#AC4242\") are set in config.toml.",
+        ["shaders.folders"] = "Folders of shaders to choose from: added and taken out in the shader picker (Custom shaders > Add).",
     };
 
     public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);

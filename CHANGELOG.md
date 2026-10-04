@@ -11,6 +11,9 @@ is the version it builds, and hands it to the installer as the release notes).
   terminal, Settings, and reopening what you closed. Each item opens in the window you used last. The same things
   work from the command line: `zinc --profile <id>`, `--folder <path>`, `--new-window`, `--quick-terminal`,
   `--settings`, `--reopen-workspace`, `--reopen-window`.
+- A shader picker (Settings > Appearance > Shaders > Add): Zinc's shaders, yours and the folders you add (a
+  collection you cloned, say), each with a line about it. Point at one and the preview runs it, with whether it
+  compiles; click to add, as many as you like.
 
 ## 0.1.0-dev.254 (2026-10-04)
 

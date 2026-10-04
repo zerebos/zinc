@@ -185,6 +185,34 @@ internal sealed partial class SettingsWindow
         }
     }
 
+    /// <summary>The preview runs <paramref name="files"/> (full paths) as its shaders: the shader picker's highlight.</summary>
+    private void PreviewShaders(IReadOnlyList<string> files)
+    {
+        if (_preview != null && _pinned.Visibility == Visibility.Visible && PreviewConfig() is { } shown)
+        {
+            _preview.ApplyConfig(shown with { Shaders = string.Join('\n', files) });
+        }
+    }
+
+    // Shown for the shader picker while it's open, though hidden (pointing at a shader would show nothing otherwise).
+    private bool _previewShownForPicker;
+
+    private void PreviewForPicker(bool open)
+    {
+        if (open && _previewHidden)
+        {
+            _previewShownForPicker = true;
+            _previewHidden = false;
+            FitPreview();
+        }
+        else if (!open && _previewShownForPicker)
+        {
+            _previewShownForPicker = false;
+            _previewHidden = true;
+            FitPreview();
+        }
+    }
+
     /// <summary>The config was read again: the preview shows what's in force now.</summary>
     private void RefreshPreview()
     {

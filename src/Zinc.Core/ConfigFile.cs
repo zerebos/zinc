@@ -664,6 +664,7 @@ public sealed class ConfigFile
             ["terminal.command-marks"] = ("command-marks", v => v as string),
             ["terminal.shell-integration"] = ("shell-integration", v => v as string),
             ["shaders.files"] = ("custom-shader", v => v as string), // paths: ApplySetting resolves them
+            ["shaders.folders"] = ("shader-folders", v => v as string), // paths: ApplySetting resolves them
             ["shaders.animation"] = ("custom-shader-animation", v => v is bool b ? (b ? "true" : "false") : v as string),
             ["window.workspace-tabs"] = ("workspace-tabs", v => v as string),
             ["window.title-bar"] = ("title-bar", v => v as string),
@@ -738,6 +739,20 @@ public sealed class ConfigFile
                 }
 
                 return config;
+            }
+
+            // Shader folders (for Settings' picker): the same, as folders.
+            if (e.Path is ["shaders", "folders"])
+            {
+                var folders = e.Value switch
+                {
+                    string one => [one],
+                    List<object> list when list.All(x => x is string) => list.Cast<string>().ToList(),
+                    _ => null,
+                };
+                return folders == null
+                    ? Warn(config, e, "a folder or a list of them")
+                    : config.Apply("shader-folders", string.Join('\n', folders.Select(f => Zinc.Shaders.ShaderPaths.ResolveFolder(f, e.File)))) ?? config;
             }
 
             // Shader files: one path or a list, relative ones from the folder of the file that names them.

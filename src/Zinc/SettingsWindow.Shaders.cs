@@ -119,52 +119,49 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        // Add: Zinc's own shaders (those not in the list yet), then any file.
-        var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
-        menu.Opening += (_, _) =>
+        // Add: the picker (Zinc's shaders, yours, the folders you added; previewed as you point at them), files, folders.
+        IReadOnlyList<string> Full() => [.. Shown().Select(w => ShaderPaths.Resolve(w, _config.Path))];
+        var picker = new ShaderPicker(Full, () => (_config.Path, ShaderFolders()));
+        picker.Opening += () => PreviewForPicker(open: true);
+        picker.Closed += () => PreviewForPicker(open: false);
+        picker.Highlighted += entry => PreviewShaders([.. Full(), entry.File]);
+        picker.HighlightEnded += RefreshPreview;
+        picker.Picked += entry => Save([.. Shown(), entry.Written]);
+        picker.FromFile += async () =>
         {
-            menu.Items.Clear();
-            var shown = Shown();
-            foreach (var (bundledName, about) in ShaderPaths.Bundled())
+            // Code after an await resumes as queued work, where an exception would end the app.
+            try
             {
-                if (shown.Contains(bundledName, StringComparer.OrdinalIgnoreCase))
+                var picked = await PickShaders();
+                if (picked.Count > 0)
                 {
-                    continue;
+                    Save([.. Shown(), .. picked.Select(p => ShaderPaths.ForConfig(p, _config.Path))]);
                 }
-
-                var item = new MenuFlyoutItem { Text = bundledName };
-                ToolTipService.SetToolTip(item, about);
-                AutomationProperties.SetHelpText(item, about);
-                item.Click += (_, _) => Save([.. Shown(), bundledName]);
-                menu.Items.Add(item);
             }
-
-            if (menu.Items.Count > 0)
+            catch (Exception ex)
             {
-                menu.Items.Add(new MenuFlyoutSeparator());
+                Log.Crash("picking shaders", ex);
+                Show(error, $"Couldn't open the file picker: {ex.Message}");
             }
-
-            var file = new MenuFlyoutItem { Text = "From a file…" };
-            file.Click += async (_, _) =>
-            {
-                // Code after an await resumes as queued work, where an exception would end the app.
-                try
-                {
-                    var picked = await PickShaders();
-                    if (picked.Count > 0)
-                    {
-                        Save([.. Shown(), .. picked.Select(p => ShaderPaths.ForConfig(p, _config.Path))]);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Crash("picking shaders", ex);
-                    Show(error, $"Couldn't open the file picker: {ex.Message}");
-                }
-            };
-            menu.Items.Add(file);
         };
-        add.Flyout = menu;
+        picker.AddFolder += () =>
+        {
+            var folder = FolderDialog.Pick(WinRT.Interop.WindowNative.GetWindowHandle(this), ShaderFolders().LastOrDefault(), "Add a folder of shaders");
+            if (folder == null)
+            {
+                return;
+            }
+
+            _addedShaderFolders.Add(folder); // listed at once, before config.toml is read again
+            WriteShaderFolders([.. WrittenShaderFolders(), ShaderPaths.ForConfig(folder, _config.Path)]);
+            picker.Flyout.ShowAt(add); // back to the picker, with the folder's shaders
+        };
+        picker.RemoveFolder += folder =>
+        {
+            _addedShaderFolders.RemoveAll(f => f.Equals(folder, StringComparison.OrdinalIgnoreCase));
+            WriteShaderFolders([.. WrittenShaderFolders().Where(w => !ShaderPaths.ResolveFolder(w, _config.Path).Equals(folder, StringComparison.OrdinalIgnoreCase))]);
+        };
+        add.Flyout = picker.Flyout;
 
         reset.Click += (_, _) =>
         {
@@ -346,6 +343,17 @@ internal sealed partial class SettingsWindow
             ShaderLoader.FileChanged -= Changed;
         };
     }
+
+    // Folders added since config.toml was last read (the picker lists them at once).
+    private readonly List<string> _addedShaderFolders = [];
+
+    /// <summary>The folders the shader picker lists ([shaders] folders, and any just added), full paths.</summary>
+    private IReadOnlyList<string> ShaderFolders() =>
+        [.. _config.Global.ShaderFolders.Split('\n', StringSplitOptions.RemoveEmptyEntries).Concat(_addedShaderFolders).Distinct(StringComparer.OrdinalIgnoreCase)];
+
+    private IReadOnlyList<string> WrittenShaderFolders() => ShaderPaths.Listed(_config.ValueOf("shaders.folders"));
+
+    private void WriteShaderFolders(IReadOnlyList<string> written) => Write(["shaders", "folders"], written.Count == 0 ? null : written.ToList());
 
     private async Task<IReadOnlyList<string>> PickShaders()
     {
