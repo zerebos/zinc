@@ -134,7 +134,7 @@ public sealed partial class MainWindow
         App.Instance.QuickTerminalSizes.Forget(MonitorKey(area));
         var work = area.WorkArea;
         var r = QuickTerminalLayout.Place(new QuickTerminalLayout.Rect(work.X, work.Y, work.Width, work.Height), _config.Global.QuickTerminal);
-        AppWindow.MoveAndResize(new RectInt32(r.X, r.Y, r.Width, r.Height));
+        PlaceQuick(new RectInt32(r.X, r.Y, r.Width, r.Height));
         Log.Write($"quick terminal: size reset on {MonitorKey(area)}");
     }
 }

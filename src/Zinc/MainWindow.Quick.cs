@@ -136,12 +136,12 @@ public sealed partial class MainWindow
                 App.Instance.QuickTerminalSizes.For(MonitorKey(area), settings)); // the size its edges were dragged to there
 
             var rect = new RectInt32(r.X, r.Y, r.Width, r.Height);
-            AppWindow.MoveAndResize(rect);
+            PlaceQuick(rect);
             // Onto a monitor with another scale, Windows resizes it by the change of scale once it's there (too big on
             // a 125% screen, too small back on 100%): the size it should have, again.
             if (AppWindow.Size.Width != rect.Width || AppWindow.Size.Height != rect.Height || AppWindow.Position.X != rect.X)
             {
-                AppWindow.MoveAndResize(rect);
+                PlaceQuick(rect);
             }
 
             if (settings.AnimationDuration > 0)
@@ -246,6 +246,20 @@ public sealed partial class MainWindow
     }
 
     private double Scale() => Root.XamlRoot?.RasterizationScale ?? 1;
+
+    /// <summary>Moves and sizes the window, as Zinc may (QuickFrame refuses other moves: Windows' snapping).</summary>
+    private void PlaceQuick(RectInt32 rect)
+    {
+        QuickFrame.Placing = true;
+        try
+        {
+            AppWindow.MoveAndResize(rect);
+        }
+        finally
+        {
+            QuickFrame.Placing = false;
+        }
+    }
 
     /// <summary>
     /// Windows' shadow around the window, off while the content isn't whole. A frameless window's shadow comes with its

@@ -36,6 +36,14 @@ internal static unsafe partial class QuickFrame
 
     public static void Attach(nint hwnd) => SetWindowSubclass(hwnd, &Proc, SubclassId, 0);
 
+    /// <summary>
+    /// Zinc is placing the window (summoning it, a reset): the moves and resizes it makes go through. Any other comes
+    /// from Windows' snapping (Win+arrows snap any window with a resizing frame) and is refused, except a border drag.
+    /// </summary>
+    public static bool Placing { get; set; }
+
+    private static bool _dragging;
+
     private const nuint SubclassId = 0x5146524D; // "QFRM"
 
     [UnmanagedCallersOnly(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvStdcall)])]
@@ -47,13 +55,22 @@ internal static unsafe partial class QuickFrame
             {
                 case 0x0083 when wParam != 0: // WM_NCCALCSIZE: the client area is the whole window (no frame drawn)
                     return 0;
+                case 0x0085: // WM_NCPAINT: no frame to paint (Windows painted a white one on a DPI change, around the fade)
+                    return 0;
+                case 0x0086: // WM_NCACTIVATE: the same on losing focus; lParam -1 = don't repaint the frame
+                    return DefSubclassProc(hwnd, msg, wParam, -1);
+                case 0x0046 when !Placing && !_dragging: // WM_WINDOWPOSCHANGING from someone else: stay put
+                    ((WindowPos*)lParam)->Flags |= 0x0001 | 0x0002; // SWP_NOSIZE | SWP_NOMOVE
+                    break;
                 case 0x0231: // WM_ENTERSIZEMOVE
+                    _dragging = true;
                     Started?.Invoke();
                     break;
                 case 0x0214 when Sizing != null: // WM_SIZING
                     *(Rect*)lParam = Sizing((int)wParam, *(Rect*)lParam);
                     return 1;
                 case 0x0232: // WM_EXITSIZEMOVE
+                    _dragging = false;
                     Sized?.Invoke();
                     break;
                 case 0x00A3 when wParam is >= 10 and <= 17: // WM_NCLBUTTONDBLCLK on a border (HTLEFT ... HTBOTTOMRIGHT)
@@ -67,6 +84,14 @@ internal static unsafe partial class QuickFrame
         }
 
         return DefSubclassProc(hwnd, msg, wParam, lParam);
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowPos
+    {
+        public nint Hwnd, InsertAfter;
+        public int X, Y, Cx, Cy;
+        public uint Flags;
     }
 
     [LibraryImport("comctl32.dll")]
