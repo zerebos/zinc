@@ -830,11 +830,11 @@ and read state after the write (see `_titleDirty`).
   (WinUI's pointer input doesn't come as window messages, even to the capture window). Windows' size loop doesn't
   fit either: WM_NCLBUTTONDOWN with an HT border code ends at once (no resizing border), and SC_SIZE runs the
   click-to-finish form (Windows' key state never sees WinUI's press), following the mouse only once the button is up
-  (the pointer did hold steady in it). So the drag stays XAML's (capture + cover + SetCursor after each step). Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
+  (the pointer did hold steady in it). What works (`QuickFrame`): a real resizing frame (IsResizable + WS_THICKFRAME) drawn nowhere (WM_NCCALCSIZE -> 0: no light strip, no margins) + `InputNonClientPointerSource` Left/Right/Top/BottomBorder regions (corners come by themselves; probe with quick-nchittest.ps1 -Position top): Windows' own pointer and press-drag loop, each WM_SIZING step our rectangle, WM_NCLBUTTONDBLCLK on a border = reset. Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
 - Clearing WinUI's top-level class cursor (the arrow) didn't stop non-arrow pointers flickering and left stale shapes
   (a resize arrow after a dropdown in Settings): don't. `.scratch/tools/quick-nchittest.ps1` shows class cursors, child
   rects and WM_NCHITTEST answers.
-  `InputNonClientPointerSource` border regions (LeftBorder…) on the frameless quick window FailFast (8000FFFF): don't.
+  `InputNonClientPointerSource` border regions FailFast (8000FFFF) on a window that isn't resizable; fine on a resizable one.
 - Hover and pointer shape can't be tested here (posted WM_MOUSEMOVE doesn't become WM_POINTER;
   screenshots omit the cursor) — ask the user.
 - Caption buttons: keep `TitleBarHeightOption.Standard` (32 px) with TabView's default ~41 px strip —

@@ -44,17 +44,18 @@ public sealed partial class MainWindow
             presenter.IsAlwaysOnTop = true;
             presenter.IsMinimizable = false;
             presenter.IsMaximizable = false;
-            // Not resizable by its frame either: a resizing frame without a title bar draws a light strip across the
-            // top (Windows' quirk), and invisible margins around the content.
-            presenter.IsResizable = false;
+            // Resizable by a real frame that QuickFrame keeps from being drawn (alone, a resizing frame without a
+            // title bar drew a light strip across the top and invisible margins around the content).
+            presenter.IsResizable = true;
             presenter.SetBorderAndTitleBar(hasBorder: false, hasTitleBar: false);
         }
 
-        // No border of any kind (a classic one survived the presenter's settings, and Windows 11 outlines windows):
-        // just the rounded terminal.
+        // No border drawn (a classic one survived the presenter's settings, and Windows 11 outlines windows): just the
+        // rounded terminal. The resizing frame stays, for Windows to drag (QuickFrame hides it).
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         const int WS_BORDER = 0x00800000, WS_DLGFRAME = 0x00400000, WS_THICKFRAME = 0x00040000;
-        SetWindowLongW(hwnd, -16 /* GWL_STYLE */, GetWindowLongW(hwnd, -16) & ~(WS_BORDER | WS_DLGFRAME | WS_THICKFRAME));
+        AttachQuickFrame(hwnd);
+        SetWindowLongW(hwnd, -16 /* GWL_STYLE */, (GetWindowLongW(hwnd, -16) & ~(WS_BORDER | WS_DLGFRAME)) | WS_THICKFRAME);
         SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0027 /* SWP_FRAMECHANGED | NOMOVE | NOSIZE | NOZORDER */ | 0x0010 /* NOACTIVATE */);
         var corners = 2; // DWMWCP_ROUND
         DwmSetWindowAttribute(hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref corners, sizeof(int));
@@ -133,7 +134,7 @@ public sealed partial class MainWindow
             var work = area.WorkArea;
             var r = QuickTerminalLayout.Place(new QuickTerminalLayout.Rect(work.X, work.Y, work.Width, work.Height), settings,
                 App.Instance.QuickTerminalSizes.For(MonitorKey(area), settings)); // the size its edges were dragged to there
-            UpdateResizeEdges();
+
             var rect = new RectInt32(r.X, r.Y, r.Width, r.Height);
             AppWindow.MoveAndResize(rect);
             // Onto a monitor with another scale, Windows resizes it by the change of scale once it's there (too big on
@@ -153,6 +154,7 @@ public sealed partial class MainWindow
 
         _quickShown = true;
         AppWindow.Show(true);
+        UpdateBorders(); // for the position in the config, which may have changed while hidden
         Activate();
         // The hotkey press grants us the right to take the foreground.
         SetForegroundWindow(hwnd);
