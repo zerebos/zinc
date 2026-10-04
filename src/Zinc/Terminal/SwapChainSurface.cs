@@ -25,6 +25,16 @@ internal sealed class SwapChainSurface
     public static bool Enabled { get; set; }
 
     /// <summary>
+    /// How long a pane stays hidden (its tab not shown) before it gives its swap chain and shader pictures back
+    /// (<c>[window] free-hidden-memory</c>, <c>free-hidden-after</c>); null: never. Read when a pane is hidden.
+    /// </summary>
+    public static TimeSpan? FreeHiddenAfter { get; set; } = TimeSpan.FromSeconds(60);
+
+    // Started when the panel unloads; if it's still hidden when this fires, the memory goes. Kept in a field: a timer
+    // only a local referenced would be collected and never fire.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _freeTimer;
+
+    /// <summary>
     /// The panel. It can't take a Background (WinUI refuses it on a SwapChainPanel), so the pane gives its parent one
     /// for the pointer to hit.
     /// </summary>
@@ -77,6 +87,7 @@ internal sealed class SwapChainSurface
 
             Resize();
             // Shown again (a tab selected, a pane moved): frames asked for while it was hidden weren't drawn.
+            _freeTimer?.Stop();
             Invalidate();
             if (Animating)
             {
@@ -84,6 +95,46 @@ internal sealed class SwapChainSurface
             }
         };
         Panel.SizeChanged += (_, _) => Resize();
+        Panel.Unloaded += (_, _) => StartFreeTimer();
+    }
+
+    private void StartFreeTimer()
+    {
+        if (_closed || FreeHiddenAfter is not { } after || _chain == null)
+        {
+            return;
+        }
+
+        if (_freeTimer == null)
+        {
+            _freeTimer = Panel.DispatcherQueue.CreateTimer();
+            _freeTimer.IsRepeating = false;
+            _freeTimer.OnTick(_ => FreeHidden());
+        }
+
+        _freeTimer.Interval = after;
+        _freeTimer.Start();
+    }
+
+    /// <summary>
+    /// Still hidden: lets go of the swap chain (two full-size buffers) and the shader pass's pictures. Shown again,
+    /// Loaded's Resize makes a new chain and Invalidate draws its first frame (the glyphs are still in the shared atlas).
+    /// </summary>
+    private void FreeHidden()
+    {
+        if (_closed || Panel.IsLoaded || _chain == null)
+        {
+            return;
+        }
+
+        var pixels = _chain.SizeInPixels;
+        Panel.SwapChain = null;
+        _chain.Dispose();
+        _chain = null;
+        _shader?.FreeTargets();
+        _stale = true;
+        UnhookRendering();
+        Log.Write($"pane: swap chain: freed while hidden ({pixels.Width}x{pixels.Height})");
     }
 
     /// <summary>The custom shaders to run over every frame, in order (none: frames go straight to the swap chain).</summary>
@@ -393,6 +444,7 @@ internal sealed class SwapChainSurface
     public void Close()
     {
         _closed = true;
+        _freeTimer?.Stop();
         UnhookRendering();
         _shader?.Dispose();
         _shader = null;

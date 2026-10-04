@@ -368,6 +368,12 @@ public static class SettingsCatalog
         new("terminal", "Troubleshooting", "window.low-latency-drawing", "Low-latency drawing",
             "What you type shows up about one screen refresh sooner, the way Windows Terminal draws. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
             SettingKind.Toggle, true),
+        new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free graphics memory of hidden tabs",
+            "A tab left in the background gives back what it draws with (most for big windows on high-resolution screens, and with shaders), and makes it anew when you come back. Turn it off if switching to such a tab flashes. Low-latency drawing only.",
+            SettingKind.Toggle, true),
+        new("terminal", "Troubleshooting", "window.free-hidden-after", "After hidden for",
+            "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 60L)
+            { Placeholder = "60", NumbersAsNumbers = true },
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
             "Draws with the processor instead of the graphics card: for broken graphics drivers, some virtual machines and remote desktop glitches. Slower. Applies to terminals opened from now on.",
             SettingKind.Toggle, false),
@@ -449,6 +455,7 @@ public static class SettingsCatalog
         new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim and remote shells do.", null,
             ["terminal.clipboard-write", "terminal.clipboard-read"]),
         new(null, null, "notify.command-finished", ["notify.command-finished-after"]),
+        new(null, null, "window.free-hidden-memory", ["window.free-hidden-after"]),
     ];
 
     /// <summary>The fold <paramref name="key"/> leads or sits in, if any.</summary>

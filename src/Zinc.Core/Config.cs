@@ -330,6 +330,16 @@ public sealed record Config
     public bool LowLatencyDrawing { get; init; } = true;
 
     /// <summary>
+    /// A tab hidden for <see cref="FreeHiddenAfter"/> gives its drawing surface's graphics memory back (two full-size
+    /// buffers, plus a shader pane's pictures: tens of MB a maximized tab on a high-resolution screen); shown again, it
+    /// makes them anew for its first frame. Low-latency drawing only. Config: <c>[window] free-hidden-memory</c> (global).
+    /// </summary>
+    public bool FreeHiddenMemory { get; init; } = true;
+
+    /// <summary>How long a tab is hidden before <see cref="FreeHiddenMemory"/> applies. Config: <c>[window] free-hidden-after</c>.</summary>
+    public TimeSpan FreeHiddenAfter { get; init; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
     /// Custom shaders (Ghostty/Shadertoy GLSL) run over the terminal's picture, in order: full paths, one per line, ""
     /// for none (a string, so configs compare by value). Relative paths in the file are from the config file's folder.
     /// Needs low-latency drawing. Config: <c>[shaders] files = ["crt.glsl"]</c>.
@@ -522,6 +532,9 @@ public sealed record Config
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
             "software-rendering" when bool.TryParse(value, out var software) => this with { SoftwareRendering = software },
             "low-latency-drawing" when bool.TryParse(value, out var lowLatency) => this with { LowLatencyDrawing = lowLatency },
+            "free-hidden-memory" when bool.TryParse(value, out var freeHidden) => this with { FreeHiddenMemory = freeHidden },
+            "free-hidden-after" when TryDuration(value, out var hiddenFor) && hiddenFor >= TimeSpan.FromSeconds(1) =>
+                this with { FreeHiddenAfter = hiddenFor },
             "custom-shader" => this with { Shaders = string.Join('\n', value.Split('\n').Select(f => f.Trim()).Where(f => f.Length > 0)) },
             "custom-shader-animation" when bool.TryParse(value, out var animate) =>
                 this with { ShaderAnimation = animate ? ShaderAnimation.Focused : ShaderAnimation.Never },

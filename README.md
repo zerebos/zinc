@@ -304,7 +304,10 @@ instead of the graphics card (for broken graphics drivers, some virtual machines
 glitches; slower; applies to terminals opened after it's set). `low-latency-drawing = true`
 (the default) has each terminal present its frames from a swap chain of its own as soon as they're
 drawn, instead of at the window's next render tick, so typing shows up about a refresh sooner; `false`
-goes back to the previous drawing, as a fallback (terminals opened after it's set).
+goes back to the previous drawing, as a fallback (terminals opened after it's set). `free-hidden-memory = true`
+(the default) has a tab left in the background give back the graphics memory it draws with (two full-size
+buffers, more with shaders: tens of MB for a maximized tab on a high-resolution screen) once it has been hidden for
+`free-hidden-after` (seconds, or `"2m"`; default 60), and make it anew when you come back; `false` keeps it.
 
 **`[notify]`**: `command-finished`, `command-finished-after` (see
 [Shell integration](#shell-integration)), and `programs`: notifications that programs send

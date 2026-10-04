@@ -105,6 +105,15 @@ internal sealed class ShaderPass : IDisposable
         _focused = focused;
     }
 
+    /// <summary>A hidden pane gives its pictures back (made again, and the frame redrawn, at the next <see cref="FrameFor"/>).</summary>
+    public void FreeTargets()
+    {
+        _frame?.Dispose();
+        _scratchA?.Dispose();
+        _scratchB?.Dispose();
+        (_frame, _scratchA, _scratchB) = (null, null, null);
+    }
+
     /// <summary>
     /// The offscreen frame for <paramref name="chain"/>'s size: draw the terminal into it, then <see cref="Run"/>.
     /// <paramref name="fresh"/>: a new one (first, or another size), which has to be drawn; otherwise it still holds the

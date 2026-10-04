@@ -671,6 +671,8 @@ public sealed class ConfigFile
             ["window.tab-groups"] = ("tab-groups", v => Bool(v)),
             ["window.software-rendering"] = ("software-rendering", v => Bool(v)),
             ["window.low-latency-drawing"] = ("low-latency-drawing", v => Bool(v)),
+            ["window.free-hidden-memory"] = ("free-hidden-memory", v => Bool(v)),
+            ["window.free-hidden-after"] = ("free-hidden-after", v => v is string d ? d : Number(v)),
             ["window.focus-follows-mouse"] = ("focus-follows-mouse", v => Bool(v)),
             ["terminal.copy-on-select"] = ("copy-on-select", v => Bool(v)),
             ["terminal.click-to-move"] = ("cursor-click-to-move", v => Bool(v)),

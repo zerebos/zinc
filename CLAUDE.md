@@ -55,6 +55,10 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   chain. Verified: visual suite identical in both modes (`visual.ps1 -WindowSettings 'low-latency-drawing =
   true'`), benchmark 144 fps capped in both, moving a workspace to a new window, echo→frame 1.3-1.6 ms vs a
   CanvasControl frame that still waits for WinUI's commit. `bench-test.ps1 -Config` (.scratch/settings-lowlat).
+- Hidden tabs free their swap chain (`[window] free-hidden-memory`, default on; `free-hidden-after`, default 60 s):
+  `SwapChainSurface.FreeHiddenAfter` (static, set by App with Enabled), a per-surface DispatcherQueueTimer started
+  on Panel.Unloaded, `FreeHidden` drops the chain + `ShaderPass.FreeTargets`; Loaded's Resize/Invalidate rebuild it.
+  Logs `pane: swap chain: freed while hidden (WxH)`. Test: `.scratch/tmp/free-test.ps1` pattern (delay 2, Ctrl+Tab back).
 - Drawing benchmark (Settings > About, under the logs): Core `Terminal/Benchmark.cs` (`BenchmarkWorkloads`:
   Colors / Synchronized / Text / Scrolling, seeded, a port of `.scratch/perf/load.py`; `TimeStats`,
   `BenchmarkResult`, `BenchmarkReport.Text()` = what Copy gives; tested) → App `BenchmarkWindow` (its own

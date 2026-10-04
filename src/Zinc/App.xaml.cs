@@ -98,6 +98,7 @@ public partial class App : Application
 
         CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
         SwapChainSurface.Enabled = _config.Global.LowLatencyDrawing;
+        SwapChainSurface.FreeHiddenAfter = _config.Global.FreeHiddenMemory ? _config.Global.FreeHiddenAfter : null;
         LoadRecentCommands();
         _keybindings = _config.Keybindings;
         foreach (var warning in _config.Warnings)
@@ -259,6 +260,7 @@ public partial class App : Application
                 Log.SetEnabled(_config.Global.Logging);
                 CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
                 SwapChainSurface.Enabled = _config.Global.LowLatencyDrawing;
+                SwapChainSurface.FreeHiddenAfter = _config.Global.FreeHiddenMemory ? _config.Global.FreeHiddenAfter : null;
                 _keybindings.CopyFrom(_config.Keybindings);
                 OpenWindow(_config.DefaultProfile);
                 WatchConfig(); // the folder exists now
@@ -719,6 +721,7 @@ public partial class App : Application
         Updater.Schedule(fresh.Global.UpdateCheck);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on
         SwapChainSurface.Enabled = fresh.Global.LowLatencyDrawing;
+        SwapChainSurface.FreeHiddenAfter = fresh.Global.FreeHiddenMemory ? fresh.Global.FreeHiddenAfter : null;
         _keybindings.CopyFrom(fresh.Keybindings);
         windows.ForEach(w => w.ApplyConfig(fresh));
         if (hotkeyChanged)
