@@ -203,8 +203,8 @@ public static class ProfileDiscovery
         })!;
         var json = process.StandardOutput.ReadToEnd();
         process.WaitForExit(5000);
-        var installs = JsonSerializer.Deserialize<JsonElement[]>(json) ?? [];
-        return _visualStudio = VisualStudioProfiles(installs.Select(i => (
+        using var installs = JsonDocument.Parse(json);
+        return _visualStudio = VisualStudioProfiles(installs.RootElement.EnumerateArray().Select(i => (
             i.GetProperty("instanceId").GetString()!,
             i.GetProperty("displayName").GetString()!,
             i.GetProperty("installationPath").GetString()!))).ToList();

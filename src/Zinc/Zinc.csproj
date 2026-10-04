@@ -28,6 +28,14 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- Program.cs is the entry point: it redirects second launches to the running instance. -->
     <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- Publishes drop the unused code of libraries marked trimmable (.NET, the Windows SDK projection: 25 MB -> 0.3);
+         ours, Tomlyn and Velopack stay whole. 200 -> 112 MB installed, 76 -> 44 MB download (2026-10-03 size audit). -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <!-- Trimming turns built-in COM off; TaskbarProgress, FolderDialog, TerminalHandoff and ClearBackdrop use it. -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <!-- "COM interfaces might be trimmed": not ours, partial mode leaves this assembly whole. -->
+    <NoWarn>$(NoWarn);IL2050</NoWarn>
   </PropertyGroup>
 
   <Import Project="..\Zinc.Native.targets" />
@@ -97,6 +105,14 @@
       <_ZnFiles Include="$(_ZnDir)zn.*" />
     </ItemGroup>
     <Copy SourceFiles="@(_ZnFiles)" DestinationFolder="$(OutDir)bin" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Left out of publishes: the .NET debugger's support files (only a debugger attaching uses them) and WebView2,
+       which WinUI brings along and nothing in Zinc shows (yet: tabs that aren't terminals may want it back). -->
+  <Target Name="DropUnusedFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Filename)', '^(mscordaccore.*|mscordbi|Microsoft\.DiaSymReader\.Native\..*|Microsoft\.Web\.WebView2\..*|WebView2Loader)$'))" />
+    </ItemGroup>
   </Target>
 
   <!-- Its own dotnet publish, with vswhere.exe's folder on PATH: Native AOT's link step finds MSVC through it. -->

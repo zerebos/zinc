@@ -673,6 +673,12 @@ and read state after the write (see `_titleDirty`).
   not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
   metapackage release they came from.
+- Publishes are trimmed (`PublishTrimmed`, `TrimMode=partial`: only assemblies marked trimmable, i.e. .NET and the
+  Windows SDK projection; ours, Tomlyn, Velopack stay whole; 2026-10-03 size audit: 200 -> 95 MB installed, Setup 85
+  -> 49 MB). `BuiltInComInteropSupport=true` is required (trimming turns built-in COM off: `[ComImport]` users threw
+  at startup). Reflection over framework types (JsonSerializer without source gen, etc.) can break only in a publish:
+  check `warning IL` in a publish log, and test a publish, not bin/. `DropUnusedFromPublish` leaves out the .NET
+  debugger's files and WebView2 (bring it back if a tab ever shows web content). `.scratch/size-audit.py <dir>`.
 - Tester builds = `scripts/release.ps1` (below; package.ps1, the zip-only script, is gone): `dotnet publish
   --self-contained true` after clearing the app's obj\x64\Release (the .NET runtime inside; install.ps1 publishes
   self-contained too), `README.txt` from `scripts/package-readme.txt` ({version} filled in). ~197 MB installed /
