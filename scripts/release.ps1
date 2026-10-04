@@ -24,7 +24,7 @@
   It builds into a fresh dist\release with -UpdateUrl and -From set to updateUrl, then uploads over FTPS (curl,
   your login from %USERPROFILE%\.netrc, the server's certificate checked as usual; with ftpPin, that key instead,
   so an expired or self-signed certificate still gives an encrypted connection to that server only. A pin breaks
-  at every renewal: use it only while a host's certificate is broken): .htaccess once (scripts/release-htaccess), the new files,
+  at every renewal: use it only while a host's certificate is broken): .htaccess (scripts/release-htaccess), the new files,
   then releases.win.json last, under another name and renamed, so a copy checking mid-upload never sees a
   release whose files aren't there yet. Packages the new list doesn't mention are deleted from the server.
 
@@ -148,10 +148,9 @@ function Ftp {
 
 Write-Host "Uploading to $ftp ..."
 $there = @(Ftp --list-only $ftp | ForEach-Object { "$_".Trim() } | Where-Object { $_ -and $_ -notin '.', '..' })
-if ($there -notcontains '.htaccess') {
-    Ftp -T (Join-Path $PSScriptRoot 'release-htaccess') "$($ftp).htaccess" | Out-Null
-    Write-Host '  .htaccess'
-}
+# Every time: its rules change now and then (2026-10-03: packages sent uncompressed, so downloads show progress).
+Ftp -T (Join-Path $PSScriptRoot 'release-htaccess') "$($ftp).htaccess" | Out-Null
+Write-Host '  .htaccess'
 
 # Same names every release: always replaced. Packages: only the new ones.
 $replace = "$PackId-win-Setup.exe", "$PackId-win-Portable.zip", 'assets.win.json', 'RELEASES'

@@ -9,3 +9,10 @@ Options -Indexes
         Header set Cache-Control "no-cache, no-store, must-revalidate"
     </FilesMatch>
 </IfModule>
+
+# Packages, the installer and the zip are zips already: sent as they are, with their size. Compressed on the fly
+# they lost Content-Length (and ranges), so Velopack couldn't show progress: a tester saw 0% for a whole download.
+AddType application/octet-stream .nupkg
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase Request_URI "\.(nupkg|exe|zip)$" no-gzip dont-vary
+</IfModule>

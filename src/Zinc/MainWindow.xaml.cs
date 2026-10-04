@@ -237,6 +237,7 @@ public sealed partial class MainWindow : Window
         };
 
         BuildNewTabMenu();
+        SolidNoticeBacks();
         SetUpConfigNotice();
         SetUpUpdateNotice();
         ApplyDividerColor();

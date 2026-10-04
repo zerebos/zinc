@@ -63,8 +63,9 @@
             IsHitTestVisible="False"
             Visibility="Collapsed" />
 
-        <!-- Notices, stacked at the bottom right. -->
+        <!-- Notices, stacked at the bottom right; each on a solid backing (MainWindow.Errors.cs: SolidNoticeBacks). -->
         <StackPanel
+            x:Name="Notices"
             Canvas.ZIndex="10"
             MaxWidth="520"
             Margin="12"
