@@ -23,6 +23,23 @@ public class BenchmarkTests
     }
 
     [Fact]
+    public void WideFramesFillTheScreenWithWideText()
+    {
+        using var session = new TerminalSession(20, 5, TerminalTheme.Default);
+        session.WriteToScreen(BenchmarkWorkloads.Start(BenchmarkWorkload.Wide));
+        var (bytes, units) = new BenchmarkWorkloads(20, 5).Next(BenchmarkWorkload.Wide, 3);
+        Assert.Equal(1, units);
+        session.WriteToScreen(bytes);
+
+        // Characters, not columns: a CJK character or an emoji is two columns, so a full line is shorter than 20.
+        var lines = session.ReadScreenText().Split('\n').Select(l => l.TrimEnd('\r')).ToArray();
+        Assert.Equal(5, lines.Length);
+        Assert.All(lines, line => Assert.True(line.Length is > 4 and < 20, line));
+        Assert.Contains(lines, line => line.Any(c => c is >= '\u3000' and <= '\u9fff' or >= '\uac00' and <= '\ud7af'));
+        Assert.Contains(lines, line => line.Any(char.IsSurrogate)); // emoji
+    }
+
+    [Fact]
     public void ScrollingWritesLines()
     {
         var output = new BenchmarkWorkloads(80, 24);

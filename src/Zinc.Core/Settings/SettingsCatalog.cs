@@ -211,7 +211,7 @@ public static class SettingsCatalog
         {
             Choices =
             [
-                new("While focused", true, "They pause, where they are, while the terminal isn't focused."),
+                new("While focused", true, "Unfocused, they pause where they are; the text under them still updates."),
                 new("Always", "always", "Every terminal with shaders keeps redrawing, focused or not."),
                 new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
             ],

@@ -609,8 +609,12 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
   (`_batching`; the cursor redraws its glyph directly). Each new glyph is clipped to its tile (some Nerd Font glyphs
   reach ~5% of a cell past it, onto a neighbor's tile); pages grow past 512 px when one tile is bigger; a frame that
   failed halfway leaves nothing behind (sprite lists cleared at frame start, a failed Flush clears the atlas), and
-  OnDraw hands a lost device to Win2D (`RaiseDeviceLost`; it can't be faked: Win2D refuses on a healthy device). Fallback/emoji/clusters still DrawTextLayout immediately
-  (before the batch). Reset with `ClearSprites`. Pixel diff vs glyph runs: mostly 1/255, colored text edges up to
+  OnDraw hands a lost device to Win2D (`RaiseDeviceLost`; it can't be faked: Win2D refuses on a healthy device). Characters the font lacks (CJK, symbols,
+  clusters) go in the atlas too, rendered once with a DirectWrite layout (`GetText`, white coverage, keyed by codepoint
+  or cluster text); emoji (`IsEmoji`: VS16/ZWJ/keycap, wide pictographs) on color pages of their own (`GetColor`, keyed
+  by text color too, copied untinted). A layout per cell per frame cost ~205 ms a frame on a CJK/emoji screen
+  (benchmark "Wide characters", 2026-10-04) -> 1.2 ms. Still immediate: the bundled box-drawing fallback, the glyph
+  under a block cursor. Reset with `ClearSprites`. Pixel diff vs glyph runs: mostly 1/255, colored text edges up to
   ~24/255. Colors workload 9.5 -> 2.9 ms (GPU), 16.7 -> 3.5 ms (software).
   Built-in glyphs (`[font] builtin-glyphs`, default on): box drawing, blocks, Legacy Computing,
   Powerline, Braille come from **Ghostty's own sprite rasterizer** built as

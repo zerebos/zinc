@@ -815,7 +815,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
             {
                 FlushRun(ds, runStart, runLen, runVariant, runColor, top);
                 runLen = 0;
-                DrawFallback(ds, ref cell, x, top);
+                if (!_batching || !AddFallback(ds, ref cell, x, row))
+                {
+                    DrawFallback(ds, ref cell, x, top);
+                }
+
                 continue;
             }
 
@@ -944,6 +948,56 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var m = Metrics;
         _frameSprites.Add((tile.Page, _atlas.Destination(_gridX + column * (int)m.WidthPx, _gridY + row * (int)m.HeightPx), tile.Source,
             new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f)));
+    }
+
+    /// <summary>
+    /// A character the font lacks, from the atlas like a glyph (CJK, symbols; emoji in color). False: drawn the old way
+    /// (a cell-filling shape from the bundled font, or no format yet).
+    /// </summary>
+    private bool AddFallback(CanvasDrawingSession ds, ref Cell cell, int column, int row)
+    {
+        var wide = (cell.Flags & CellFlags.Wide) != 0;
+        var single = cell.CpLen == 1;
+        var codepoint = (int)_codepoints[cell.CpStart];
+        if ((single && !wide && _bundledFaces[cell.FontVariant] != null && FillsCell((uint)codepoint)) ||
+            _formats[cell.FontVariant] is not { } format)
+        {
+            return false;
+        }
+
+        var cluster = single ? null : CellText(ref cell);
+        var color = cell.Fg;
+        GlyphAtlas.Tile tile;
+        Vector4 tint;
+        if (IsEmoji(codepoint, cluster, wide))
+        {
+            tile = _atlas.GetColor(ds, codepoint, cluster, format, cell.FontVariant, wide, color);
+            tint = Vector4.One;
+        }
+        else
+        {
+            var dark = 0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B < 128;
+            tile = _atlas.GetText(ds, codepoint, cluster, format, cell.FontVariant, wide, dark);
+            tint = new Vector4(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
+        }
+
+        var m = Metrics;
+        _frameSprites.Add((tile.Page, _atlas.Destination(_gridX + column * (int)m.WidthPx, _gridY + row * (int)m.HeightPx), tile.Source, tint));
+        return true;
+    }
+
+    /// <summary>
+    /// Whether a fallback character shows in color: emoji presentation (VS16, a ZWJ sequence, a keycap) or a wide
+    /// pictograph. Narrow symbols like U+2714 stay text, and CJK is never color (as Windows Terminal draws them).
+    /// </summary>
+    private static bool IsEmoji(int codepoint, string? cluster, bool wide)
+    {
+        if (cluster != null && (cluster.Contains('\uFE0F') || cluster.Contains('\u200D') || cluster.Contains('\u20E3')))
+        {
+            return true;
+        }
+
+        return wide && (codepoint >= 0x1F000 || codepoint is >= 0x2300 and <= 0x2BFF or 0x3030 or 0x303D or 0x3297 or 0x3299);
     }
 
     /// <summary>The frame's glyphs and box-drawing sprites, in one sprite batch.</summary>

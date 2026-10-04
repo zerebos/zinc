@@ -16,6 +16,12 @@ public enum BenchmarkWorkload
 
     /// <summary>Colored log lines scrolling through the main screen into the scrollback.</summary>
     Scrolling,
+
+    /// <summary>
+    /// Full-screen text in CJK and emoji with some ASCII, changing every frame: wide characters and fallback fonts (the
+    /// default font has no CJK), which the other workloads never draw.
+    /// </summary>
+    Wide,
 }
 
 /// <summary>
@@ -39,6 +45,7 @@ public sealed class BenchmarkWorkloads(int cols, int rows, int seed = 42)
         BenchmarkWorkload.Colors => "Colors",
         BenchmarkWorkload.Synchronized => "Synchronized output",
         BenchmarkWorkload.Text => "Text",
+        BenchmarkWorkload.Wide => "Wide characters",
         _ => "Scrolling",
     };
 
@@ -64,6 +71,8 @@ public sealed class BenchmarkWorkloads(int cols, int rows, int seed = 42)
                 return ([.. "\e[?2026h"u8, .. ColorFrame(n), .. "\e[?2026l"u8], 1);
             case BenchmarkWorkload.Text:
                 return (TextFrame(n), 1);
+            case BenchmarkWorkload.Wide:
+                return (WideFrame(n), 1);
             default:
                 var lines = new StringBuilder();
                 for (var i = 0; i < 200; i++)
@@ -118,6 +127,47 @@ public sealed class BenchmarkWorkloads(int cols, int rows, int seed = 42)
         }
 
         frame.Append("\e[0m");
+        return Encoding.UTF8.GetBytes(frame.ToString());
+    }
+
+    // Common CJK (Japanese, Chinese, Korean) and emoji: two columns each.
+    private const string Cjk = "日本語文字表示漢字中国语言한국어글자테스트端末画面出力入力設定検索";
+    private static readonly string[] Emoji = ["😀", "🚀", "✅", "🎉", "🔥", "💡", "📦", "🐧", "⭐", "🌍"];
+
+    private byte[] WideFrame(int n)
+    {
+        var frame = new StringBuilder("\e[H");
+        for (var r = 0; r < rows; r++)
+        {
+            var width = 0;
+            frame.Append($"{(n + r) % 1000,3} ");
+            width += 4;
+            while (width < cols)
+            {
+                var pick = _random.Next(10);
+                if (pick < 6 && width + 2 <= cols)
+                {
+                    frame.Append(Cjk[_random.Next(Cjk.Length)]);
+                    width += 2;
+                }
+                else if (pick < 8 && width + 2 <= cols)
+                {
+                    frame.Append(Emoji[_random.Next(Emoji.Length)]);
+                    width += 2;
+                }
+                else
+                {
+                    frame.Append(Chars[_random.Next(36)]); // a letter or digit
+                    width += 1;
+                }
+            }
+
+            if (r < rows - 1)
+            {
+                frame.Append("\r\n");
+            }
+        }
+
         return Encoding.UTF8.GetBytes(frame.ToString());
     }
 

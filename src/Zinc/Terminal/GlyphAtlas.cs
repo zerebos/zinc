@@ -29,6 +29,11 @@ namespace Zinc.Terminal;
 /// Lookups are arrays indexed by glyph number (one per font variant and light/dark), not a dictionary: they run
 /// for every cell of every frame.
 ///
+/// Characters the font lacks (CJK, symbols: Windows' font fallback) go in too, rendered once with a DirectWrite
+/// layout as before: text as white coverage like glyphs, keyed by codepoint (a cluster by its text); emoji on pages of
+/// their own, drawn in color (keyed by the text's color too, for the occasional plain glyph in an emoji font) and
+/// copied untinted. Drawing a layout per cell per frame made a screen of CJK or emoji take ~200 ms a frame.
+///
 /// Per renderer, in 512 px pages (about 1 MB each; larger only if one tile is) added as needed; <see cref="Clear"/>
 /// on any change of font, cell size, scale, device or padding offset, and after a flush that failed halfway.
 /// </summary>
@@ -47,6 +52,18 @@ internal sealed class GlyphAtlas : IDisposable
 
     /// <summary>Pages not cleared yet: a new render target can come with recycled GPU memory, an old atlas's tiles in it.</summary>
     private readonly HashSet<int> _unclearedPages = [];
+
+    // Fallback text (DirectWrite layouts): tile number + 1 by (codepoint or cluster, variant, wide, dark).
+    private readonly Dictionary<(int Codepoint, int Variant, bool Wide, bool Dark), int> _textSlots = [];
+    private readonly Dictionary<(string Cluster, int Variant, bool Wide, bool Dark), int> _clusterSlots = [];
+    private readonly List<(string Text, CanvasTextFormat Format, bool Wide, bool Dark, int Page, Vector2 Origin, Rect Clip)> _pendingText = [];
+
+    // Emoji: their own pages, drawn in color, by (text, variant, wide, color).
+    private readonly List<CanvasRenderTarget> _colorPages = [];
+    private readonly HashSet<int> _unclearedColorPages = [];
+    private readonly Dictionary<(int Codepoint, string? Cluster, int Variant, bool Wide, Color Color), Tile> _colorSlots = [];
+    private readonly List<(string Text, CanvasTextFormat Format, bool Wide, Color Color, int Page, Vector2 Origin, Rect Clip)> _pendingColor = [];
+    private int _nextColor;
 
     private CanvasRenderTarget? _scratch;
     private ColorMatrixEffect? _whiten;
@@ -102,31 +119,98 @@ internal sealed class GlyphAtlas : IDisposable
             return _tiles[slot - 1];
         }
 
-        var s = _metrics.Scale;
-        if (_pages.Count == 0 || _next >= _perPage)
-        {
-            _pages.Add(new CanvasRenderTarget(device, _pageW / s, _pageH / s, 96 * s));
-            _unclearedPages.Add(_pages.Count - 1);
-            _next = 0;
-        }
-
-        var place = _next++;
-        var px = place % _perRow * _tileW;
-        var py = place / _perRow * _tileH;
-        // The glyph's cell is one cell in and half a cell down its tile; the origin is on the baseline, at the
-        // grid's fractional offset.
-        var origin = new Vector2((px + (int)_metrics.WidthPx + _fracX) / s, (py + (int)_metrics.HeightPx / 2 + _fracY) / s + _metrics.Baseline);
-        var tile = new Tile(_pages[^1], new Rect(px / s, py / s, _tileW / s, _tileH / s));
-        _pending.Add((face, fontSize, glyph, dark, _pages.Count - 1, origin, tile.Source));
+        var (tile, page, cell) = Reserve(device, _pages, _unclearedPages, ref _next);
+        // The origin is on the baseline.
+        _pending.Add((face, fontSize, glyph, dark, page, cell + new Vector2(0, _metrics.Baseline), tile.Source));
         _tiles.Add(tile);
         slots[glyph] = _tiles.Count;
         return tile;
     }
 
+    /// <summary>
+    /// The tile for a character the font lacks, as white coverage like a glyph: <paramref name="codepoint"/>, or a
+    /// cluster's <paramref name="cluster"/> text. Laid out in <paramref name="format"/> centered in one cell or two
+    /// (<paramref name="wide"/>), on the grid's baseline, as the cell-by-cell layouts were.
+    /// </summary>
+    public Tile GetText(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, CanvasTextFormat format, int variant, bool wide, bool dark)
+    {
+        int slot;
+        var found = cluster == null
+            ? _textSlots.TryGetValue((codepoint, variant, wide, dark), out slot)
+            : _clusterSlots.TryGetValue((cluster, variant, wide, dark), out slot);
+        if (found)
+        {
+            return _tiles[slot - 1];
+        }
+
+        var (tile, page, cell) = Reserve(device, _pages, _unclearedPages, ref _next);
+        _pendingText.Add((cluster ?? char.ConvertFromUtf32(codepoint), format, wide, dark, page, cell, tile.Source));
+        _tiles.Add(tile);
+        if (cluster == null)
+        {
+            _textSlots[(codepoint, variant, wide, dark)] = _tiles.Count;
+        }
+        else
+        {
+            _clusterSlots[(cluster, variant, wide, dark)] = _tiles.Count;
+        }
+
+        return tile;
+    }
+
+    /// <summary>
+    /// The tile for an emoji (<paramref name="codepoint"/>, or a cluster's <paramref name="cluster"/> text), drawn in
+    /// color and copied untinted; <paramref name="color"/> is the text's.
+    /// </summary>
+    public Tile GetColor(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, CanvasTextFormat format, int variant, bool wide, Color color)
+    {
+        if (_colorSlots.TryGetValue((codepoint, cluster, variant, wide, color), out var known))
+        {
+            return known;
+        }
+
+        var (tile, page, cell) = Reserve(device, _colorPages, _unclearedColorPages, ref _nextColor);
+        _pendingColor.Add((cluster ?? char.ConvertFromUtf32(codepoint), format, wide, color, page, cell, tile.Source));
+        _colorSlots[(codepoint, cluster, variant, wide, color)] = tile;
+        return tile;
+    }
+
+    /// <summary>A free tile on <paramref name="pages"/> (a page added when full); its cell's top-left, in DIPs of the page.</summary>
+    private (Tile Tile, int Page, Vector2 Cell) Reserve(ICanvasResourceCreatorWithDpi device, List<CanvasRenderTarget> pages,
+        HashSet<int> uncleared, ref int next)
+    {
+        var s = _metrics.Scale;
+        if (pages.Count == 0 || next >= _perPage)
+        {
+            pages.Add(new CanvasRenderTarget(device, _pageW / s, _pageH / s, 96 * s));
+            uncleared.Add(pages.Count - 1);
+            next = 0;
+        }
+
+        var place = next++;
+        var px = place % _perRow * _tileW;
+        var py = place / _perRow * _tileH;
+        // The glyph's cell is one cell in and half a cell down its tile, at the grid's fractional offset.
+        var cell = new Vector2((px + (int)_metrics.WidthPx + _fracX) / s, (py + (int)_metrics.HeightPx / 2 + _fracY) / s);
+        return (new Tile(pages[^1], new Rect(px / s, py / s, _tileW / s, _tileH / s)), pages.Count - 1, cell);
+    }
+
+    /// <summary>A layout of <paramref name="text"/> as a cell showed it: centered in its cell(s), and how far down its top goes so its baseline is the grid's.</summary>
+    private (CanvasTextLayout Layout, float Down) Layout(ICanvasResourceCreator device, string text, CanvasTextFormat format, bool wide, bool color)
+    {
+        var width = wide ? 2 * _metrics.Width : _metrics.Width;
+        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
+        var layout = new CanvasTextLayout(device, text, format, width, _metrics.Height);
+        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
+        layout.Options = color ? CanvasDrawTextOptions.EnableColorFont : CanvasDrawTextOptions.Default;
+        var lines = layout.LineMetrics;
+        return (layout, lines.Length > 0 ? _metrics.Baseline - lines[0].Baseline : 0);
+    }
+
     /// <summary>Draws the glyphs reserved since the last flush into their tiles (before the batch that copies them).</summary>
     public void Flush(ICanvasResourceCreatorWithDpi device)
     {
-        if (_pending.Count == 0)
+        if (_pending.Count == 0 && _pendingText.Count == 0 && _pendingColor.Count == 0)
         {
             return;
         }
@@ -155,7 +239,7 @@ internal sealed class GlyphAtlas : IDisposable
             AlphaMode = CanvasAlphaMode.Premultiplied,
         };
 
-        foreach (var page in _pending.Select(p => p.Page).Distinct().ToList())
+        foreach (var page in _pending.Select(p => p.Page).Concat(_pendingText.Select(p => p.Page)).Distinct().ToList())
         {
             // The page's new glyphs alone, on transparent, at their tiles: white for light text, black for dark
             // (Direct2D's contrast for each)...
@@ -171,6 +255,16 @@ internal sealed class GlyphAtlas : IDisposable
                     using var layer = ds.CreateLayer(1, clip);
                     brush.Color = dark ? Color.FromArgb(255, 0, 0, 0) : Color.FromArgb(255, 255, 255, 255);
                     ds.DrawGlyphRun(origin, face, fontSize, [new CanvasGlyph { Index = glyph, Advance = _metrics.Width }], false, 0, brush);
+                }
+
+                foreach (var (text, format, wide, dark, _, cell, clip) in _pendingText.Where(p => p.Page == page))
+                {
+                    using var layer = ds.CreateLayer(1, clip);
+                    var (layout, down) = Layout(ds, text, format, wide, color: false);
+                    using (layout)
+                    {
+                        ds.DrawTextLayout(layout, cell.X, cell.Y + down, dark ? Color.FromArgb(255, 0, 0, 0) : Color.FromArgb(255, 255, 255, 255));
+                    }
                 }
             }
 
@@ -191,6 +285,30 @@ internal sealed class GlyphAtlas : IDisposable
         }
 
         _pending.Clear();
+        _pendingText.Clear();
+
+        // Emoji straight onto their pages, in color: nothing to whiten.
+        foreach (var page in _pendingColor.Select(p => p.Page).Distinct().ToList())
+        {
+            using var ds = _colorPages[page].CreateDrawingSession();
+            if (_unclearedColorPages.Remove(page))
+            {
+                ds.Clear(Color.FromArgb(0, 0, 0, 0));
+            }
+
+            ds.TextAntialiasing = CanvasTextAntialiasing.Grayscale;
+            foreach (var (text, format, wide, color, _, cell, clip) in _pendingColor.Where(p => p.Page == page))
+            {
+                using var layer = ds.CreateLayer(1, clip);
+                var (layout, down) = Layout(ds, text, format, wide, color: true);
+                using (layout)
+                {
+                    ds.DrawTextLayout(layout, cell.X, cell.Y + down, color);
+                }
+            }
+        }
+
+        _pendingColor.Clear();
     }
 
     public void Clear()
@@ -205,6 +323,19 @@ internal sealed class GlyphAtlas : IDisposable
         _pending.Clear();
         _unclearedPages.Clear();
         Array.Clear(_slots);
+        _textSlots.Clear();
+        _clusterSlots.Clear();
+        _pendingText.Clear();
+        foreach (var page in _colorPages)
+        {
+            page.Dispose();
+        }
+
+        _colorPages.Clear();
+        _unclearedColorPages.Clear();
+        _colorSlots.Clear();
+        _pendingColor.Clear();
+        _nextColor = 0;
         _scratch?.Dispose();
         _scratch = null;
         _whiten?.Dispose();
