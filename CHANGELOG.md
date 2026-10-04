@@ -6,6 +6,8 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.254 (2026-10-04)
+
 ### New
 - Zinc comes with six shaders of its own: `scanlines`, `crt`, `glow`, `phosphor` (in Lit Cell's green),
   `cursor-glow` and `cursor-trail`. Use them by name (`[shaders] files = ["crt", "glow"]`), or pick them from
