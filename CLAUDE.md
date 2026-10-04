@@ -349,13 +349,15 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   Zinc's own shaders: `assets/shaders` -> `Shaders\` (scanlines, crt, glow, phosphor, cursor-glow, cursor-trail; only
   crt and cursor-trail use time, tested), by name in `files` (`ShaderPaths.IsName/Resolve`: yours in `shaders\` next
   to the config first; `BundledFolder` settable for tests); Settings' Add is a menu of them + "From a file…".
-  Picker (2026-10-04): Core `ShaderLibrary` (sections: Zinc's, yours, `[shaders] folders` (`Config.ShaderFolders`, full
-  paths via `ShaderPaths.ResolveFolder`; FileOnly in the catalog: the picker writes it); `Describe` = the first
-  sentence-like comment; tested; tests touching `ShaderPaths.BundledFolder` share an xUnit collection) -> App `ShaderPicker`
-  (Flyout, popup window; flat ListView of section + entry items built in ContainerContentChanging; hover/focus ->
-  `Highlighted` -> `SettingsWindow.PreviewShaders` (list + it) and a compile check in the status line; pick keeps it
-  open (`_added` until the reload); "Add a folder…" = FolderDialog then reopens; a hidden preview shows while it's open:
-  `PreviewForPicker`). Test: `.scratch/tools/shader-picker-shot.ps1 -Item crt` (captures settings + flyout).
+  Shaders page (2026-10-04; a flyout picker first, too cramped): Core `ShaderLibrary` (sections: Zinc's, yours,
+  `[shaders] folders` (`Config.ShaderFolders`, full paths via `ShaderPaths.ResolveFolder`; FileOnly in the catalog: the
+  page writes it); `Describe` = the first sentence-like comment; tested; tests touching `ShaderPaths.BundledFolder` share
+  an xUnit collection). App: the card (`ShaderFilesCard`: summary, compile check, Edit shaders) -> `OpenShaders(profile)`
+  -> sub-page `SettingsWindow.ShadersPage.cs` (`_editingShaders`/`_shadersProfile`, like `_editingScheme`; In use =
+  `ShaderRow`s + Animation; Library = filter + source chips + rows (wide button = click to preview / again to stop:
+  `_previewedShader` -> `ApplyShaderPreview` -> `PreviewShaders(list + it)`; Add/Remove; Enter toggles, arrows move);
+  folder chips + Add a folder/file; `_addedShaderFolders`/`_hiddenShaderFolders` until the reload; a hidden preview shows
+  on the page: `PreviewForShaders`). Sidebar clicks/GoTo leave it. Test: `.scratch/tools/shaders-page-shot.ps1`.
   Settings (session 3): catalog `shaders.files` = `SettingKind.Files` (cards: `SettingsWindow.Shaders.cs`
   `ShaderFilesCard`, also in profile pages and search; rows = state via `ShaderLoader.Load`, Up/Down/Open/Remove;
   rebuilt rows give focus back to the same button, else the page scrolled to its first field), `shaders.animation`

@@ -164,6 +164,12 @@ internal sealed partial class SettingsWindow : Window
             _section = id;
             _editing = null;
             _editingScheme = null;
+            if (_editingShaders)
+            {
+                _editingShaders = false;
+                PreviewForShaders(open: false);
+            }
+
             _search.Text = "";
             Render();
             _scroller.ChangeView(null, 0, null, disableAnimation: true);
@@ -181,7 +187,7 @@ internal sealed partial class SettingsWindow : Window
         _nav.ItemInvoked += (_, e) =>
         {
             if (!_navigating && e.InvokedItemContainer is NavigationViewItem { Tag: string id } item && ReferenceEquals(item, _nav.SelectedItem) &&
-                (_search.Text.Trim().Length > 0 || _editing != null || _editingScheme != null))
+                (_search.Text.Trim().Length > 0 || _editing != null || _editingScheme != null || _editingShaders))
             {
                 Navigate(id);
             }
@@ -270,6 +276,7 @@ internal sealed partial class SettingsWindow : Window
         {
             Text = query.Length > 0 ? "Results"
                 : _editingScheme is { } scheme ? scheme
+                : _editingShaders ? _shadersProfile is { } shadersOf ? $"Shaders: {_config.FindProfile(shadersOf)?.Name ?? shadersOf}" : "Shaders"
                 : _section == "profiles" && _editing is { } editing ? _config.FindProfile(editing)?.Name ?? editing
                 : SettingsCatalog.Sections.First(s => s.Id == _section).Title,
             FontSize = 28,
@@ -277,7 +284,7 @@ internal sealed partial class SettingsWindow : Window
             Margin = new Thickness(0, 8, 0, 12),
         };
         _page.Children.Add(heading);
-        if (query.Length == 0 && _editingScheme == null && _section == "about")
+        if (query.Length == 0 && _editingScheme == null && !_editingShaders && _section == "about")
         {
             heading.Visibility = Visibility.Collapsed; // About's lockup is its heading
         }
@@ -292,6 +299,10 @@ internal sealed partial class SettingsWindow : Window
         else if (_editingScheme is { } editingScheme)
         {
             SchemeEditor(editingScheme);
+        }
+        else if (_editingShaders)
+        {
+            ShadersPage(_shadersProfile);
         }
         else if (_section == "about")
         {

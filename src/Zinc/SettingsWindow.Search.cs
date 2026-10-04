@@ -150,6 +150,12 @@ internal sealed partial class SettingsWindow
             _search.Text = "";
             _section = section;
             _editing = profile;
+            if (_editingShaders)
+            {
+                _editingShaders = false;
+                PreviewForShaders(open: false);
+            }
+
             if (keyFilter != null)
             {
                 _keyFilter = keyFilter;

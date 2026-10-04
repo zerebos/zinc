@@ -40,6 +40,7 @@ internal sealed partial class SettingsWindow
     private Config? PreviewConfig() =>
         _search.Text.Trim().Length > 0 ? null
         : _editingScheme is { } scheme ? _config.Themes.Apply(_config.Global, scheme) ?? _config.Global
+        : _editingShaders ? _shadersProfile is { } shadersOf ? _config.FindProfile(shadersOf)?.Config ?? _config.Global : _config.Global
         : _section == "appearance" ? _config.Global
         : _section == "profiles" && _editing is { } id ? _config.FindProfile(id)?.Config ?? _config.Global
         : null;
@@ -185,7 +186,7 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>The preview runs <paramref name="files"/> (full paths) as its shaders: the shader picker's highlight.</summary>
+    /// <summary>The preview runs <paramref name="files"/> (full paths) as its shaders: a shader previewed on the shaders page.</summary>
     private void PreviewShaders(IReadOnlyList<string> files)
     {
         if (_preview != null && _pinned.Visibility == Visibility.Visible && PreviewConfig() is { } shown)
@@ -194,10 +195,10 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    // Shown for the shader picker while it's open, though hidden (pointing at a shader would show nothing otherwise).
+    // Shown on the shaders page, though hidden (previewing a shader would show nothing otherwise).
     private bool _previewShownForPicker;
 
-    private void PreviewForPicker(bool open)
+    private void PreviewForShaders(bool open)
     {
         if (open && _previewHidden)
         {

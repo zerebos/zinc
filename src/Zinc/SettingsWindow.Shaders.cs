@@ -12,54 +12,70 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// Custom shaders ([shaders] files): the list as a card of its own, each file with whether it compiles.
+// Custom shaders ([shaders] files): a card that sums the list up and opens its page (SettingsWindow.ShadersPage.cs).
 internal sealed partial class SettingsWindow
 {
     private const string ShaderCollection = "https://github.com/0xhckr/ghostty-shaders";
 
-    // The card on the page now, refreshed when one of its files is saved; and whether the window listens for that.
+    // The rows on the shaders page now, refreshed when one of its files is saved; and whether the window listens for that.
     private Action? _shaderRows;
     private bool _shaderWatch;
 
+    // The shader list of the global settings (null) or of a profile, as config.toml has it: its own (null: inherits,
+    // in a profile; none, globally), what it inherits, what's in force; and writing it.
+    private IReadOnlyList<string>? OwnShaders(string? profile) => profile == null
+        ? _config.ValueOf("shaders.files") is { } global ? ShaderPaths.Listed(global) : null
+        : _config.ValueOf(profile, "shaders.files") is { } own ? ShaderPaths.Listed(own) : null;
+
+    private IReadOnlyList<string> InheritedShaders() => ShaderPaths.Listed(_config.ValueOf("shaders.files"));
+
+    private IReadOnlyList<string> ShownShaders(string? profile) => OwnShaders(profile) ?? (profile == null ? [] : InheritedShaders());
+
+    private IReadOnlyList<string> ShownShaderFiles(string? profile) => [.. ShownShaders(profile).Select(w => ShaderPaths.Resolve(w, _config.Path))];
+
+    /// <summary>Writes the list (globally an empty one is the default: nothing written; a profile's means "none here").</summary>
+    private bool SaveShaders(string? profile, IReadOnlyList<string> files, TextBlock? error)
+    {
+        if (_config.HasErrors)
+        {
+            if (error != null)
+            {
+                Show(error, "config.toml has an error; fix it first (see the top of the page).");
+            }
+
+            return false;
+        }
+
+        if (error != null)
+        {
+            error.Visibility = Visibility.Collapsed;
+        }
+
+        IReadOnlyList<string> path = profile == null ? ["shaders", "files"] : ["profile", profile, "shaders", "files"];
+        Write(path, profile == null && files.Count == 0 ? null : files.ToList());
+        return true;
+    }
+
     /// <summary>
-    /// The shader list: Add (several files at once), then a row per file in order, with its state (compiles, or why not)
-    /// and buttons to move it, open it in an editor, or take it out. In a profile: the inherited list until changed here,
-    /// when the profile gets a list of its own (empty: no shaders in it); the reset arrow inherits again.
+    /// The shader list as a card: which shaders run (and whether one doesn't compile), and Edit shaders, which opens
+    /// their own page (the list, the library to choose from, folders). In a profile: the inherited list until changed
+    /// there; the reset arrow inherits again.
     /// </summary>
     private Border ShaderFilesCard(SettingDef setting, string? profile)
     {
-        IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
-        var error = ErrorText();
         var reset = ResetArrow(setting.Label, profile == null ? "No custom shaders (removes them from config.toml)" : "Back to the shaders every profile inherits");
         var description = DescriptionText();
-        var rows = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 0) };
-        var add = new Button { Content = "Add…" };
-        AutomationProperties.SetName(add, "Add a custom shader");
-        var load = 0;
-
-        IReadOnlyList<string>? Own() => profile == null
-            ? _config.ValueOf(setting.Key) is { } global ? ShaderPaths.Listed(global) : null
-            : _config.ValueOf(profile, setting.Key) is { } own ? ShaderPaths.Listed(own) : null;
-        IReadOnlyList<string> Inherited() => ShaderPaths.Listed(_config.ValueOf(setting.Key));
-        IReadOnlyList<string> Shown() => Own() ?? (profile == null ? [] : Inherited());
-
-        void Save(IReadOnlyList<string> files)
-        {
-            if (_config.HasErrors)
-            {
-                Show(error, "config.toml has an error; fix it first (see the top of the page).");
-                return;
-            }
-
-            error.Visibility = Visibility.Collapsed;
-            // Globally an empty list is the default (nothing written); a profile's empty list means "none here".
-            Write(path, profile == null && files.Count == 0 ? null : files.ToList());
-        }
+        var summary = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
+        var state = DescriptionText();
+        var edit = new Button { Content = "Edit shaders" };
+        AutomationProperties.SetName(edit, profile == null ? "Edit shaders" : $"Edit shaders of {profile}");
+        edit.Click += (_, _) => OpenShaders(profile);
+        var check = 0;
 
         void Refresh()
         {
-            var own = Own();
-            var files = Shown();
+            var own = OwnShaders(profile);
+            var files = ShownShaders(profile);
             reset.Visibility = (profile == null ? files.Count > 0 : own != null) ? Visibility.Visible : Visibility.Collapsed;
             if (profile == null)
             {
@@ -67,123 +83,62 @@ internal sealed partial class SettingsWindow
             }
             else
             {
-                var inherited = Inherited();
-                InheritedText(description, setting, inherited.Count == 0 ? "none" : string.Join(", ", inherited.Select(Path.GetFileName)), own != null);
+                var inherited = InheritedShaders();
+                InheritedText(description, setting, inherited.Count == 0 ? "none" : string.Join(", ", inherited.Select(ShaderName)), own != null);
             }
 
-            // A row's button may have focus (it was just pressed): the rows are rebuilt, so focus goes to the same button in
-            // the new rows, else Add. Left to itself it fell to the page's first field, and the page scrolled up there.
-            var focused = rows.XamlRoot != null && FocusManager.GetFocusedElement(rows.XamlRoot) is Button { } button && IsWithin(button, rows)
-                ? AutomationProperties.GetName(button)
-                : null;
-            rows.Children.Clear();
-            if (!_config.Global.LowLatencyDrawing)
+            summary.Text = files.Count == 0 ? "None." : string.Join(", ", files.Select(ShaderName));
+            SetText(state, !_config.Global.LowLatencyDrawing && files.Count > 0
+                ? "They need low-latency drawing, which is off (Terminal > Troubleshooting)."
+                : "");
+            if (files.Count > 0 && _config.Global.LowLatencyDrawing)
             {
-                var off = ErrorText();
-                off.Inlines.Add(new Run { Text = "They need low-latency drawing, which is off: " });
-                var link = new Hyperlink();
-                link.Inlines.Add(new Run { Text = "Terminal > Troubleshooting" });
-                link.Click += (_, _) => GoTo("terminal", null, "window.low-latency-drawing");
-                off.Inlines.Add(link);
-                off.Inlines.Add(new Run { Text = "." });
-                off.Visibility = Visibility.Visible;
-                rows.Children.Add(off);
-            }
-
-            if (files.Count == 0)
-            {
-                var none = DescriptionText(profile != null && own != null ? "None in this profile." : "None yet. ");
-                if (profile == null)
-                {
-                    var find = new Hyperlink { NavigateUri = new Uri(ShaderCollection) };
-                    find.Inlines.Add(new Run { Text = "Ghostty shaders on GitHub" });
-                    none.Inlines.Add(new Run { Text = "Collections to start from: " });
-                    none.Inlines.Add(find);
-                    none.Visibility = Visibility.Visible;
-                }
-
-                rows.Children.Add(none);
-            }
-
-            var current = ++load;
-            for (var i = 0; i < files.Count; i++)
-            {
-                rows.Children.Add(ShaderRow(files, i, Save, () => current == load));
-            }
-
-            if (focused != null)
-            {
-                var again = rows.Children.OfType<Grid>().SelectMany(r => r.Children.OfType<StackPanel>()).SelectMany(t => t.Children.OfType<Button>())
-                    .FirstOrDefault(b => b.IsEnabled && AutomationProperties.GetName(b) == focused);
-                (again ?? (Control)add).Focus(FocusState.Programmatic);
+                CheckAll(ShownShaderFiles(profile), ++check);
             }
         }
 
-        // Add: the picker (Zinc's shaders, yours, the folders you added; previewed as you point at them), files, folders.
-        IReadOnlyList<string> Full() => [.. Shown().Select(w => ShaderPaths.Resolve(w, _config.Path))];
-        var picker = new ShaderPicker(Full, () => (_config.Path, ShaderFolders()));
-        picker.Opening += () => PreviewForPicker(open: true);
-        picker.Closed += () => PreviewForPicker(open: false);
-        picker.Highlighted += entry => PreviewShaders([.. Full(), entry.File]);
-        picker.HighlightEnded += RefreshPreview;
-        picker.Picked += entry => Save([.. Shown(), entry.Written]);
-        picker.FromFile += async () =>
+        // Whether they all compile (the terminals' check and cache): the card says so when one doesn't.
+        async void CheckAll(IReadOnlyList<string> full, int current)
         {
-            // Code after an await resumes as queued work, where an exception would end the app.
             try
             {
-                var picked = await PickShaders();
-                if (picked.Count > 0)
+                var loaded = await ShaderLoader.Load(full);
+                if (current == check && loaded.Errors.Count > 0)
                 {
-                    Save([.. Shown(), .. picked.Select(p => ShaderPaths.ForConfig(p, _config.Path))]);
+                    SetText(state, loaded.Errors.Count == 1 ? $"One doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} don't compile; Edit shaders shows why.");
+                    state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 }
             }
             catch (Exception ex)
             {
-                Log.Crash("picking shaders", ex);
-                Show(error, $"Couldn't open the file picker: {ex.Message}");
+                Log.Crash("checking shaders", ex);
             }
-        };
-        picker.AddFolder += () =>
-        {
-            var folder = FolderDialog.Pick(WinRT.Interop.WindowNative.GetWindowHandle(this), ShaderFolders().LastOrDefault(), "Add a folder of shaders");
-            if (folder == null)
-            {
-                return;
-            }
-
-            _addedShaderFolders.Add(folder); // listed at once, before config.toml is read again
-            WriteShaderFolders([.. WrittenShaderFolders(), ShaderPaths.ForConfig(folder, _config.Path)]);
-            picker.Flyout.ShowAt(add); // back to the picker, with the folder's shaders
-        };
-        picker.RemoveFolder += folder =>
-        {
-            _addedShaderFolders.RemoveAll(f => f.Equals(folder, StringComparison.OrdinalIgnoreCase));
-            WriteShaderFolders([.. WrittenShaderFolders().Where(w => !ShaderPaths.ResolveFolder(w, _config.Path).Equals(folder, StringComparison.OrdinalIgnoreCase))]);
-        };
-        add.Flyout = picker.Flyout;
+        }
 
         reset.Click += (_, _) =>
         {
-            FocusAfterReset(reset, add);
-            Write(path, null);
+            FocusAfterReset(reset, edit);
+            Write(profile == null ? setting.Path : ["profile", profile, .. setting.Path], null);
         };
 
         _refreshers.Add(Refresh);
-        _shaderRows = Refresh;
-        WatchShaderFiles();
         Quietly(Refresh);
 
         var text = new StackPanel { Spacing = 1, VerticalAlignment = VerticalAlignment.Center };
         var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { new TextBlock { Text = setting.Label, VerticalAlignment = VerticalAlignment.Center }, reset } };
         text.Children.Add(title);
         text.Children.Add(description);
+        text.Children.Add(summary);
+        text.Children.Add(state);
         text.Children.Add(KeyText(profile == null ? setting.Key : $"profile.{profile}.{setting.Key}"));
-        text.Children.Add(error);
-        var card = CardBorder(new StackPanel { Children = { TextAndControl(text, add), rows } });
-        _cards[(profile, setting.Key)] = (card, add);
+        var card = CardBorder(TextAndControl(text, edit));
+        _cards[(profile, setting.Key)] = (card, edit);
         return card;
     }
+
+    /// <summary>How a list entry reads: Zinc's and yours by name, a file by its name.</summary>
+    private string ShaderName(string written) =>
+        ShaderPaths.IsName(written) ? written.Trim() : Path.GetFileNameWithoutExtension(ShaderPaths.Resolve(written, _config.Path));
 
     /// <summary>One file of the list: its state, name and path, and Up, Down, Open, Remove.</summary>
     private FrameworkElement ShaderRow(IReadOnlyList<string> files, int index, Action<IReadOnlyList<string>> save, Func<bool> stillShown)
@@ -344,12 +299,13 @@ internal sealed partial class SettingsWindow
         };
     }
 
-    // Folders added since config.toml was last read (the picker lists them at once).
+    // Folders added since config.toml was last read (the library lists them at once).
     private readonly List<string> _addedShaderFolders = [];
 
-    /// <summary>The folders the shader picker lists ([shaders] folders, and any just added), full paths.</summary>
+    /// <summary>The folders the library lists ([shaders] folders, with any just added or taken out), full paths.</summary>
     private IReadOnlyList<string> ShaderFolders() =>
-        [.. _config.Global.ShaderFolders.Split('\n', StringSplitOptions.RemoveEmptyEntries).Concat(_addedShaderFolders).Distinct(StringComparer.OrdinalIgnoreCase)];
+        [.. _config.Global.ShaderFolders.Split('\n', StringSplitOptions.RemoveEmptyEntries).Concat(_addedShaderFolders).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(f => !_hiddenShaderFolders.Contains(f, StringComparer.OrdinalIgnoreCase))];
 
     private IReadOnlyList<string> WrittenShaderFolders() => ShaderPaths.Listed(_config.ValueOf("shaders.folders"));
 
