@@ -25,6 +25,8 @@ is the version it builds, and hands it to the installer as the release notes).
 - Alt+F4 typed an escape sequence into the terminal (and rang its bell) instead of closing the window.
 - The quick terminal came out too big, or too small, the first time it opened on a monitor with another scale.
 - Box-drawing lines (prompt frames, `─`) had a gap in every cell after a window moved to a monitor with another scale.
+- Zinc could close without a word while a window was being resized, most likely when dragging fast. Resizing is also
+  lighter now: most sizes made Zinc draw every character's shape again.
 
 ## 0.1.0-dev.228 (2026-10-04)
 

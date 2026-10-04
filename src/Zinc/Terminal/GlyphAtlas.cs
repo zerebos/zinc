@@ -63,13 +63,39 @@ internal sealed class GlyphAtlas : IDisposable
     private readonly List<(string Text, TextStyle Style, bool Wide, bool Dark, int Page, Vector2 Origin, Rect Clip)> _pendingText = [];
 
     /// <summary>
-    /// The font a fallback character is laid out in: the atlas makes and keeps its own text formats from it. Panes
-    /// share the atlas, and a pane's own formats go when its font or scale changes: a character reserved with one
-    /// and drawn after it was gone failed the frame (seen after moving to a monitor with another scale).
+    /// The font a fallback character is laid out in: the formats made from it are shared by every atlas and kept for
+    /// the process's life. Panes share atlases, and a pane's own formats go when its font or scale changes: a character
+    /// reserved with one and drawn after it was gone failed the frame (seen after moving to a monitor with another scale).
     /// </summary>
     public readonly record struct TextStyle(string Family, float Size, bool Bold, bool Italic);
 
-    private readonly Dictionary<TextStyle, CanvasTextFormat> _formats = [];
+    // Never made during a frame if it can be helped (PrepareFormat, from SetFont): the first layout with a format naming
+    // the bundled font's file (file:///...ttf#Cascadia Mono NF) has Win2D resolve the path through Windows.Storage, a COM
+    // call that pumps messages, and a pointer move pumped inside XAML's render tick ends the process (FailFast on
+    // reentrancy: dragging the quick terminal's edge, 2026-10-04). Realized once, a format doesn't do that again.
+    private static readonly Dictionary<TextStyle, CanvasTextFormat> Formats = [];
+
+    private static CanvasTextFormat FormatFor(ICanvasResourceCreator device, TextStyle style)
+    {
+        if (!Formats.TryGetValue(style, out var format))
+        {
+            Formats[style] = format = new CanvasTextFormat
+            {
+                FontFamily = style.Family,
+                FontSize = style.Size,
+                FontWeight = style.Bold ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
+                FontStyle = style.Italic ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal,
+                WordWrapping = CanvasWordWrapping.NoWrap,
+                HorizontalAlignment = CanvasHorizontalAlignment.Center, // centered in its cell(s), as a cell showed it
+            };
+            using var realize = new CanvasTextLayout(device, "M", format, 100, 100);
+        }
+
+        return format;
+    }
+
+    /// <summary>Makes (and realizes) the shared format for <paramref name="style"/> now, outside any frame.</summary>
+    public static void PrepareFormat(ICanvasResourceCreator device, TextStyle style) => FormatFor(device, style);
 
     // Emoji: their own pages, drawn in color, by (text, variant, wide, color).
     private readonly List<CanvasRenderTarget> _colorPages = [];
@@ -241,19 +267,7 @@ internal sealed class GlyphAtlas : IDisposable
     private (CanvasTextLayout Layout, float Down) Layout(ICanvasResourceCreator device, string text, TextStyle style, bool wide, bool color)
     {
         var width = wide ? 2 * _metrics.Width : _metrics.Width;
-        if (!_formats.TryGetValue(style, out var format))
-        {
-            _formats[style] = format = new CanvasTextFormat
-            {
-                FontFamily = style.Family,
-                FontSize = style.Size,
-                FontWeight = style.Bold ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
-                FontStyle = style.Italic ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal,
-                WordWrapping = CanvasWordWrapping.NoWrap,
-                HorizontalAlignment = CanvasHorizontalAlignment.Center, // centered in its cell(s), as a cell showed it
-            };
-        }
-
+        var format = FormatFor(device, style);
         var layout = new CanvasTextLayout(device, text, format, width, _metrics.Height);
         layout.Options = color ? CanvasDrawTextOptions.EnableColorFont : CanvasDrawTextOptions.Default;
         var lines = layout.LineMetrics;
@@ -389,12 +403,6 @@ internal sealed class GlyphAtlas : IDisposable
         _colorSlots.Clear();
         _pendingColor.Clear();
         _nextColor = 0;
-        foreach (var format in _formats.Values)
-        {
-            format.Dispose();
-        }
-
-        _formats.Clear();
         _scratch?.Dispose();
         _scratch = null;
         _whiten?.Dispose();

@@ -16,7 +16,12 @@ internal sealed partial class QuickResizeEdge : Grid
 
     public QuickTerminalEdge Edge { get; }
 
-    public QuickResizeEdge(QuickTerminalEdge edge)
+    /// <summary>
+    /// <paramref name="cover"/>: the whole window instead, with this edge's pointer, laid over it while that edge is
+    /// dragged: the window follows the pointer a moment late, so the pointer kept slipping off the strip onto the
+    /// terminal, whose own pointer flickered in.
+    /// </summary>
+    public QuickResizeEdge(QuickTerminalEdge edge, bool cover = false)
     {
         Edge = edge;
         Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); // hit-testable
@@ -29,6 +34,13 @@ internal sealed partial class QuickResizeEdge : Grid
         VerticalAlignment = top ? VerticalAlignment.Top : bottom ? VerticalAlignment.Bottom : VerticalAlignment.Stretch;
         Width = left || right ? (corner ? 2 * Thickness : Thickness) : double.NaN;
         Height = top || bottom ? (corner ? 2 * Thickness : Thickness) : double.NaN;
+        if (cover)
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch;
+            VerticalAlignment = VerticalAlignment.Stretch;
+            Width = Height = double.NaN;
+        }
+
         ProtectedCursor = InputSystemCursor.Create(edge switch
         {
             QuickTerminalEdge.Left or QuickTerminalEdge.Right => InputSystemCursorShape.SizeWestEast,

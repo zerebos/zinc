@@ -48,6 +48,10 @@ public sealed unsafe class TerminalRenderer : IDisposable
     private readonly nint _renderState, _rowIterator, _rowCells;
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
 
+    // The same, centered in a cell (characters drawn on their own): setting a format's alignment per draw unrealized it,
+    // and realizing one can pump messages (GlyphAtlas.FormatFor says why that's fatal mid-frame).
+    private readonly CanvasTextFormat?[] _centered = new CanvasTextFormat?[4];
+
     // The same fonts, as the glyph atlas makes its own formats from them (it's shared: it mustn't hold a pane's).
     private readonly GlyphAtlas.TextStyle[] _textStyles = new GlyphAtlas.TextStyle[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
@@ -234,6 +238,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var style = (v & 2) != 0 ? FontStyle.Italic : FontStyle.Normal;
             var italic = (v & 2) != 0;
             _formats[v]?.Dispose(); // the previous size's (each zoom step, each scale change)
+            _centered[v]?.Dispose();
             _textStyles[v] = new(bundled ? BundledFonts.FormatFamily(italic) : _fontFamily, _fontSize, (v & 1) != 0, italic);
             _formats[v] = new CanvasTextFormat
             {
@@ -244,6 +249,24 @@ public sealed unsafe class TerminalRenderer : IDisposable
                 WordWrapping = CanvasWordWrapping.NoWrap,
                 Options = CanvasDrawTextOptions.EnableColorFont,
             };
+            _centered[v] = new CanvasTextFormat
+            {
+                FontFamily = _formats[v]!.FontFamily,
+                FontSize = _fontSize,
+                FontWeight = weight,
+                FontStyle = style,
+                WordWrapping = CanvasWordWrapping.NoWrap,
+                Options = CanvasDrawTextOptions.EnableColorFont,
+                HorizontalAlignment = CanvasHorizontalAlignment.Center,
+            };
+
+            // Realized now, not in a frame (each one's first layout may pump messages: GlyphAtlas.FormatFor).
+            using (new CanvasTextLayout(device, "M", _formats[v], 100, 100))
+            using (new CanvasTextLayout(device, "M", _centered[v], 100, 100))
+            {
+            }
+
+            GlyphAtlas.PrepareFormat(device, _textStyles[v]);
 
             var faces = bundled ? BundledFonts.Set(italic) ?? fonts : fonts;
             var matches = faces.GetMatchingFonts(_fontFamily, weight, FontStretch.Normal, style).Fonts;
@@ -445,8 +468,10 @@ public sealed unsafe class TerminalRenderer : IDisposable
         _rowSprites.Clear();
         if (_batching)
         {
-            var padX = PadLeft * m.Scale;
-            var padY = PadTop * m.Scale;
+            // To 1/64 of a pixel: the padding in points (1pt = 1.333... DIPs) plus whole pixels came out 0.33333206 at one
+            // size and 0.33333302 at another, a new atlas (every glyph drawn again) for most sizes of a window resize.
+            var padX = MathF.Round(PadLeft * m.Scale * 64) / 64;
+            var padY = MathF.Round(PadTop * m.Scale * 64) / 64;
             _gridX = (int)MathF.Floor(padX);
             _gridY = (int)MathF.Floor(padY);
             // The shared atlas for this font, size, scale and offset (another pane's, if one draws the same).
@@ -1101,10 +1126,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var m = Metrics;
         var text = CellText(ref cell);
         var width = (cell.Flags & CellFlags.Wide) != 0 ? 2 * m.Width : m.Width;
-        var format = _formats[cell.FontVariant]!;
-        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
-        using var layout = new CanvasTextLayout(ds, text, format, width, m.Height);
-        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
+        using var layout = new CanvasTextLayout(ds, text, _centered[cell.FontVariant]!, width, m.Height);
         // Color glyphs only for emoji presentation. Default-emoji characters are
         // East Asian Wide (two cells); narrow symbols like U+2714 are text unless
         // followed by VS16 (U+FE0F), matching how Windows Terminal renders them.

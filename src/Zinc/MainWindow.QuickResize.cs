@@ -21,6 +21,7 @@ public sealed partial class MainWindow
 
     // The drag in progress: the edge, where the pointer and the size started (physical pixels), and the monitor.
     private QuickResizeEdge? _resizing;
+    private QuickResizeEdge? _resizeCover;
     private CursorPoint _resizeFrom;
     private (int Width, int Height) _resizeStart;
     private DisplayArea? _resizeArea;
@@ -78,6 +79,8 @@ public sealed partial class MainWindow
         }
 
         _resizing = strip;
+        _resizeCover = new QuickResizeEdge(strip.Edge, cover: true);
+        _resizeEdges?.Children.Add(_resizeCover);
         _resizeFrom = from;
         _resizeStart = (AppWindow.Size.Width, AppWindow.Size.Height);
         _resizeArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
@@ -113,6 +116,12 @@ public sealed partial class MainWindow
         var strip = _resizing;
         _resizing = null;
         strip.ReleasePointerCaptures();
+        if (_resizeCover != null)
+        {
+            _resizeEdges?.Children.Remove(_resizeCover);
+            _resizeCover = null;
+        }
+
         if (_resizeArea is not { } area || _windowClosed)
         {
             return;

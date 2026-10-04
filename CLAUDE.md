@@ -861,6 +861,13 @@ and read state after the write (see `_titleDirty`).
   which short test runs never reach (`test:gc` forces one).
 - A new `CanvasRenderTarget` can hold recycled GPU memory (an old one's pixels): clear it before drawing
   into it with normal blending. The glyph atlas didn't, and zooming garbled text with the previous size's tiles.
+- **Nothing in a frame may pump messages.** A Win2D CanvasTextFormat naming a font *file* (`file:///…ttf#Family`, the
+  bundled Cascadia) resolves it through Windows.Storage on its first layout: a COM call that pumps, and a pointer
+  message pumped inside XAML's render tick is a FailFast (CXcpDispatcher::CheckReentrancy, 8000FFFF, no managed
+  exception, nothing in crash.log; WER dump in %LOCALAPPDATA%\CrashDumps, read with cdb `.ecxr; kn`). So formats are
+  realized in SetFont (`GlyphAtlas.PrepareFormat`, shared and never disposed) and never changed per draw (`_centered`).
+  Also: a frame can run *inside* SetFont's own pump (sprites keyed by CellMetrics for that), and the atlas key's
+  sub-pixel offset is rounded to 1/64 px (float noise made a new atlas per window size).
 - `await` is illegal inside an `unsafe` class → async code lives in `ClipboardText`.
 - Keyboard: a key's WM_CHAR arrives after its KeyDown and before its KeyUp. Suppress the
   char only when KeyDown already encoded the key (`_charHandledByKeyDown`), and clear the
