@@ -86,9 +86,12 @@ internal sealed class SwapChainSurface
             }
 
             Resize();
-            // Shown again (a tab selected, a pane moved): frames asked for while it was hidden weren't drawn.
+            // Shown again (a tab selected, a pane moved): frames asked for while it was hidden weren't drawn. Drawn now,
+            // not queued: the swap chain still holds the picture from before it was hidden, and a queued frame let that
+            // show first, so whatever changed meanwhile (a prompt, a git status) visibly jumped into place.
             _freeTimer?.Stop();
-            Invalidate();
+            _stale = true;
+            Present();
             if (Animating)
             {
                 HookRendering();
