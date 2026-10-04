@@ -76,6 +76,27 @@ internal sealed class GlyphAtlas : IDisposable
     /// <summary>A glyph's place in the atlas: the page and the tile's rectangle on it (DIPs of the page).</summary>
     public readonly record struct Tile(CanvasRenderTarget Page, Rect Source);
 
+    /// <summary>
+    /// Most pages a pane's atlas keeps (about 1 MB each): past it, the next frame starts over with only what's on screen.
+    /// Without a limit it only grew until a font, size or scale change (a session paging through thousands of distinct
+    /// characters or icons, or emoji in many text colors, could hold 100+ MB). 32 pages hold ~4,000 tiles at 150%, far
+    /// more than one screen shows, so starting over is rare and never every frame.
+    /// </summary>
+    public const int MaxPages = 32;
+
+    /// <summary>Pages in use (glyphs and emoji).</summary>
+    public int PageCount => _pages.Count + _colorPages.Count;
+
+    /// <summary>At a frame's start (no tile of this frame handed out yet): starts over if the atlas has grown past <see cref="MaxPages"/>.</summary>
+    public void Trim()
+    {
+        if (PageCount > MaxPages)
+        {
+            Log.Write($"atlas: {PageCount} pages, starting over");
+            Clear();
+        }
+    }
+
     /// <summary>Tile size and the glyph's origin in it, for these metrics; drops everything if they changed.</summary>
     public void Prepare(CellMetrics m, float fracX, float fracY)
     {

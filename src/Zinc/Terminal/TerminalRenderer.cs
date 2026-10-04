@@ -422,6 +422,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var padY = PadTop * m.Scale;
             _gridX = (int)MathF.Floor(padX);
             _gridY = (int)MathF.Floor(padY);
+            _atlas.Trim(); // before Prepare: a cleared atlas takes the metrics again
             _atlas.Prepare(m, padX - _gridX, padY - _gridY);
         }
 
