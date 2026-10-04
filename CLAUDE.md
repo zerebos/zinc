@@ -416,7 +416,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
 - About's open-source list: Core `OpenSourceNotices` (name, version, use, license, URL, license file)
   + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
   `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every
-  license file and the pinned Ghostty commit to match — a new dependency needs an entry + text.
+  license file and the pinned Ghostty commit to match — a new dependency needs an entry + text, in alphabetical order (tested).
 - Palette recents: `RecentCommands` (Core/Commands, by title; one instance on `App`, saved in
   session.json's `recentCommands`) — `CommandFilter.Filter(..., recent)` puts the 5 newest first
   on an empty query and boosts them a little otherwise. Entries that come and go (workspaces,

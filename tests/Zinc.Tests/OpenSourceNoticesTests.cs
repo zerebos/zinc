@@ -53,6 +53,13 @@ public class OpenSourceNoticesTests
     }
 
     [Fact]
+    public void ListedAlphabetically()
+    {
+        var names = OpenSourceNotices.Components.Select(c => c.Name).ToList();
+        Assert.Equal(names.Order(StringComparer.OrdinalIgnoreCase), names);
+    }
+
+    [Fact]
     public void EveryLicenseTextExists()
     {
         foreach (var component in OpenSourceNotices.Components)
