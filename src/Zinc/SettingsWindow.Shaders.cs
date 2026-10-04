@@ -119,23 +119,52 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        add.Click += async (_, _) =>
+        // Add: Zinc's own shaders (those not in the list yet), then any file.
+        var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
+        menu.Opening += (_, _) =>
         {
-            // Code after an await resumes as queued work, where an exception would end the app.
-            try
+            menu.Items.Clear();
+            var shown = Shown();
+            foreach (var (bundledName, about) in ShaderPaths.Bundled())
             {
-                var picked = await PickShaders();
-                if (picked.Count > 0)
+                if (shown.Contains(bundledName, StringComparer.OrdinalIgnoreCase))
                 {
-                    Save([.. Shown(), .. picked.Select(p => ShaderPaths.ForConfig(p, _config.Path))]);
+                    continue;
                 }
+
+                var item = new MenuFlyoutItem { Text = bundledName };
+                ToolTipService.SetToolTip(item, about);
+                AutomationProperties.SetHelpText(item, about);
+                item.Click += (_, _) => Save([.. Shown(), bundledName]);
+                menu.Items.Add(item);
             }
-            catch (Exception ex)
+
+            if (menu.Items.Count > 0)
             {
-                Log.Crash("picking shaders", ex);
-                Show(error, $"Couldn't open the file picker: {ex.Message}");
+                menu.Items.Add(new MenuFlyoutSeparator());
             }
+
+            var file = new MenuFlyoutItem { Text = "From a file…" };
+            file.Click += async (_, _) =>
+            {
+                // Code after an await resumes as queued work, where an exception would end the app.
+                try
+                {
+                    var picked = await PickShaders();
+                    if (picked.Count > 0)
+                    {
+                        Save([.. Shown(), .. picked.Select(p => ShaderPaths.ForConfig(p, _config.Path))]);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Crash("picking shaders", ex);
+                    Show(error, $"Couldn't open the file picker: {ex.Message}");
+                }
+            };
+            menu.Items.Add(file);
         };
+        add.Flyout = menu;
 
         reset.Click += (_, _) =>
         {
@@ -164,7 +193,12 @@ internal sealed partial class SettingsWindow
     {
         var written = files[index];
         var full = ShaderPaths.Resolve(written, _config.Path);
-        var name = Path.GetFileName(full);
+        // One of Zinc's: its name, and what it does where a path would be.
+        var bundled = ShaderPaths.IsBundled(full) && File.Exists(full);
+        var name = bundled ? Path.GetFileNameWithoutExtension(full) : Path.GetFileName(full);
+        var detail = bundled
+            ? "Comes with Zinc. " + ShaderPaths.Bundled().FirstOrDefault(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).Description
+            : written;
         var icon = new FontIcon { Glyph = "", FontSize = 14, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, 3, 0, 0), Opacity = 0.6 };
         var state = DescriptionText("Checking…");
         var text = new StackPanel
@@ -173,7 +207,7 @@ internal sealed partial class SettingsWindow
             Children =
             {
                 new TextBlock { Text = name, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis },
-                new TextBlock { Text = written, FontSize = 11, Opacity = 0.7, TextTrimming = TextTrimming.CharacterEllipsis },
+                new TextBlock { Text = detail, FontSize = 11, Opacity = 0.7, TextTrimming = TextTrimming.CharacterEllipsis },
                 state,
             },
         };
@@ -268,9 +302,17 @@ internal sealed partial class SettingsWindow
                 state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 // The message names the file first ("crt.glsl, line 3: ..."); the row already does.
                 var message = loaded.Errors[0];
-                var name = Path.GetFileName(full);
-                SetText(state, message.StartsWith(name + ", ") ? char.ToUpper(message[name.Length + 2]) + message[(name.Length + 3)..]
-                    : message.StartsWith(name + ": ") ? char.ToUpper(message[name.Length + 2]) + message[(name.Length + 3)..] : message);
+                // The message names the shader first ("crt.glsl, line 3: ...", "nope: no shader..."); the row already does.
+                foreach (var name in new[] { Path.GetFileName(full), Path.GetFileNameWithoutExtension(full) })
+                {
+                    if ((message.StartsWith(name + ", ") || message.StartsWith(name + ": ")) && message.Length > name.Length + 2)
+                    {
+                        message = char.ToUpper(message[name.Length + 2]) + message[(name.Length + 3)..];
+                        break;
+                    }
+                }
+
+                SetText(state, message);
             }
         }
         catch (Exception ex)

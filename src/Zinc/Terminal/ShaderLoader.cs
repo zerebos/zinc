@@ -150,6 +150,13 @@ internal static class ShaderLoader
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            if (ex is FileNotFoundException or DirectoryNotFoundException && ShaderPaths.IsBundled(file))
+            {
+                // A name that's neither yours (shaders\ next to the config) nor Zinc's.
+                var known = string.Join(", ", ShaderPaths.Bundled().Select(s => s.Name));
+                return (null, $"{Path.GetFileNameWithoutExtension(file)}: no shader by that name (Zinc's are {known}; yours go in a shaders folder next to config.toml)");
+            }
+
             return (null, ex is FileNotFoundException or DirectoryNotFoundException ? $"{name}: no such file ({file})" : $"{name}: couldn't read it ({ex.Message})");
         }
 

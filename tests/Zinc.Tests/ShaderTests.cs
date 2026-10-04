@@ -65,6 +65,63 @@ public class ShaderTests : IDisposable
     }
 
     [Fact]
+    public void NamesFindYoursThenZincs()
+    {
+        var bundled = Directory.CreateDirectory(Path.Combine(_dir, "bundled")).FullName;
+        File.WriteAllText(Path.Combine(bundled, "crt.glsl"), "// Zinc: crt. An old monitor: curved glass. More.\n");
+        File.WriteAllText(Path.Combine(bundled, "glow.glsl"), "// Zinc: glow. Soft light.\n");
+        Directory.CreateDirectory(Path.Combine(_dir, "shaders"));
+        File.WriteAllText(Path.Combine(_dir, "shaders", "glow.glsl"), "// mine\n");
+        var was = ShaderPaths.BundledFolder;
+        ShaderPaths.BundledFolder = bundled;
+        try
+        {
+            var config = Parse("[shaders]\nfiles = [\"crt\", \"glow\", \"nope\", \"crt.glsl\"]");
+            Assert.Equal([Path.Combine(bundled, "crt.glsl"), Path.Combine(_dir, "shaders", "glow.glsl"), Path.Combine(bundled, "nope.glsl"),
+                Path.Combine(_dir, "crt.glsl")], config.Global.ShaderFiles);
+
+            Assert.True(ShaderPaths.IsName("crt"));
+            Assert.All(["crt.glsl", "./crt", "~/crt", "C:crt", "%X%"], w => Assert.False(ShaderPaths.IsName(w)));
+            Assert.Equal("crt", ShaderPaths.ForConfig(Path.Combine(bundled, "crt.glsl"), Path.Combine(_dir, "config.toml")));
+            Assert.Equal([("crt", "An old monitor: curved glass."), ("glow", "Soft light.")], ShaderPaths.Bundled());
+        }
+        finally
+        {
+            ShaderPaths.BundledFolder = was;
+        }
+    }
+
+    /// <summary>The shaders that ship (assets/shaders): each compiles, says what it is, and only those meant to move use time.</summary>
+    [Fact]
+    public void ZincsOwnShaders()
+    {
+        var root = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(root, "Zinc.slnx")))
+        {
+            root = Path.GetDirectoryName(root)!;
+        }
+
+        var files = Directory.GetFiles(Path.Combine(root, "assets", "shaders"), "*.glsl");
+        Assert.NotEmpty(files);
+        var animated = new List<string>();
+        foreach (var file in files)
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            var glsl = File.ReadAllText(file);
+            Assert.StartsWith($"// Zinc: {name}. ", glsl);
+            Assert.EndsWith(".", glsl.Split('\n')[0].TrimEnd()); // a whole sentence on the first line: Settings' menu shows it
+            Assert.True(ShaderTranslator.TryTranslate(glsl, file, out _, out var error), error);
+            if (ShaderSource.UsesTime(glsl))
+            {
+                animated.Add(name);
+            }
+        }
+
+        // Everything else is drawn only when the terminal changes: no work at all while it's idle.
+        Assert.Equal(["crt", "cursor-trail"], animated.Order());
+    }
+
+    [Fact]
     public void OneFileAsAString()
     {
         var config = Parse("[shaders]\nfiles = \"crt.glsl\"");

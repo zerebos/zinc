@@ -281,6 +281,13 @@ shaders written for Ghostty work unchanged
   the config file's folder, `~` is your home. A shader that doesn't compile is left out (the others still
   run) and a notice says why, with its line number. Saving a shader file applies it at once (the notice
   goes when it compiles).
+- Zinc comes with six of its own, used by name: `files = ["crt", "glow"]`. `scanlines` (soft lines and a
+  vignette), `crt` (curved glass, scanlines, color fringes, a faint flicker), `glow` (bright text bleeds light),
+  `phosphor` (a one-color screen in Lit Cell's green), `cursor-glow` (a halo in the cursor's color) and
+  `cursor-trail` (a streak follows the cursor when it jumps). Only `crt` and `cursor-trail` move on their own;
+  the rest are drawn only when the terminal changes, so they cost nothing while it's idle. A name finds
+  `shaders\<name>.glsl` next to config.toml first, so a copy there (to change its settings, at the top of each
+  file) takes the place of Zinc's.
 - `animation`: `true` (default) lets shaders that use time (`iTime`, `iFrame`...) redraw on their own
   while the terminal has focus. Unfocused, their clock pauses (they pick up where they stopped; unlike
   Ghostty, where it keeps running): the terminal's text still updates as output arrives, under a still effect;
