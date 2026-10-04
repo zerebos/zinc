@@ -128,7 +128,7 @@ public sealed partial class TerminalControl
         {
             var (r, c, color) = (frame.Cursor, scale, frame.CursorDrawnColor);
             u.SetCursor((float)(r.X * c), (float)(r.Bottom * c), (float)(r.Width * c), (float)(r.Height * c),
-                color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f, (float)pass.Time);
+                color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f, (float)pass.EventTime);
         }
 
         u.SetMouse((float)(_shaderMouse.X * scale), (float)(_shaderMouse.Y * scale),
@@ -167,6 +167,7 @@ public sealed partial class TerminalControl
 
         // Settings' preview is never focused, but stands for a focused terminal (its cursor is drawn so too).
         var focused = _focused || _previewScript != null;
+        _swap.SetAtRest(_config.ShaderAnimation == ShaderAnimation.Never);
         _swap.SetFocus(focused);
         _swap.Animate = _config.ShaderAnimation switch
         {
@@ -176,8 +177,8 @@ public sealed partial class TerminalControl
         };
 
         // Paused with the animation while unfocused: hovering a program's links or scrollbar redraws the terminal, and
-        // with a running clock each of those frames showed the shader jumped ahead. With animation off (Ghostty's
-        // false) time still runs: frames drawn on change show it moving, as in Ghostty.
-        _swap.SetClock(_config.ShaderAnimation != ShaderAnimation.Focused || focused);
+        // with a running clock each of those frames showed the shader jumped ahead. With animation off it never runs
+        // (unlike Ghostty's false, where frames drawn on change, a selection being dragged, showed it moving).
+        _swap.SetClock(_config.ShaderAnimation == ShaderAnimation.Always || _config.ShaderAnimation == ShaderAnimation.Focused && focused);
     }
 }

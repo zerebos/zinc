@@ -213,7 +213,7 @@ public static class SettingsCatalog
             [
                 new("While focused", true, "They pause, where they are, while the terminal isn't focused."),
                 new("Always", "always", "Every terminal with shaders keeps redrawing, focused or not."),
-                new("Never", false, "Drawn only when the terminal changes."),
+                new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
             ],
         },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)

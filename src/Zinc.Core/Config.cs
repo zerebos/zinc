@@ -112,7 +112,7 @@ public enum ShaderAnimation
     /// <summary>While the terminal has focus (true, the default).</summary>
     Focused,
 
-    /// <summary>Never (false): only when something on screen changes.</summary>
+    /// <summary>Never (false): they hold still (their clock stopped, cursor effects finished); drawn only when something on screen changes.</summary>
     Never,
 
     /// <summary>Focused or not.</summary>

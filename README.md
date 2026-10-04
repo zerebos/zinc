@@ -283,7 +283,8 @@ shaders written for Ghostty work unchanged
   goes when it compiles).
 - `animation`: `true` (default) lets shaders that use time (`iTime`, `iFrame`...) redraw on their own
   while the terminal has focus (their clock pauses meanwhile, so they pick up where they stopped);
-  `"always"`, focused or not; `false`, only when the terminal changes.
+  `"always"`, focused or not; `false`, never: they hold still (cursor effects included) and are drawn only
+  when the terminal changes (unlike Ghostty's `false`, where each such frame shows them further along).
   Shaders that don't use time draw only when the terminal changes anyway.
 - Settings > Appearance > Shaders has both: add files, reorder or remove them, open one in your editor,
   and see whether each compiles (and why not); the preview at the top runs them. A profile's page has

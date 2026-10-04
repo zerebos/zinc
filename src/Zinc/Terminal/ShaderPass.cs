@@ -71,12 +71,21 @@ internal sealed class ShaderPass : IDisposable
     /// <summary>The shaders' clock now (iTime's seconds).</summary>
     public double Time => _clock.Elapsed.TotalSeconds;
 
+    /// <summary>
+    /// Nothing moves (animation "never"): the clock is stopped, and what happens (a cursor move, focus) is stamped long
+    /// before it, so effects timed from it (cursor trails, a focus fade) show as finished, not frozen at their start.
+    /// </summary>
+    public bool AtRest { get; set; }
+
+    /// <summary>The time an event is stamped with (iTimeCursorChange, iTimeFocus).</summary>
+    public double EventTime => AtRest ? Time - 10_000 : Time;
+
     /// <summary>The terminal gained or lost focus: iFocus, and iTimeFocus = when it was last gained (as Ghostty).</summary>
     public void SetFocus(bool focused)
     {
         if (focused && !_focused)
         {
-            _focusChanged = _clock.Elapsed.TotalSeconds;
+            _focusChanged = EventTime;
         }
 
         _focused = focused;

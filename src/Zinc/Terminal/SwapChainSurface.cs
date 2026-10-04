@@ -44,7 +44,7 @@ internal sealed class SwapChainSurface
     // Custom shaders (SetShaders): the pass for the current device, rebuilt after a lost one.
     private ShaderPass? _shader;
     private IReadOnlyList<CompiledShader> _shaders = [];
-    private bool _animate, _focused, _clockRunning = true;
+    private bool _animate, _focused, _clockRunning = true, _atRest;
 
     // The terminal changed since its picture was last drawn for the shaders: an animation frame with nothing new only
     // runs the shaders again over the last picture (redrawing the terminal each refresh cost ~30% of a core).
@@ -109,6 +109,7 @@ internal sealed class SwapChainSurface
         try
         {
             _shader = new ShaderPass(Device, _shaders);
+            _shader.AtRest = _atRest;
             _shader.SetFocus(_focused);
             _shader.SetClock(_clockRunning);
             Log.Write($"shader: running {string.Join(", ", _shaders.Select(s => Path.GetFileName(s.File)))}{(_shader.UsesTime ? " (animated)" : "")}");
@@ -143,6 +144,16 @@ internal sealed class SwapChainSurface
 
     // Not on a hidden tab (TabView unloads it): nobody would see the frames.
     private bool Animating => _animate && _shader is { UsesTime: true } && Panel.IsLoaded;
+
+    /// <summary>Whether nothing moves at all (animation "never": see <see cref="ShaderPass.AtRest"/>).</summary>
+    public void SetAtRest(bool atRest)
+    {
+        _atRest = atRest;
+        if (_shader != null)
+        {
+            _shader.AtRest = atRest;
+        }
+    }
 
     /// <summary>Whether the shaders' clock runs (paused while their animation is: see <see cref="ShaderPass.SetClock"/>).</summary>
     public void SetClock(bool running)
