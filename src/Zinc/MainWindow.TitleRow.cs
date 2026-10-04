@@ -182,7 +182,22 @@ public sealed partial class MainWindow
         {
             _commandClock = DispatcherQueue.CreateTimer();
             _commandClock.Interval = TimeSpan.FromSeconds(1);
-            _commandClock.OnTick(_ => UpdateCommandCenter());
+            _commandClock.OnTick(_ =>
+            {
+                // A/B for the pointer trace: does the clock's tick put the arrow back?
+                if (PointerTrace.HoldClock)
+                {
+                    Log.Write("pointer: command clock tick (held)");
+                    return;
+                }
+
+                if (PointerTrace.Running)
+                {
+                    Log.Write("pointer: command clock tick");
+                }
+
+                UpdateCommandCenter();
+            });
         }
 
         if (running)
