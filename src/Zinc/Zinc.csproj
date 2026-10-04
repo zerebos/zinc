@@ -80,6 +80,9 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
     <!-- Installer and updates (Program.cs, Updater.cs). Keep its version equal to vpk's in dotnet-tools.json. -->
     <PackageReference Include="Velopack" Version="1.2.161" />
+    <!-- Custom shaders (ShaderPass.cs): Direct3D 11 on Win2D's device, and D3DCompile. Trimmed: a few hundred KB. -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
   </ItemGroup>
 
   <!-- Where release builds look for updates (scripts/release.ps1 -UpdateUrl); dev builds have none (Updater.Source). -->

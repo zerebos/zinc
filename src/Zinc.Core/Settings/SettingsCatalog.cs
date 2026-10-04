@@ -413,6 +413,8 @@ public static class SettingsCatalog
     public static IReadOnlyDictionary<string, string> FileOnly { get; } = new Dictionary<string, string>
     {
         ["colors.palette"] = "Palette colors by number (palette.1 = \"#AC4242\") are set in config.toml.",
+        ["shaders.files"] = "Custom shaders are set in config.toml for now: [shaders] files = [\"crt.glsl\"].",
+        ["shaders.animation"] = "Custom shaders are set in config.toml for now: [shaders] animation = true | false | \"always\".",
     };
 
     public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);

@@ -322,6 +322,20 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   first with a press alone (Ghostty/kitty send only the press). App: plain left click (no modifiers,
   no drag, no selection, pane already focused) in `TerminalControl.Mouse.cs`; `test:click:col:row`;
   `.scratch/tools/click-test.ps1 -Shell ... -Clicks "c:r",...` types a marker after each click.
+- Custom shaders (`[shaders] files`/`animation` = Ghostty's custom-shader/-animation; per profile; low-latency drawing
+  only): Core `Shaders/` (`ShaderSource`: Ghostty's Shadertoy prefix, `UsesTime`, glslang log -> "file, line N: ..."
+  in the file's own lines; `ShaderTranslator`: zinc-shader.dll = `native-src/shader` (glslang from Ghostty's pkg +
+  SPIRV-Cross with its HLSL backend, static MSVC runtime: imports only KERNEL32; `scripts/build-shader.sh`, run by
+  build-libghostty.sh; one call at a time); `ShaderUniforms`: the std140 block, offsets tested against SPIRV-Cross's
+  packoffsets; all tested in `ShaderTests`). App: `ShaderLoader` (read + translate + D3DCompile on the thread pool,
+  cached per file by size+time and shared by panes; failures = messages), `ShaderPass` (Vortice D3D11 on Win2D's
+  device: the frame drawn into a CanvasRenderTarget, then each shader as a full-screen triangle, ping-pong, the last
+  into the swap chain's back buffer; y down as Ghostty's Metal), `SwapChainSurface.SetShaders/Animate/SetFocus` (an
+  animation frame with nothing new reruns the shaders over the last picture: redrawing the terminal each refresh
+  cost ~30% of a core; no animation on unloaded = hidden tabs), `TerminalControl.Shaders.cs` (load on start, after
+  the window wired the pane, and on every config reload; `ShaderProblems` -> `MainWindow.Shaders.cs` notice, deduped,
+  dismissed problems stay quiet until a reload). Test: `.scratch/tools/shader-shot.ps1 -Shaders a.glsl,b.glsl
+  [-Extra 'animation = false'] [-Window ...] [-KeepOpen]`; samples in .scratch/shaders.
 - Grid placement: Core `Terminal/GridLayout.cs` (whole cells inside the padding; `[terminal] padding-balance` splits the
   leftover between both sides, in whole device pixels so the atlas's subpixel offset never changes; tested) →
   `TerminalControl._gridLeft/_gridTop` (every pointer → cell conversion) and `TerminalRenderer.SetGridOrigin`.

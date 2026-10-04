@@ -273,6 +273,20 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   shell's own): the folder at the prompt (`~` for your home), the command while one runs. A title the
   running program sets itself (vim, htop) still wins until it ends. Shells without marks keep their own titles.
 
+**`[shaders]`**: custom shaders over the terminal's picture, Ghostty's way (its `custom-shader`
+and `custom-shader-animation`): GLSL fragment shaders in [Shadertoy](https://www.shadertoy.com)'s form, so
+shaders written for Ghostty work unchanged
+(CRT screens, bloom, cursor trails...).
+- `files`: one path or a list, run in order, each over the previous one's picture; relative paths are from
+  the config file's folder, `~` is your home. A shader that doesn't compile is left out (the others still
+  run) and a notice says why, with its line number; fix it and save the config to try again.
+- `animation`: `true` (default) lets shaders that use time (`iTime`, `iFrame`...) redraw on their own
+  while the terminal has focus; `"always"`, focused or not; `false`, only when the terminal changes.
+  Shaders that don't use time draw only when the terminal changes anyway.
+- Profiles can have their own (`[profile.x.shaders]`, `files = []` for none). Shaders need
+  `low-latency-drawing` (the default). What a shader gets: Ghostty's uniforms; for now the size, time,
+  frame, date and focus ones are set, the cursor, colors and mouse ones are zero.
+
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
 features they control below; `focus-follows-mouse = true`, which focuses a pane when the pointer
@@ -324,7 +338,7 @@ relative to this one. Settings in the including file win.
 ### Profiles
 
 Each `[profile.<id>]` section is a profile, starting from the settings above and overriding
-`[font]`, `[colors]` and `[terminal]` for itself (as subsections, or dotted keys like
+`[font]`, `[colors]`, `[terminal]` and `[shaders]` for itself (as subsections, or dotted keys like
 `font.size = 12`). Profiles appear in the new-tab menu with yours first (in file order), then the
 ones found on this PC in the order they're found; `profile-order` (or dragging them in Settings)
 sets any order you like. The id is what

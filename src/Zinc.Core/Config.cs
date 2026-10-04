@@ -103,6 +103,22 @@ public enum BellMode
     None,
 }
 
+/// <summary>
+/// When custom shaders that use time (iTime, iFrame...) redraw on their own (Ghostty's <c>custom-shader-animation</c>);
+/// otherwise a frame is drawn only when the terminal changes. Config: <c>[shaders] animation = true | false | "always"</c>.
+/// </summary>
+public enum ShaderAnimation
+{
+    /// <summary>While the terminal has focus (true, the default).</summary>
+    Focused,
+
+    /// <summary>Never (false): only when something on screen changes.</summary>
+    Never,
+
+    /// <summary>Focused or not.</summary>
+    Always,
+}
+
 /// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
 /// <summary>Light or dark windows, menus and dialogs (the terminal's colors are the color scheme's).</summary>
 public enum ChromeAppearance
@@ -313,6 +329,19 @@ public sealed record Config
     /// </summary>
     public bool LowLatencyDrawing { get; init; } = true;
 
+    /// <summary>
+    /// Custom shaders (Ghostty/Shadertoy GLSL) run over the terminal's picture, in order: full paths, one per line, ""
+    /// for none (a string, so configs compare by value). Relative paths in the file are from the config file's folder.
+    /// Needs low-latency drawing. Config: <c>[shaders] files = ["crt.glsl"]</c>.
+    /// </summary>
+    public string Shaders { get; init; } = "";
+
+    /// <summary><see cref="Shaders"/> as a list.</summary>
+    public IReadOnlyList<string> ShaderFiles => Shaders.Length == 0 ? [] : Shaders.Split('\n');
+
+    /// <summary>When time-based shaders redraw on their own. Config: <c>[shaders] animation</c>.</summary>
+    public ShaderAnimation ShaderAnimation { get; init; }
+
     /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
     public GroupTabStrip GroupTabStrip { get; init; }
 
@@ -493,6 +522,11 @@ public sealed record Config
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
             "software-rendering" when bool.TryParse(value, out var software) => this with { SoftwareRendering = software },
             "low-latency-drawing" when bool.TryParse(value, out var lowLatency) => this with { LowLatencyDrawing = lowLatency },
+            "custom-shader" => this with { Shaders = string.Join('\n', value.Split('\n').Select(f => f.Trim()).Where(f => f.Length > 0)) },
+            "custom-shader-animation" when bool.TryParse(value, out var animate) =>
+                this with { ShaderAnimation = animate ? ShaderAnimation.Focused : ShaderAnimation.Never },
+            "custom-shader-animation" when value.Equals("always", StringComparison.OrdinalIgnoreCase) =>
+                this with { ShaderAnimation = ShaderAnimation.Always },
             "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
                 this with { GroupTabStrip = strip },
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,

@@ -40,6 +40,15 @@ internal sealed class SwapChainSurface
     private readonly Func<float> _scale;
     private readonly Func<double> _sinceOutput;
     private CanvasSwapChain? _chain;
+
+    // Custom shaders (SetShaders): the pass for the current device, rebuilt after a lost one.
+    private ShaderPass? _shader;
+    private IReadOnlyList<CompiledShader> _shaders = [];
+    private bool _animate, _focused;
+
+    // The terminal changed since its picture was last drawn for the shaders: an animation frame with nothing new only
+    // runs the shaders again over the last picture (redrawing the terminal each refresh cost ~30% of a core).
+    private bool _stale = true;
     private bool _resourcesCreated, _drawQueued, _dirty, _presentedThisTick, _onRendering, _closed;
     private int _failures;
 
@@ -67,8 +76,78 @@ internal sealed class SwapChainSurface
             }
 
             Resize();
+            if (Animating)
+            {
+                HookRendering(); // shown again
+            }
         };
         Panel.SizeChanged += (_, _) => Resize();
+    }
+
+    /// <summary>The custom shaders to run over every frame, in order (none: frames go straight to the swap chain).</summary>
+    public void SetShaders(IReadOnlyList<CompiledShader> shaders)
+    {
+        if (_closed || shaders.SequenceEqual(_shaders))
+        {
+            return;
+        }
+
+        _shaders = shaders;
+        BuildShaderPass();
+        Invalidate();
+    }
+
+    private void BuildShaderPass()
+    {
+        _shader?.Dispose();
+        _shader = null;
+        if (_shaders.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            _shader = new ShaderPass(Device, _shaders);
+            _shader.SetFocus(_focused);
+            Log.Write($"shader: running {string.Join(", ", _shaders.Select(s => Path.GetFileName(s.File)))}{(_shader.UsesTime ? " (animated)" : "")}");
+            if (Animating)
+            {
+                HookRendering();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Crash("shader pass", ex);
+            _shader = null;
+        }
+    }
+
+    /// <summary>
+    /// Whether shaders that use time may redraw every refresh on their own (<c>[shaders] animation</c> and focus decide);
+    /// otherwise a frame is drawn only when the terminal changes.
+    /// </summary>
+    public bool Animate
+    {
+        get => _animate;
+        set
+        {
+            _animate = value;
+            if (Animating)
+            {
+                HookRendering();
+            }
+        }
+    }
+
+    // Not on a hidden tab (TabView unloads it): nobody would see the frames.
+    private bool Animating => _animate && _shader is { UsesTime: true } && Panel.IsLoaded;
+
+    /// <summary>The terminal's focus, for the shaders' iFocus and iTimeFocus.</summary>
+    public void SetFocus(bool focused)
+    {
+        _focused = focused;
+        _shader?.SetFocus(focused);
     }
 
     /// <summary>Matches the swap chain to the panel's size and the window's scale (after a move or DPI change too).</summary>
@@ -100,6 +179,7 @@ internal sealed class SwapChainSurface
     /// <summary>A frame is wanted: drawn at once, or at the next refresh if one was presented since the last.</summary>
     public void Invalidate()
     {
+        _stale = true;
         if (_closed || _drawQueued)
         {
             return;
@@ -144,8 +224,35 @@ internal sealed class SwapChainSurface
 
         try
         {
-            using (var ds = chain.CreateDrawingSession(ClearColor))
+            if (_shader is { } shader)
             {
+                var frame = shader.FrameFor(chain, out var fresh);
+                if (_stale || fresh)
+                {
+                    _stale = false;
+                    using var ds = frame.CreateDrawingSession();
+                    ds.Clear(ClearColor);
+                    _draw(ds);
+                }
+
+                try
+                {
+                    shader.Run(chain);
+                }
+                catch (Exception ex) when (!Device.IsDeviceLost(ex.HResult))
+                {
+                    // Not worth a blank pane: carry on without shaders (the log says why), drawn plainly this time.
+                    Log.Crash("shader pass", ex);
+                    _shader.Dispose();
+                    _shader = null;
+                    _shaders = [];
+                    using var plain = chain.CreateDrawingSession(ClearColor);
+                    _draw(plain);
+                }
+            }
+            else
+            {
+                using var ds = chain.CreateDrawingSession(ClearColor);
                 _draw(ds);
             }
 
@@ -171,7 +278,12 @@ internal sealed class SwapChainSurface
     private void OnRendering(object? sender, object e)
     {
         _presentedThisTick = false;
-        if (_dirty)
+        if (Animating)
+        {
+            _dirty = false;
+            Present(); // a shader that uses time: a frame every refresh
+        }
+        else if (_dirty)
         {
             _dirty = false;
             Present();
@@ -217,6 +329,7 @@ internal sealed class SwapChainSurface
             Device = CanvasDevice.GetSharedDevice(_software);
             Device.DeviceLost += OnDeviceLost;
             _createResources(Device);
+            BuildShaderPass();
             Resize();
         });
     }
@@ -226,6 +339,8 @@ internal sealed class SwapChainSurface
     {
         _closed = true;
         UnhookRendering();
+        _shader?.Dispose();
+        _shader = null;
         Device.DeviceLost -= OnDeviceLost;
         Panel.SwapChain = null;
         _chain?.Dispose();

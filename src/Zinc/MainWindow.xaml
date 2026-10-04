@@ -78,6 +78,12 @@
                     <Button x:Name="OpenConfigButton" Content="Open config" />
                 </InfoBar.ActionButton>
             </InfoBar>
+            <!-- Custom shaders that couldn't be used (MainWindow.Shaders.cs); the terminals draw without them. -->
+            <InfoBar x:Name="ShaderNotice" IsOpen="False" Severity="Warning" Title="A custom shader isn't running">
+                <InfoBar.ActionButton>
+                    <Button x:Name="OpenShaderConfigButton" Content="Open config" />
+                </InfoBar.ActionButton>
+            </InfoBar>
             <!-- A downloaded update, ready to install (Updater, MainWindow.Updates.cs). -->
             <InfoBar x:Name="UpdateNotice" IsOpen="False" Severity="Informational" IsClosable="False">
                 <InfoBar.Content>

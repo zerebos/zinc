@@ -1,0 +1,17 @@
+.{
+    .name = .zinc_shader,
+    .version = "0.1.0",
+    .fingerprint = 0xb91cf9af2734351,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        // Ghostty's own package, at the pinned checkout (scripts/build-libghostty.sh clones it).
+        .glslang = .{ .path = "../../external/ghostty/pkg/glslang", .lazy = true },
+        // KhronosGroup/SPIRV-Cross, the same source as Ghostty's pkg/spirv-cross/build.zig.zon.
+        .spirv_cross = .{
+            .url = "https://deps.files.ghostty.org/spirv_cross-1220fb3b5586e8be67bc3feb34cbe749cf42a60d628d2953632c2f8141302748c8da.tar.gz",
+            .hash = "N-V-__8AANb6pwD7O1WG6L5nvD_rNMvnSc9Cpg1ijSlTYywv",
+            .lazy = true,
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "zinc_shader.zig" },
+}

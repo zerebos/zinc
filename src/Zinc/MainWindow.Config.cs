@@ -8,20 +8,22 @@ public sealed partial class MainWindow
 {
     private void SetUpConfigNotice()
     {
-        OpenConfigButton.Click += (_, _) =>
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo(_config.Path) { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                // No app for .toml files: fall back to Notepad.
-                Log.Write($"config: open with the default app failed ({ex.Message}); using notepad");
-                Process.Start("notepad.exe", $"\"{_config.Path}\"");
-            }
-        };
+        OpenConfigButton.Click += (_, _) => OpenConfigFile();
         ShowConfigProblems(_config, applied: true);
+    }
+
+    private void OpenConfigFile()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(_config.Path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            // No app for .toml files: fall back to Notepad.
+            Log.Write($"config: open with the default app failed ({ex.Message}); using notepad");
+            Process.Start("notepad.exe", $"\"{_config.Path}\"");
+        }
     }
 
     /// <summary>
@@ -60,6 +62,7 @@ public sealed partial class MainWindow
     internal void ApplyConfig(ConfigFile config)
     {
         _config = config;
+        ForgetShaderProblems(); // the terminals report them again, as they are now
         ApplyDividerColor();
         ApplyBackdrop();
         foreach (var tab in AllTabs())

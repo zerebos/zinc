@@ -39,5 +39,8 @@ echo "libghostty-vt ($COMMIT) -> native/$ARCH/ghostty-vt.dll"
 # Ghostty's sprite rasterizer, from the same checkout.
 "$ROOT/scripts/build-sprites.sh" "$ARCH"
 
+# The custom shader translator (glslang + SPIRV-Cross), from the same checkout.
+"$ROOT/scripts/build-shader.sh" "$ARCH"
+
 # The Visual C++ runtime both DLLs import (not part of Windows), shipped beside them.
 "$ROOT/scripts/copy-vcruntime.sh" "$ARCH"

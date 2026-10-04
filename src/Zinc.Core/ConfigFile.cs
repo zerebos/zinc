@@ -224,9 +224,9 @@ public sealed class ConfigFile
     }
 
     /// <summary>The sections a profile may override; the rest belong to the app.</summary>
-    private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal"];
+    private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal", "shaders"];
 
-    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "window", "notify", "quick-terminal", "updates", "cli", "debug"];
+    private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "shaders", "window", "notify", "quick-terminal", "updates", "cli", "debug"];
 
 
     private sealed class Reader(string mainPath, string bundledThemes, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover,
@@ -663,6 +663,8 @@ public sealed class ConfigFile
             ["terminal.clipboard-write"] = ("clipboard-write", v => Permission(v)),
             ["terminal.command-marks"] = ("command-marks", v => v as string),
             ["terminal.shell-integration"] = ("shell-integration", v => v as string),
+            ["shaders.files"] = ("custom-shader", v => v as string), // paths: ApplySetting resolves them
+            ["shaders.animation"] = ("custom-shader-animation", v => v is bool b ? (b ? "true" : "false") : v as string),
             ["window.workspace-tabs"] = ("workspace-tabs", v => v as string),
             ["window.title-bar"] = ("title-bar", v => v as string),
             ["window.sidebar"] = ("sidebar", v => v as string),
@@ -735,6 +737,20 @@ public sealed class ConfigFile
                 return config;
             }
 
+            // Shader files: one path or a list, relative ones from the folder of the file that names them.
+            if (e.Path is ["shaders", "files"])
+            {
+                var files = e.Value switch
+                {
+                    string one => [one],
+                    List<object> list when list.All(x => x is string) => list.Cast<string>().ToList(),
+                    _ => null,
+                };
+                return files == null
+                    ? Warn(config, e, "a file path or a list of them")
+                    : config.Apply("custom-shader", string.Join('\n', files.Select(f => ShaderPath(f, e.File)))) ?? config;
+            }
+
             if (legacy is not { } l)
             {
                 _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
@@ -742,6 +758,18 @@ public sealed class ConfigFile
             }
 
             return l.Value != null && config.Apply(l.Key, l.Value) is { } applied ? applied : Warn(config, e, null);
+        }
+
+        /// <summary>A shader path as written (~, %VARS%, relative to <paramref name="file"/>'s folder) made full.</summary>
+        private static string ShaderPath(string path, string file)
+        {
+            path = Environment.ExpandEnvironmentVariables(path.Trim());
+            if (path.StartsWith("~/") || path.StartsWith("~\\"))
+            {
+                path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
+            }
+
+            return path.Length == 0 ? "" : System.IO.Path.GetFullPath(path, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(file)) ?? ".");
         }
 
         /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>

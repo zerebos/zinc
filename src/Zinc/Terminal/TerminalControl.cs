@@ -162,6 +162,8 @@ public sealed partial class TerminalControl : UserControl
             _canvas = CreateCanvas();
         }
 
+        StartShaders();
+
         EnableFileDrop();
         // The scrollbar overlays the canvas's right edge (inside the padding when idle).
         Content = _root = new Grid { Children = { Surface, CreateScrollBar() } };
@@ -534,6 +536,7 @@ public sealed partial class TerminalControl : UserControl
             _selection?.SetWordBoundaries(SelectionGesture.Boundaries(config.WordBoundaries));
         }
 
+        ApplyShaders(config);
         if (_renderer.HasResources)
         {
             if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize)
@@ -773,6 +776,7 @@ public sealed partial class TerminalControl : UserControl
         }
 
         _focused = true;
+        UpdateShaderAnimation();
         ResetBlink();
         SendFocusEvent(true);
         Redraw();
@@ -786,6 +790,7 @@ public sealed partial class TerminalControl : UserControl
         }
 
         _focused = false;
+        UpdateShaderAnimation();
         CancelSequence();
         SendFocusEvent(false);
         Redraw();
