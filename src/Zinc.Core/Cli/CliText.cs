@@ -32,8 +32,15 @@ public static class CliText
 
     /// <summary>What <c>zn list</c>, <c>zn &lt;thing&gt; list</c> print: one row per thing at that level.</summary>
     /// <param name="level">"" (zn list), "window", "workspace", "pane" or "terminal".</param>
-    public static string List(CliTree tree, string level)
+    /// <param name="cap">
+    /// The longest a name, title or folder may be (zn passes 40 when printing to a terminal: one long title made the
+    /// whole table too wide to read); null: whole, for output that goes on to another program.
+    /// </param>
+    public static string List(CliTree tree, string level, int? cap = null)
     {
+        string Name(string text) => Cut(text, cap);
+        string Folder(string? text) => CutFront(text ?? "", cap);
+
         List<string[]> rows = level switch
         {
             "window" =>
@@ -43,7 +50,7 @@ public static class CliText
                 {
                     Mark(w.Id, w.Focused) + (w.Quick ? " quick" : ""), w.Workspaces.Count.ToString(),
                     w.Workspaces.Sum(s => s.Panes.Sum(p => p.Terminals.Count)).ToString(),
-                    w.Workspaces.FirstOrDefault(s => s.Active)?.Name ?? "",
+                    Name(w.Workspaces.FirstOrDefault(s => s.Active)?.Name ?? ""),
                 }),
             ],
             "workspace" =>
@@ -51,7 +58,7 @@ public static class CliText
                 ["WINDOW", "WORKSPACE", "NAME", "PANES", "TERMINALS"],
                 .. tree.Windows.SelectMany(w => w.Workspaces.Select(s => new[]
                 {
-                    w.Id.ToString(), Mark(s.Id, s.Focused), s.Name, s.Panes.Count.ToString(),
+                    w.Id.ToString(), Mark(s.Id, s.Focused), Name(s.Name), s.Panes.Count.ToString(),
                     s.Panes.Sum(p => p.Terminals.Count).ToString(),
                 })),
             ],
@@ -60,8 +67,8 @@ public static class CliText
                 ["WINDOW", "WORKSPACE", "PANE", "TERMINALS", "SHOWING"],
                 .. tree.Windows.SelectMany(w => w.Workspaces.SelectMany(s => s.Panes.Select(p => new[]
                 {
-                    w.Id.ToString(), $"{s.Id} {s.Name}", Mark(p.Id, p.Focused), p.Terminals.Count.ToString(),
-                    p.Terminals.FirstOrDefault(t => t.Active)?.Title ?? "",
+                    w.Id.ToString(), $"{s.Id} {Name(s.Name)}", Mark(p.Id, p.Focused), p.Terminals.Count.ToString(),
+                    Name(p.Terminals.FirstOrDefault(t => t.Active)?.Title ?? ""),
                 }))),
             ],
             _ =>
@@ -73,8 +80,8 @@ public static class CliText
                 {
                     string[] row =
                     [
-                        Mark(w.Id, w.Focused), Mark(s.Id, s.Focused) + " " + s.Name, Mark(p.Id, p.Focused), Mark(t.Id, t.Focused),
-                        t.Title, t.Folder ?? "",
+                        Mark(w.Id, w.Focused), Mark(s.Id, s.Focused) + " " + Name(s.Name), Mark(p.Id, p.Focused), Mark(t.Id, t.Focused),
+                        Name(t.Title), Folder(t.Folder),
                     ];
                     return level == "terminal" ? [.. row, t.Profile] : row;
                 })))),
@@ -82,6 +89,14 @@ public static class CliText
         };
         return Table(rows);
     }
+
+    /// <summary>Text cut to <paramref name="cap"/> characters, the end replaced by an ellipsis.</summary>
+    public static string Cut(string text, int? cap) =>
+        cap is { } n && text.Length > n ? text[..(n - 1)].TrimEnd() + "…" : text;
+
+    /// <summary>A path cut to <paramref name="cap"/> characters from the front: its end (the folder itself) is what matters.</summary>
+    public static string CutFront(string text, int? cap) =>
+        cap is { } n && text.Length > n ? "…" + text[^(n - 1)..] : text;
 
     private static string Mark(int id, bool focused) => focused ? $"{id} (*)" : id.ToString();
 

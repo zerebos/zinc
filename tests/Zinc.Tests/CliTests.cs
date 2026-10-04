@@ -232,6 +232,24 @@ public class CliTests
     }
 
     [Fact]
+    public void LongNamesAreCutForPeople()
+    {
+        Assert.Equal("short", CliText.Cut("short", 10));
+        Assert.Equal("a long ti…", CliText.Cut("a long title indeed", 10));
+        Assert.Equal("…\\src\\zinc", CliText.CutFront(@"C:\Users\Zack\dev\src\zinc", 10));
+        Assert.Equal("a long title indeed", CliText.Cut("a long title indeed", null)); // piped on: whole
+
+        var tree = Tree();
+        tree.Windows[0].Workspaces[0].Panes[0].Terminals[0].Title = new string('t', 60);
+        tree.Windows[0].Workspaces[0].Panes[0].Terminals[0].Folder = @"C:\Users\Zack\" + new string('d', 60) + @"\zinc";
+        var capped = CliText.List(tree, "", 40);
+        Assert.Contains(new string('t', 39) + "…", capped);
+        Assert.Contains(@"\zinc", capped);
+        Assert.DoesNotContain(new string('t', 41), capped);
+        Assert.Contains(new string('t', 60), CliText.List(tree, "")); // no cap given: as it is
+    }
+
+    [Fact]
     public void ListFlagsNarrowIt()
     {
         var onlyPane = CliText.Filter(Tree(), new CliRequest { Pane = 4 });

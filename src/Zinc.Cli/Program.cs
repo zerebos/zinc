@@ -79,7 +79,8 @@ internal static class Program
                 var shown = CliText.Filter(tree, request);
                 Console.Out.Write(parsed.Json
                     ? JsonSerializer.Serialize(shown, CliJsonIndented.Default.CliTree) + Environment.NewLine
-                    : CliText.List(shown, request.Cmd.Split(' ')[0] is var level && level != "list" ? level : ""));
+                    : CliText.List(shown, request.Cmd.Split(' ')[0] is var level && level != "list" ? level : "",
+                        Console.IsOutputRedirected ? null : 40)); // whole when piped on
                 break;
             case "terminal read":
                 Console.Out.Write(reply.Text ?? "");
