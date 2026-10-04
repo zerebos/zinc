@@ -20,29 +20,39 @@ internal static unsafe partial class NativeSizeLoop
     }
 
     /// <summary>
-    /// Runs the loop for <paramref name="hit"/> (the border's hit-test code: HTLEFT 10 ... HTBOTTOMRIGHT 17) while the
-    /// left button is held, from screen point (<paramref name="x"/>, <paramref name="y"/>); returns when it's released.
-    /// <paramref name="step"/> gives the window's rectangle (screen pixels) for each step. Started as a press on that
-    /// border (WM_NCLBUTTONDOWN): a bare SC_SIZE ran the keyboard-style loop (follow the mouse until the next click).
+    /// Runs the loop for <paramref name="edge"/> (WMSZ_*: 1 left ... 8 bottom-right) until the left button is released;
+    /// <paramref name="step"/> gives the window's rectangle (screen pixels) for each step.
     /// </summary>
-    public static void Run(nint hwnd, int hit, int x, int y, Func<Rect> step)
+    /// <remarks>
+    /// Started as SC_SIZE: a press on a border (WM_NCLBUTTONDOWN) did nothing, the window having no resizing border.
+    /// SC_SIZE runs the loop in its click-to-finish form, though: Windows' own idea of the button is "up" (WinUI takes
+    /// the press as pointer input before Windows' key state sees it). So a timer watches the real button
+    /// (GetAsyncKeyState) and, once it's up, accepts the size with Enter, as that form of the loop takes it.
+    /// </remarks>
+    public static void Run(nint hwnd, int edge, Func<Rect> step)
     {
         _step = step;
         _steps = 0;
+        _ticksUp = 0;
         SetWindowSubclass(hwnd, &Proc, SubclassId, 0);
+        SetTimer(hwnd, TimerId, 10, 0);
         try
         {
             ReleaseCapture(); // XAML's, from the press
-            Log.Write($"size loop: starting (hit {hit})");
-            SendMessageW(hwnd, 0x00A1 /* WM_NCLBUTTONDOWN */, hit, (nint)(((y & 0xFFFF) << 16) | (x & 0xFFFF)));
+            Log.Write($"size loop: starting (edge {edge})");
+            SendMessageW(hwnd, 0x0112 /* WM_SYSCOMMAND */, 0xF000 /* SC_SIZE */ + edge, 0);
         }
         finally
         {
+            KillTimer(hwnd, TimerId);
             RemoveWindowSubclass(hwnd, &Proc, SubclassId);
             Log.Write($"size loop: ended after {_steps} steps");
             _step = null;
         }
     }
+
+    private const nuint TimerId = 0x51535A;
+    private static int _ticksUp;
 
     private const nuint SubclassId = 0x51535A4C; // "QSZL"
 
@@ -63,6 +73,26 @@ internal static unsafe partial class NativeSizeLoop
             }
         }
 
+        if (msg == 0x0113 /* WM_TIMER */ && wParam == (nint)TimerId)
+        {
+            if ((GetAsyncKeyState(0x01 /* VK_LBUTTON */) & 0x8000) == 0)
+            {
+                // Released: Enter accepts the size; should the loop still run a few ticks on, losing the capture ends it.
+                _ticksUp++;
+                if (_ticksUp == 1)
+                {
+                    PostMessageW(hwnd, 0x0100 /* WM_KEYDOWN */, 0x0D /* VK_RETURN */, 0);
+                }
+                else if (_ticksUp == 6)
+                {
+                    Log.Write("size loop: Enter didn't end it; releasing the capture");
+                    ReleaseCapture();
+                }
+            }
+
+            return 0;
+        }
+
         if (msg is 0x0231 or 0x0232) // WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE
         {
             Log.Write($"size loop: {(msg == 0x0231 ? "entered" : "exited")}");
@@ -77,6 +107,20 @@ internal static unsafe partial class NativeSizeLoop
 
     [LibraryImport("user32.dll")]
     private static partial nint SendMessageW(nint hwnd, uint msg, nint wParam, nint lParam);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool PostMessageW(nint hwnd, uint msg, nint wParam, nint lParam);
+
+    [LibraryImport("user32.dll")]
+    private static partial nuint SetTimer(nint hwnd, nuint id, uint ms, nint proc);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool KillTimer(nint hwnd, nuint id);
+
+    [LibraryImport("user32.dll")]
+    private static partial short GetAsyncKeyState(int key);
 
     [LibraryImport("comctl32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
