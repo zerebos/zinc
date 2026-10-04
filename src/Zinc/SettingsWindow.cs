@@ -37,6 +37,11 @@ internal sealed partial class SettingsWindow : Window
     // Bottom padding: room for the undo bar floating over the last card.
     private readonly StackPanel _page = new() { Spacing = 4, MaxWidth = 960, Padding = new Thickness(40, 12, 40, 96) };
     private readonly ScrollViewer _scroller = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+
+    // What the scroller holds: a plain stretching grid with the page centered in it. The page itself in the scroller
+    // (a StackPanel with MaxWidth) came out shifted right, off the window, on a page shorter than the window once the
+    // window was wide enough for MaxWidth to apply (a search for "blink" at 1228 px).
+    private readonly Grid _pageHost = new();
     private readonly Border _snackbar;
     private readonly Button _undo = new() { Content = "Undo changes", IsEnabled = false };
     private bool _snackbarShown;
@@ -310,7 +315,12 @@ internal sealed partial class SettingsWindow : Window
         }
 
         PlacePreview(heading);
-        _scroller.Content = _page;
+        if (_pageHost.Children.Count == 0)
+        {
+            _pageHost.Children.Add(_page);
+        }
+
+        _scroller.Content = _pageHost;
     }
 
     private void UpdateBanners()
