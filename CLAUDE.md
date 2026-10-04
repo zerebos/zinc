@@ -424,6 +424,19 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   + `assets/licenses/*.txt` → `Licenses\` (font/scheme licenses stay in Fonts\/Themes\); App
   `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every
   license file and the pinned Ghostty commit to match — a new dependency needs an entry + text, in alphabetical order (tested).
+- Jump list (taskbar right-click, 2026-10-04): Core `LaunchRequest` (Zinc's flags at the start of the command line:
+  `--profile <id>`, `--folder <path>` (+ `--profile`), `--new-window`, `--quick-terminal`, `--settings`, `--reopen-workspace`,
+  `--reopen-window`; anything else stays a command, `--` forces one; `ShellResolver.OwnArguments` = the command only,
+  `LaunchArguments` = raw; round-trips CommandLineToArgvW, tested), `Session/RecentProfiles` (session.json `recentProfiles`;
+  noted in `CreatePane` unless `recent: false`: restores (OpenSaved), handed-over consoles; not the quick terminal),
+  `Shell/JumpListPlan` (recent profiles filled up from the profile order, recent folders opening with the profile that was
+  there, 5 each; tasks; removed items left out and the next move up; tested). App: `JumpListWriter` (ICustomDestinationList
+  via ComImport; items = IShellLink to zinc.exe, title in PKEY_Title), `App.JumpList.cs` (`HandleLaunch`, from
+  `OpenForLaunch` and the first launch (which then opens no default window for Profile/Folder/NewWindow/ReopenWindow/
+  QuickTerminal); `UpdateJumpList` on every session tick, written only when `JumpListPlan.Key` changes; icons from
+  `ProfileIcons.JumpIconFor`: .ico/.exe files, PNG wrapped as .ico), `MainWindow.Launch.cs` (`LaunchStart`, `OpenLaunched`).
+  Test runs don't write it unless ZINC_JUMP_LIST=1. Test: `.scratch/tools/jumplist-test.ps1` (launches each flag as a
+  second zinc.exe; the list file is under %APPDATA%\Microsoft\Windows\Recent\CustomDestinations).
 - Palette recents: `RecentCommands` (Core/Commands, by title; one instance on `App`, saved in
   session.json's `recentCommands`) — `CommandFilter.Filter(..., recent)` puts the 5 newest first
   on an empty query and boosts them a little otherwise. Entries that come and go (workspaces,

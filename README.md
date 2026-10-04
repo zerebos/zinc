@@ -463,6 +463,22 @@ When the last window closes, Zinc keeps running in the tray while its quick term
 works (or the quick terminal is showing), so the hotkey still summons it; otherwise it exits.
 In `[window]`, `quit-after-last-window-closed = true` always exits, `false` always stays in the tray.
 
+### Jump list
+
+Right-click Zinc's taskbar button (or its pinned Start entry) for:
+
+- **Recent profiles**: the profiles you opened lately, then the first ones in your profile
+  order. Each opens a new workspace with that profile in the window you used last.
+- **Recent folders**: the folders your shells were in lately. Each opens a new workspace there,
+  with the profile that was there.
+- **Tasks**: New window, Quick terminal, Settings, and Reopen closed workspace / window when
+  there's one to reopen.
+
+Pin an item to keep it at the top; remove one and Zinc leaves it out. Each item is a launch of
+Zinc with one of its own flags, which you can use too (from a script or a launcher):
+`--profile <id>`, `--folder <path>` (with `--profile`, or the default profile), `--new-window`,
+`--quick-terminal`, `--settings`, `--reopen-workspace`, `--reopen-window`.
+
 ### Default terminal
 
 Zinc can open the console programs Windows starts outside a terminal: a script you
@@ -565,6 +581,7 @@ are. For other shells, the scripts in `ShellIntegration\` show what to send.
 ## Choosing a shell
 
 1. Arguments after the executable: `zinc.exe "C:\Program Files\Git\bin\bash.exe" --login -i`
+   (not Zinc's own flags, see [Jump list](#jump-list); `zinc.exe -- <command>` runs a command that starts with one)
 2. The `ZINC_SHELL` environment variable (a full command line)
 3. The default profile's `command` (tabs opened later use their profile's)
 4. Otherwise `pwsh.exe`, then `powershell.exe`, then `cmd.exe`

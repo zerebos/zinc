@@ -16,7 +16,7 @@ namespace Zinc.Session;
 public sealed record SessionState(int Version, List<WindowState> Windows, List<string>? RecentCommands = null, WindowBounds? Settings = null,
     bool SettingsPreviewHidden = false, List<Zinc.Terminal.RecentFolder>? RecentFolders = null,
     List<ClosedWorkspace>? ClosedWorkspaces = null, List<ClosedWindow>? ClosedWindows = null,
-    List<QuickTerminalSize>? QuickTerminalSizes = null)
+    List<QuickTerminalSize>? QuickTerminalSizes = null, List<string>? RecentProfiles = null)
 {
     public const int CurrentVersion = 1;
 }

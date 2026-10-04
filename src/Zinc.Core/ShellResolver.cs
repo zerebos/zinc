@@ -13,8 +13,13 @@ public static class ShellResolver
     public const string LoginFlag = "--at-login";
 
     /// <summary>Our command line after the executable, without <see cref="LoginFlag"/> or COM's <c>-Embedding</c>.</summary>
-    public static string[] OwnArguments() =>
+    public static string[] LaunchArguments() =>
         [.. Environment.GetCommandLineArgs().Skip(1).Where(a => a != LoginFlag && a != Zinc.Pty.DefaultTerminal.EmbeddingFlag)];
+
+    /// <summary>The command our command line gives (none when it's Zinc's own flags: <see cref="LaunchRequest"/>).</summary>
+    public static string[] OwnArguments() => LaunchRequest.Parse(LaunchArguments()) is { Action: LaunchAction.None } request
+        ? [.. request.Command]
+        : [];
 
     /// <summary>Whether Windows started this process to hand it a console (as the default terminal).</summary>
     public static bool LaunchedForHandoff => Environment.GetCommandLineArgs().Skip(1).Contains(Zinc.Pty.DefaultTerminal.EmbeddingFlag);

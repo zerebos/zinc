@@ -168,12 +168,12 @@ public sealed partial class MainWindow
         TerminalTab pane;
         if (saved.ColorScheme is { } scheme && _config.Themes.Apply(profile.Config, scheme) is { } themed)
         {
-            pane = CreatePane(profile with { Config = themed }, command, directory);
+            pane = CreatePane(profile with { Config = themed }, command, directory, recent: false);
             pane.ColorScheme = scheme;
         }
         else
         {
-            pane = CreatePane(profile, command, directory);
+            pane = CreatePane(profile, command, directory, recent: false);
         }
 
         pane.CustomTitle = saved.Title;

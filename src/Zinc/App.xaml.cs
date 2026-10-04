@@ -115,6 +115,8 @@ public partial class App : Application
         // it rather than the saved session. Otherwise reopen what was open last time.
         var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
                               Environment.GetEnvironmentVariable("ZINC_SHELL") is { Length: > 0 };
+        // Zinc's own flags (a jump list item while Zinc wasn't running): the usual start, then what they ask.
+        var launch = LaunchRequest.Parse(ShellResolver.LaunchArguments());
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
         ApplyZnPath(_config.Global.ZnOnPath);
         Updater.Schedule(_config.Global.UpdateCheck);
@@ -147,9 +149,12 @@ public partial class App : Application
             // First launch: the welcome page, then the first window, built the way it asks for.
             ShowWelcome(firstRun: true);
         }
-        else if (explicitCommand || !RestoreSession())
+        else if ((explicitCommand || !RestoreSession()) &&
+                 launch.Action is not (LaunchAction.Profile or LaunchAction.Folder or LaunchAction.NewWindow or
+                     LaunchAction.ReopenWindow or LaunchAction.QuickTerminal))
         {
-            // Our own arguments / ZINC_SHELL override the first tab's command only.
+            // Our own arguments / ZINC_SHELL override the first tab's command only. (Nothing saved to reopen and a flag
+            // that opens a window, or the quick terminal: that's what opens, not a default window too.)
             OpenWindow(profile, ShellResolver.Resolve(profile.Config));
         }
 
@@ -166,6 +171,13 @@ public partial class App : Application
             // Background features failing must not take the open window down with them.
             Log.Write($"background setup failed: {ex}");
         }
+
+        if (launch.Action != LaunchAction.None && File.Exists(_config.Path))
+        {
+            HandleLaunch(launch);
+        }
+
+        UpdateJumpList();
     }
 
     private WelcomeWindow? _welcome;
@@ -540,6 +552,14 @@ public partial class App : Application
             return;
         }
 
+        var request = LaunchRequest.Parse(argv);
+        if (request.Action != LaunchAction.None)
+        {
+            HandleLaunch(request);
+            return;
+        }
+
+        argv = [.. request.Command]; // without a leading "--"
         var profile = _config.DefaultProfile;
         if (argv.Length > 0)
         {
@@ -703,6 +723,8 @@ public partial class App : Application
             return;
         }
 
+        _jumpIcons.Clear(); // a profile's icon or command may have changed
+
         var fresh = ConfigFile.Load(_config.Path);
         if (!fresh.HasErrors)
         {
@@ -823,6 +845,7 @@ public partial class App : Application
 
         _settingsBounds = saved?.Settings;
         RecentFolders = new RecentFolders(saved?.RecentFolders);
+        RecentProfiles = new RecentProfiles(saved?.RecentProfiles);
         ClosedWorkspaces = new ClosedWorkspaces(saved?.ClosedWorkspaces);
         ClosedWindows = new ClosedWindows(saved?.ClosedWindows);
         QuickTerminalSizes = new QuickTerminalSizes(saved?.QuickTerminalSizes);
@@ -915,7 +938,11 @@ public partial class App : Application
 
         _sessionTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
         _sessionTimer.Interval = TimeSpan.FromSeconds(2);
-        _sessionTimer.OnTick(_ => SaveSession());
+        _sessionTimer.OnTick(_ =>
+        {
+            SaveSession();
+            UpdateJumpList();
+        });
         _sessionTimer.Start();
     }
 
@@ -935,7 +962,8 @@ public partial class App : Application
         {
             SessionStore.Save(_sessionPath, SessionStore.Serialize(
                 new SessionState(SessionState.CurrentVersion, [], [.. RecentCommands.Titles], _settingsBounds, _settingsPreviewHidden,
-                    [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All], [.. QuickTerminalSizes.All])));
+                    [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All], [.. QuickTerminalSizes.All],
+                    [.. RecentProfiles.All])));
             Log.Write("session: windows forgotten; the next start opens a new one");
         }
         catch (Exception ex)
@@ -960,7 +988,8 @@ public partial class App : Application
             }
 
             var json = SessionStore.Serialize(new SessionState(SessionState.CurrentVersion, windows, [.. RecentCommands.Titles], _settingsBounds,
-                _settingsPreviewHidden, [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All], [.. QuickTerminalSizes.All]));
+                _settingsPreviewHidden, [.. RecentFolders.All], [.. ClosedWorkspaces.All], [.. ClosedWindows.All], [.. QuickTerminalSizes.All],
+                [.. RecentProfiles.All]));
             if (json != _savedSession)
             {
                 SessionStore.Save(_sessionPath, json);

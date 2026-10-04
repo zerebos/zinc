@@ -6,6 +6,12 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### New
+- A jump list: right-click Zinc's taskbar button for your recent profiles and folders, a new window, the quick
+  terminal, Settings, and reopening what you closed. Each item opens in the window you used last. The same things
+  work from the command line: `zinc --profile <id>`, `--folder <path>`, `--new-window`, `--quick-terminal`,
+  `--settings`, `--reopen-workspace`, `--reopen-window`.
+
 ## 0.1.0-dev.254 (2026-10-04)
 
 ### New

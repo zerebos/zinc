@@ -71,6 +71,73 @@ internal static class ProfileIcons
         return Glyph(TerminalGlyph);
     }
 
+    /// <summary>
+    /// The profile's icon as a file the taskbar's jump list can show (an .ico, or an .exe's own icon): found as the
+    /// tab icon is, without the glyph fallbacks (null: Zinc's icon). A PNG given as the icon is wrapped in an .ico.
+    /// </summary>
+    internal static Zinc.Shell.JumpIcon JumpIconFor(Profile profile)
+    {
+        if (profile.Config.Icon is { } explicitPath && File.Exists(explicitPath))
+        {
+            var extension = Path.GetExtension(explicitPath).ToLowerInvariant();
+            return extension is ".ico" or ".exe" or ".dll" ? new(explicitPath)
+                : extension == ".png" && PngAsIco(explicitPath) is { } ico ? new(ico)
+                : new(null);
+        }
+
+        var (exe, args) = SplitCommand(ShellResolver.ForProfile(profile.Config));
+        var name = Path.GetFileNameWithoutExtension(exe).ToLowerInvariant();
+        if (name == "wsl" && WslDistroIcon(args) is { } distroIcon)
+        {
+            return new(distroIcon);
+        }
+
+        if (name == "ssh" || FindExecutable(exe) is not { } path)
+        {
+            return new(null);
+        }
+
+        var gitIcon = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, "..", "mingw64", "share", "git", "git-for-windows.ico"));
+        return new(name == "bash" && File.Exists(gitIcon) ? gitIcon : path);
+    }
+
+    /// <summary>A PNG as a one-image .ico (the format holds PNG data as it is), cached; null if it can't be written.</summary>
+    private static string? PngAsIco(string png)
+    {
+        try
+        {
+            var info = new FileInfo(png);
+            var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{png}|{info.LastWriteTimeUtc.Ticks}")))[..16];
+            var ico = Path.Combine(IconCacheDir, $"{Path.GetFileNameWithoutExtension(png)}-{hash}.ico");
+            if (!File.Exists(ico))
+            {
+                var data = File.ReadAllBytes(png);
+                Directory.CreateDirectory(IconCacheDir);
+                using var file = File.Create(ico);
+                using var w = new BinaryWriter(file);
+                w.Write((ushort)0); // reserved
+                w.Write((ushort)1); // icon
+                w.Write((ushort)1); // one image
+                w.Write((byte)0); // width 256 or more (Windows reads the PNG's own size)
+                w.Write((byte)0);
+                w.Write((byte)0); // no palette
+                w.Write((byte)0);
+                w.Write((ushort)1); // planes
+                w.Write((ushort)32); // bits
+                w.Write(data.Length);
+                w.Write(6 + 16); // the image's offset
+                w.Write(data);
+            }
+
+            return ico;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Write($"jump list: icon {png} not converted ({ex.Message})");
+            return null;
+        }
+    }
+
     private static IconSource Bitmap(string path) =>
         new BitmapIconSource { UriSource = new Uri(Small(path)), ShowAsMonochrome = false };
 

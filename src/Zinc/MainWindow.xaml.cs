@@ -143,7 +143,7 @@ public sealed partial class MainWindow : Window
         // Its program, not the title: from a shortcut that's the shortcut's name ("Command Prompt").
         var program = pty.ProgramPath ?? title;
         var profile = ProfileForHandedOver(program);
-        var pane = CreatePane(profile, program, profile.Config.ResolveWorkingDirectory());
+        var pane = CreatePane(profile, program, profile.Config.ResolveWorkingDirectory(), recent: false);
         pane.Control.HandedOver = pty;
         pane.HandedOver = true;
         var tab = AddWorkspace(new Workspace<TerminalTab>(pane), color: AutoColor(null));
@@ -323,8 +323,15 @@ public sealed partial class MainWindow : Window
     /// <summary>What the next pane created types into its shell once it's ready ("New tab running…").</summary>
     private string? _startupInput;
 
-    private TerminalTab CreatePane(Profile profile, string command, string workingDirectory)
+    /// <param name="recent">Whether it counts as opening its profile (the jump list's recent profiles): not restored
+    /// terminals or a console Windows handed over.</param>
+    private TerminalTab CreatePane(Profile profile, string command, string workingDirectory, bool recent = true)
     {
+        if (recent && !_quick)
+        {
+            App.Instance.NoteProfileOpened(profile.Id);
+        }
+
         var control = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
         {
             // A canvas has no desired size of its own; make sure it fills its slot.
