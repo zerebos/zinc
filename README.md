@@ -279,13 +279,17 @@ shaders written for Ghostty work unchanged
 (CRT screens, bloom, cursor trails...).
 - `files`: one path or a list, run in order, each over the previous one's picture; relative paths are from
   the config file's folder, `~` is your home. A shader that doesn't compile is left out (the others still
-  run) and a notice says why, with its line number; fix it and save the config to try again.
+  run) and a notice says why, with its line number. Saving a shader file applies it at once (the notice
+  goes when it compiles).
 - `animation`: `true` (default) lets shaders that use time (`iTime`, `iFrame`...) redraw on their own
-  while the terminal has focus; `"always"`, focused or not; `false`, only when the terminal changes.
+  while the terminal has focus (their clock pauses meanwhile, so they pick up where they stopped);
+  `"always"`, focused or not; `false`, only when the terminal changes.
   Shaders that don't use time draw only when the terminal changes anyway.
 - Profiles can have their own (`[profile.x.shaders]`, `files = []` for none). Shaders need
-  `low-latency-drawing` (the default). What a shader gets: Ghostty's uniforms; for now the size, time,
-  frame, date and focus ones are set, the cursor, colors and mouse ones are zero.
+  `low-latency-drawing` (the default). What a shader gets: all of Ghostty's uniforms: the picture so far
+  (`iChannel0`), size, time, frame, date, focus, the cursor (where and how it's drawn, the previous one and
+  when it moved: cursor trails), the live palette and colors, and `iMouse` (Shadertoy's: while the left button
+  is down). Positions are in pixels with y going down, as in Ghostty on macOS.
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the

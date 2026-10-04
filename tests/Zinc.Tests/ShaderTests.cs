@@ -165,6 +165,49 @@ public class ShaderTests : IDisposable
     }
 
     [Fact]
+    public void CursorMovesKeepThePreviousOne()
+    {
+        var u = new ShaderUniforms();
+        u.SetCursor(10, 40, 8, 16, 1, 1, 1, 1, time: 1);
+        u.SetCursor(10, 40, 8, 16, 1, 1, 1, 1, time: 2); // unchanged: no new change time
+        Assert.Equal(1, u.Float("iTimeCursorChange"));
+
+        u.SetCursor(18, 40, 8, 16, 1, 1, 1, 1, time: 3);
+        Assert.Equal(18, u.Float("iCurrentCursor"));
+        Assert.Equal(10, u.Float("iPreviousCursor"));
+        Assert.Equal(40, u.Float("iPreviousCursor", 1));
+        Assert.Equal(3, u.Float("iTimeCursorChange"));
+
+        u.SetCursor(18, 40, 8, 16, 1, 0, 0, 1, time: 4); // a new color counts as a change too
+        Assert.Equal(18, u.Float("iPreviousCursor"));
+        Assert.Equal(1, u.Float("iPreviousCursorColor", 1));
+        Assert.Equal(0, u.Float("iCurrentCursorColor", 1));
+        Assert.Equal(4, u.Float("iTimeCursorChange"));
+    }
+
+    [Fact]
+    public void CursorStyleAndColors()
+    {
+        var u = new ShaderUniforms();
+        u.SetCursorStyle(ShaderUniforms.CursorStyle.Bar, visible: true);
+        u.SetCursorStyle(ShaderUniforms.CursorStyle.BlockHollow, visible: false);
+        int Int(string name) => BitConverter.ToInt32(u.Bytes, ShaderUniforms.Offsets[name]);
+        Assert.Equal(1, Int("iCurrentCursorStyle"));
+        Assert.Equal(2, Int("iPreviousCursorStyle"));
+        Assert.Equal(0, Int("iCursorVisible"));
+
+        var palette = new byte[256 * 3];
+        palette[255 * 3 + 2] = 255;
+        u.SetPalette(palette);
+        Assert.Equal(1, BitConverter.ToSingle(u.Bytes, ShaderUniforms.Offsets["iPalette"] + 255 * 16 + 8));
+        u.SetColor("iBackgroundColor", 255, 0, 51);
+        Assert.Equal(0.2f, u.Float("iBackgroundColor", 2), 3);
+
+        u.SetMouse(5, 6, 1, 2, down: false);
+        Assert.Equal([5, 6, -1, -2], [u.Float("iMouse"), u.Float("iMouse", 1), u.Float("iMouse", 2), u.Float("iMouse", 3)]);
+    }
+
+    [Fact]
     public void ErrorsUseTheFilesLines()
     {
         Assert.False(ShaderTranslator.TryTranslate("void mainImage(out vec4 c, in vec2 p) {\n  c = vec4(1.0)\n  foo = 2;\n}\n", @"C:\s\bad.glsl",

@@ -334,8 +334,14 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   animation frame with nothing new reruns the shaders over the last picture: redrawing the terminal each refresh
   cost ~30% of a core; no animation on unloaded = hidden tabs; the shader clock pauses with a focus-paused
   animation, so hover redraws in an unfocused pane don't jump it; SPIRV-Cross zero-initializes variables: fxc's X4000), `TerminalControl.Shaders.cs` (load on start, after
-  the window wired the pane, and on every config reload; `ShaderProblems` -> `MainWindow.Shaders.cs` notice, deduped,
-  dismissed problems stay quiet until a reload). Test: `.scratch/tools/shader-shot.ps1 -Shaders a.glsl,b.glsl
+  the window wired the pane, on every config reload and when `ShaderLoader.FileChanged` (watchers on the shaders'
+  folders, 300 ms settle) names one of its files; after each load `ShaderProblems` = the pane's full current list ->
+  `MainWindow.Shaders.cs` (per pane, union shown, closes when empty; closed-on lines stay quiet until a reload)).
+  Uniforms from the frame: `TerminalRenderer.ForShaders` (`ShaderFrame`: palette/colors copied in DrawSnapshot,
+  the cursor rect as `DrawCursor` draws it, only while the pane has shaders) -> `FillShaderUniforms` via
+  `SwapChainSurface.FillUniforms` before each pass (cursor: left, bottom edge, size in pixels, as Ghostty's Metal;
+  previous/change time in Core `ShaderUniforms.SetCursor`; iMouse = Shadertoy's, from the pointer handlers).
+  Short cursor effects can be captured with `animation = false` (the frame at the move stays on screen). Test: `.scratch/tools/shader-shot.ps1 -Shaders a.glsl,b.glsl
   [-Extra 'animation = false'] [-Window ...] [-KeepOpen]`; samples in .scratch/shaders.
 - Grid placement: Core `Terminal/GridLayout.cs` (whole cells inside the padding; `[terminal] padding-balance` splits the
   leftover between both sides, in whole device pixels so the atlas's subpixel offset never changes; tested) →

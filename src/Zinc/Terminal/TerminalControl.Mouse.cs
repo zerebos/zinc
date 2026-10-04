@@ -21,6 +21,7 @@ public sealed partial class TerminalControl
 
     protected override void OnPointerPressed(PointerRoutedEventArgs e)
     {
+        NoteShaderMouse(e);
         // A click that brings the pane into focus only focuses it (no click-to-move).
         var wasFocused = FocusIsWithin();
         Focus(FocusState.Pointer);
@@ -74,6 +75,7 @@ public sealed partial class TerminalControl
 
     protected override void OnPointerMoved(PointerRoutedEventArgs e)
     {
+        NoteShaderMouse(e);
         var session = _session;
         if (session == null || (!_selecting && (IsFromScrollBar(e.OriginalSource) || IsFromSearch(e.OriginalSource))))
         {
@@ -100,6 +102,7 @@ public sealed partial class TerminalControl
 
     protected override void OnPointerReleased(PointerRoutedEventArgs e)
     {
+        NoteShaderMouse(e);
         var session = _session;
         ReleasePointerCapture(e.Pointer);
         if (session == null)

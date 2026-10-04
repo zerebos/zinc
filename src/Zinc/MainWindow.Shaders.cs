@@ -1,47 +1,58 @@
+using Zinc.Terminal;
+
 namespace Zinc;
 
 // Custom shaders that couldn't be used: one notice for the window, whichever terminals report them.
 public sealed partial class MainWindow
 {
-    private readonly HashSet<string> _shaderProblems = [];
+    // Each terminal's problems as of its last load (most share the same lines: the same shaders).
+    private readonly Dictionary<TerminalControl, IReadOnlyList<string>> _shaderProblems = [];
     private readonly HashSet<string> _dismissedShaderProblems = [];
     private bool _shaderNoticeWired;
 
     /// <summary>
-    /// Adds a terminal's shader problems to the notice. Every terminal with that shader reports the same lines, and new
-    /// tabs report them again: a problem the notice was closed on stays quiet until the next config reload.
+    /// A terminal loaded its shaders: the notice shows every terminal's problems, and closes once none are left (a fixed
+    /// file takes its line back). A problem the notice was closed on stays quiet until the next config reload.
     /// </summary>
-    private void ShowShaderProblems(IReadOnlyList<string> problems)
+    private void ShowShaderProblems(TerminalControl control, IReadOnlyList<string> problems)
     {
         if (!_shaderNoticeWired)
         {
             _shaderNoticeWired = true;
             OpenShaderConfigButton.Click += (_, _) => OpenConfigFile();
-            ShaderNotice.Closed += (_, _) =>
-            {
-                _dismissedShaderProblems.UnionWith(_shaderProblems);
-                _shaderProblems.Clear();
-            };
+            ShaderNotice.CloseButtonClick += (_, _) => _dismissedShaderProblems.UnionWith(_shaderProblems.Values.SelectMany(p => p));
         }
 
-        var added = false;
-        foreach (var problem in problems)
-        {
-            added |= !_dismissedShaderProblems.Contains(problem) && _shaderProblems.Add(problem);
-        }
+        _shaderProblems[control] = problems;
+        UpdateShaderNotice();
+    }
 
-        if (added)
+    /// <summary>A terminal left the window (closed or moved): its problems go with it.</summary>
+    private void ForgetShaderProblems(TerminalControl control)
+    {
+        if (_shaderProblems.Remove(control))
         {
-            ShaderNotice.Message = string.Join("\n", _shaderProblems);
-            ShaderNotice.IsOpen = true;
+            UpdateShaderNotice();
         }
     }
 
-    /// <summary>A config reload: the terminals load their shaders again and report what's still wrong.</summary>
-    private void ForgetShaderProblems()
+    /// <summary>A config reload: the terminals load their shaders again; closed-on problems may show again.</summary>
+    private void ForgetShaderProblems() => _dismissedShaderProblems.Clear();
+
+    private void UpdateShaderNotice()
     {
-        _shaderProblems.Clear();
-        _dismissedShaderProblems.Clear();
-        ShaderNotice.IsOpen = false;
+        var lines = _shaderProblems.Values.SelectMany(p => p).Distinct().Where(p => !_dismissedShaderProblems.Contains(p)).ToList();
+        if (lines.Count == 0)
+        {
+            ShaderNotice.IsOpen = false;
+            return;
+        }
+
+        var message = string.Join("\n", lines);
+        if (!ShaderNotice.IsOpen || ShaderNotice.Message != message)
+        {
+            ShaderNotice.Message = message;
+            ShaderNotice.IsOpen = true;
+        }
     }
 }

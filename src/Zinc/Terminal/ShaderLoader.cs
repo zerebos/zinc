@@ -30,6 +30,75 @@ internal static class ShaderLoader
         }
         """, "vs_5_0", out var error) ?? throw new InvalidOperationException(error));
 
+    /// <summary>
+    /// A shader file was saved, created, deleted or renamed (a folder holding a loaded or wanted shader is watched; 300 ms
+    /// of quiet first: editors save in steps). On a thread-pool thread, with the file's full path.
+    /// </summary>
+    public static event Action<string>? FileChanged;
+
+    private static readonly Dictionary<string, FileSystemWatcher> Watchers = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, Timer> Settling = new(StringComparer.OrdinalIgnoreCase);
+
+    private static void Watch(string file)
+    {
+        var folder = Path.GetDirectoryName(file);
+        if (folder == null || !Directory.Exists(folder) || Watchers.ContainsKey(folder))
+        {
+            return;
+        }
+
+        try
+        {
+            var watcher = new FileSystemWatcher(folder)
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+            };
+            watcher.Changed += (_, e) => Settle(e.FullPath);
+            watcher.Created += (_, e) => Settle(e.FullPath);
+            watcher.Deleted += (_, e) => Settle(e.FullPath);
+            watcher.Renamed += (_, e) =>
+            {
+                Settle(e.OldFullPath);
+                Settle(e.FullPath); // editors that save by renaming a temporary file over it
+            };
+            watcher.EnableRaisingEvents = true;
+            Watchers[folder] = watcher;
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or UnauthorizedAccessException)
+        {
+            Log.Write($"shader: can't watch {folder}: {ex.Message}");
+        }
+    }
+
+    private static void Settle(string path)
+    {
+        lock (Gate)
+        {
+            if (!Cache.ContainsKey(path))
+            {
+                return; // not a shader anyone uses
+            }
+
+            if (Settling.TryGetValue(path, out var timer))
+            {
+                timer.Change(300, Timeout.Infinite);
+                return;
+            }
+
+            Settling[path] = new Timer(_ =>
+            {
+                lock (Gate)
+                {
+                    Settling.Remove(path, out var done);
+                    done?.Dispose();
+                }
+
+                Log.Write($"shader: {Path.GetFileName(path)} changed");
+                FileChanged?.Invoke(path);
+            }, null, 300, Timeout.Infinite);
+        }
+    }
+
     public static async Task<LoadedShaders> Load(IReadOnlyList<string> files)
     {
         var results = await Task.WhenAll(files.Select(LoadOne));
@@ -42,6 +111,7 @@ internal static class ShaderLoader
         var (written, length) = info.Exists ? (info.LastWriteTimeUtc, info.Length) : (DateTime.MinValue, -1L);
         lock (Gate)
         {
+            Watch(file);
             if (Cache.TryGetValue(file, out var cached) && cached.Written == written && cached.Length == length)
             {
                 return cached.Load;

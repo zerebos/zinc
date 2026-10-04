@@ -68,14 +68,18 @@ internal sealed class ShaderPass : IDisposable
         }
     }
 
-    /// <summary>The terminal gained or lost focus (iFocus, iTimeFocus).</summary>
+    /// <summary>The shaders' clock now (iTime's seconds).</summary>
+    public double Time => _clock.Elapsed.TotalSeconds;
+
+    /// <summary>The terminal gained or lost focus: iFocus, and iTimeFocus = when it was last gained (as Ghostty).</summary>
     public void SetFocus(bool focused)
     {
-        if (focused != _focused)
+        if (focused && !_focused)
         {
-            _focused = focused;
             _focusChanged = _clock.Elapsed.TotalSeconds;
         }
+
+        _focused = focused;
     }
 
     /// <summary>

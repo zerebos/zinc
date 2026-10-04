@@ -151,6 +151,9 @@ internal sealed class SwapChainSurface
         _shader?.SetClock(running);
     }
 
+    /// <summary>Fills the shaders' uniforms from the terminal (cursor, colors, mouse) before each frame's pass.</summary>
+    public Action<ShaderPass>? FillUniforms { get; set; }
+
     /// <summary>The terminal's focus, for the shaders' iFocus and iTimeFocus.</summary>
     public void SetFocus(bool focused)
     {
@@ -245,6 +248,7 @@ internal sealed class SwapChainSurface
 
                 try
                 {
+                    FillUniforms?.Invoke(shader);
                     shader.Run(chain);
                 }
                 catch (Exception ex) when (!Device.IsDeviceLost(ex.HResult))

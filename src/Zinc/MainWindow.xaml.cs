@@ -352,7 +352,7 @@ public sealed partial class MainWindow : Window
         Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
         Action bell = () => OnBell(tab, pane);
         Action progress = () => OnProgress(tab);
-        Action<IReadOnlyList<string>> shaders = ShowShaderProblems;
+        Action<IReadOnlyList<string>> shaders = problems => ShowShaderProblems(control, problems);
         RoutedEventHandler focus = (_, _) =>
         {
             tab.Workspace.Activate(pane);
@@ -382,6 +382,7 @@ public sealed partial class MainWindow : Window
             control.BellRang -= bell;
             control.ProgressChanged -= progress;
             control.ShaderProblems -= shaders;
+            ForgetShaderProblems(control);
             control.CloseRequested -= close;
             control.GotFocus -= focus;
             pane.Unwire = null;

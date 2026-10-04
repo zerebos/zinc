@@ -129,6 +129,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
     /// <summary>The cursor's cell in the viewport at the last frame (null: off screen), where input methods compose.</summary>
     public (int Column, int Row)? CursorCell { get; private set; }
 
+    /// <summary>What custom shaders read from the last frame (palette, colors, the cursor as drawn); null: not kept.</summary>
+    public ShaderFrame? ForShaders { get; set; }
+
     public bool HasResources => _brush != null && Metrics.Width > 0;
 
     // The grid's top-left corner (DIPs): the padding, plus half the spare room with padding-balance (SetGridOrigin).
@@ -358,6 +361,15 @@ public sealed unsafe class TerminalRenderer : IDisposable
         if (Config.CursorOpacity < 1)
         {
             cursorColor.A = (byte)(255 * Config.CursorOpacity);
+        }
+
+        if (ForShaders is { } shaders)
+        {
+            new ReadOnlySpan<byte>(colors.Palette, 768).CopyTo(shaders.Palette);
+            (shaders.Background, shaders.Foreground) = (defaultBg, defaultFg);
+            shaders.CursorColor = colors.CursorHasValue != 0 ? ToColor(colors.Cursor) : null;
+            shaders.CursorVisible = cursor.Visible != 0;
+            shaders.CursorDrawn = false;
         }
 
         // The palette's bright colors as programs left them (OSC 4), for bold-is-bright.
@@ -1228,6 +1240,19 @@ public sealed unsafe class TerminalRenderer : IDisposable
         if (presentation.Focused && cursor.Blinking != 0 && !presentation.BlinkOn)
         {
             return;
+        }
+
+        if (ForShaders is { } shaders)
+        {
+            shaders.CursorDrawn = true;
+            shaders.CursorStyle = style;
+            shaders.CursorDrawnColor = color;
+            shaders.Cursor = style switch
+            {
+                CursorVisualStyle.Bar => new(left, top, 2 * thin, m.Height),
+                CursorVisualStyle.Underline => new(left, top + m.Height - 2 * thin, width, 2 * thin),
+                _ => new(left, top, width, m.Height),
+            };
         }
 
         switch (style)

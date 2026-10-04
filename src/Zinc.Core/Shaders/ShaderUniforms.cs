@@ -75,6 +75,83 @@ public sealed class ShaderUniforms
         Floats("iTimeFocus", since);
     }
 
+    /// <summary>
+    /// The cursor as drawn this frame, in pixels: its left edge, its bottom edge (Ghostty's "+Y edge" with y down: a
+    /// shader's rectangle is x..x+w, y-h..y), its size, its color (0-1, alpha included). As in Ghostty, a change of
+    /// place or color makes the old one iPreviousCursor and stamps iTimeCursorChange with <paramref name="time"/>
+    /// (cursor trails animate from there). Not called for frames without a cursor drawn (blink, hidden): the last stays.
+    /// </summary>
+    public void SetCursor(float x, float y, float width, float height, float r, float g, float b, float a, float time)
+    {
+        Span<float> cursor = [x, y, width, height];
+        Span<float> color = [r, g, b, a];
+        if (Same("iCurrentCursor", cursor) && Same("iCurrentCursorColor", color))
+        {
+            return;
+        }
+
+        Copy("iCurrentCursor", "iPreviousCursor");
+        Copy("iCurrentCursorColor", "iPreviousCursorColor");
+        Floats("iCurrentCursor", cursor);
+        Floats("iCurrentCursorColor", color);
+        Floats("iTimeCursorChange", time);
+    }
+
+    /// <summary>Ghostty's cursor style codes (CURSORSTYLE_* in the prefix).</summary>
+    public enum CursorStyle { Block = 0, BlockHollow = 1, Bar = 2, Underline = 3, Lock = 4 }
+
+    /// <summary>The cursor's style (the previous one kept when it changes) and whether the terminal shows a cursor at all.</summary>
+    public void SetCursorStyle(CursorStyle style, bool visible)
+    {
+        var current = BinaryPrimitives.ReadInt32LittleEndian(Bytes.AsSpan(Offsets["iCurrentCursorStyle"], 4));
+        if (current != (int)style)
+        {
+            Int("iPreviousCursorStyle", current);
+            Int("iCurrentCursorStyle", (int)style);
+        }
+
+        Int("iCursorVisible", visible ? 1 : 0);
+    }
+
+    /// <summary>The 256-color palette as the terminal has it now (programs may change it), 3 bytes a color.</summary>
+    public void SetPalette(ReadOnlySpan<byte> rgb)
+    {
+        var at = Offsets["iPalette"];
+        for (var i = 0; i < 256 && i * 3 + 2 < rgb.Length; i++)
+        {
+            for (var c = 0; c < 3; c++)
+            {
+                BinaryPrimitives.WriteSingleLittleEndian(Bytes.AsSpan(at + i * 16 + c * 4, 4), rgb[i * 3 + c] / 255f);
+            }
+        }
+    }
+
+    /// <summary>A vec3 color uniform from 0-255 components (iBackgroundColor, iCursorColor...).</summary>
+    public void SetColor(string name, byte r, byte g, byte b) => Floats(name, r / 255f, g / 255f, b / 255f);
+
+    /// <summary>
+    /// The mouse as Shadertoy gives it, in pixels: xy = where it is while the left button is down (kept after), zw = where
+    /// the button went down, negative once it's up.
+    /// </summary>
+    public void SetMouse(float x, float y, float downX, float downY, bool down) =>
+        Floats("iMouse", x, y, down ? downX : -Math.Abs(downX), down ? downY : -Math.Abs(downY));
+
+    private bool Same(string name, ReadOnlySpan<float> values)
+    {
+        var at = Offsets[name];
+        for (var i = 0; i < values.Length; i++)
+        {
+            if (BinaryPrimitives.ReadSingleLittleEndian(Bytes.AsSpan(at + i * 4, 4)) != values[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void Copy(string from, string to) => Bytes.AsSpan(Offsets[from], 16).CopyTo(Bytes.AsSpan(Offsets[to], 16));
+
     /// <summary>A uniform's floats (vecN, or a float).</summary>
     public void Floats(string name, params ReadOnlySpan<float> values)
     {

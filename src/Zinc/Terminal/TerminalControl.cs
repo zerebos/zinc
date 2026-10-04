@@ -611,6 +611,7 @@ public sealed partial class TerminalControl : UserControl
     public void Close()
     {
         _closing.Cancel(); // a clipboard question still open: the answer is no
+        StopShaders();
         _blinkTimer.Stop();
         var session = _session;
         if (session == null)
