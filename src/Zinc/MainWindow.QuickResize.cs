@@ -10,7 +10,8 @@ namespace Zinc;
 // around it), so invisible strips along its edges do it: a drag resizes the window through Core's
 // QuickTerminalResize, keeping its place (centered stays centered), and the size is remembered for that monitor
 // (App.QuickTerminalSizes, saved with the session) until the config places it differently. Double-clicking an edge,
-// or the palette's "Reset quick terminal size", goes back to the configured size.
+// or the palette's "Reset quick terminal size", goes back to the configured size. The pointer's shape is XAML's alone
+// (WindowCursor: the window class's arrow fought it).
 public sealed partial class MainWindow
 {
     // The minimum size, in DIPs: a few dozen columns and lines.
@@ -25,6 +26,11 @@ public sealed partial class MainWindow
     private CursorPoint _resizeFrom;
     private (int Width, int Height) _resizeStart;
     private DisplayArea? _resizeArea;
+
+    // The last press on an edge (tick count, screen point): a second one soon after, close by, is a double-click. Told
+    // apart here: XAML's DoubleTapped never came, the first press being captured for a drag.
+    private long _lastEdgePress;
+    private CursorPoint _lastEdgePoint;
 
     /// <summary>The strips for the configured position (none against the screen edge it sits on), made again when it changes.</summary>
     private void UpdateResizeEdges()
@@ -51,11 +57,6 @@ public sealed partial class MainWindow
             strip.PointerMoved += OnResizeMoved;
             strip.PointerReleased += OnResizeEnded;
             strip.PointerCaptureLost += OnResizeEnded;
-            strip.DoubleTapped += (_, e) =>
-            {
-                e.Handled = true;
-                ResetQuickSize();
-            };
             _resizeEdges.Children.Add(strip);
         }
     }
@@ -73,6 +74,18 @@ public sealed partial class MainWindow
         }
 
         e.Handled = true;
+        var now = Environment.TickCount64;
+        var twice = now - _lastEdgePress <= GetDoubleClickTime() &&
+            Math.Abs(from.X - _lastEdgePoint.X) <= GetSystemMetrics(36 /* SM_CXDOUBLECLK */) / 2 &&
+            Math.Abs(from.Y - _lastEdgePoint.Y) <= GetSystemMetrics(37 /* SM_CYDOUBLECLK */) / 2;
+        _lastEdgePress = twice ? 0 : now;
+        _lastEdgePoint = from;
+        if (twice)
+        {
+            ResetQuickSize();
+            return;
+        }
+
         if (!strip.CapturePointer(e.Pointer))
         {
             return;
@@ -136,6 +149,12 @@ public sealed partial class MainWindow
         App.Instance.QuickTerminalSizes.Remember(MonitorKey(area), _config.Global.QuickTerminal, size.Width, size.Height);
         Log.Write($"quick terminal: resized to {size.Width}x{size.Height} on {MonitorKey(area)}");
     }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial uint GetDoubleClickTime();
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial int GetSystemMetrics(int index);
 
     /// <summary>Whether the monitor it's on has a dragged size (the palette offers to reset it).</summary>
     private bool HasQuickSize() =>

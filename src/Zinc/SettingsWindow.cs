@@ -63,6 +63,7 @@ internal sealed partial class SettingsWindow : Window
         Brand.StyleCaptionButtons(AppWindow.TitleBar);
         SystemBackdrop = TestHooks.Deterministic ? null : new MicaBackdrop();
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
+        WindowCursor.LeaveToXaml(this);
         Updater.Changed += ShowUpdateStatus;
         Closed += (_, _) => Updater.Changed -= ShowUpdateStatus;
 

@@ -227,6 +227,7 @@ public sealed partial class MainWindow : Window
         ApplyBackdrop();
         // Unpackaged WinUI windows don't pick up the exe's icon on their own.
         WindowIcon.Apply(this, Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"));
+        WindowCursor.LeaveToXaml(this);
         MenuKeySuppressor.Attach(this);
         ConfirmWindowClose();
 
