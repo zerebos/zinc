@@ -827,11 +827,10 @@ and read state after the write (see `_titleDirty`).
   (`.scratch/cursor-demo`, `CursorDemo.exe watch` logs cursor changes + other apps' WinEvents in one file) shows the same.
   The quick terminal's edge drag through XAML showed the arrow from the press on (the divider's doesn't: unknown why),
   and setting the shape after each step, layout pass or frame lost to it. A Win32 SetCapture drag got no moves at all
-  (WinUI's pointer input doesn't come as window messages, even to the capture window). So a press on an edge starts
-  Windows' own size loop (`NativeSizeLoop`: SC_SIZE + WMSZ edge; each WM_SIZING step gets our rectangle; the pointer
-  held steady in it, traced). WM_NCLBUTTONDOWN with an HT border code did nothing (no resizing border). SC_SIZE runs
-  the click-to-finish form (Windows' key state never saw WinUI's press), so a 10 ms timer watches GetAsyncKeyState and
-  posts Enter on release (capture released as a fallback). Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
+  (WinUI's pointer input doesn't come as window messages, even to the capture window). Windows' size loop doesn't
+  fit either: WM_NCLBUTTONDOWN with an HT border code ends at once (no resizing border), and SC_SIZE runs the
+  click-to-finish form (Windows' key state never sees WinUI's press), following the mouse only once the button is up
+  (the pointer did hold steady in it). So the drag stays XAML's (capture + cover + SetCursor after each step). Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
 - Clearing WinUI's top-level class cursor (the arrow) didn't stop non-arrow pointers flickering and left stale shapes
   (a resize arrow after a dropdown in Settings): don't. `.scratch/tools/quick-nchittest.ps1` shows class cursors, child
   rects and WM_NCHITTEST answers.
