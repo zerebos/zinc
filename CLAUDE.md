@@ -825,9 +825,9 @@ and read state after the write (see `_titleDirty`).
   answers with the arrow until the next pointer move, with no WM_SETCURSOR to it. (Quitting Zinc "fixed" it: Task
   Manager's Details view was filtered to zinc, and with no rows left it stopped redrawing.) A bare WinUI app
   (`.scratch/cursor-demo`, `CursorDemo.exe watch` logs cursor changes + other apps' WinEvents in one file) shows the same.
-  Zinc's own window moves do it too: the quick terminal's edge drag re-sets the shape with Win32 SetCursor after each
-  MoveAndResize, after each layout pass and on each frame while the drag lasts (once per step wasn't enough: the arrow
-  came back a frame later). Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
+  A drag XAML holds is worse: XAML shows the arrow from the press on, and setting the shape after each step, layout
+  pass or frame lost to it. So the quick terminal's edges hand the drag to `Win32Drag` (SetCapture on the window + a
+  subclass taking WM_MOUSEMOVE/WM_POINTERUPDATE, the release, WM_SETCURSOR; capture taken just after the press handler). Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
 - Clearing WinUI's top-level class cursor (the arrow) didn't stop non-arrow pointers flickering and left stale shapes
   (a resize arrow after a dropdown in Settings): don't. `.scratch/tools/quick-nchittest.ps1` shows class cursors, child
   rects and WM_NCHITTEST answers.
