@@ -211,8 +211,14 @@ public sealed partial class MainWindow : Window
         Activated += OnActivated;
         TrackNormalBounds();
         HotkeyNotice.Closed += (_, _) => _hotkeyNoticeDismissed = true;
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(DragRegion);
+        if (!quick)
+        {
+            // The tab strip is the title bar. (The quick terminal has none: extending into one left a light strip
+            // across its top.)
+            ExtendsContentIntoTitleBar = true;
+            SetTitleBar(DragRegion);
+        }
+
         var titleBar = AppWindow.TitleBar;
         // Standard (32 px) caption buttons fit inside the ~41 px tab strip; Tall (48 px)
         // hung below it, so their hover highlight covered the top of the terminal.
@@ -535,7 +541,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>Whether a group shows its own strip of tabs (see tab-groups, group-tab-strip).</summary>
     private bool ShowsStrip(TabGroup<TerminalTab> group) =>
-        _config.Global.TabGroups && (group.Tabs.Count > 1 || _config.Global.GroupTabStrip == GroupTabStrip.Always);
+        !_quick && _config.Global.TabGroups && (group.Tabs.Count > 1 || _config.Global.GroupTabStrip == GroupTabStrip.Always);
 
     private static void Dismantle(Panel panel)
     {
@@ -1429,6 +1435,11 @@ public sealed partial class MainWindow : Window
 
     private bool HandleAction(ActionInvocation invocation, WorkspaceTab tab, TerminalTab origin)
     {
+        if (_quick && NotInQuickTerminal(invocation.Action))
+        {
+            return true; // taken (not typed into the shell), and nothing happens
+        }
+
         var count = Tabs.TabItems.Count;
         // With tab groups, new tabs open in the focused pane (with the focused tab's profile);
         // without, a new tab is a new workspace, as in Windows Terminal.

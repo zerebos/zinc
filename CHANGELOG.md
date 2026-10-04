@@ -14,9 +14,14 @@ is the version it builds, and hands it to the installer as the release notes).
 - A downloaded update says what's new in it: Settings > About > "What's new in …" (this file's entry for it).
 
 ### Changed
-- The quick terminal (Win+`) is just the terminal now: no title bar or tab strip, centered on the screen, sliding
-  in and out (Settings > Quick terminal > "Slide in and out"). Dismissing it gives the foreground back to the window
-  you came from, and closing it only hides it, so its shells and scrollback are still there next time.
+- The quick terminal (Win+`) is just the terminal now: no title bar, frame or tab strip, centered on the screen,
+  fading and growing into place (Settings > Quick terminal > Animation). It's one terminal: splits yes, tabs and
+  workspaces no. Dismissing it gives the foreground back to the window you came from, and closing it only hides
+  it, so its shells and scrollback are still there next time.
+
+### Fixed
+- Alt+F4 typed an escape sequence into the terminal (and rang its bell) instead of closing the window.
+- The quick terminal came out too big, or too small, the first time it opened on a monitor with another scale.
 
 ## 0.1.0-dev.228 (2026-10-04)
 

@@ -422,9 +422,14 @@ public sealed partial class MainWindow
         string? Keys(ActionInvocation action) => _keybindings.ShortcutFor(action);
 
         // Titles come from the action registry, shortcuts from the current bindings.
-        void Action(ActionInvocation action) =>
-            commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => pane.Invoke(action),
-                SearchWords: Actions.SearchWords(action)));
+        void Action(ActionInvocation action)
+        {
+            if (!(_quick && NotInQuickTerminal(action.Action)))
+            {
+                commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => pane.Invoke(action),
+                    SearchWords: Actions.SearchWords(action)));
+            }
+        }
 
         void Custom(string title, Action run, string? keys = null) =>
             commands.Add(new PaletteCommand(title, keys, run));
@@ -569,6 +574,11 @@ public sealed partial class MainWindow
         }
 
         Custom("Workspace color: Reset", () => SetTabColor(tab, null));
+        if (_quick)
+        {
+            commands.RemoveAll(c => AboutTabsOrWorkspaces(c.Title)); // one terminal: no tabs, no workspaces
+        }
+
         return commands;
     }
 }

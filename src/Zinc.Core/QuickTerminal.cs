@@ -62,7 +62,7 @@ public sealed record QuickTerminalSettings
     public bool Autohide { get; init; } = true;
 
     /// <summary>
-    /// How long it takes to slide in and out, in seconds (Ghostty's quick-terminal-animation-duration); 0: it just
+    /// How long it takes to fade in and out, in seconds (Ghostty's quick-terminal-animation-duration); 0: it just
     /// appears and disappears.
     /// </summary>
     public double AnimationDuration { get; init; } = 0.2;
@@ -142,28 +142,28 @@ public readonly record struct GlobalHotkey(uint Modifiers, VirtualKey Key)
 }
 
 /// <summary>
-/// The quick terminal sliding in (pure, testable). The window sits at its final place throughout; each frame shows the
-/// part of it nearest the edge it comes from (a window region) with the content moved along, so it seems to slide out
-/// from that edge (a centered one from its own top edge). Moving the window itself from off screen would show it on a
-/// neighboring monitor on the way (Windows Terminal's quake window clips the same way).
+/// How the quick terminal appears (pure, testable): its content starts transparent and, centered, at 70% of its size
+/// (grows into place), or along an edge, moved a little toward that edge (comes out of it); then it fades and moves
+/// into place. Fading the content rather than clipping the window keeps Windows' own edges out of it (a clipped window
+/// showed a white classic frame while it slid) and never shows it on a neighboring monitor on the way.
 /// </summary>
-public static class QuickTerminalSlide
+public static class QuickTerminalAppear
 {
-    /// <summary>
-    /// At <paramref name="progress"/> (0: hidden, 1: all there; eased here, fast then settling): the part of a
-    /// <paramref name="width"/> x <paramref name="height"/> window to show, and how far its content is moved (pixels).
-    /// </summary>
-    public static (QuickTerminalLayout.Rect Visible, int OffsetX, int OffsetY) At(QuickTerminalPosition position, int width, int height, double progress)
+    /// <summary>The scale it grows from when centered.</summary>
+    public const double CenterScale = 0.7;
+
+    /// <summary>Where the content starts, for a <paramref name="width"/> x <paramref name="height"/> window (DIPs): its scale and offset.</summary>
+    public static (double Scale, double OffsetX, double OffsetY) Start(QuickTerminalPosition position, double width, double height)
     {
-        var eased = 1 - Math.Pow(1 - Math.Clamp(progress, 0, 1), 3);
-        var shownHigh = (int)Math.Round(height * eased);
-        var shownWide = (int)Math.Round(width * eased);
+        var dy = Math.Min(120, height / 4);
+        var dx = Math.Min(120, width / 4);
         return position switch
         {
-            QuickTerminalPosition.Bottom => (new(0, height - shownHigh, width, shownHigh), 0, height - shownHigh),
-            QuickTerminalPosition.Left => (new(0, 0, shownWide, height), shownWide - width, 0),
-            QuickTerminalPosition.Right => (new(width - shownWide, 0, shownWide, height), width - shownWide, 0),
-            _ => (new(0, 0, width, shownHigh), 0, shownHigh - height), // top and center: down from the top edge
+            QuickTerminalPosition.Top => (1, 0, -dy),
+            QuickTerminalPosition.Bottom => (1, 0, dy),
+            QuickTerminalPosition.Left => (1, -dx, 0),
+            QuickTerminalPosition.Right => (1, dx, 0),
+            _ => (CenterScale, 0, 0),
         };
     }
 }

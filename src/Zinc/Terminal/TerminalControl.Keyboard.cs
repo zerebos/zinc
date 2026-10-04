@@ -156,6 +156,13 @@ public sealed partial class TerminalControl
             return;
         }
 
+        // Alt+F4 is Windows' (close the window: a main window asks first if something runs, the quick terminal hides);
+        // encoded, it reached the shell as an escape sequence (a beep in most) and the window stayed.
+        if (e.Key == Windows.System.VirtualKey.F4 && state.Alt && !state.Ctrl && !state.Shift)
+        {
+            return;
+        }
+
         var press = new KeyPress(
             KeyMap.FromScanCode(status.ScanCode, status.IsExtendedKey, e.Key),
             status.WasKeyDown,

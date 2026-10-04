@@ -47,6 +47,14 @@ public sealed partial class MainWindow
         }
 
         _backdrop = wanted;
+        if (_quick)
+        {
+            // See-through, untinted: it fades and grows in, and a backdrop (or a tint) would sit there at full size
+            // meanwhile. The terminal draws its own background.
+            SystemBackdrop = new ClearBackdrop(Windows.UI.Color.FromArgb(0, 0, 0, 0));
+            return;
+        }
+
         SystemBackdrop = _config.Global.Backdrop switch
         {
             WindowBackdrop.Acrylic => new GlassBackdrop(tint, _config.Global.BackdropTint),

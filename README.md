@@ -415,9 +415,10 @@ hidden = true
 
 ### Quick terminal
 
-A global hotkey (default ``Win+` ``) slides a terminal in above other windows and slides it away
-again, like Ghostty's quick terminal: just the terminal (no title bar or tab strip; a pane's own
-strip shows once you open a second tab in it), centered by default. Dismissing it gives the
+A global hotkey (default ``Win+` ``) brings a terminal in above other windows and sends it away
+again, like Ghostty's quick terminal: just the terminal (no title bar, frame or tab strip), centered
+by default. It's one terminal: you can split it, but tabs and workspaces stay in Zinc's windows
+(their keys do nothing here). Dismissing it gives the
 foreground back to the window you came from. It stays out of the taskbar and Alt+Tab, and it
 keeps running while hidden: closing it (Alt+F4) only hides it, so its shells and scrollback are
 there next time; it's gone only when Zinc quits or its last tab closes. In `[quick-terminal]`:
@@ -429,8 +430,8 @@ there next time; it's gone only when Zinc quits or its last tab closes. In `[qui
   the width for left/right/center; secondary is the other side. Defaults: 50% for the edges,
   `["70%", "60%"]` for center.
 - `autohide`: `true` (default) hides it when it loses focus.
-- `animation-duration`: how long it takes to slide in and out, in seconds (default `0.2`; `0`: at once).
-  From an edge it slides out of that edge; centered, it unrolls downward from its top.
+- `animation-duration`: how long it takes to fade in and out, in seconds (default `0.2`; `0`: at once).
+  Centered, it grows into place as it fades in; along an edge, it comes out of that edge.
 
 If another app holds the hotkey (Windows Terminal's quake mode uses ``Win+` ``), windows
 show a notice, and Zinc retries whenever one of its windows is activated.

@@ -60,13 +60,22 @@ internal sealed class GlyphAtlas : IDisposable
     // Fallback text (DirectWrite layouts): tile number + 1 by (codepoint or cluster, variant, wide, dark).
     private readonly Dictionary<(int Codepoint, int Variant, bool Wide, bool Dark), int> _textSlots = [];
     private readonly Dictionary<(string Cluster, int Variant, bool Wide, bool Dark), int> _clusterSlots = [];
-    private readonly List<(string Text, CanvasTextFormat Format, bool Wide, bool Dark, int Page, Vector2 Origin, Rect Clip)> _pendingText = [];
+    private readonly List<(string Text, TextStyle Style, bool Wide, bool Dark, int Page, Vector2 Origin, Rect Clip)> _pendingText = [];
+
+    /// <summary>
+    /// The font a fallback character is laid out in: the atlas makes and keeps its own text formats from it. Panes
+    /// share the atlas, and a pane's own formats go when its font or scale changes: a character reserved with one
+    /// and drawn after it was gone failed the frame (seen after moving to a monitor with another scale).
+    /// </summary>
+    public readonly record struct TextStyle(string Family, float Size, bool Bold, bool Italic);
+
+    private readonly Dictionary<TextStyle, CanvasTextFormat> _formats = [];
 
     // Emoji: their own pages, drawn in color, by (text, variant, wide, color).
     private readonly List<CanvasRenderTarget> _colorPages = [];
     private readonly HashSet<int> _unclearedColorPages = [];
     private readonly Dictionary<(int Codepoint, string? Cluster, int Variant, bool Wide, Color Color), Tile> _colorSlots = [];
-    private readonly List<(string Text, CanvasTextFormat Format, bool Wide, Color Color, int Page, Vector2 Origin, Rect Clip)> _pendingColor = [];
+    private readonly List<(string Text, TextStyle Style, bool Wide, Color Color, int Page, Vector2 Origin, Rect Clip)> _pendingColor = [];
     private int _nextColor;
 
     private CanvasRenderTarget? _scratch;
@@ -165,7 +174,7 @@ internal sealed class GlyphAtlas : IDisposable
     /// cluster's <paramref name="cluster"/> text. Laid out in <paramref name="format"/> centered in one cell or two
     /// (<paramref name="wide"/>), on the grid's baseline, as the cell-by-cell layouts were.
     /// </summary>
-    public Tile GetText(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, CanvasTextFormat format, int variant, bool wide, bool dark)
+    public Tile GetText(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, TextStyle format, int variant, bool wide, bool dark)
     {
         int slot;
         var found = cluster == null
@@ -195,7 +204,7 @@ internal sealed class GlyphAtlas : IDisposable
     /// The tile for an emoji (<paramref name="codepoint"/>, or a cluster's <paramref name="cluster"/> text), drawn in
     /// color and copied untinted; <paramref name="color"/> is the text's.
     /// </summary>
-    public Tile GetColor(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, CanvasTextFormat format, int variant, bool wide, Color color)
+    public Tile GetColor(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, TextStyle format, int variant, bool wide, Color color)
     {
         if (_colorSlots.TryGetValue((codepoint, cluster, variant, wide, color), out var known))
         {
@@ -229,12 +238,23 @@ internal sealed class GlyphAtlas : IDisposable
     }
 
     /// <summary>A layout of <paramref name="text"/> as a cell showed it: centered in its cell(s), and how far down its top goes so its baseline is the grid's.</summary>
-    private (CanvasTextLayout Layout, float Down) Layout(ICanvasResourceCreator device, string text, CanvasTextFormat format, bool wide, bool color)
+    private (CanvasTextLayout Layout, float Down) Layout(ICanvasResourceCreator device, string text, TextStyle style, bool wide, bool color)
     {
         var width = wide ? 2 * _metrics.Width : _metrics.Width;
-        format.HorizontalAlignment = CanvasHorizontalAlignment.Center;
+        if (!_formats.TryGetValue(style, out var format))
+        {
+            _formats[style] = format = new CanvasTextFormat
+            {
+                FontFamily = style.Family,
+                FontSize = style.Size,
+                FontWeight = style.Bold ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
+                FontStyle = style.Italic ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal,
+                WordWrapping = CanvasWordWrapping.NoWrap,
+                HorizontalAlignment = CanvasHorizontalAlignment.Center, // centered in its cell(s), as a cell showed it
+            };
+        }
+
         var layout = new CanvasTextLayout(device, text, format, width, _metrics.Height);
-        format.HorizontalAlignment = CanvasHorizontalAlignment.Left;
         layout.Options = color ? CanvasDrawTextOptions.EnableColorFont : CanvasDrawTextOptions.Default;
         var lines = layout.LineMetrics;
         return (layout, lines.Length > 0 ? _metrics.Baseline - lines[0].Baseline : 0);
@@ -369,6 +389,12 @@ internal sealed class GlyphAtlas : IDisposable
         _colorSlots.Clear();
         _pendingColor.Clear();
         _nextColor = 0;
+        foreach (var format in _formats.Values)
+        {
+            format.Dispose();
+        }
+
+        _formats.Clear();
         _scratch?.Dispose();
         _scratch = null;
         _whiten?.Dispose();

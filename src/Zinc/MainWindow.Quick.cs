@@ -1,17 +1,18 @@
-using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.InteropServices;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
+using Zinc.Input;
 
 namespace Zinc;
 
 // The quick terminal: a window summoned and dismissed with a global hotkey (quick-terminal-* settings), and the
-// notice shown when that hotkey is taken. Like Ghostty's: just the terminal (no title bar, caption buttons or
-// workspace strip; a pane's own strip shows once it has a second tab), centered by default, sliding in and out.
-// Closing it hides it (its shells and scrollback live on until Zinc quits or its last tab closes), and dismissing
-// it gives the foreground back to the window you came from.
+// notice shown when that hotkey is taken. Like Ghostty's: one terminal (splits, no tabs or workspaces; no title bar,
+// caption buttons or strips), centered by default, fading and growing into place (or out of its edge). Closing it
+// hides it (its shells and scrollback live on until Zinc quits or its last tab closes), and dismissing it gives the
+// foreground back to the window you came from.
 public sealed partial class MainWindow
 {
     private readonly bool _quick;
@@ -22,27 +23,40 @@ public sealed partial class MainWindow
     // The window that had the foreground when the quick terminal was summoned: it gets it back on dismissal.
     private nint _previousForeground;
 
-    // A slide in progress: in (true) or out, since when, and what runs when it's done.
-    private bool? _sliding;
-    private long _slideStart;
-    private Action? _slideDone;
-    private bool _slideHooked;
+    // Fading out: hidden when the timer fires (kept in a field: a timer only a local holds would be collected).
+    private DispatcherQueueTimer? _fadeOutTimer;
+    private Action? _fadeOutDone;
 
     public bool IsQuickShownAndActive => _quickShown && _active;
     public bool IsQuickShown => _quickShown;
 
     private void ConfigureQuickWindow()
     {
-        // Out of the taskbar and Alt+Tab, above other windows while shown; no title bar or caption buttons (the thin
-        // border stays: Windows rounds its corners).
+        // Out of the taskbar and Alt+Tab, above other windows while shown, with no frame at all: the content fades and
+        // grows in a see-through window (ApplyBackdrop gives it a clear one), and a frame would sit there at full size
+        // meanwhile. Windows still rounds its corners when asked.
         AppWindow.IsShownInSwitchers = false;
         if (AppWindow.Presenter is OverlappedPresenter presenter)
         {
             presenter.IsAlwaysOnTop = true;
             presenter.IsMinimizable = false;
             presenter.IsMaximizable = false;
-            presenter.SetBorderAndTitleBar(hasBorder: true, hasTitleBar: false);
+            // Not resizable by its frame either: a resizing frame without a title bar draws a light strip across the
+            // top (Windows' quirk), and invisible margins around the content.
+            presenter.IsResizable = false;
+            presenter.SetBorderAndTitleBar(hasBorder: false, hasTitleBar: false);
         }
+
+        // No border of any kind (a classic one survived the presenter's settings, and Windows 11 outlines windows):
+        // just the rounded terminal.
+        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        const int WS_BORDER = 0x00800000, WS_DLGFRAME = 0x00400000, WS_THICKFRAME = 0x00040000;
+        SetWindowLongW(hwnd, -16 /* GWL_STYLE */, GetWindowLongW(hwnd, -16) & ~(WS_BORDER | WS_DLGFRAME | WS_THICKFRAME));
+        SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0027 /* SWP_FRAMECHANGED | NOMOVE | NOSIZE | NOZORDER */ | 0x0010 /* NOACTIVATE */);
+        var corners = 2; // DWMWCP_ROUND
+        DwmSetWindowAttribute(hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref corners, sizeof(int));
+        var noOutline = unchecked((int)0xFFFFFFFE); // DWMWA_COLOR_NONE
+        DwmSetWindowAttribute(hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noOutline, sizeof(int));
 
         // Just the terminal: the workspace strip (which is also the title bar elsewhere) stays collapsed.
         Tabs.IsAddTabButtonVisible = false;
@@ -98,19 +112,15 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Places the window on the configured monitor, brings it to the front and slides it in.</summary>
+    /// <summary>Places the window on the configured monitor, brings it to the front and fades it in.</summary>
     public void ShowQuick()
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var settings = _config.Global.QuickTerminal;
-        // Summoned again while sliding out: it turns around from where it is (still placed, still showing).
-        double? from = null;
-        if (_sliding == false)
-        {
-            from = SlideProgress();
-            FinishSlide(run: false);
-        }
-        else if (!_quickShown)
+        // Summoned again while fading out: it turns around from where it is (still placed, still showing).
+        var turningAround = _fadeOutTimer?.IsRunning == true;
+        _fadeOutTimer?.Stop();
+        if (!_quickShown && !turningAround)
         {
             var foreground = GetForegroundWindow();
             _previousForeground = foreground != hwnd ? foreground : 0;
@@ -119,10 +129,19 @@ public sealed partial class MainWindow
                 : DisplayArea.GetFromPoint(new PointInt32(cursor.X, cursor.Y), DisplayAreaFallback.Nearest);
             var work = area.WorkArea;
             var r = QuickTerminalLayout.Place(new QuickTerminalLayout.Rect(work.X, work.Y, work.Width, work.Height), settings);
-            AppWindow.MoveAndResize(new RectInt32(r.X, r.Y, r.Width, r.Height));
+            var rect = new RectInt32(r.X, r.Y, r.Width, r.Height);
+            AppWindow.MoveAndResize(rect);
+            // Onto a monitor with another scale, Windows resizes it by the change of scale once it's there (too big on
+            // a 125% screen, too small back on 100%): the size it should have, again.
+            if (AppWindow.Size.Width != rect.Width || AppWindow.Size.Height != rect.Height || AppWindow.Position.X != rect.X)
+            {
+                AppWindow.MoveAndResize(rect);
+            }
+
             if (settings.AnimationDuration > 0)
             {
-                ApplySlide(0); // nothing shown yet: no flash of the whole window before the first frame
+                var scale = Scale();
+                SetAppearance(QuickTerminalAppear.Start(settings.Position, r.Width / scale, r.Height / scale), opacity: 0, animate: false);
             }
         }
 
@@ -136,11 +155,26 @@ public sealed partial class MainWindow
             FocusActive(tab);
         }
 
-        StartSlide(show: true, done: null, from);
+        // Into place: the start values were set without a transition; the targets go with one, once the start has been
+        // drawn, so the transition runs from it.
+        if (settings.AnimationDuration > 0)
+        {
+            DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.Low, () =>
+            {
+                if (_quickShown)
+                {
+                    SetAppearance((1, 0, 0), opacity: 1, animate: true);
+                }
+            });
+        }
+        else
+        {
+            SetAppearance((1, 0, 0), opacity: 1, animate: false);
+        }
     }
 
     /// <summary>
-    /// Slides it out and hides it. <paramref name="restoreFocus"/>: dismissed here (the hotkey, closing), so the window
+    /// Fades it out and hides it. <paramref name="restoreFocus"/>: dismissed here (the hotkey, closing), so the window
     /// you came from gets the foreground back; not when it hides because focus already went elsewhere.
     /// </summary>
     public void HideQuick(bool restoreFocus = true)
@@ -152,123 +186,76 @@ public sealed partial class MainWindow
 
         _quickShown = false;
         var previous = restoreFocus ? _previousForeground : 0;
-        StartSlide(show: false, done: () =>
+        void Hidden()
         {
             AppWindow.Hide();
-            ApplySlide(1); // whole again for next time (hidden: nothing shows)
+            SetAppearance((1, 0, 0), opacity: 1, animate: false); // whole again for next time (hidden: nothing shows)
             if (previous != 0 && IsWindow(previous) && IsWindowVisible(previous))
             {
                 SetForegroundWindow(previous);
             }
-        });
-    }
+        }
 
-    // ------------------------------------------------------------ the slide
-
-    /// <summary>Slides in or out, from <paramref name="from"/> (0 hidden .. 1 whole), else from the far end or where a slide is now.</summary>
-    private void StartSlide(bool show, Action? done, double? from = null)
-    {
         var duration = _config.Global.QuickTerminal.AnimationDuration;
         if (duration <= 0 || _windowClosed)
         {
-            FinishSlide(run: false);
-            ApplySlide(1);
-            done?.Invoke();
+            Hidden();
             return;
         }
 
-        // Turning around mid-slide starts from where it is, not from the far end.
-        var progress = from ?? (_sliding != null ? SlideProgress() : show ? 0 : 1);
-        _sliding = show;
-        _slideDone = done;
-        var elapsed = (show ? progress : 1 - progress) * duration;
-        _slideStart = Stopwatch.GetTimestamp() - (long)(elapsed * Stopwatch.Frequency);
-        if (!_slideHooked)
+        // Out: a little smaller (or back toward its edge) as it fades; hidden once the fade is done.
+        var start = QuickTerminalAppear.Start(_config.Global.QuickTerminal.Position, Root.ActualWidth, Root.ActualHeight);
+        SetAppearance((1 - (1 - start.Scale) / 3, start.OffsetX / 3, start.OffsetY / 3), opacity: 0, animate: true);
+        if (_fadeOutTimer == null)
         {
-            _slideHooked = true;
-            CompositionTarget.Rendering += OnSlideFrame;
+            _fadeOutTimer = DispatcherQueue.CreateTimer();
+            _fadeOutTimer.IsRepeating = false;
+            _fadeOutTimer.OnTick(_ => _fadeOutDone?.Invoke());
         }
+
+        _fadeOutDone = Hidden;
+        _fadeOutTimer.Interval = TimeSpan.FromSeconds(duration);
+        _fadeOutTimer.Start();
     }
 
-    /// <summary>0 hidden .. 1 all there, at this moment of the slide.</summary>
-    private double SlideProgress()
-    {
-        var duration = _config.Global.QuickTerminal.AnimationDuration;
-        var t = duration <= 0 ? 1 : Math.Clamp(Stopwatch.GetElapsedTime(_slideStart).TotalSeconds / duration, 0, 1);
-        return _sliding == false ? 1 - t : t;
-    }
-
-    private void OnSlideFrame(object? sender, object e) => Ui.Guard("quick terminal slide", () =>
-    {
-        if (_sliding is not { } show || _windowClosed)
-        {
-            FinishSlide(run: false);
-            return;
-        }
-
-        var progress = SlideProgress();
-        ApplySlide(progress);
-        if (show ? progress >= 1 : progress <= 0)
-        {
-            FinishSlide(run: true);
-        }
-    });
-
-    private void FinishSlide(bool run)
-    {
-        var done = _slideDone;
-        var wasIn = _sliding == true;
-        _sliding = null;
-        _slideDone = null;
-        if (_slideHooked)
-        {
-            _slideHooked = false;
-            CompositionTarget.Rendering -= OnSlideFrame;
-        }
-
-        if (wasIn)
-        {
-            ApplySlide(1);
-        }
-
-        if (run)
-        {
-            done?.Invoke();
-        }
-    }
+    private double Scale() => Root.XamlRoot?.RasterizationScale ?? 1;
 
     /// <summary>
-    /// One frame: the part of the window nearest its edge (a window region, in pixels of the window) with the
-    /// content moved along (<see cref="QuickTerminalSlide"/>). At 1: no region (Windows' rounded corners back).
+    /// The content's look: scale (around its middle), offset (DIPs) and opacity, at once or with a transition of the
+    /// configured length (WinUI's implicit transitions, run by the compositor: smooth even when the UI thread is busy).
     /// </summary>
-    private void ApplySlide(double progress)
+    private void SetAppearance((double Scale, double OffsetX, double OffsetY) look, double opacity, bool animate)
     {
         if (_windowClosed)
         {
             return;
         }
 
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var translate = Root.RenderTransform as TranslateTransform ?? new TranslateTransform();
-        Root.RenderTransform = translate;
-        if (progress >= 1)
-        {
-            SetWindowRgn(hwnd, 0, true);
-            translate.X = translate.Y = 0;
-            return;
-        }
-
+        var duration = TimeSpan.FromSeconds(Math.Max(0.01, _config.Global.QuickTerminal.AnimationDuration));
+        Root.OpacityTransition = animate ? new ScalarTransition { Duration = duration } : null;
+        Root.ScaleTransition = animate ? new Vector3Transition { Duration = duration } : null;
+        Root.TranslationTransition = animate ? new Vector3Transition { Duration = duration } : null;
         var size = AppWindow.Size;
-        var (visible, offsetX, offsetY) = QuickTerminalSlide.At(_config.Global.QuickTerminal.Position, size.Width, size.Height, progress);
-        // A region of nothing would mean "no region" (all of it): a 1-pixel strip off the window's edge instead.
-        var region = visible.Width * visible.Height > 0
-            ? CreateRectRgn(visible.X, visible.Y, visible.X + visible.Width, visible.Y + visible.Height)
-            : CreateRectRgn(-1, -1, 0, 0);
-        SetWindowRgn(hwnd, region, true); // Windows owns the region from here
-        var scale = Root.XamlRoot?.RasterizationScale ?? 1;
-        translate.X = offsetX / scale;
-        translate.Y = offsetY / scale;
+        var scale = Scale();
+        Root.CenterPoint = new Vector3((float)(size.Width / scale / 2), (float)(size.Height / scale / 2), 0);
+        Root.Opacity = opacity;
+        Root.Scale = new Vector3((float)look.Scale, (float)look.Scale, 1);
+        Root.Translation = new Vector3((float)look.OffsetX, (float)look.OffsetY, 0);
     }
+
+    /// <summary>
+    /// What the quick terminal doesn't do: it's one terminal (splits are fine), as Ghostty's: no tabs (Windows Terminal's
+    /// quake window keeps them, but with no strip to see them by), no workspaces, no sidebar or title bar to toggle.
+    /// </summary>
+    internal static bool NotInQuickTerminal(TerminalAction action) => action is
+        TerminalAction.NewTab or TerminalAction.NewTabFromProfile or TerminalAction.DuplicateTab or TerminalAction.OpenNewTabMenu or
+        TerminalAction.NextTab or TerminalAction.PreviousTab or TerminalAction.SwitchToTab or TerminalAction.TabSwitcher or
+        TerminalAction.NewWorkspace or TerminalAction.ReopenWorkspace or
+        TerminalAction.ToggleSidebar or TerminalAction.ToggleTitleBar or TerminalAction.FocusMode;
+
+    /// <summary>The palette's commands that are about tabs or workspaces ("Rename workspace…", "New tab: Fedora").</summary>
+    private static bool AboutTabsOrWorkspaces(string title) =>
+        System.Text.RegularExpressions.Regex.IsMatch(title, @"\b(tabs?|workspaces?)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
     private void ShowHotkeyNoticeIfNeeded()
     {
@@ -312,8 +299,15 @@ public sealed partial class MainWindow
     private static partial bool IsWindowVisible(nint hwnd);
 
     [LibraryImport("user32.dll")]
-    private static partial int SetWindowRgn(nint hwnd, nint region, [MarshalAs(UnmanagedType.Bool)] bool redraw);
+    private static partial int GetWindowLongW(nint hwnd, int index);
 
-    [LibraryImport("gdi32.dll")]
-    private static partial nint CreateRectRgn(int left, int top, int right, int bottom);
+    [LibraryImport("user32.dll")]
+    private static partial int SetWindowLongW(nint hwnd, int index, int value);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetWindowPos(nint hwnd, nint after, int x, int y, int cx, int cy, uint flags);
+
+    [LibraryImport("dwmapi.dll")]
+    private static partial int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
 }

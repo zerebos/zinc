@@ -47,6 +47,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
     }
     private readonly nint _renderState, _rowIterator, _rowCells;
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
+
+    // The same fonts, as the glyph atlas makes its own formats from them (it's shared: it mustn't hold a pane's).
+    private readonly GlyphAtlas.TextStyle[] _textStyles = new GlyphAtlas.TextStyle[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
     private readonly Dictionary<(uint, int), int> _glyphCache = new();
     // The first 2,048 codepoints (Latin, Greek, Cyrillic...) per variant: glyph index + 1, 0 = not looked up yet.
@@ -221,6 +224,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             var style = (v & 2) != 0 ? FontStyle.Italic : FontStyle.Normal;
             var italic = (v & 2) != 0;
             _formats[v]?.Dispose(); // the previous size's (each zoom step, each scale change)
+            _textStyles[v] = new(bundled ? BundledFonts.FormatFamily(italic) : _fontFamily, _fontSize, (v & 1) != 0, italic);
             _formats[v] = new CanvasTextFormat
             {
                 FontFamily = bundled ? BundledFonts.FormatFamily(italic) : _fontFamily,
@@ -983,10 +987,12 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var single = cell.CpLen == 1;
         var codepoint = (int)_codepoints[cell.CpStart];
         if ((single && !wide && _bundledFaces[cell.FontVariant] != null && FillsCell((uint)codepoint)) ||
-            _formats[cell.FontVariant] is not { } format)
+            _formats[cell.FontVariant] == null)
         {
             return false;
         }
+
+        var format = _textStyles[cell.FontVariant];
 
         var cluster = single ? null : CellText(ref cell);
         var color = cell.Fg;

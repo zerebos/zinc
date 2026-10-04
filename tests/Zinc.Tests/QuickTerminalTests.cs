@@ -122,31 +122,13 @@ public class QuickTerminalTests
         Assert.NotEmpty(ConfigFile.Parse("[quick-terminal]\nanimation-duration = -1").Warnings);
     }
 
-    [Theory]
-    [InlineData(QuickTerminalPosition.Top)]
-    [InlineData(QuickTerminalPosition.Center)]
-    [InlineData(QuickTerminalPosition.Bottom)]
-    [InlineData(QuickTerminalPosition.Left)]
-    [InlineData(QuickTerminalPosition.Right)]
-    public void SlideStartsHiddenAndEndsWhole(QuickTerminalPosition position)
-    {
-        var (start, _, _) = QuickTerminalSlide.At(position, 800, 400, 0);
-        Assert.Equal(0, start.Width * start.Height);
-        Assert.Equal((new Rect(0, 0, 800, 400), 0, 0), QuickTerminalSlide.At(position, 800, 400, 1));
-    }
-
     [Fact]
-    public void SlideComesFromItsEdge()
+    public void AppearsFromWhereItIs()
     {
-        // Halfway in time is most of the way there (eased), shown from the edge it comes from.
-        var (top, _, topY) = QuickTerminalSlide.At(QuickTerminalPosition.Top, 800, 400, 0.5);
-        Assert.Equal(new Rect(0, 0, 800, 350), top);
-        Assert.Equal(-50, topY); // the content's bottom is at the visible edge
-        var (bottom, _, bottomY) = QuickTerminalSlide.At(QuickTerminalPosition.Bottom, 800, 400, 0.5);
-        Assert.Equal(new Rect(0, 50, 800, 350), bottom);
-        Assert.Equal(50, bottomY);
-        var (right, rightX, _) = QuickTerminalSlide.At(QuickTerminalPosition.Right, 800, 400, 0.5);
-        Assert.Equal(new Rect(100, 0, 700, 400), right);
-        Assert.Equal(100, rightX);
+        Assert.Equal((0.7, 0.0, 0.0), QuickTerminalAppear.Start(QuickTerminalPosition.Center, 1200, 600));
+        Assert.Equal((1.0, 0.0, -120.0), QuickTerminalAppear.Start(QuickTerminalPosition.Top, 1200, 600)); // at most 120
+        Assert.Equal((1.0, 0.0, 50.0), QuickTerminalAppear.Start(QuickTerminalPosition.Bottom, 1200, 200)); // a quarter
+        Assert.Equal((1.0, -120.0, 0.0), QuickTerminalAppear.Start(QuickTerminalPosition.Left, 900, 1000));
+        Assert.Equal((1.0, 100.0, 0.0), QuickTerminalAppear.Start(QuickTerminalPosition.Right, 400, 1000));
     }
 }
