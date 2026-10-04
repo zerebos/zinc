@@ -21,10 +21,6 @@ internal static unsafe partial class PointerTrace
 
     public static bool Running => _running;
 
-    private static long _started;
-
-    /// <summary>The second half of a trace (after 7 s): the title row's command clock holds still (A/B: is it the cause?).</summary>
-    public static bool HoldClock => _running && Environment.TickCount64 - _started > 7000;
 
     public static void Start(IEnumerable<UIElement> roots, TimeSpan length)
     {
@@ -34,7 +30,6 @@ internal static unsafe partial class PointerTrace
         }
 
         _running = true;
-        _started = Environment.TickCount64;
         NameSystemCursors();
         Log.Write($"pointer: trace for {length.TotalSeconds:0} s");
 

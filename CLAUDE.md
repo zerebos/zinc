@@ -820,6 +820,12 @@ and read state after the write (see `_titleDirty`).
   WinUI's DefaultScrollBarStyle with a few substitutions (its header says which) — its sizes are
   StaticResources, which per-bar Resources can't override. `test:scrollbar-expand` pins it open
   for captures (`.scratch/tools/sb-shot.ps1`; WT reference shots in `.scratch/tmp/wt-scrollbar-*`).
+- **A pointer shape that flickers back to the arrow is (almost always) not Zinc** (2026-10-04, hours spent): any window
+  change anywhere (Task Manager's once-a-second list redraw!) makes Windows refresh the pointer, and every WinUI 3 window
+  answers with the arrow until the next pointer move, with no WM_SETCURSOR to it. A bare WinUI app
+  (`.scratch/cursor-demo`, `CursorDemo.exe watch` logs cursor changes + other apps' WinEvents in one file) shows the same.
+  Zinc's own window moves do it too: the quick terminal's edge drag re-sets the shape with Win32 SetCursor after each
+  MoveAndResize. Palette "Trace the pointer (15 s)" (logging on) = `PointerTrace`.
 - Clearing WinUI's top-level class cursor (the arrow) didn't stop non-arrow pointers flickering and left stale shapes
   (a resize arrow after a dropdown in Settings): don't. `.scratch/tools/quick-nchittest.ps1` shows class cursors, child
   rects and WM_NCHITTEST answers.

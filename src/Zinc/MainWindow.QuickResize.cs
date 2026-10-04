@@ -115,8 +115,24 @@ public sealed partial class MainWindow
         if (r.Width != AppWindow.Size.Width || r.Height != AppWindow.Size.Height || r.X != AppWindow.Position.X || r.Y != AppWindow.Position.Y)
         {
             AppWindow.MoveAndResize(new RectInt32(r.X, r.Y, r.Width, r.Height));
+            // Moving a window makes Windows refresh the pointer, and a WinUI window answers that with the arrow until
+            // the next pointer move (Task Manager's once-a-second redraw does the same to every WinUI app): the drag's
+            // pointer flickered. The resize shape again, at once.
+            SetCursor(LoadCursorW(0, _resizing.Edge switch
+            {
+                QuickTerminalEdge.Left or QuickTerminalEdge.Right => 32644, // IDC_SIZEWE
+                QuickTerminalEdge.Top or QuickTerminalEdge.Bottom => 32645, // IDC_SIZENS
+                QuickTerminalEdge.TopLeft or QuickTerminalEdge.BottomRight => 32642, // IDC_SIZENWSE
+                _ => 32643, // IDC_SIZENESW
+            }));
         }
     }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint SetCursor(nint cursor);
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial nint LoadCursorW(nint instance, nint name);
 
     private void OnResizeEnded(object sender, PointerRoutedEventArgs e)
     {
