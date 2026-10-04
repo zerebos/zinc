@@ -20,10 +20,12 @@ internal static unsafe partial class NativeSizeLoop
     }
 
     /// <summary>
-    /// Runs the loop for <paramref name="edge"/> (WMSZ_*: 1 left ... 8 bottom-right) while the left button is held;
-    /// returns when it's released. <paramref name="step"/> gives the window's rectangle (screen pixels) for each step.
+    /// Runs the loop for <paramref name="hit"/> (the border's hit-test code: HTLEFT 10 ... HTBOTTOMRIGHT 17) while the
+    /// left button is held, from screen point (<paramref name="x"/>, <paramref name="y"/>); returns when it's released.
+    /// <paramref name="step"/> gives the window's rectangle (screen pixels) for each step. Started as a press on that
+    /// border (WM_NCLBUTTONDOWN): a bare SC_SIZE ran the keyboard-style loop (follow the mouse until the next click).
     /// </summary>
-    public static void Run(nint hwnd, int edge, Func<Rect> step)
+    public static void Run(nint hwnd, int hit, int x, int y, Func<Rect> step)
     {
         _step = step;
         _steps = 0;
@@ -31,8 +33,8 @@ internal static unsafe partial class NativeSizeLoop
         try
         {
             ReleaseCapture(); // XAML's, from the press
-            Log.Write($"size loop: starting (edge {edge})");
-            SendMessageW(hwnd, 0x0112 /* WM_SYSCOMMAND */, 0xF000 /* SC_SIZE */ + edge, 0);
+            Log.Write($"size loop: starting (hit {hit})");
+            SendMessageW(hwnd, 0x00A1 /* WM_NCLBUTTONDOWN */, hit, (nint)(((y & 0xFFFF) << 16) | (x & 0xFFFF)));
         }
         finally
         {

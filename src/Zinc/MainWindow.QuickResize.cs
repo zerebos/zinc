@@ -96,22 +96,22 @@ public sealed partial class MainWindow
                 return;
             }
 
-            NativeSizeLoop.Run(hwnd, WmszFor(strip.Edge), ResizeStep);
+            NativeSizeLoop.Run(hwnd, HitFor(strip.Edge), from.X, from.Y, ResizeStep);
             ResizeEnded();
         });
     }
 
-    // WM_SIZING's edge numbers (WMSZ_*), also SC_SIZE's.
-    private static int WmszFor(QuickTerminalEdge edge) => edge switch
+    // The border's hit-test code (HT*), as a press on a real border would have.
+    private static int HitFor(QuickTerminalEdge edge) => edge switch
     {
-        QuickTerminalEdge.Left => 1,
-        QuickTerminalEdge.Right => 2,
-        QuickTerminalEdge.Top => 3,
-        QuickTerminalEdge.TopLeft => 4,
-        QuickTerminalEdge.TopRight => 5,
-        QuickTerminalEdge.Bottom => 6,
-        QuickTerminalEdge.BottomLeft => 7,
-        _ => 8,
+        QuickTerminalEdge.Left => 10,
+        QuickTerminalEdge.Right => 11,
+        QuickTerminalEdge.Top => 12,
+        QuickTerminalEdge.TopLeft => 13,
+        QuickTerminalEdge.TopRight => 14,
+        QuickTerminalEdge.Bottom => 15,
+        QuickTerminalEdge.BottomLeft => 16,
+        _ => 17,
     };
 
     /// <summary>One step of the drag: the size the pointer gives, placed as the window belongs (the loop applies it).</summary>
