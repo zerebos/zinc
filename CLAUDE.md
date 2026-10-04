@@ -820,9 +820,9 @@ and read state after the write (see `_titleDirty`).
   WinUI's DefaultScrollBarStyle with a few substitutions (its header says which) — its sizes are
   StaticResources, which per-bar Resources can't override. `test:scrollbar-expand` pins it open
   for captures (`.scratch/tools/sb-shot.ps1`; WT reference shots in `.scratch/tmp/wt-scrollbar-*`).
-- WinUI's top-level window class has the arrow as its class cursor: on every WM_SETCURSOR Windows set it back and XAML
-  its own shape after, so non-arrow pointers (quick terminal edges, pane dividers) flickered. `WindowCursor.LeaveToXaml`
-  clears it (class-wide). Check with `.scratch/tools/quick-nchittest.ps1` (class cursors, child rects, WM_NCHITTEST).
+- Clearing WinUI's top-level class cursor (the arrow) didn't stop non-arrow pointers flickering and left stale shapes
+  (a resize arrow after a dropdown in Settings): don't. `.scratch/tools/quick-nchittest.ps1` shows class cursors, child
+  rects and WM_NCHITTEST answers.
   `InputNonClientPointerSource` border regions (LeftBorder…) on the frameless quick window FailFast (8000FFFF): don't.
 - Hover and pointer shape can't be tested here (posted WM_MOUSEMOVE doesn't become WM_POINTER;
   screenshots omit the cursor) — ask the user.

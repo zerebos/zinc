@@ -10,8 +10,7 @@ namespace Zinc;
 // around it), so invisible strips along its edges do it: a drag resizes the window through Core's
 // QuickTerminalResize, keeping its place (centered stays centered), and the size is remembered for that monitor
 // (App.QuickTerminalSizes, saved with the session) until the config places it differently. Double-clicking an edge,
-// or the palette's "Reset quick terminal size", goes back to the configured size. The pointer's shape is XAML's alone
-// (WindowCursor: the window class's arrow fought it).
+// or the palette's "Reset quick terminal size", goes back to the configured size.
 public sealed partial class MainWindow
 {
     // The minimum size, in DIPs: a few dozen columns and lines.

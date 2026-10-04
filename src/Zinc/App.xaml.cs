@@ -177,6 +177,13 @@ public partial class App : Application
     /// </summary>
     private SettingsWindow? _settings;
 
+    /// <summary>Logs what sets the pointer's shape, in every window, for 15 seconds (PointerTrace).</summary>
+    internal void TracePointer()
+    {
+        var roots = _windows.Select(w => w.Content).Append(_settings?.Content).Append(_quick?.Content).OfType<UIElement>();
+        PointerTrace.Start(roots.ToList(), TimeSpan.FromSeconds(15));
+    }
+
     /// <summary>The settings window: opened, or brought forward if it's open.</summary>
     /// <summary>Opens (or brings back) the settings window, on <paramref name="section"/> if given.</summary>
     internal void ShowSettings(string? section = null)

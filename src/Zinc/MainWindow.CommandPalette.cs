@@ -499,6 +499,10 @@ public sealed partial class MainWindow
         Action(TerminalAction.ReloadConfig);
         Action(TerminalAction.OpenSettings);
         Custom("Welcome…", () => App.Instance.ShowWelcome(firstRun: false));
+        if (Log.Enabled && !PointerTrace.Running)
+        {
+            Custom("Trace the pointer (15 s)", App.Instance.TracePointer); // diagnostics: a flickering pointer shape
+        }
 
         // Panes.
         Action(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
