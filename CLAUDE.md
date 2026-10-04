@@ -720,6 +720,12 @@ and read state after the write (see `_titleDirty`).
   at startup). Reflection over framework types (JsonSerializer without source gen, etc.) can break only in a publish:
   check `warning IL` in a publish log, and test a publish, not bin/. `DropUnusedFromPublish` leaves out the .NET
   debugger's files and WebView2 (bring it back if a tab ever shows web content). `.scratch/size-audit.py <dir>`.
+- CHANGELOG.md (user-facing, docs/ux-writing.md voice; newest first; `## Unreleased` then `## 0.1.0-dev.N (date)`):
+  add to Unreleased with each user-visible change. Releasing: rename Unreleased to the version the NEXT commit makes
+  (`git rev-list --count HEAD` + 1), add a new empty Unreleased, commit, then `release.ps1 -Publish` (refuses without an
+  entry for its version or with anything left under Unreleased; passes the entry to vpk `--releaseNotes`; `-Changelog`
+  for tests). Core `ReleaseNotes` (Entry/Newest/Pieces, tested incl. the real file); `Updater.NewNotes` -> About's
+  "What's new in X" dialog. Test: `.scratch/tools/update-notes-test.ps1` (Zinc.Test packages, own changelog).
 - Tester builds = `scripts/release.ps1` (below; package.ps1, the zip-only script, is gone): `dotnet publish
   --self-contained true` after clearing the app's obj\x64\Release (the .NET runtime inside; install.ps1 publishes
   self-contained too), `README.txt` from `scripts/package-readme.txt` ({version} filled in). ~197 MB installed /

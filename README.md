@@ -338,7 +338,7 @@ switches and buttons) or `"windows"` (your Windows accent color). Applies when Z
 
 **`[updates]`**: `check = true` (default) lets a Zinc installed with its installer look for a new
 version once a day and download it in the background; a notice then offers to restart into it, or it
-installs the next time you quit. `false`: only Settings > About > Check for updates looks. Copies not
+installs the next time you quit; Settings > About shows what's new in it (from [CHANGELOG.md](CHANGELOG.md)). `false`: only Settings > About > Check for updates looks. Copies not
 installed by the installer (a dev build, `scripts/install.ps1`'s) never update.
 
 **`[cli]`**: `remote-control = true` lets `zn` (below) control this Zinc; off by default, when only

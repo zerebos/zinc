@@ -17,6 +17,11 @@
   A release is a commit: a working tree with uncommitted changes is refused (-AllowDirty is for tests),
   and its version (computed as Directory.Build.props does) only ever goes up.
 
+  Its notes are CHANGELOG.md's entry for its version ("## 0.1.0-dev.N (date)"), handed to the installer (a downloaded
+  update shows them under "What's new" in About). -Publish refuses without one, or with anything left under
+  "## Unreleased". Before publishing: rename "## Unreleased" to the version the next commit makes (N = commits + 1:
+  `git rev-list --count HEAD` plus one), start a new empty "## Unreleased" above it, and commit that.
+
   -Publish does the whole thing from release.local.json (next to this repo's root; not in git):
     { "updateUrl": "https://example.com/zinc/",
       "ftp": "ftp://host/path/to/zinc/",
@@ -42,7 +47,9 @@ param(
     [switch]$AllowDirty,
     # Where shortcuts go at install ('' = none: test packages must not touch the Start Menu).
     [string]$Shortcuts = 'StartMenuRoot',
-    [switch]$Publish
+    [switch]$Publish,
+    # The changelog the release notes come from (tests give their own).
+    [string]$Changelog
 )
 
 $ErrorActionPreference = 'Stop'
@@ -77,6 +84,36 @@ if (-not $Version) {
     $commits = (git -C $repo rev-list --count HEAD).Trim()
     git -C $repo describe --exact-match --tags --match "v$base" HEAD 2>$null | Out-Null
     $Version = if ($LASTEXITCODE -eq 0) { "$base+$rev" } else { "$base-dev.$commits+$rev" }
+}
+
+# ---- release notes: the changelog's entry for this version ----
+$notesArgs = @()
+if (-not $Changelog) { $Changelog = Join-Path $repo 'CHANGELOG.md' }
+if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
+    $plain = $Version.Split('+')[0]
+    $lines = (Get-Content $Changelog -Raw) -replace "`r`n", "`n" -split "`n"
+    function Entry([string]$heading) {
+        $start = [Array]::FindIndex($lines, [Predicate[string]] { param($l) $l -eq "## $heading" -or $l.StartsWith("## $heading (") })
+        if ($start -lt 0) { return $null }
+        $end = [Array]::FindIndex($lines, $start + 1, [Predicate[string]] { param($l) $l.StartsWith('## ') })
+        if ($end -lt 0) { $end = $lines.Length }
+        ($lines[($start + 1)..($end - 1)] -join "`n").Trim()
+    }
+
+    if ($Publish -and (Entry 'Unreleased')) {
+        throw "CHANGELOG.md has notes under '## Unreleased': rename it to '## $plain ($(Get-Date -Format yyyy-MM-dd))', add a new empty '## Unreleased' above it, commit, then publish."
+    }
+
+    $notes = Entry $plain
+    if (-not $notes) {
+        if ($Publish) { throw "CHANGELOG.md has no entry for $plain (see this script's help)." }
+        Write-Warning "CHANGELOG.md has no entry for ${plain}: this build has no release notes."
+    } else {
+        $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out: everything there is uploaded
+        [IO.File]::WriteAllText($notesFile, $notes + "`n", [Text.UTF8Encoding]::new($false))
+        $notesArgs = '--releaseNotes', $notesFile
+        Write-Host "Release notes: CHANGELOG.md's entry for $plain"
+    }
 }
 
 # ---- the previous release, for deltas ----
@@ -128,7 +165,7 @@ Write-Host "Packing $PackId $Version ..."
 $title = if ($PackId -eq 'Zinc') { 'Zinc' } else { $PackId }
 dotnet vpk pack --packId $PackId --packVersion $Version --packTitle $title --packAuthors Zinc --runtime win-x64 `
     --packDir $publishDir --mainExe zinc.exe --icon (Join-Path $repo 'src\Zinc\Assets\Zinc.ico') `
-    --shortcuts $Shortcuts --outputDir $Out
+    --shortcuts $Shortcuts --outputDir $Out @notesArgs
 if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed.' }
 Remove-Item $publishDir -Recurse -Force
 

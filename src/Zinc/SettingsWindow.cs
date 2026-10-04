@@ -424,6 +424,7 @@ internal sealed partial class SettingsWindow : Window
     // The Updates card's live parts (replaced on every render; ShowUpdateStatus updates them in place).
     private TextBlock? _updateStatus;
     private Button? _updateCheck, _updateRestart;
+    private HyperlinkButton? _updateNotes;
 
     /// <summary>Updates: where things stand (live), Check for updates / Restart now, and the automatic-check switch.</summary>
     private void UpdatesGroup()
@@ -443,7 +444,9 @@ internal sealed partial class SettingsWindow : Window
         _updateRestart = new Button { Content = "Restart now", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         AutomationProperties.SetName(_updateRestart, "Restart to update");
         _updateRestart.Click += (_, _) => Updater.RestartNow();
-        var text = new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Status", TextWrapping = TextWrapping.Wrap }, _updateStatus } };
+        _updateNotes = new HyperlinkButton { Padding = new Thickness(0, 2, 0, 0), FontSize = 12 };
+        _updateNotes.Click += (_, _) => ShowReleaseNotes();
+        var text = new StackPanel { Spacing = 2, Children = { new TextBlock { Text = "Status", TextWrapping = TextWrapping.Wrap }, _updateStatus, _updateNotes } };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _updateRestart, _updateCheck } };
         _page.Children.Insert(at + 1, CardBorder(TextAndControl(text, buttons))); // under the group's title
         ShowUpdateStatus();
@@ -461,6 +464,58 @@ internal sealed partial class SettingsWindow : Window
         _updateCheck.Visibility = status == UpdateStatus.NotInstalled ? Visibility.Collapsed : Visibility.Visible;
         _updateCheck.IsEnabled = status is not (UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Ready);
         _updateRestart.Visibility = status == UpdateStatus.Ready ? Visibility.Visible : Visibility.Collapsed;
+        if (_updateNotes != null)
+        {
+            _updateNotes.Content = $"What's new in {Updater.NewVersion}";
+            _updateNotes.Visibility = status == UpdateStatus.Ready && Updater.NewNotes.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>The downloaded update's release notes (CHANGELOG.md's entry), as headings and bullets.</summary>
+    private void ShowReleaseNotes()
+    {
+        var body = new StackPanel { Spacing = 6 };
+        foreach (var (kind, text) in ReleaseNotes.Pieces(Updater.NewNotes))
+        {
+            body.Children.Add(kind switch
+            {
+                NoteKind.Heading => new TextBlock { Text = text, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0) },
+                NoteKind.Bullet => new Grid
+                {
+                    ColumnSpacing = 8,
+                    ColumnDefinitions = { new() { Width = GridLength.Auto }, new() { Width = new GridLength(1, GridUnitType.Star) } },
+                    Children = { new TextBlock { Text = "•" }, Column(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }, 1) },
+                },
+                _ => new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap },
+            });
+        }
+
+        static FrameworkElement Column(FrameworkElement element, int column)
+        {
+            Grid.SetColumn(element, column);
+            return element;
+        }
+
+        var dialog = new ContentDialog
+        {
+            Title = $"What's new in {Updater.NewVersion}",
+            Content = new ScrollViewer { Content = body, MaxHeight = 420 },
+            CloseButtonText = "Close",
+            XamlRoot = _page.XamlRoot,
+        };
+        _ = Guarded(dialog);
+
+        static async Task Guarded(ContentDialog dialog)
+        {
+            try
+            {
+                await dialog.ShowAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Crash("release notes", ex); // after an await: an escape would end the process
+            }
+        }
     }
 
     /// <summary>The debug log's file: show it, copy it (with the version and Windows on top) for a bug report, or start it afresh.</summary>

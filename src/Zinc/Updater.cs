@@ -55,6 +55,9 @@ internal static class Updater
     /// <summary>The version downloading or ready.</summary>
     public static string? NewVersion { get; private set; }
 
+    /// <summary>The new version's release notes (CHANGELOG.md's entry, Markdown), "" when it has none.</summary>
+    public static string NewNotes { get; private set; } = "";
+
     /// <summary>Download progress, 0-100.</summary>
     public static int Progress { get; private set; }
 
@@ -167,6 +170,7 @@ internal static class Updater
             }
 
             NewVersion = update.TargetFullRelease.Version.ToString().Split('+')[0]; // without the commit hash
+            NewNotes = update.TargetFullRelease.NotesMarkdown ?? "";
             Progress = 0;
             Log.Write($"update: {manager.CurrentVersion} -> {NewVersion}, downloading");
             Set(UpdateStatus.Downloading);
