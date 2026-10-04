@@ -27,6 +27,9 @@ public sealed partial class MainWindow
     private DispatcherQueueTimer? _fadeOutTimer;
     private Action? _fadeOutDone;
 
+    // Fading in: Windows' shadow (which comes with the rounded corners) is off until the content is whole, then on.
+    private DispatcherQueueTimer? _shadowTimer;
+
     public bool IsQuickShownAndActive => _quickShown && _active;
     public bool IsQuickShown => _quickShown;
 
@@ -142,6 +145,7 @@ public sealed partial class MainWindow
             {
                 var scale = Scale();
                 SetAppearance(QuickTerminalAppear.Start(settings.Position, r.Width / scale, r.Height / scale), opacity: 0, animate: false);
+                SetShadow(false); // Windows draws it at full size from the first frame: on once the content is
             }
         }
 
@@ -166,10 +170,26 @@ public sealed partial class MainWindow
                     SetAppearance((1, 0, 0), opacity: 1, animate: true);
                 }
             });
+            if (_shadowTimer == null)
+            {
+                _shadowTimer = DispatcherQueue.CreateTimer();
+                _shadowTimer.IsRepeating = false;
+                _shadowTimer.OnTick(_ =>
+                {
+                    if (_quickShown)
+                    {
+                        SetShadow(true);
+                    }
+                });
+            }
+
+            _shadowTimer.Interval = TimeSpan.FromSeconds(settings.AnimationDuration);
+            _shadowTimer.Start();
         }
         else
         {
             SetAppearance((1, 0, 0), opacity: 1, animate: false);
+            SetShadow(true);
         }
     }
 
@@ -203,7 +223,10 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Out: a little smaller (or back toward its edge) as it fades; hidden once the fade is done.
+        // Out: the shadow goes first (it would stay full size), then the content fades a little smaller (or back toward
+        // its edge); hidden once the fade is done.
+        _shadowTimer?.Stop();
+        SetShadow(false);
         var start = QuickTerminalAppear.Start(_config.Global.QuickTerminal.Position, Root.ActualWidth, Root.ActualHeight);
         SetAppearance((1 - (1 - start.Scale) / 3, start.OffsetX / 3, start.OffsetY / 3), opacity: 0, animate: true);
         if (_fadeOutTimer == null)
@@ -219,6 +242,18 @@ public sealed partial class MainWindow
     }
 
     private double Scale() => Root.XamlRoot?.RasterizationScale ?? 1;
+
+    /// <summary>Windows' shadow around the window (its non-client rendering), off while the content isn't whole.</summary>
+    private void SetShadow(bool on)
+    {
+        if (_windowClosed)
+        {
+            return;
+        }
+
+        var policy = on ? 2 : 1; // DWMNCRP_ENABLED : DWMNCRP_DISABLED
+        DwmSetWindowAttribute(WinRT.Interop.WindowNative.GetWindowHandle(this), 2 /* DWMWA_NCRENDERING_POLICY */, ref policy, sizeof(int));
+    }
 
     /// <summary>
     /// The content's look: scale (around its middle), offset (DIPs) and opacity, at once or with a transition of the
