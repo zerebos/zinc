@@ -38,6 +38,16 @@ public sealed unsafe partial class TerminalSession
     private bool _commandsChanged;
     private List<ShellCommand>? _commandSnapshot;
 
+    // Output since the snapshot was made: its rows may have moved (the scrollback pruned) and the running command's
+    // end follows the cursor. Checked on the next read instead of rebuilding per write: during output the list was
+    // made anew every frame (up to 2,000 commands: ~220 KB of garbage a frame at 144 Hz).
+    private bool _commandSnapshotMoved;
+
+    // How to check the snapshot: the first listed command's index and prompt row (rows only shift all together, when
+    // the scrollback prunes), and whether its last command ends at the cursor (refreshed on each read).
+    private (int Index, long PromptRow)? _snapshotAnchor;
+    private bool _snapshotEndsAtCursor;
+
     /// <summary>A command started or finished (or a prompt appeared). Raised after the write, outside the lock.</summary>
     public event Action? CommandsChanged;
 
@@ -158,8 +168,8 @@ public sealed unsafe partial class TerminalSession
             data = data[end..];
         }
 
-        // Screen rows shift as the scrollback fills and prunes.
-        _commandSnapshot = null;
+        // Screen rows shift as the scrollback fills and prunes, and a running command grows: checked at the next read.
+        _commandSnapshotMoved = true;
     }
 
     private void VtWrite(ReadOnlySpan<byte> data)
@@ -444,12 +454,53 @@ public sealed unsafe partial class TerminalSession
     {
         lock (Lock)
         {
-            return _disposed ? [] : _commandSnapshot ??= SnapshotCommands();
+            if (_disposed)
+            {
+                return [];
+            }
+
+            if (_commandSnapshot != null && _commandSnapshotMoved)
+            {
+                _commandSnapshotMoved = false;
+                RefreshSnapshot(_commandSnapshot);
+            }
+
+            return _commandSnapshot ??= SnapshotCommands();
+        }
+    }
+
+    /// <summary>
+    /// After output: if nothing moved (the first listed prompt is where it was), only the end of a command still running
+    /// is brought up to the cursor; otherwise the snapshot is dropped, to be made anew.
+    /// </summary>
+    private void RefreshSnapshot(List<ShellCommand> snapshot)
+    {
+        if (_snapshotAnchor is not { } anchor || anchor.Index >= _commands.Count ||
+            !TryScreen(_commands[anchor.Index].Prompt, out var prompt) || prompt.Y != anchor.PromptRow)
+        {
+            _commandSnapshot = null;
+            return;
+        }
+
+        if (_snapshotEndsAtCursor && snapshot.Count > 0)
+        {
+            ushort cursorY = 0;
+            Native.TerminalGet(_terminal, TerminalData.CursorY, &cursorY);
+            nuint history = 0;
+            Native.TerminalGet(_terminal, TerminalData.ScrollbackRows, &history);
+            var cursorRow = (long)history + cursorY;
+            if (snapshot[^1].LastRow != cursorRow)
+            {
+                snapshot[^1] = snapshot[^1] with { LastRow = cursorRow };
+            }
         }
     }
 
     private List<ShellCommand> SnapshotCommands()
     {
+        _commandSnapshotMoved = false;
+        _snapshotAnchor = null;
+        _snapshotEndsAtCursor = false;
         var list = new List<ShellCommand>(_commands.Count);
         ushort cursorY = 0;
         Native.TerminalGet(_terminal, TerminalData.CursorY, &cursorY);
@@ -485,6 +536,10 @@ public sealed unsafe partial class TerminalSession
                 lastRow = cursorRow;
             }
 
+            // The last one listed decides: whether its end is the cursor (refreshed after output) or a fixed row.
+            _snapshotEndsAtCursor = lastRow == cursorRow && !TryScreen(c.End, out _) &&
+                !(i + 1 < _commands.Count && TryScreen(_commands[i + 1].Prompt, out _));
+            _snapshotAnchor ??= (i, prompt.Y);
             var running = !c.Closed && c.Started != null;
             list.Add(new ShellCommand(prompt.Y, output, lastRow, c.Text, c.Exit, c.Started,
                 c.Ended - c.Started, running));
