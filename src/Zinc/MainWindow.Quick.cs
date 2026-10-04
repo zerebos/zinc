@@ -56,6 +56,10 @@ public sealed partial class MainWindow
         const int WS_BORDER = 0x00800000, WS_DLGFRAME = 0x00400000, WS_THICKFRAME = 0x00040000;
         AttachQuickFrame(hwnd);
         SetWindowLongW(hwnd, -16 /* GWL_STYLE */, (GetWindowLongW(hwnd, -16) & ~(WS_BORDER | WS_DLGFRAME)) | WS_THICKFRAME);
+        // A tool window: Windows doesn't snap those (Win+arrows). QuickFrame refused the snap's move, but Windows still
+        // took the window for snapped: square corners and no shadow until its next resize.
+        const int WS_EX_TOOLWINDOW = 0x00000080;
+        SetWindowLongW(hwnd, -20 /* GWL_EXSTYLE */, GetWindowLongW(hwnd, -20) | WS_EX_TOOLWINDOW);
         SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0027 /* SWP_FRAMECHANGED | NOMOVE | NOSIZE | NOZORDER */ | 0x0010 /* NOACTIVATE */);
         var corners = 2; // DWMWCP_ROUND
         DwmSetWindowAttribute(hwnd, 33 /* DWMWA_WINDOW_CORNER_PREFERENCE */, ref corners, sizeof(int));
