@@ -93,6 +93,8 @@ public sealed partial class MainWindow
         _resizing = strip;
         _resizeCover = new QuickResizeEdge(strip.Edge, cover: true);
         _resizeEdges?.Children.Add(_resizeCover);
+        Root.LayoutUpdated += HoldResizeCursor;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering += HoldResizeCursor;
         _resizeFrom = from;
         _resizeStart = (AppWindow.Size.Width, AppWindow.Size.Height);
         _resizeArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest);
@@ -115,17 +117,30 @@ public sealed partial class MainWindow
         if (r.Width != AppWindow.Size.Width || r.Height != AppWindow.Size.Height || r.X != AppWindow.Position.X || r.Y != AppWindow.Position.Y)
         {
             AppWindow.MoveAndResize(new RectInt32(r.X, r.Y, r.Width, r.Height));
-            // Moving a window makes Windows refresh the pointer, and a WinUI window answers that with the arrow until
-            // the next pointer move (Task Manager's once-a-second redraw does the same to every WinUI app): the drag's
-            // pointer flickered. The resize shape again, at once.
-            SetCursor(LoadCursorW(0, _resizing.Edge switch
-            {
-                QuickTerminalEdge.Left or QuickTerminalEdge.Right => 32644, // IDC_SIZEWE
-                QuickTerminalEdge.Top or QuickTerminalEdge.Bottom => 32645, // IDC_SIZENS
-                QuickTerminalEdge.TopLeft or QuickTerminalEdge.BottomRight => 32642, // IDC_SIZENWSE
-                _ => 32643, // IDC_SIZENESW
-            }));
+            HoldResizeCursor(null, null);
         }
+    }
+
+    /// <summary>
+    /// The resize shape, set again: moving a window makes Windows refresh the pointer, and a WinUI window answers that
+    /// with the arrow until the next pointer move (Task Manager's once-a-second redraw does the same to every WinUI app).
+    /// Set right after each step it still came back a frame later (XAML handling Windows' follow-up move before laying
+    /// out the new size), so also after every layout pass and every frame while a drag lasts.
+    /// </summary>
+    private void HoldResizeCursor(object? sender, object? e)
+    {
+        if (_resizing is not { } strip)
+        {
+            return;
+        }
+
+        SetCursor(LoadCursorW(0, strip.Edge switch
+        {
+            QuickTerminalEdge.Left or QuickTerminalEdge.Right => 32644, // IDC_SIZEWE
+            QuickTerminalEdge.Top or QuickTerminalEdge.Bottom => 32645, // IDC_SIZENS
+            QuickTerminalEdge.TopLeft or QuickTerminalEdge.BottomRight => 32642, // IDC_SIZENWSE
+            _ => 32643, // IDC_SIZENESW
+        }));
     }
 
     [System.Runtime.InteropServices.LibraryImport("user32.dll")]
@@ -143,6 +158,8 @@ public sealed partial class MainWindow
 
         var strip = _resizing;
         _resizing = null;
+        Root.LayoutUpdated -= HoldResizeCursor;
+        Microsoft.UI.Xaml.Media.CompositionTarget.Rendering -= HoldResizeCursor;
         strip.ReleasePointerCaptures();
         if (_resizeCover != null)
         {
