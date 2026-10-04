@@ -364,6 +364,10 @@ internal sealed partial class SettingsWindow : Window
                     _page.Children.Add(card);
                 }
             }
+            else if (setting.Kind == SettingKind.Files)
+            {
+                _page.Children.Add(ShaderFilesCard(setting, null));
+            }
             else
             {
                 _page.Children.Add(Card(setting));
@@ -948,6 +952,10 @@ internal sealed partial class SettingsWindow : Window
                 {
                     rows.AddRange(SchemeCards(setting, id));
                 }
+                else if (setting.Kind == SettingKind.Files)
+                {
+                    rows.Add(ShaderFilesCard(setting, id));
+                }
                 else
                 {
                     rows.Add(OverrideCard(setting, id));
@@ -1371,10 +1379,11 @@ internal sealed partial class SettingsWindow : Window
             SettingKind.Scheme => DefaultSchemeLabel,
             _ => "the default",
         },
+        _ when setting.Kind == SettingKind.Choice && setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value)) is { } choice =>
+            choice.Label,
         bool b => b ? "on" : "off",
         string t when setting.Kind == SettingKind.Scheme && ThemeLibrary.TryParsePair(t, out var l, out var d) => $"{d} / {l}",
-        _ when setting.Kind == SettingKind.Choice =>
-            setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value))?.Label ?? Format(value),
+        _ when setting.Kind == SettingKind.Choice => Format(value),
         _ => setting.Unit is { } unit ? $"{Format(value)} {unit}" : Format(value),
     };
 

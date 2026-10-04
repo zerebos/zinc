@@ -341,7 +341,12 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   the cursor rect as `DrawCursor` draws it, only while the pane has shaders) -> `FillShaderUniforms` via
   `SwapChainSurface.FillUniforms` before each pass (cursor: left, bottom edge, size in pixels, as Ghostty's Metal;
   previous/change time in Core `ShaderUniforms.SetCursor`; iMouse = Shadertoy's, from the pointer handlers).
-  Short cursor effects can be captured with `animation = false` (the frame at the move stays on screen). Test: `.scratch/tools/shader-shot.ps1 -Shaders a.glsl,b.glsl
+  Short cursor effects can be captured with `animation = false` (the frame at the move stays on screen).
+  Settings (session 3): catalog `shaders.files` = `SettingKind.Files` (cards: `SettingsWindow.Shaders.cs`
+  `ShaderFilesCard`, also in profile pages and search; rows = state via `ShaderLoader.Load`, Up/Down/Open/Remove;
+  rebuilt rows give focus back to the same button, else the page scrolled to its first field), `shaders.animation`
+  a Choice; paths written by Core `ShaderPaths.ForConfig` (relative to the config, else ~/, forward slashes). The
+  preview pane animates as if focused. Test: `.scratch/tools/shader-shot.ps1 -Shaders a.glsl,b.glsl
   [-Extra 'animation = false'] [-Window ...] [-KeepOpen]`; samples in .scratch/shaders.
 - Grid placement: Core `Terminal/GridLayout.cs` (whole cells inside the padding; `[terminal] padding-balance` splits the
   leftover between both sides, in whole device pixels so the atlas's subpixel offset never changes; tested) →

@@ -25,6 +25,9 @@ public enum SettingKind
 
     /// <summary>A color scheme by name, or a light/dark pair.</summary>
     Scheme,
+
+    /// <summary>An ordered list of files (custom shaders): written as a list of paths, empty for none.</summary>
+    Files,
 }
 
 /// <summary>
@@ -66,8 +69,8 @@ public sealed record SettingDef(string Section, string Group, string Key, string
     /// <summary>The key's path in config.toml.</summary>
     public IReadOnlyList<string> Path => Key.Split('.');
 
-    /// <summary>Whether a profile can have its own value (the [font], [colors] and [terminal] groups).</summary>
-    public bool ProfileOverridable => Path[0] is "font" or "colors" or "terminal";
+    /// <summary>Whether a profile can have its own value (the [font], [colors], [terminal] and [shaders] groups).</summary>
+    public bool ProfileOverridable => Path[0] is "font" or "colors" or "terminal" or "shaders";
 }
 
 /// <summary>
@@ -200,6 +203,19 @@ public static class SettingsCatalog
             "How much of the window glass shows through the terminal (1: none; 0: only the glass, behind the text). Colored cells stay solid.",
             SettingKind.Number, 1.0)
             { Minimum = 0, Maximum = 1, Step = 0.05 },
+        new("appearance", "Shaders", "shaders.files", "Custom shaders",
+            "Effects drawn over the terminal (CRT screens, glow, cursor trails): GLSL files written for Ghostty or Shadertoy, run in order.",
+            SettingKind.Files, null),
+        new("appearance", "Shaders", "shaders.animation", "Animation",
+            "For shaders that move on their own; the rest are drawn only when the terminal changes.", SettingKind.Choice, true)
+        {
+            Choices =
+            [
+                new("While focused", true, "They pause, where they are, while the terminal isn't focused."),
+                new("Always", "always", "Every terminal with shaders keeps redrawing, focused or not."),
+                new("Never", false, "Drawn only when the terminal changes."),
+            ],
+        },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)
@@ -413,8 +429,6 @@ public static class SettingsCatalog
     public static IReadOnlyDictionary<string, string> FileOnly { get; } = new Dictionary<string, string>
     {
         ["colors.palette"] = "Palette colors by number (palette.1 = \"#AC4242\") are set in config.toml.",
-        ["shaders.files"] = "Custom shaders are set in config.toml for now: [shaders] files = [\"crt.glsl\"].",
-        ["shaders.animation"] = "Custom shaders are set in config.toml for now: [shaders] animation = true | false | \"always\".",
     };
 
     public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);

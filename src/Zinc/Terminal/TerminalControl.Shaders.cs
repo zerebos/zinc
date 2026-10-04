@@ -165,17 +165,19 @@ public sealed partial class TerminalControl
             return;
         }
 
-        _swap.SetFocus(_focused);
+        // Settings' preview is never focused, but stands for a focused terminal (its cursor is drawn so too).
+        var focused = _focused || _previewScript != null;
+        _swap.SetFocus(focused);
         _swap.Animate = _config.ShaderAnimation switch
         {
             ShaderAnimation.Always => true,
             ShaderAnimation.Never => false,
-            _ => _focused,
+            _ => focused,
         };
 
         // Paused with the animation while unfocused: hovering a program's links or scrollbar redraws the terminal, and
         // with a running clock each of those frames showed the shader jumped ahead. With animation off (Ghostty's
         // false) time still runs: frames drawn on change show it moving, as in Ghostty.
-        _swap.SetClock(_config.ShaderAnimation != ShaderAnimation.Focused || _focused);
+        _swap.SetClock(_config.ShaderAnimation != ShaderAnimation.Focused || focused);
     }
 }

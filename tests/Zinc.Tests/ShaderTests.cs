@@ -46,6 +46,25 @@ public class ShaderTests : IDisposable
     }
 
     [Fact]
+    public void SettingsWritePathsShort()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var config = Path.Combine(_dir, "config.toml");
+        Assert.Equal("shaders/crt.glsl", ShaderPaths.ForConfig(Path.Combine(_dir, "shaders", "crt.glsl"), config));
+        Assert.Equal("~/dev/ghostty-shaders/bloom.glsl", ShaderPaths.ForConfig(Path.Combine(home, "dev", "ghostty-shaders", "bloom.glsl"), config));
+        Assert.Equal("Z:/fx/crt.glsl", ShaderPaths.ForConfig(@"Z:\fx\crt.glsl", config));
+        // What's written reads back as the same file.
+        foreach (var full in new[] { Path.Combine(_dir, "shaders", "crt.glsl"), Path.Combine(home, "x.glsl"), @"Z:\fx\crt.glsl" })
+        {
+            Assert.Equal(full, ShaderPaths.Resolve(ShaderPaths.ForConfig(full, config), config));
+        }
+
+        Assert.Equal(["a.glsl", "b.glsl"], ShaderPaths.Listed(new List<object> { "a.glsl", "b.glsl" }));
+        Assert.Equal(["a.glsl"], ShaderPaths.Listed("a.glsl"));
+        Assert.Empty(ShaderPaths.Listed(null));
+    }
+
+    [Fact]
     public void OneFileAsAString()
     {
         var config = Parse("[shaders]\nfiles = \"crt.glsl\"");

@@ -285,6 +285,9 @@ shaders written for Ghostty work unchanged
   while the terminal has focus (their clock pauses meanwhile, so they pick up where they stopped);
   `"always"`, focused or not; `false`, only when the terminal changes.
   Shaders that don't use time draw only when the terminal changes anyway.
+- Settings > Appearance > Shaders has both: add files, reorder or remove them, open one in your editor,
+  and see whether each compiles (and why not); the preview at the top runs them. A profile's page has
+  the same, inherited until you change it there.
 - Profiles can have their own (`[profile.x.shaders]`, `files = []` for none). Shaders need
   `low-latency-drawing` (the default). What a shader gets: all of Ghostty's uniforms: the picture so far
   (`iChannel0`), size, time, frame, date, focus, the cursor (where and how it's drawn, the previous one and

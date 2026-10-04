@@ -120,7 +120,8 @@ internal sealed partial class SettingsWindow
             return cards[1];
         }
 
-        var card = profile == null ? Card(setting) : OverrideCard(setting, profile);
+        var card = setting.Kind == SettingKind.Files ? ShaderFilesCard(setting, profile)
+            : profile == null ? Card(setting) : OverrideCard(setting, profile);
         _page.Children.Add(card);
         return card;
     }

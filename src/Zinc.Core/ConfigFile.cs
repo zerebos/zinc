@@ -748,7 +748,7 @@ public sealed class ConfigFile
                 };
                 return files == null
                     ? Warn(config, e, "a file path or a list of them")
-                    : config.Apply("custom-shader", string.Join('\n', files.Select(f => ShaderPath(f, e.File)))) ?? config;
+                    : config.Apply("custom-shader", string.Join('\n', files.Select(f => Zinc.Shaders.ShaderPaths.Resolve(f, e.File)))) ?? config;
             }
 
             if (legacy is not { } l)
@@ -758,18 +758,6 @@ public sealed class ConfigFile
             }
 
             return l.Value != null && config.Apply(l.Key, l.Value) is { } applied ? applied : Warn(config, e, null);
-        }
-
-        /// <summary>A shader path as written (~, %VARS%, relative to <paramref name="file"/>'s folder) made full.</summary>
-        private static string ShaderPath(string path, string file)
-        {
-            path = Environment.ExpandEnvironmentVariables(path.Trim());
-            if (path.StartsWith("~/") || path.StartsWith("~\\"))
-            {
-                path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
-            }
-
-            return path.Length == 0 ? "" : System.IO.Path.GetFullPath(path, System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(file)) ?? ".");
         }
 
         /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
