@@ -47,7 +47,8 @@ public readonly record struct QuickTerminalLength(double Value, bool Percent)
 /// <summary>The quick terminal's settings (Ghostty's <c>quick-terminal-*</c> keys).</summary>
 public sealed record QuickTerminalSettings
 {
-    public QuickTerminalPosition Position { get; init; } = QuickTerminalPosition.Top;
+    /// <summary>Where it appears: centered by default (as Ghostty draws it), or along an edge.</summary>
+    public QuickTerminalPosition Position { get; init; } = QuickTerminalPosition.Center;
     public QuickTerminalScreen Screen { get; init; } = QuickTerminalScreen.Mouse;
 
     /// <summary>
@@ -59,6 +60,12 @@ public sealed record QuickTerminalSettings
     public QuickTerminalLength? Secondary { get; init; }
 
     public bool Autohide { get; init; } = true;
+
+    /// <summary>
+    /// How long it takes to slide in and out, in seconds (Ghostty's quick-terminal-animation-duration); 0: it just
+    /// appears and disappears.
+    /// </summary>
+    public double AnimationDuration { get; init; } = 0.2;
 
     /// <summary>Global hotkey, e.g. "win+grave" (Windows Terminal's quake key).</summary>
     public string Hotkey { get; init; } = "win+grave";
@@ -131,5 +138,32 @@ public readonly record struct GlobalHotkey(uint Modifiers, VirtualKey Key)
         }
 
         return new GlobalHotkey(mods, chord.Key);
+    }
+}
+
+/// <summary>
+/// The quick terminal sliding in (pure, testable). The window sits at its final place throughout; each frame shows the
+/// part of it nearest the edge it comes from (a window region) with the content moved along, so it seems to slide out
+/// from that edge (a centered one from its own top edge). Moving the window itself from off screen would show it on a
+/// neighboring monitor on the way (Windows Terminal's quake window clips the same way).
+/// </summary>
+public static class QuickTerminalSlide
+{
+    /// <summary>
+    /// At <paramref name="progress"/> (0: hidden, 1: all there; eased here, fast then settling): the part of a
+    /// <paramref name="width"/> x <paramref name="height"/> window to show, and how far its content is moved (pixels).
+    /// </summary>
+    public static (QuickTerminalLayout.Rect Visible, int OffsetX, int OffsetY) At(QuickTerminalPosition position, int width, int height, double progress)
+    {
+        var eased = 1 - Math.Pow(1 - Math.Clamp(progress, 0, 1), 3);
+        var shownHigh = (int)Math.Round(height * eased);
+        var shownWide = (int)Math.Round(width * eased);
+        return position switch
+        {
+            QuickTerminalPosition.Bottom => (new(0, height - shownHigh, width, shownHigh), 0, height - shownHigh),
+            QuickTerminalPosition.Left => (new(0, 0, shownWide, height), shownWide - width, 0),
+            QuickTerminalPosition.Right => (new(width - shownWide, 0, shownWide, height), width - shownWide, 0),
+            _ => (new(0, 0, width, shownHigh), 0, shownHigh - height), // top and center: down from the top edge
+        };
     }
 }

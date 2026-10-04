@@ -593,7 +593,11 @@ behind the drops can be, through `test:drop-middle:N`/`test:drop-right:N` (works
 (`palette:Move tab to new workspace`). Quick terminal: layout/hotkey parsing in
 Core `QuickTerminal.cs` (tested); `HotkeyListener` (RegisterHotKey on the `MessageWindow`),
 `App.ToggleQuickTerminal`, `MainWindow.Quick.cs` (placement, autohide on deactivate,
-hotkey-taken InfoBar). `MessageWindow` is a hidden *top-level* window (message-only windows
+hotkey-taken InfoBar; rework 2026-10-04: borderless via `SetBorderAndTitleBar(true, false)` + the TabView strip
+collapsed, center by default, AppWindow.Closing cancelled -> hide unless `App.Quitting` or no tabs left, foreground
+handed back to `_previousForeground` on a dismissal (not on autohide), slide = window region + Root translation per
+CompositionTarget.Rendering frame from Core `QuickTerminalSlide` (tested), `animation-duration`). Test:
+`.scratch/tools/quick-test.ps1` (summon, WM_CLOSE hides, same session; PrintWindow ignores the region: no slide frames). `MessageWindow` is a hidden *top-level* window (message-only windows
 miss Explorer's TaskbarCreated broadcast) that logs its hwnd and dispatches WM_HOTKEY and the
 `TrayIcon` callbacks. App lifetime: `DispatcherShutdownMode.OnExplicitShutdown`;
 `App.OnWindowClosed` decides stay-in-tray vs `Quit()` (tray icon must be removed on exit).

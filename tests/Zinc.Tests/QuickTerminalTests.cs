@@ -111,4 +111,42 @@ public class QuickTerminalTests
         Assert.Empty(file.Warnings);
         Assert.Contains(ConfigFile.Parse("[quick-terminal]\nposition = \"sideways\"").Warnings, w => w.Contains("sideways"));
     }
+
+    [Fact]
+    public void CenteredAndSlidingByDefault()
+    {
+        var q = new Config().QuickTerminal;
+        Assert.Equal(QuickTerminalPosition.Center, q.Position);
+        Assert.Equal(0.2, q.AnimationDuration);
+        Assert.Equal(0, ConfigFile.Parse("[quick-terminal]\nanimation-duration = 0").Global.QuickTerminal.AnimationDuration);
+        Assert.NotEmpty(ConfigFile.Parse("[quick-terminal]\nanimation-duration = -1").Warnings);
+    }
+
+    [Theory]
+    [InlineData(QuickTerminalPosition.Top)]
+    [InlineData(QuickTerminalPosition.Center)]
+    [InlineData(QuickTerminalPosition.Bottom)]
+    [InlineData(QuickTerminalPosition.Left)]
+    [InlineData(QuickTerminalPosition.Right)]
+    public void SlideStartsHiddenAndEndsWhole(QuickTerminalPosition position)
+    {
+        var (start, _, _) = QuickTerminalSlide.At(position, 800, 400, 0);
+        Assert.Equal(0, start.Width * start.Height);
+        Assert.Equal((new Rect(0, 0, 800, 400), 0, 0), QuickTerminalSlide.At(position, 800, 400, 1));
+    }
+
+    [Fact]
+    public void SlideComesFromItsEdge()
+    {
+        // Halfway in time is most of the way there (eased), shown from the edge it comes from.
+        var (top, _, topY) = QuickTerminalSlide.At(QuickTerminalPosition.Top, 800, 400, 0.5);
+        Assert.Equal(new Rect(0, 0, 800, 350), top);
+        Assert.Equal(-50, topY); // the content's bottom is at the visible edge
+        var (bottom, _, bottomY) = QuickTerminalSlide.At(QuickTerminalPosition.Bottom, 800, 400, 0.5);
+        Assert.Equal(new Rect(0, 50, 800, 350), bottom);
+        Assert.Equal(50, bottomY);
+        var (right, rightX, _) = QuickTerminalSlide.At(QuickTerminalPosition.Right, 800, 400, 0.5);
+        Assert.Equal(new Rect(100, 0, 700, 400), right);
+        Assert.Equal(100, rightX);
+    }
 }

@@ -27,6 +27,9 @@ public partial class App : Application
     private MainWindow? _quick;
     private bool _quitting;
 
+    /// <summary>Zinc is quitting: windows close for real (the quick terminal too, which otherwise hides when closed).</summary>
+    internal bool Quitting => _quitting;
+
     public App()
     {
         InitializeComponent();

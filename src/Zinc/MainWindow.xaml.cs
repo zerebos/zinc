@@ -225,7 +225,7 @@ public sealed partial class MainWindow : Window
         ConfirmWindowClose();
 
         Tabs.Loaded += (_, _) => DisableTabAnimations();
-        if (config.Global.WorkspaceTabs == WorkspaceTabs.Left)
+        if (config.Global.WorkspaceTabs == WorkspaceTabs.Left && !quick)
         {
             UseWorkspaceList();
         }

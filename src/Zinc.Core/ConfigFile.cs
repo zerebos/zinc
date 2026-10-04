@@ -715,6 +715,7 @@ public sealed class ConfigFile
             ["quick-terminal.screen"] = ("quick-terminal-screen", v => v as string),
             ["quick-terminal.size"] = ("quick-terminal-size", v => Pair(v)),
             ["quick-terminal.autohide"] = ("quick-terminal-autohide", v => Bool(v)),
+            ["quick-terminal.animation-duration"] = ("quick-terminal-animation-duration", v => Number(v)),
             ["quick-terminal.hotkey"] = ("quick-terminal-hotkey", v => v as string),
         };
 

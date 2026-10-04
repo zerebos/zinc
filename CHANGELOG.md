@@ -13,6 +13,11 @@ is the version it builds, and hands it to the installer as the release notes).
   while the terminal is idle.
 - A downloaded update says what's new in it: Settings > About > "What's new in …" (this file's entry for it).
 
+### Changed
+- The quick terminal (Win+`) is just the terminal now: no title bar or tab strip, centered on the screen, sliding
+  in and out (Settings > Quick terminal > "Slide in and out"). Dismissing it gives the foreground back to the window
+  you came from, and closing it only hides it, so its shells and scrollback are still there next time.
+
 ## 0.1.0-dev.228 (2026-10-04)
 
 ### Faster

@@ -398,7 +398,7 @@ public static class SettingsCatalog
 
         // ---- Quick terminal
         new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides it from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text, "win+grave"),
-        new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice, "top")
+        new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice, "center")
             { Choices = [new("Top", "top"), new("Bottom", "bottom"), new("Left", "left"), new("Right", "right"), new("Center", "center")] },
         new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice, "mouse")
             { Choices = [new("With the pointer", "mouse", "Opens on the screen the pointer is on."), new("Main", "main", "Always opens on the main screen.")] },
@@ -406,6 +406,8 @@ public static class SettingsCatalog
             "A percentage or pixels (50%, 600px) along its edge; defaults: 50%, or 70% by 60% centered.", SettingKind.Text, null)
             { Placeholder = "50%" },
         new("quick", "Behavior", "quick-terminal.autohide", "Hide when it loses focus", "", SettingKind.Toggle, true),
+        new("quick", "Behavior", "quick-terminal.animation-duration", "Slide in and out", "How long it takes; 0 makes it appear at once.",
+            SettingKind.Number, 0.2) { Unit = "seconds", Minimum = 0, Maximum = 2, Step = 0.05 },
     ];
 
     /// <summary>A profile's own fields (keys relative to its <c>[profile.&lt;id&gt;]</c> section).</summary>

@@ -616,6 +616,8 @@ public sealed record Config
                 this with { QuickTerminal = QuickTerminal with { Primary = primary, Secondary = secondary } },
             "quick-terminal-autohide" when bool.TryParse(value, out var autohide) =>
                 this with { QuickTerminal = QuickTerminal with { Autohide = autohide } },
+            "quick-terminal-animation-duration" when TryDouble(value, out var slide) && slide is >= 0 and <= 2 =>
+                this with { QuickTerminal = QuickTerminal with { AnimationDuration = slide } },
             "quick-terminal-hotkey" when TryHotkey(value) =>
                 this with { QuickTerminal = QuickTerminal with { Hotkey = value } },
             "background" when TryColor(value, out var c) => this with { Theme = theme with { Background = c } },
