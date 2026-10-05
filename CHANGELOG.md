@@ -6,6 +6,8 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.306 (2026-10-05)
+
 ### New
 - New tabs pick up environment changes: a PATH an installer changed works without restarting Zinc, as in
   Windows Terminal (Terminal > Shell > Pick up environment changes).
