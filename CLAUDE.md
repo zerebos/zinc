@@ -213,7 +213,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   `WasLast` (the session keeps it anyway); `RestoreSession` drops those entries. `reopen-window`, palette,
   tray menu → `App.ReopenWindow`. Test: `.scratch/tools/close-window.ps1` (posts WM_CLOSE to our others). Later ideas are
   in .scratch/NOTES.md.
-- IME (`input-method`, **off by default** until the user confirms it): `TerminalControl.InputMethod.cs`. A
+- IME (`input-method`, **on by default** since 2026-10-04, after the user ran it for days): `TerminalControl.InputMethod.cs`. A
   focused pane's keyboard focus sits in a hidden TextBox at the cursor (`OnGotFocus` redirects;
   `FocusIsWithin` = pane or box, so moving between them isn't a focus change for programs; the find
   box counts as elsewhere). Its PreviewKeyDown runs `HandleKeyDown`, which marks encoded keys and

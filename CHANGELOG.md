@@ -15,6 +15,10 @@ is the version it builds, and hands it to the installer as the release notes).
   Zinc's shaders, yours and the folders you add (a collection you cloned, say), each with a line about it.
   Click one to see it in the preview (and whether it compiles), again to take it back; Add puts it in your list.
 
+### Changed
+- Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, Terminal > Troubleshooting
+  > Input methods turns it off.
+
 ### Fixed
 - Settings: while searching (or editing a profile or a scheme), clicking the section that was open before did
   nothing; it goes back to that section now. Search results no longer show a section as selected.

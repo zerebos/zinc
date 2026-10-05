@@ -284,9 +284,10 @@ public sealed record Config
 
     /// <summary>
     /// Input methods (IME) type into the terminal: a focused pane's keys pass through a hidden text box
-    /// Windows' input methods work with. Off by default while it's new. Config: <c>input-method = true</c>.
+    /// Windows' input methods work with. On by default (since 2026-10-04, after a long run on the user's machine);
+    /// <c>input-method = false</c> sends keys straight to the terminal.
     /// </summary>
-    public bool InputMethod { get; init; }
+    public bool InputMethod { get; init; } = true;
 
     /// <summary>Programs may set the tab's title (OSC 0/2); off: the profile's name. Config: <c>program-titles = false</c>.</summary>
     public bool ProgramTitles { get; init; } = true;
