@@ -13,10 +13,17 @@ power tool; the aim is still to be easier to understand than the tools it compet
 - **Plain, direct, specific.** Short sentences, active voice, no jargon a user wouldn't search for.
   Prefer "the reset arrow gives one back" to "reverts to the inherited value".
 - **Sentence case everywhere**: names, buttons, section titles, menu items. ("Tab width mode", not
-  "Tab Width Mode".) Windows Terminal slips here ("Application Theme", "Add Entry"); we don't.
+  "Tab Width Mode".) Windows Terminal slips here ("Application Theme", "Add Entry"); we don't. The one
+  exception is a window's title, which follows Windows' own title case: "Zinc Settings".
+- **Zinc on its own terms.** Don't compare Zinc to other terminals in the interface ("the way Windows Terminal
+  draws", "keys follow Windows Terminal's defaults"). Name another app only when it affects the person reading:
+  "Windows Terminal uses Win+` for its quake mode" says who took their hotkey.
 
 ## Names
 
+- **The word people recognize** for a label or badge, even when it's less exact: "Animated", not "moves on its
+  own"; "Visual bell", "Focus follows mouse". The precise meaning (what it costs, how it works) goes in the
+  description or a tooltip.
 - **Short noun phrases** for settings: "Font", "Line thickness", "Unfocused panes", "Long command
   finishes". A long yes/no sentence as a name ("Show a confirmation dialog before closing tabs or
   windows") is the weakest pattern; the nuance belongs in the description.
@@ -66,6 +73,9 @@ power tool; the aim is still to be easier to understand than the tools it compet
 - **Apply immediately; make undo easy.** Settings write as you change them and say so ("Saved to
   config.toml and applied"), with "Undo N changes" counting what Undo would put back. No
   Save/Discard step.
+- **Buttons say what they do; reset arrows say where they go.** A text button is a verb: "Restore the original",
+  "Delete it", "Open folder", "Open in editor". A reset arrow (icon only) has a tooltip that starts "Back to …":
+  "Back to the default: no shaders".
 - **Destructive actions** (delete a profile, reset everything): a button that says what it does, a
   confirmation that states the consequence ("Removes its section from config.toml."), and a confirm
   button that restates the action ("Delete it"). Put them last on a page.
