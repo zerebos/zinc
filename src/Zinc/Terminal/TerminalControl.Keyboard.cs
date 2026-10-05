@@ -120,9 +120,9 @@ public sealed partial class TerminalControl
         if (Keyboard.IsModifierKey(vk))
         {
             _traceModifier = true;
-            if (IsCtrlKey(e.Key))
+            if (IsLinkKey(e.Key))
             {
-                UpdateHoverLink(ctrl: true);
+                UpdateHoverLink(linkKey: true);
             }
 
             return;
@@ -208,9 +208,9 @@ public sealed partial class TerminalControl
             return; // released here, pressed elsewhere: not a key event of ours
         }
 
-        if (IsCtrlKey(e.Key))
+        if (IsLinkKey(e.Key))
         {
-            UpdateHoverLink(ctrl: false);
+            UpdateHoverLink(linkKey: false);
         }
 
         var session = _session;

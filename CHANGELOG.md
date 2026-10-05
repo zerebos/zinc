@@ -11,6 +11,11 @@ is the version it builds, and hands it to the installer as the release notes).
   Windows Terminal (Terminal > Shell > Pick up environment changes).
 - Environment variables of your own, for every program (Terminal > Shell) or per profile (on its page), in
   config.toml's `[environment]`. `%PATH%` and the like work in values; an empty value removes a variable.
+- Open links with Alt+click, or a plain click, instead of Ctrl+click (Terminal > Mouse > Open links with).
+- Middle-click pastes, if you turn it on (Terminal > Mouse).
+- A sound when a long command finishes out of view: Windows' notification sound or its beep (Notifications).
+- Turn off the question before closing or quitting while a command runs (Layout > Closing).
+- How far a resize key moves a pane's divider (Layout > Panes > Resize step).
 
 ## 0.1.0-dev.282 (2026-10-05)
 

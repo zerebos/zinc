@@ -5,8 +5,8 @@ using Windows.System;
 
 namespace Zinc.Terminal;
 
-// Links: with Ctrl held, the OSC 8 hyperlink or URL under the pointer is underlined and
-// the pointer becomes a hand; Ctrl+click opens it (LinkTarget decides what may open).
+// Links: with the link key held (link-click: Ctrl or Alt; always, for a plain click), the OSC 8 hyperlink or URL under
+// the pointer is underlined and the pointer becomes a hand; a click with it opens it (LinkTarget decides what may open).
 public sealed partial class TerminalControl
 {
     private Windows.Foundation.Point? _pointerPosition;
@@ -16,10 +16,26 @@ public sealed partial class TerminalControl
     private static bool IsCtrlKey(VirtualKey key) =>
         key is VirtualKey.Control or VirtualKey.LeftControl or VirtualKey.RightControl;
 
-    /// <summary>Re-evaluates the hovered link at the last pointer position.</summary>
-    private void UpdateHoverLink(bool ctrl)
+    /// <summary>Whether <paramref name="key"/> is the one <c>link-click</c> opens links with (none for a plain click).</summary>
+    private bool IsLinkKey(VirtualKey key) => _config.LinkClick switch
     {
-        var link = ctrl && !_selecting && _pointerPosition is { } pos ? LinkUnder(pos) : null;
+        LinkClick.Ctrl => IsCtrlKey(key),
+        LinkClick.Alt => key is VirtualKey.Menu or VirtualKey.LeftMenu or VirtualKey.RightMenu,
+        _ => false,
+    };
+
+    /// <summary>Whether links show (and open) with these modifiers: the link key held, or always with a plain click.</summary>
+    private bool LinkKeyHeld(VirtualKeyModifiers modifiers) => _config.LinkClick switch
+    {
+        LinkClick.Ctrl => (modifiers & VirtualKeyModifiers.Control) != 0,
+        LinkClick.Alt => (modifiers & VirtualKeyModifiers.Menu) != 0,
+        _ => true,
+    };
+
+    /// <summary>Re-evaluates the hovered link at the last pointer position (<paramref name="linkKey"/>: links show now).</summary>
+    private void UpdateHoverLink(bool linkKey)
+    {
+        var link = linkKey && !_selecting && _pointerPosition is { } pos ? LinkUnder(pos) : null;
         if (link == _renderer.HoverLink)
         {
             return;

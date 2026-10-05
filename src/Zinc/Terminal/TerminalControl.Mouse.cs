@@ -19,6 +19,9 @@ public sealed partial class TerminalControl
     private bool _arrowCursor;
     private InputSystemCursorShape _cursorShape;
 
+    // A link pressed with link-click = click, and the cell it was pressed on: opened on release if it wasn't dragged.
+    private (LinkMatch Link, (int Col, int Row)? Cell)? _pendingLink;
+
     protected override void OnPointerPressed(PointerRoutedEventArgs e)
     {
         NoteShaderMouse(e);
@@ -34,12 +37,20 @@ public sealed partial class TerminalControl
         var point = e.GetCurrentPoint(Surface);
         var props = point.Properties;
         e.Handled = true;
-        if (props.IsLeftButtonPressed && (e.KeyModifiers & VirtualKeyModifiers.Control) != 0 &&
-            LinkUnder(point.Position) is { } link)
+        _pendingLink = null;
+        if (props.IsLeftButtonPressed && LinkUnder(point.Position) is { } link)
         {
-            // Links win over app mouse reporting, like selecting with Shift.
-            OpenLink(link.Uri);
-            return;
+            if (_config.LinkClick != LinkClick.Click && LinkKeyHeld(e.KeyModifiers))
+            {
+                // Links win over app mouse reporting, like selecting with Shift.
+                OpenLink(link.Uri);
+                return;
+            }
+
+            if (_config.LinkClick == LinkClick.Click && e.KeyModifiers == VirtualKeyModifiers.None && !ShouldReportMouse(session, e))
+            {
+                _pendingLink = (link, CellAt(point.Position)); // opened on release, unless it became a drag
+            }
         }
 
         CapturePointer(e.Pointer);
@@ -60,6 +71,16 @@ public sealed partial class TerminalControl
             // Windows Terminal convention: right-click copies a selection, or pastes.
             if (HasSelection()) CopySelection();
             else PasteFromClipboard();
+            return;
+        }
+
+        if (props.IsMiddleButtonPressed)
+        {
+            if (_config.MiddleClickPaste)
+            {
+                PasteFromClipboard();
+            }
+
             return;
         }
 
@@ -84,7 +105,7 @@ public sealed partial class TerminalControl
 
         var point = e.GetCurrentPoint(Surface);
         _pointerPosition = point.Position;
-        UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0);
+        UpdateHoverLink(LinkKeyHeld(e.KeyModifiers));
         var reporting = !_selecting && ShouldReportMouse(session, e);
         UpdatePointerCursor(arrow: reporting || _nearScrollBar || !_config.TextPointer);
 
@@ -123,6 +144,17 @@ public sealed partial class TerminalControl
             {
                 ClipboardText.Set(selected);
             }
+
+            // A link clicked (link-click = click), not dragged across: it opens, and that's all the click does.
+            if (_pendingLink is var (link, linkCell) && selected == null && CellAt(position) == linkCell)
+            {
+                _pendingLink = null;
+                _clickCell = null;
+                OpenLink(link.Uri);
+                return;
+            }
+
+            _pendingLink = null;
 
             // A plain click (no drag, nothing selected) in a shell's command line moves its cursor there.
             if (_clickCell is { } pressed && selected == null && CellAt(position) == pressed)
@@ -206,7 +238,7 @@ public sealed partial class TerminalControl
         }
 
         session.ScrollLines((up ? -3 : 3) * notches);
-        UpdateHoverLink((e.KeyModifiers & VirtualKeyModifiers.Control) != 0); // new text under the pointer
+        UpdateHoverLink(LinkKeyHeld(e.KeyModifiers)); // new text under the pointer
         Redraw();
     }
 
@@ -258,7 +290,7 @@ public sealed partial class TerminalControl
         }
 
         _pointerPosition = null;
-        UpdateHoverLink(ctrl: false);
+        UpdateHoverLink(linkKey: false);
     }
 
     /// <summary>

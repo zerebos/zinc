@@ -34,9 +34,44 @@ public sealed partial class MainWindow
         Log.Write($"attention: '{command.Text}' {attention} after {took.TotalSeconds:0}s");
         UpdateFocusBorders(tab);
         var result = command.Failed ? $"failed (exit {command.ExitCode})" : "finished";
-        Alert(global.NotifyCommandFinished, tab, pane,
+        var toast = Alert(global.NotifyCommandFinished, tab, pane,
             $"{command.Text ?? "A command"}", $"{char.ToUpperInvariant(result[0])}{result[1..]} after {Elapsed(took)} · {tab.Header.Title}");
+        if (!toast)
+        {
+            PlayFinishedSound(global.CommandFinishedSound);
+        }
     }
+
+    /// <summary>The sound for a finished command (<c>command-finished-sound</c>), played without waiting.</summary>
+    private static void PlayFinishedSound(FinishedSound sound)
+    {
+        try
+        {
+            switch (sound)
+            {
+                case FinishedSound.Notification:
+                    PlaySound("Notification.Default", 0, SndAlias | SndAsync | SndNoDefault);
+                    break;
+                case FinishedSound.Beep:
+                    MessageBeep(0); // MB_OK: the "Default Beep" sound
+                    break;
+            }
+        }
+        catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
+        {
+            Log.Write($"attention: no sound: {ex.Message}");
+        }
+    }
+
+    private const uint SndAsync = 0x0001, SndNoDefault = 0x0002, SndAlias = 0x00010000;
+
+    [LibraryImport("winmm.dll", EntryPoint = "PlaySoundW", StringMarshalling = StringMarshalling.Utf16)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool PlaySound(string sound, nint module, uint flags);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool MessageBeep(uint type);
 
     /// <summary>The bell rang (per <c>bell</c>): a dot on the tab where you weren't looking, and a taskbar flash from the background.</summary>
     private void OnBell(WorkspaceTab tab, TerminalTab pane)
@@ -81,16 +116,21 @@ public sealed partial class MainWindow
     /// "toast-always": whenever you weren't looking), else a taskbar flash while in the background.
     /// Clicking the notification brings you to the pane.
     /// </summary>
-    private void Alert(NotifyMode mode, WorkspaceTab tab, TerminalTab pane, string title, string body)
+    /// <returns>Whether it was a Windows notification.</returns>
+    private bool Alert(NotifyMode mode, WorkspaceTab tab, TerminalTab pane, string title, string body)
     {
         if (mode == NotifyMode.ToastAlways || (mode == NotifyMode.Toast && !_active))
         {
             App.Instance.Notify(title, body, () => BringToPane(tab, pane));
+            return true;
         }
-        else if (!_active)
+
+        if (!_active)
         {
             FlashTaskbarButton();
         }
+
+        return false;
     }
 
     /// <summary>Brings this window forward with <paramref name="pane"/> shown and focused (if it's still here).</summary>
@@ -220,7 +260,8 @@ public sealed partial class MainWindow
     /// Asks before closing terminals the shell says are running a command. True to go ahead
     /// (nothing running, or the user agreed).
     /// </summary>
-    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes) => ConfirmClose(panes, "Closing", "Close");
+    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes) =>
+        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", "Close") : Task.FromResult(true);
 
     /// <param name="doing">What the answer does, as the reason ("Closing", "Quitting").</param>
     /// <param name="button">The primary button's label ("Close", "Quit").</param>
@@ -307,7 +348,7 @@ public sealed partial class MainWindow
             }
 
             var panes = AllTabs().SelectMany(t => t.Workspace.Tabs).ToList();
-            if (panes.All(p => p.Control.RunningCommand == null))
+            if (!_config.Global.ConfirmClose || panes.All(p => p.Control.RunningCommand == null))
             {
                 return;
             }
@@ -338,8 +379,9 @@ public sealed partial class MainWindow
 
     /// <summary>Asks this window's question for the whole app (quitting, or restarting for an update).</summary>
     internal Task<bool> ConfirmQuit(IEnumerable<MainWindow> windows, bool restart = false) =>
-        ConfirmClose(windows.SelectMany(w => w.AllTabs()).SelectMany(t => t.Workspace.Tabs),
-            restart ? "Restarting" : "Quitting", restart ? "Restart" : "Quit");
+        !_config.Global.ConfirmQuit ? Task.FromResult(true)
+            : ConfirmClose(windows.SelectMany(w => w.AllTabs()).SelectMany(t => t.Workspace.Tabs),
+                restart ? "Restarting" : "Quitting", restart ? "Restart" : "Quit");
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FlashInfo

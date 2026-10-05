@@ -246,6 +246,9 @@ public static class SettingsCatalog
         new("layout", "Panes", "window.tab-groups", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
         new("layout", "Panes", "window.group-tab-strip", "Pane tab strip", "The row of tabs above a pane.", SettingKind.Choice, "auto")
             { Choices = [new("Automatic", "auto", "Shown when a pane has two or more tabs."), new("Always", "always")] },
+        new("layout", "Panes", "window.pane-resize-step", "Resize step",
+            "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number, 5L)
+            { Unit = "%", Minimum = 1, Maximum = 50, Step = 1 },
         new("layout", "Panes", "window.unfocused-split-opacity", "Unfocused panes",
             "How bright unfocused panes stay (1: not dimmed).", SettingKind.Number, 0.7)
             { Minimum = 0.15, Maximum = 1, Step = 0.05 },
@@ -275,6 +278,10 @@ public static class SettingsCatalog
                     new("Open my windows", "windows", "As they were when you left, or a new one."),
                 ],
             },
+        new("layout", "Closing", "window.confirm-close", "Ask before closing a running command",
+            "When you close a tab, pane or window while a command still runs. Needs shell integration to know.", SettingKind.Toggle, true),
+        new("layout", "Closing", "window.confirm-quit", "Ask before quitting with a running command",
+            "When you quit Zinc (or restart it for an update) while a command still runs.", SettingKind.Toggle, true),
 
         // ---- Terminal
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
@@ -312,6 +319,18 @@ public static class SettingsCatalog
         new("terminal", "Mouse", "terminal.click-to-move", "Click to move the cursor",
             "At a shell prompt, clicking in the command you're typing moves the cursor there. Needs shell integration.",
             SettingKind.Toggle, true),
+        new("terminal", "Mouse", "terminal.link-click", "Open links with", "Web links and files shown in the terminal.",
+            SettingKind.Choice, "ctrl")
+            {
+                Choices =
+                [
+                    new("Ctrl+click", "ctrl", "Holding Ctrl underlines the links."),
+                    new("Alt+click", "alt", "Holding Alt underlines the links."),
+                    new("A click", "click", "Dragging across a link still selects it; a program using the mouse still gets the click."),
+                ],
+            },
+        new("terminal", "Mouse", "terminal.middle-click-paste", "Middle-click pastes",
+            "Unless the program uses the mouse.", SettingKind.Toggle, false),
         new("terminal", "Mouse", "window.focus-follows-mouse", "Focus follows mouse",
             "Moving the pointer into a pane focuses it.", SettingKind.Toggle, false),
         new("terminal", "Clipboard", "terminal.copy-on-select", "Copy on select",
@@ -388,6 +407,11 @@ public static class SettingsCatalog
         new("notifications", "Long commands", "notify.command-finished-after", "Counts as long after",
             "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 10L)
             { Placeholder = "10", NumbersAsNumbers = true },
+        new("notifications", "Long commands", "notify.command-finished-sound", "Sound",
+            "Plays when a long command finishes out of view (a Windows notification has its own).", SettingKind.Choice, "off")
+            {
+                Choices = [new("None", "off"), new("Windows' notification sound", "notification"), new("Windows' default beep", "beep")],
+            },
         new("notifications", "Programs", "notify.programs", "Program notifications",
             "When a program asks for one, e.g. a build script finishing (OSC 9 or 777).", SettingKind.Choice, "badge")
             { Choices = NotifyChoices },
@@ -460,7 +484,7 @@ public static class SettingsCatalog
         new(null, null, "terminal.paste-warning", ["terminal.large-paste-warning"]),
         new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim and remote shells do.", null,
             ["terminal.clipboard-write", "terminal.clipboard-read"]),
-        new(null, null, "notify.command-finished", ["notify.command-finished-after"]),
+        new(null, null, "notify.command-finished", ["notify.command-finished-after", "notify.command-finished-sound"]),
         new(null, null, "window.free-hidden-memory", ["window.free-hidden-after"]),
     ];
 

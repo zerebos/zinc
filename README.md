@@ -232,6 +232,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
 - `copy-on-select`: `false` (default) or `true`: selecting text with the mouse copies it (the
   selection stays).
+- `link-click`: what opens a link (a web address, or an OSC 8 hyperlink): `"ctrl"` (default, Ctrl+click;
+  holding Ctrl underlines them), `"alt"` (Alt+click), or `"click"` (a plain click; dragging across a link
+  still selects it, and a program using the mouse still gets the click).
+- `middle-click-paste`: `false` (default) or `true`: the middle button pastes, unless the program uses the mouse.
 - `click-to-move`: `true` (default) or `false`: at a shell prompt, clicking in the command you're
   typing moves the cursor there (Ghostty's `cursor-click-to-move`). It needs the prompt marks of
   [shell integration](#shell-integration): Zinc presses the arrow keys for you, or, for shells
@@ -327,7 +331,9 @@ shaders written for Ghostty work unchanged
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
 `unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
-features they control below; `focus-follows-mouse = true`, which focuses a pane when the pointer
+features they control below; `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
+how far a resize key moves it); `confirm-close` and `confirm-quit` (`true` by default: closing a tab, pane or
+window, or quitting, asks first while shell integration says a command is running; `false` doesn't ask); `focus-follows-mouse = true`, which focuses a pane when the pointer
 enters it (only while focus is in another pane, not in the palette or a find box); and `software-rendering = true`, which draws with the processor
 instead of the graphics card (for broken graphics drivers, some virtual machines and remote desktop
 glitches; slower; applies to terminals opened after it's set). `low-latency-drawing = true`
@@ -339,7 +345,9 @@ buffers, more with shaders: tens of MB for a maximized tab on a high-resolution 
 `free-hidden-after` (seconds, or `"2m"`; default 60), and make it anew when you come back; `false` keeps it.
 
 **`[notify]`**: `command-finished`, `command-finished-after` (see
-[Shell integration](#shell-integration)), and `programs`: notifications that programs send
+[Shell integration](#shell-integration)), `command-finished-sound` (`"off"` by default, `"notification"` for
+Windows' notification sound or `"beep"` for its default beep, when the command finished out of view and no
+Windows notification, which has its own sound, was shown), and `programs`: notifications that programs send
 (OSC 9 and OSC 777, e.g. a build script's `printf '\e]9;Build done\a'`). Out of view they put a
 blue dot on the tab, like a finished command; `"toast"` also shows a Windows notification while
 Zinc is in the background (`"toast-always"`: whenever that pane is out of view), `"never"`

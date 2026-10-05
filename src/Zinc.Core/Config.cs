@@ -23,6 +23,19 @@ public enum WorkspaceTabs
 }
 
 /// <summary>Whether Zinc loads its shell integration into the shells it starts. Config: <c>shell-integration</c>.</summary>
+/// <summary>What opens a link under the pointer. Config: <c>link-click = ctrl | alt | click</c>.</summary>
+public enum LinkClick
+{
+    /// <summary>Ctrl+click (links show underlined while Ctrl is held).</summary>
+    Ctrl,
+
+    /// <summary>Alt+click.</summary>
+    Alt,
+
+    /// <summary>A click without dragging (a drag still selects; a program using the mouse still gets it).</summary>
+    Click,
+}
+
 public enum ShellIntegrationMode
 {
     /// <summary>PowerShell, bash and zsh get it (after the user's own startup files).</summary>
@@ -49,6 +62,18 @@ public enum CommandMarks
 /// How Zinc tells you about something that happened out of view (a long command finishing, a
 /// program's notification). Config: <c>[notify] command-finished</c> and <c>programs</c>.
 /// </summary>
+/// <summary>The sound for a finished long command. Config: <c>[notify] command-finished-sound</c>.</summary>
+public enum FinishedSound
+{
+    Off,
+
+    /// <summary>Windows' notification sound.</summary>
+    Notification,
+
+    /// <summary>Windows' default beep.</summary>
+    Beep,
+}
+
 public enum NotifyMode
 {
     /// <summary>A dot on its tab; the taskbar button flashes if the window is in the background.</summary>
@@ -230,6 +255,12 @@ public sealed record Config
     /// <summary>A selection is copied as soon as it's made (and stays selected). Config: <c>copy-on-select = true</c>.</summary>
     public bool CopyOnSelect { get; init; }
 
+    /// <summary>What opens a link. Config: <c>link-click</c>.</summary>
+    public LinkClick LinkClick { get; init; }
+
+    /// <summary>The middle button pastes (unless a program uses the mouse). Config: <c>middle-click-paste = true</c>.</summary>
+    public bool MiddleClickPaste { get; init; }
+
     /// <summary>
     /// Clicking in a shell's command line moves its cursor there (with shell integration's marks).
     /// Config: <c>[terminal] click-to-move = false</c> (Ghostty's <c>cursor-click-to-move</c>).
@@ -325,6 +356,18 @@ public sealed record Config
     /// Config: <c>quit-after-last-window-closed = true | false</c>.
     /// </summary>
     public bool? QuitAfterLastWindowClosed { get; init; }
+
+    /// <summary>A sound when a long command finishes out of view (not with a Windows notification: it has its own).</summary>
+    public FinishedSound CommandFinishedSound { get; init; }
+
+    /// <summary>How far the resize-pane action moves a divider, as a fraction of the split. Config: <c>[window] pane-resize-step</c> (percent).</summary>
+    public double PaneResizeStep { get; init; } = 0.05;
+
+    /// <summary>Closing a tab, pane or window asks first when a command is still running. Config: <c>[window] confirm-close</c>.</summary>
+    public bool ConfirmClose { get; init; } = true;
+
+    /// <summary>Quitting (or restarting for an update) asks first when a command is still running. Config: <c>[window] confirm-quit</c>.</summary>
+    public bool ConfirmQuit { get; init; } = true;
 
     /// <summary>
     /// A pane can hold several tabs (true, the default); false keeps one terminal per pane, and
@@ -549,6 +592,9 @@ public sealed record Config
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
             "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
+            "confirm-close" when bool.TryParse(value, out var confirmClose) => this with { ConfirmClose = confirmClose },
+            "notify-command-finished-sound" when TryMode<FinishedSound>(value, out var finishedSound) => this with { CommandFinishedSound = finishedSound },
+            "confirm-quit" when bool.TryParse(value, out var confirmQuit) => this with { ConfirmQuit = confirmQuit },
             "quit-after-last-window-closed" when bool.TryParse(value, out var quit) =>
                 this with { QuitAfterLastWindowClosed = quit },
             "tab-groups" when bool.TryParse(value, out var groups) => this with { TabGroups = groups },
@@ -565,6 +611,9 @@ public sealed record Config
                 this with { ShaderAnimation = ShaderAnimation.Always },
             "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
                 this with { GroupTabStrip = strip },
+            "pane-resize-step" when double.TryParse(value, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var step) && step is >= 1 and <= 50 =>
+                this with { PaneResizeStep = step / 100 },
             "unfocused-split-opacity" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var opacity) =>
                 this with { UnfocusedSplitOpacity = Math.Clamp(opacity, 0.15, 1.0) },
@@ -602,6 +651,8 @@ public sealed record Config
             "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
             "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
             "shell-integration" when TryMode<ShellIntegrationMode>(value, out var integration) => this with { ShellIntegration = integration },
+            "link-click" when TryMode<LinkClick>(value, out var linkClick) => this with { LinkClick = linkClick },
+            "middle-click-paste" when bool.TryParse(value, out var middle) => this with { MiddleClickPaste = middle },
             "notify-command-finished" when TryMode<NotifyMode>(value, out var notify) => this with { NotifyCommandFinished = notify },
             "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },

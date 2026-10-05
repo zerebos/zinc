@@ -1581,7 +1581,7 @@ public sealed partial class MainWindow : Window
                 return true;
             case TerminalAction.ResizePane:
                 if (tab.Workspace.GroupOf(origin) is { } group &&
-                    tab.Workspace.Resize(group, invocation.Direction, 0.05) is { } split &&
+                    tab.Workspace.Resize(group, invocation.Direction, _config.Global.PaneResizeStep) is { } split &&
                     GridFor(tab, split) is { } grid)
                 {
                     PaneDivider.ApplyRatio(grid, split);
