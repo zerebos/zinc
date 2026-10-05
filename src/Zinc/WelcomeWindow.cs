@@ -671,7 +671,14 @@ internal sealed partial class WelcomeWindow : Window
             Padding = new Thickness(5, 8, 5, 8),
             BorderThickness = new Thickness(0),
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            Content = new Border { Height = 8, CornerRadius = new CornerRadius(4) },
+            // Its own brush, so the color can fade (ShowDots); starts as an unselected dot.
+            Content = new Border
+            {
+                Height = 8,
+                Width = 8,
+                CornerRadius = new CornerRadius(4),
+                Background = new SolidColorBrush(((SolidColorBrush)Application.Current.Resources["ControlStrongFillColorDefaultBrush"]).Color),
+            },
         };
         foreach (var key in new[] { "ButtonBackgroundPointerOver", "ButtonBackgroundPressed" })
         {
@@ -683,15 +690,35 @@ internal sealed partial class WelcomeWindow : Window
         return dot;
     }
 
-    /// <summary>The current page's dot is a wider accent pill; the others, small grey dots.</summary>
+    /// <summary>
+    /// The current page's dot is a wider accent pill; the others, small grey dots. A page change slides between them: the
+    /// new pill widens and takes the accent while the old one shrinks back (200 ms; at once with Windows' animations off).
+    /// </summary>
     private void ShowDots()
     {
+        var animate = new Windows.UI.ViewManagement.UISettings().AnimationsEnabled;
+        var duration = new Duration(TimeSpan.FromMilliseconds(200));
+        var ease = new Microsoft.UI.Xaml.Media.Animation.CubicEase { EasingMode = Microsoft.UI.Xaml.Media.Animation.EasingMode.EaseOut };
         for (var i = 0; i < _dots.Children.Count; i++)
         {
             var pill = (Border)((Button)_dots.Children[i]).Content;
             var current = i == _page;
-            pill.Width = current ? 24 : 8;
-            pill.Background = (Brush)Application.Current.Resources[current ? "AccentFillColorDefaultBrush" : "ControlStrongFillColorDefaultBrush"];
+            var width = current ? 24.0 : 8.0;
+            var color = ((SolidColorBrush)Application.Current.Resources[current ? "AccentFillColorDefaultBrush" : "ControlStrongFillColorDefaultBrush"]).Color;
+            if (!animate || pill.ActualWidth <= 0)
+            {
+                pill.Width = width;
+                ((SolidColorBrush)pill.Background).Color = color;
+                continue;
+            }
+
+            var grow = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation { To = width, Duration = duration, EasingFunction = ease, EnableDependentAnimation = true };
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(grow, pill);
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(grow, "Width");
+            var fade = new Microsoft.UI.Xaml.Media.Animation.ColorAnimation { To = color, Duration = duration, EasingFunction = ease };
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(fade, pill.Background);
+            Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(fade, "Color");
+            new Microsoft.UI.Xaml.Media.Animation.Storyboard { Children = { grow, fade } }.Begin();
         }
     }
 
