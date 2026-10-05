@@ -33,6 +33,13 @@ public static class InstallCleanup
             done.Add(wasDefault ? "gave the default terminal back" : "removed the default-terminal class");
         }
 
+        var menu = new Zinc.Shell.ExplorerMenu(root);
+        if (IsInside(menu.RegisteredExe(), installDir))
+        {
+            menu.Apply(null);
+            done.Add("removed Open in Zinc from Explorer's menu");
+        }
+
         var path = new UserPath(root);
         if (path.Entry is { } entry && IsInside(Path.Combine(entry, "zn.exe"), installDir))
         {

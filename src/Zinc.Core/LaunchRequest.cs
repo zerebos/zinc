@@ -88,6 +88,10 @@ public sealed record LaunchRequest(LaunchAction Action, string? Profile, string?
             else if (args[i].Equals(FolderFlag, StringComparison.OrdinalIgnoreCase) && i + 1 < args.Count && args[i + 1].Length > 0)
             {
                 folder = args[++i];
+                if (folder.Length > 3 && folder.EndsWith(@":\.", StringComparison.Ordinal))
+                {
+                    folder = folder[..^1]; // a drive as Explorer's menu passes it: "C:\." (ExplorerMenu says why)
+                }
             }
         }
 

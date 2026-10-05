@@ -487,6 +487,9 @@ public sealed record Config
     /// <summary>Starting Zinc when you sign in to Windows. Config: <c>[window] launch-at-login = off | tray | windows</c>.</summary>
     public LaunchAtLogin LaunchAtLogin { get; init; }
 
+    /// <summary>"Open in Zinc" on Explorer's menu for folders and drives. Config: <c>[window] explorer-menu = true</c>.</summary>
+    public bool ExplorerMenu { get; init; }
+
     /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
     public GhosttyColorRgb? UnfocusedSplitFill { get; init; }
 
@@ -642,6 +645,7 @@ public sealed record Config
             "workspace-colors" when TryMode<Zinc.Panes.WorkspaceColorMode>(value, out var colors) => this with { WorkspaceColors = colors },
             "new-workspace-page" when bool.TryParse(value, out var page) => this with { NewWorkspacePage = page },
             "launch-at-login" when TryMode<LaunchAtLogin>(value, out var login) => this with { LaunchAtLogin = login },
+            "explorer-menu" when bool.TryParse(value, out var explorer) => this with { ExplorerMenu = explorer },
             "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },

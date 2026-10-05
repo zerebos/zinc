@@ -118,6 +118,7 @@ public partial class App : Application
         // Zinc's own flags (a jump list item while Zinc wasn't running): the usual start, then what they ask.
         var launch = LaunchRequest.Parse(ShellResolver.LaunchArguments());
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
+        ExplorerIntegration.Apply(_config.Global.ExplorerMenu);
         ApplyZnPath(_config.Global.ZnOnPath);
         Updater.Schedule(_config.Global.UpdateCheck);
         ListenForConsoles();
@@ -749,6 +750,7 @@ public partial class App : Application
         _config = fresh;
         AttentionDot.SetColors(fresh.Global);
         LoginStartup.Apply(fresh.Global.LaunchAtLogin);
+        ExplorerIntegration.Apply(fresh.Global.ExplorerMenu);
         ApplyZnPath(fresh.Global.ZnOnPath);
         Updater.Schedule(fresh.Global.UpdateCheck);
         CanvasLifetime.SoftwareRendering = fresh.Global.SoftwareRendering; // terminals opened from now on

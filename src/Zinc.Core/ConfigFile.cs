@@ -705,6 +705,7 @@ public sealed class ConfigFile
             ["window.free-hidden-after"] = ("free-hidden-after", v => v is string d ? d : Number(v)),
             ["window.focus-follows-mouse"] = ("focus-follows-mouse", v => Bool(v)),
             ["window.confirm-close"] = ("confirm-close", v => Bool(v)),
+            ["window.explorer-menu"] = ("explorer-menu", v => Bool(v)),
             ["window.pane-resize-step"] = ("pane-resize-step", v => Number(v)),
             ["window.confirm-quit"] = ("confirm-quit", v => Bool(v)),
             ["terminal.copy-on-select"] = ("copy-on-select", v => Bool(v)),

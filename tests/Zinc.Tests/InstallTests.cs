@@ -75,6 +75,39 @@ public sealed class InstallTests : IDisposable
     }
 
     [Fact]
+    public void ExplorerMenuAddsOpenInZincForFoldersBackgroundsAndDrives()
+    {
+        var exe = Installed + @"\current\zinc.exe";
+        var menu = new Zinc.Shell.ExplorerMenu(_root);
+        Assert.True(menu.Apply(exe));
+        Assert.False(menu.Apply(exe)); // already so
+        string? Command(string key) => _root.OpenSubKey($@"Software\Classes\{key}\shell\Zinc\command")?.GetValue(null) as string;
+        Assert.Equal($"\"{exe}\" --folder \"%V\"", Command("Directory"));
+        Assert.Equal($"\"{exe}\" --folder \"%V\"", Command(@"Directory\Background"));
+        Assert.Equal($"\"{exe}\" --folder \"%V.\"", Command("Drive")); // "C:\" would end in an escaped quote
+        Assert.Equal("Open in Zinc", _root.OpenSubKey(@"Software\Classes\Directory\shell\Zinc")?.GetValue(null));
+        Assert.Equal(exe, menu.RegisteredExe());
+
+        Assert.True(menu.Apply(null));
+        Assert.Null(Command("Directory"));
+        Assert.Null(Command("Drive"));
+        Assert.Null(menu.RegisteredExe());
+    }
+
+    [Fact]
+    public void UninstallTakesBackTheExplorerMenuOnlyWhenItStartsThisInstall()
+    {
+        var other = @"C:\Users\Someone\AppData\Local\Programs\Zinc\versions\20261002-0.1.0\zinc.exe";
+        new Zinc.Shell.ExplorerMenu(_root).Apply(other);
+        Assert.Empty(InstallCleanup.Uninstall(_root, Installed));
+        Assert.Equal(other, new Zinc.Shell.ExplorerMenu(_root).RegisteredExe());
+
+        new Zinc.Shell.ExplorerMenu(_root).Apply(Installed + @"\current\zinc.exe");
+        Assert.Equal(["removed Open in Zinc from Explorer's menu"], InstallCleanup.Uninstall(_root, Installed));
+        Assert.Null(new Zinc.Shell.ExplorerMenu(_root).RegisteredExe());
+    }
+
+    [Fact]
     public void UninstallWithNothingRegisteredDoesNothing()
     {
         Assert.Empty(InstallCleanup.Uninstall(_root, Installed));

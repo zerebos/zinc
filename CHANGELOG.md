@@ -19,6 +19,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - Line height: more room between lines, as a percentage or in pixels (Appearance > Font). Box drawing still joins up.
 - Match 256 colors to the scheme: programs using the extended palette get shades made from your scheme's colors
   (Appearance > Colors).
+- Open in Zinc from File Explorer: right-click a folder or a drive (Layout > When you come back; off by default).
 
 ## 0.1.0-dev.282 (2026-10-05)
 

@@ -12,6 +12,9 @@ public partial class LaunchRequestTests
         Assert.Equal(LaunchAction.None, command.Action);
         Assert.Equal(["wsl.exe", "-d", "Fedora"], command.Command);
         Assert.Equal(["--settings"], LaunchRequest.Parse(["--", "--settings"]).Command);
+        // A drive as Explorer's menu passes it ("C:\." rather than "C:\", which can't be quoted).
+        Assert.Equal(@"C:\", LaunchRequest.Parse(["--folder", @"C:\."]).Folder);
+        Assert.Equal(@"C:\src\.git", LaunchRequest.Parse(["--folder", @"C:\src\.git"]).Folder);
     }
 
     [Theory]
