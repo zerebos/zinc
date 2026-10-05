@@ -41,7 +41,7 @@ public static partial class Program
         {
             Log.Write($"startup: another Zinc runs from {other}; asking to quit it first");
             MessageBoxW(0, $"Zinc is already running from another folder:\n\n{other}\n\n" +
-                "Quit that copy first (right-click its tray icon, then “Quit Zinc”), then start Zinc again.", "Zinc", 0x40 /* MB_ICONINFORMATION */);
+                "Quit that copy first (right-click its tray icon, then \"Quit Zinc\"), then start Zinc again.", "Zinc", 0x40 /* MB_ICONINFORMATION */);
             return 0;
         }
 

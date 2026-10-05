@@ -507,7 +507,7 @@ public sealed class Keybindings
             if (bindings.Sequences.FirstOrDefault(s => s.Keys.Keys.Count < keys.Keys.Count && keys.StartsWith(s.Keys.Keys)) is { Keys: { } shorter } &&
                 seenSequences.TryGetValue(keys, out var where))
             {
-                warnings.Add($"{where}: {keys} can’t be reached: {shorter} runs first");
+                warnings.Add($"{where}: {keys} can't be reached: {shorter} runs first");
             }
         }
 

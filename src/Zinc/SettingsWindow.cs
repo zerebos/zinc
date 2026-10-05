@@ -406,7 +406,7 @@ internal sealed partial class SettingsWindow : Window
     private void UpdateBanners()
     {
         _problems.IsOpen = _config.HasErrors;
-        _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until it’s fixed.";
+        _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until it's fixed.";
         UpdateChanges();
     }
 
@@ -556,7 +556,7 @@ internal sealed partial class SettingsWindow : Window
         _updateRestart.Visibility = status == UpdateStatus.Ready ? Visibility.Visible : Visibility.Collapsed;
         if (_updateNotes != null)
         {
-            _updateNotes.Content = $"What’s new in {Updater.NewVersion}";
+            _updateNotes.Content = $"What's new in {Updater.NewVersion}";
             _updateNotes.Visibility = status == UpdateStatus.Ready && Updater.NewNotes.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
     }
@@ -588,7 +588,7 @@ internal sealed partial class SettingsWindow : Window
 
         var dialog = new ContentDialog
         {
-            Title = $"What’s new in {Updater.NewVersion}",
+            Title = $"What's new in {Updater.NewVersion}",
             Content = new ScrollViewer { Content = body, MaxHeight = 420 },
             CloseButtonText = "Close",
             XamlRoot = _page.XamlRoot,
@@ -630,7 +630,7 @@ internal sealed partial class SettingsWindow : Window
         });
 
         var open = new Button { Content = "Open folder" };
-        AutomationProperties.SetName(open, "Open the debug log’s folder");
+        AutomationProperties.SetName(open, "Open the debug log's folder");
         open.Click += (_, _) => Reveal(Log.FilePath);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { open, copy, clear } };
@@ -656,7 +656,7 @@ internal sealed partial class SettingsWindow : Window
         var refresh = new Button { Content = "Refresh" };
         AutomationProperties.SetName(refresh, "Measure memory again");
         refresh.Click += (_, _) => Render();
-        _page.Children.Add(Row("Memory", report.Summary + ". Most of it is Windows’ UI framework, the graphics driver, and your terminals’ screens and scrollback.",
+        _page.Children.Add(Row("Memory", report.Summary + ". Most of it is Windows' UI framework, the graphics driver, and your terminals' screens and scrollback.",
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { refresh, copy } }));
     }
 
@@ -768,7 +768,7 @@ internal sealed partial class SettingsWindow : Window
     {
         if (profile.Missing == ProfileMissing.SearchOff && profile.Source is { } source)
         {
-            var on = new Button { Content = $"Turn on “{SearchLabel(source)}”" };
+            var on = new Button { Content = $"Turn on \"{SearchLabel(source)}\"" };
             on.Click += (_, _) => Write(["discover", source], null); // on is the default: the line goes
             return on;
         }
@@ -839,7 +839,7 @@ internal sealed partial class SettingsWindow : Window
         else
         {
             label.Text = kept > 0
-                ? $"Off. {kept} profile{(kept == 1 ? "" : "s")} you changed can’t open until it’s on again."
+                ? $"Off. {kept} profile{(kept == 1 ? "" : "s")} you changed can't open until it's on again."
                 : _config.ValueOf($"discover.{source}") is not false ? "Nothing found on this PC." : "Off.";
         }
 
@@ -872,7 +872,7 @@ internal sealed partial class SettingsWindow : Window
         what.Add(profile.Missing switch
         {
             ProfileMissing.NotFound => "not found on this PC any more",
-            ProfileMissing.SearchOff => $"“{SearchLabel(profile.Source)}” is turned off",
+            ProfileMissing.SearchOff => $"\"{SearchLabel(profile.Source)}\" is turned off",
             _ => profile.Found ? profile.InFile ? "found on this PC, with your changes" : "found on this PC" : "yours",
         });
         if (profile.Hidden && profile.Missing == ProfileMissing.None)
@@ -1052,10 +1052,10 @@ internal sealed partial class SettingsWindow : Window
                 IsOpen = true,
                 IsClosable = false,
                 Severity = InfoBarSeverity.Warning,
-                Title = "This profile can’t open",
+                Title = "This profile can't open",
                 Message = profile.Missing == ProfileMissing.SearchOff
-                    ? $"It was found by “{SearchLabel(profile.Source)}”, which is turned off. Your changes to it are kept in config.toml."
-                    : "It was found on this PC, but isn’t here any more. Your changes to it are kept in config.toml; delete it if it’s gone for good.",
+                    ? $"It was found by \"{SearchLabel(profile.Source)}\", which is turned off. Your changes to it are kept in config.toml."
+                    : "It was found on this PC, but isn't here any more. Your changes to it are kept in config.toml; delete it if it's gone for good.",
                 ActionButton = MissingFix(profile),
                 Margin = new Thickness(0, 0, 0, 8),
             };
@@ -1331,7 +1331,7 @@ internal sealed partial class SettingsWindow : Window
     /// </summary>
     private Border SchemeCard(SettingDef setting, string? profile)
     {
-        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc’s own: Lit Cell" : "Back to the scheme every profile inherits");
+        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
         var description = DescriptionText();
         var tiles = new StackPanel { Spacing = 3 };
         var chevron = new FontIcon { Glyph = ((char)0xE76C).ToString(), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -1402,7 +1402,7 @@ internal sealed partial class SettingsWindow : Window
     {
         null => setting.Kind switch
         {
-            SettingKind.Color => "the scheme’s",
+            SettingKind.Color => "the scheme's",
             SettingKind.Font => BundledFonts.Family,
             SettingKind.Scheme => DefaultSchemeLabel,
             _ => "the default",
@@ -1805,7 +1805,7 @@ internal sealed partial class SettingsWindow : Window
     private (FrameworkElement, Action<object?>) ColorControl(SettingDef setting, Action<object?> commit, string? profile)
     {
         // What "none" means for this setting, and its color under the scheme in force.
-        var nullLabel = setting.NullLabel ?? (setting.Key == "window.unfocused-split-fill" ? "Use each pane’s background" : "Use the scheme’s color");
+        var nullLabel = setting.NullLabel ?? (setting.Key == "window.unfocused-split-fill" ? "Use each pane's background" : "Use the scheme's color");
         Color NullColor()
         {
             // The tab dots default to the brand's colors, not the scheme's.
@@ -1828,7 +1828,7 @@ internal sealed partial class SettingsWindow : Window
 
         var swatch = new Border { Width = 22, Height = 22, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1) };
         swatch.BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"];
-        var box = new TextBox { Width = ControlWidth - 22 - 8 - 40 - 8, PlaceholderText = setting.Placeholder ?? "The scheme’s" };
+        var box = new TextBox { Width = ControlWidth - 22 - 8 - 40 - 8, PlaceholderText = setting.Placeholder ?? "The scheme's" };
         AutomationProperties.SetName(box, setting.Label);
 
         // The flyout: the scheme's colors as chips, "use the scheme's", and the full picker below.

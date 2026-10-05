@@ -246,7 +246,7 @@ internal sealed partial class WelcomeWindow : Window
             Spacing = 12,
             Children =
             {
-                Note("A few choices to start with. Change them any time in Settings, or come back here: Ctrl+Shift+P, then “Welcome…”."),
+                Note("A few choices to start with. Change them any time in Settings, or come back here: Ctrl+Shift+P, then \"Welcome…\"."),
                 new Border { Height = 8 },
                 SectionTitle("How do you like to work?"),
                 cards,
@@ -599,7 +599,7 @@ internal sealed partial class WelcomeWindow : Window
             Children =
             {
                 SectionTitle("When a long command finishes"),
-                Note("A command that ran 10 seconds or more puts a dot on its tab if you weren’t looking. " +
+                Note("A command that ran 10 seconds or more puts a dot on its tab if you weren't looking. " +
                      "If Zinc is in the background, also:"),
                 flash,
                 toast,

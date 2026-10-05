@@ -18,7 +18,7 @@ public class FirstRunTests
         // A top-level key must come before any table to stay top-level.
         Assert.True(text.IndexOf("default-profile", StringComparison.Ordinal) < text.IndexOf('[', StringComparison.Ordinal));
         // Read as the top-level setting (tests don't discover profiles, so it names none here).
-        Assert.Contains(config.Warnings, w => w.Contains("default-profile 'wsl:Fedora' isn’t a profile"));
+        Assert.Contains(config.Warnings, w => w.Contains("default-profile 'wsl:Fedora' isn't a profile"));
     }
 
     [Fact]

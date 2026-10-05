@@ -154,10 +154,10 @@ internal static class ShaderLoader
             {
                 // A name that's neither yours (shaders\ next to the config) nor Zinc's.
                 var known = string.Join(", ", ShaderPaths.Bundled().Select(s => s.Name));
-                return (null, $"{Path.GetFileNameWithoutExtension(file)}: no shader by that name (Zinc’s are {known}; yours go in a shaders folder next to config.toml)");
+                return (null, $"{Path.GetFileNameWithoutExtension(file)}: no shader by that name (Zinc's are {known}; yours go in a shaders folder next to config.toml)");
             }
 
-            return (null, ex is FileNotFoundException or DirectoryNotFoundException ? $"{name}: no such file ({file})" : $"{name}: couldn’t read it ({ex.Message})");
+            return (null, ex is FileNotFoundException or DirectoryNotFoundException ? $"{name}: no such file ({file})" : $"{name}: couldn't read it ({ex.Message})");
         }
 
         try
@@ -174,7 +174,7 @@ internal static class ShaderLoader
             {
                 // The translation's HLSL, refused: not the shader's fault as written, so its lines mean nothing to its author.
                 Log.Write($"shader: {name}: Direct3D refused the translation: {error}");
-                return (null, $"{name}: couldn’t be compiled for Direct3D ({FirstLine(error)})");
+                return (null, $"{name}: couldn't be compiled for Direct3D ({FirstLine(error)})");
             }
 
             Log.Write($"shader: {name} ready (translated in {translated:0} ms, compiled in {watch.Elapsed.TotalMilliseconds - translated:0} ms)");
@@ -183,14 +183,14 @@ internal static class ShaderLoader
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             Log.Write($"shader: no translator: {ex.Message}");
-            return (null, $"{name}: Zinc’s shader translator (zinc-shader.dll) is missing or broken; reinstalling Zinc should bring it back");
+            return (null, $"{name}: Zinc's shader translator (zinc-shader.dll) is missing or broken; reinstalling Zinc should bring it back");
         }
         catch (Exception ex)
         {
             // Anything else is this file's problem, not every pane's: a faulted task cached here would reach each new
             // pane and each reload as a "something went wrong" notice.
             Log.Crash($"shader {name}", ex);
-            return (null, $"{name}: couldn’t be compiled ({ex.Message})");
+            return (null, $"{name}: couldn't be compiled ({ex.Message})");
         }
     }
 

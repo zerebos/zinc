@@ -168,10 +168,10 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains(':') || name.Contains(','))
         {
-            return "A name can’t have \\ / : * ? \" < > | or a comma.";
+            return "A name can't have \\ / : * ? \" < > | or a comma.";
         }
 
-        return Find(name) != null ? $"There’s a scheme called {name} already." : null;
+        return Find(name) != null ? $"There's a scheme called {name} already." : null;
     }
 
     /// <summary>

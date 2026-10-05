@@ -89,7 +89,7 @@ internal sealed partial class SettingsWindow
 
             summary.Text = files.Count == 0 ? "None" : string.Join(", ", files.Select(ShaderName));
             SetText(state, !_config.Global.LowLatencyDrawing && files.Count > 0
-                ? "Shaders need “Low-latency drawing”, which is off (Terminal > Troubleshooting)."
+                ? "Shaders need \"Low-latency drawing\", which is off (Terminal > Troubleshooting)."
                 : "");
             if (files.Count > 0 && _config.Global.LowLatencyDrawing)
             {
@@ -105,7 +105,7 @@ internal sealed partial class SettingsWindow
                 var loaded = await ShaderLoader.Load(full);
                 if (current == check && loaded.Errors.Count > 0)
                 {
-                    SetText(state, loaded.Errors.Count == 1 ? $"One doesn’t compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} don’t compile; “Edit shaders” shows why.");
+                    SetText(state, loaded.Errors.Count == 1 ? $"One doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} don't compile; \"Edit shaders\" shows why.");
                     state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 }
             }
@@ -245,7 +245,7 @@ internal sealed partial class SettingsWindow
                 icon.Foreground = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
                 icon.Opacity = 1;
                 SetText(state, loaded.Shaders[0].UsesTime ? "Compiles. Animated." : "Compiles.");
-                ToolTipService.SetToolTip(state, loaded.Shaders[0].UsesTime ? "Keeps redrawing while the terminal is idle. The “Animation” setting decides when." : null);
+                ToolTipService.SetToolTip(state, loaded.Shaders[0].UsesTime ? "Keeps redrawing while the terminal is idle. The \"Animation\" setting decides when." : null);
             }
             else
             {

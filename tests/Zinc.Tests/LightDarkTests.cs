@@ -68,7 +68,7 @@ public class LightDarkTests
     public void AMissingSideIsReportedWhateverTheMode()
     {
         var config = Read("[colors]\ntheme = \"light:Paper,dark:Nope\"\n", ColorScheme.Light);
-        Assert.Contains(config.Warnings, w => w.Contains("no color scheme named “Nope”"));
+        Assert.Contains(config.Warnings, w => w.Contains("no color scheme named \"Nope\""));
     }
 
     [Fact]

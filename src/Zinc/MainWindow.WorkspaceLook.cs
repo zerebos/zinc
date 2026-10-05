@@ -33,7 +33,7 @@ public sealed partial class MainWindow
     private void AskWorkspaceIcon(WorkspaceTab tab)
     {
         var before = tab.Icon;
-        var choices = new List<PaletteCommand> { new("Profile’s icon", null, () => SetWorkspaceIcon(tab, null), Remember: false) };
+        var choices = new List<PaletteCommand> { new("Profile's icon", null, () => SetWorkspaceIcon(tab, null), Remember: false) };
         choices.AddRange(WorkspaceIcons.All.Select(i => new PaletteCommand(i.Name, null, () => SetWorkspaceIcon(tab, i.Name), Remember: false)));
         AskPaletteArgument(new PaletteArgument("Icon for this workspace", choices,
             Highlight: choice => tab.Header.SetIcon(WorkspaceIcons.Glyph(choice.Title)),

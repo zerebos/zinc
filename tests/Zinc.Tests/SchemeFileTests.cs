@@ -97,7 +97,7 @@ public sealed class CustomizeSchemeTests : IDisposable
         Assert.Equal("Give it a name.", _themes.NameProblem("  "));
         Assert.NotNull(_themes.NameProblem("a/b"));
         Assert.NotNull(_themes.NameProblem("light:x"));
-        Assert.Equal("There’s a scheme called dracula already.", _themes.NameProblem("dracula"));
+        Assert.Equal("There's a scheme called dracula already.", _themes.NameProblem("dracula"));
 
         var file = _themes.Create(" Night Shift ", "Dracula")!;
         Assert.Equal(Path.Combine(_root, "themes", "Night Shift"), file);

@@ -106,7 +106,7 @@ internal sealed partial class SettingsWindow
 
         if (_page.Children.Count <= 2)
         {
-            _page.Children.Add(Note($"Nothing matches “{query}”."));
+            _page.Children.Add(Note($"Nothing matches \"{query}\"."));
         }
     }
 

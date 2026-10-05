@@ -144,7 +144,7 @@ public class KeySequenceTests
             "ctrl+a>c" = "new-tab"
             "ctrl+a>c>x" = "quit"
             """);
-        Assert.Contains("config.toml:3: Ctrl+A > C > X can’t be reached: Ctrl+A > C runs first", config.Warnings);
+        Assert.Contains("config.toml:3: Ctrl+A > C > X can't be reached: Ctrl+A > C runs first", config.Warnings);
     }
 
     [Fact]

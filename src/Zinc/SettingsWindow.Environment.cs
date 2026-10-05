@@ -116,8 +116,8 @@ internal sealed partial class SettingsWindow
         // Adding one: a name and a value, written together.
         var newName = new TextBox { PlaceholderText = "Name", FontFamily = new FontFamily("Cascadia Mono, Consolas") };
         var newValue = new TextBox { PlaceholderText = "Value (%PATH% and the like work)", FontFamily = new FontFamily("Cascadia Mono, Consolas") };
-        AutomationProperties.SetName(newName, "New variable’s name");
-        AutomationProperties.SetName(newValue, "New variable’s value");
+        AutomationProperties.SetName(newName, "New variable's name");
+        AutomationProperties.SetName(newValue, "New variable's value");
         var add = new Button { Content = new FontIcon { Glyph = "\uE710", FontSize = 12 }, Padding = new Thickness(8), VerticalAlignment = VerticalAlignment.Center };
         ToolTipService.SetToolTip(add, "Add");
         AutomationProperties.SetName(add, "Add variable");
@@ -127,7 +127,7 @@ internal sealed partial class SettingsWindow
             var name = newName.Text.Trim();
             if (name.Length == 0 || name.Contains('=') || name.Any(char.IsWhiteSpace))
             {
-                Show(error, "A variable’s name can’t be empty or have spaces or =.");
+                Show(error, "A variable's name can't be empty or have spaces or =.");
                 return;
             }
 
@@ -150,8 +150,8 @@ internal sealed partial class SettingsWindow
         }
 
         var description = DescriptionText(profile == null
-            ? "Set for every program Zinc starts. %NAME% uses a variable’s value (PATH = %PATH%;C:\\tools); an empty value removes one."
-            : "Set for this profile’s programs, on top of every profile’s. %NAME% uses a variable’s value; an empty value removes one.");
+            ? "Set for every program Zinc starts. %NAME% uses a variable's value (PATH = %PATH%;C:\\tools); an empty value removes one."
+            : "Set for this profile's programs, on top of every profile's. %NAME% uses a variable's value; an empty value removes one.");
         var text = new StackPanel
         {
             Spacing = 1,

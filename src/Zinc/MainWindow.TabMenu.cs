@@ -46,7 +46,7 @@ public sealed partial class MainWindow
         menu.Items.Add(folder);
         menu.Opening += (_, _) =>
         {
-            current.Text = tab.Folder is { } f ? f.Path : "No folder set: tabs start in their profile’s folder";
+            current.Text = tab.Folder is { } f ? f.Path : "No folder set: tabs start in their profile's folder";
             clear.IsEnabled = tab.Folder != null;
         };
 
@@ -125,7 +125,7 @@ public sealed partial class MainWindow
         var box = new TextBox
         {
             Text = tab.CustomTitle ?? tab.Header.Title,
-            PlaceholderText = "Leave empty to use the program’s title",
+            PlaceholderText = "Leave empty to use the program's title",
             MinWidth = 240,
         };
         var flyout = new Flyout { Content = box, Placement = FlyoutPlacementMode.Bottom };

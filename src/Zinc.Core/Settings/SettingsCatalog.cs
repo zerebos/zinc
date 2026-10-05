@@ -102,7 +102,7 @@ public static class SettingsCatalog
     [
         new("Tab dot", "badge", "A dot on its tab; the taskbar button flashes if Zinc is in the background."),
         new("Notification", "toast", "A dot on its tab, and a Windows notification if Zinc is in the background."),
-        new("Always notify", "toast-always", "A Windows notification whenever you aren’t looking at that pane, even in Zinc."),
+        new("Always notify", "toast-always", "A Windows notification whenever you aren't looking at that pane, even in Zinc."),
         new("None", "never", "No dot, no notification."),
     ];
 
@@ -124,7 +124,7 @@ public static class SettingsCatalog
         new("appearance", "Colors", "colors.theme", "Color scheme",
             "About 650 are included; yours go in the themes folder next to config.toml.", SettingKind.Scheme, null),
         new("appearance", "Colors", "colors.palette-generate", "Match 256 colors to the scheme",
-            "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme’s 16, not the standard ones.",
+            "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme's 16, not the standard ones.",
             SettingKind.Toggle, false),
         new("appearance", "Colors", "colors.palette-harmonious", "Light schemes: shades from background to text",
             "Off: dark to light, as usual, which programs expect.", SettingKind.Toggle, false),
@@ -149,10 +149,10 @@ public static class SettingsCatalog
             "How bright dim text is (1: as bright as other text).", SettingKind.Number, 0.5)
             { Minimum = 0.1, Maximum = 1, Step = 0.05 },
         new("appearance", "Readability", "colors.find-highlight", "Find highlight", "Behind each match of Find.",
-            SettingKind.Color, null) { Placeholder = "Zinc’s yellow" },
+            SettingKind.Color, null) { Placeholder = "Zinc's yellow" },
         new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Behind the match Find is on.",
-            SettingKind.Color, null) { Placeholder = "Zinc’s orange" },
-        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim’s insert mode often does).",
+            SettingKind.Color, null) { Placeholder = "Zinc's orange" },
+        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim's insert mode often does).",
             SettingKind.Choice, "block")
             {
                 Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
@@ -162,7 +162,7 @@ public static class SettingsCatalog
             "1: solid. Lower lets the character under a block cursor show in its own color.", SettingKind.Number, 1.0)
             { Minimum = 0.1, Maximum = 1, Step = 0.05 },
         new("appearance", "Cursor", "terminal.cursor-style-at-prompt", "Cursor at the prompt",
-            "While the shell waits for a command. A program’s own cursor still wins. Needs shell integration.",
+            "While the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
             SettingKind.Choice, "same")
             {
                 Choices =
@@ -187,15 +187,15 @@ public static class SettingsCatalog
                 Choices =
                 [
                     new("Zinc green", "zinc"),
-                    new("Windows’ accent", "windows", "The one in Windows Settings > Personalization > Colors."),
+                    new("Windows' accent", "windows", "The one in Windows Settings > Personalization > Colors."),
                 ],
             },
-        new("appearance", "Background", "window.backdrop", "Window background", "What’s behind everything in the window: tabs, sidebar and terminal.",
+        new("appearance", "Background", "window.backdrop", "Window background", "What's behind everything in the window: tabs, sidebar and terminal.",
             SettingKind.Choice, "mica")
             {
                 Choices =
                 [
-                    new("Mica", "mica", "Not see-through: your wallpaper’s tint, as Windows apps use."),
+                    new("Mica", "mica", "Not see-through: your wallpaper's tint, as Windows apps use."),
                     new("Acrylic (frosted)", "acrylic", "The windows behind show, blurred."),
                     new("Clear", "none", "The windows behind show as they are."),
                 ],
@@ -206,7 +206,7 @@ public static class SettingsCatalog
             { Minimum = 0, Maximum = 1, Step = 0.05 },
         new("appearance", "Background", "window.backdrop-color", "Window tint color",
             "The color an acrylic or clear background is tinted with.", SettingKind.Color, null)
-            { NullLabel = "Use the terminal’s background", Placeholder = "The terminal’s background" },
+            { NullLabel = "Use the terminal's background", Placeholder = "The terminal's background" },
         new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
             "Lower lets the window background show behind the text (1: solid). Colored cells stay solid.",
             SettingKind.Number, 1.0)
@@ -224,9 +224,9 @@ public static class SettingsCatalog
                 new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
             ],
         },
-        new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window’s edge and the text.", SettingKind.Number, 6L)
+        new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
-        new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window’s edge and the text.", SettingKind.Number, 6L)
+        new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)
             { Unit = "pt", Maximum = 100 },
         new("appearance", "Spacing", "terminal.padding-balance", "Even padding",
             "Splits the leftover space between both sides. Off: it all goes to the right and bottom.",
@@ -235,19 +235,19 @@ public static class SettingsCatalog
         // ---- Layout
         new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice, "top")
             { Choices = [new("Along the top", "top"), new("In a sidebar", "left")] },
-        new("layout", "Workspaces", "window.sidebar", "Sidebar", "Only when “Workspaces” is “In a sidebar”.", SettingKind.Choice, "full")
-            { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window’s left edge.")] },
-        new("layout", "Workspaces", "window.title-bar", "Title bar", "Only when “Workspaces” is “In a sidebar”.", SettingKind.Choice, "show")
-            { Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window’s top edge.")] },
+        new("layout", "Workspaces", "window.sidebar", "Sidebar", "Only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice, "full")
+            { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window's left edge.")] },
+        new("layout", "Workspaces", "window.title-bar", "Title bar", "Only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice, "show")
+            { Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window's top edge.")] },
         new("layout", "Workspaces", "window.new-workspace-page", "Start page for new workspaces",
             "Choose a profile, a folder and a name when you open a workspace; Enter starts the default.", SettingKind.Toggle, true),
-        new("layout", "Workspaces", "window.workspace-colors", "Colors for new workspaces", "For the ones you don’t color yourself.",
+        new("layout", "Workspaces", "window.workspace-colors", "Colors for new workspaces", "For the ones you don't color yourself.",
             SettingKind.Choice, "off")
             {
                 Choices =
                 [
                     new("None", "off"),
-                    new("By folder", "folder", "A workspace with a folder gets that folder’s color, the same one every time."),
+                    new("By folder", "folder", "A workspace with a folder gets that folder's color, the same one every time."),
                     new("One after another", "cycle", "Each new workspace takes the next color."),
                 ],
             },
@@ -261,9 +261,9 @@ public static class SettingsCatalog
             "How bright unfocused panes stay (1: not dimmed).", SettingKind.Number, 0.7)
             { Minimum = 0.15, Maximum = 1, Step = 0.05 },
         new("layout", "Panes", "window.unfocused-split-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color, null)
-            { Placeholder = "The pane’s background" },
+            { Placeholder = "The pane's background" },
         new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes.", SettingKind.Color, null)
-            { Placeholder = "Zinc’s grey" },
+            { Placeholder = "Zinc's grey" },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
             "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice, "always")
             { Choices = [new("Reopen them", "always"), new("Start fresh", "never")] },
@@ -272,7 +272,7 @@ public static class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Automatic", null, "Stays in the tray while the quick terminal’s hotkey is set, so it keeps working; otherwise quits."),
+                    new("Automatic", null, "Stays in the tray while the quick terminal's hotkey is set, so it keeps working; otherwise quits."),
                     new("Quit", true),
                     new("Stay in the tray", false, "Click the tray icon to open a window again."),
                 ],
@@ -281,13 +281,13 @@ public static class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Don’t start Zinc", "off"),
-                    new("Start in the tray", "tray", "No window: the quick terminal’s hotkey works, and the tray icon opens your windows."),
+                    new("Don't start Zinc", "off"),
+                    new("Start in the tray", "tray", "No window: the quick terminal's hotkey works, and the tray icon opens your windows."),
                     new("Open my windows", "windows", "As they were when you left, or a new one."),
                 ],
             },
         new("layout", "When you come back", "window.explorer-menu", "Open in Zinc from File Explorer",
-            "Adds “Open in Zinc” to the right-click menu of folders and drives. On Windows 11 it’s under “Show more options”.",
+            "Adds \"Open in Zinc\" to the right-click menu of folders and drives. On Windows 11 it's under \"Show more options\".",
             SettingKind.Toggle, false),
         new("layout", "Closing", "window.confirm-close", "Ask before closing a running command",
             "When you close a tab, pane or window while a command still runs. Needs shell integration to know.", SettingKind.Toggle, true),
@@ -296,10 +296,10 @@ public static class SettingsCatalog
 
         // ---- Terminal
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
-            "Marks prompts and commands in PowerShell, bash and zsh (WSL too), so you can jump between prompts, copy a command’s output and see which commands failed.",
+            "Marks prompts and commands in PowerShell, bash and zsh (WSL too), so you can jump between prompts, copy a command's output and see which commands failed.",
             SettingKind.Choice, "auto")
             { Choices = [new("On", "auto"), new("Off", "off")] },
-        new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command’s output.", SettingKind.Choice, "failures")
+        new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command's output.", SettingKind.Choice, "failures")
             { Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")] },
         new("terminal", "Shell", "terminal.close-on-exit", "When the program ends", "", SettingKind.Choice, "success")
             {
@@ -311,13 +311,13 @@ public static class SettingsCatalog
                 ],
             },
         new("terminal", "Shell", "terminal.reload-environment", "Pick up environment changes",
-            "New tabs read PATH and other variables from Windows as they start, so an installer’s changes work without restarting Zinc.",
+            "New tabs read PATH and other variables from Windows as they start, so an installer's changes work without restarting Zinc.",
             SettingKind.Toggle, true),
         new("terminal", "Shell", "terminal.program-titles", "Program titles",
-            "Shells and programs set the tab’s title (often the folder or the running command). Off: the profile’s name.",
+            "Shells and programs set the tab's title (often the folder or the running command). Off: the profile's name.",
             SettingKind.Toggle, true),
         new("terminal", "Shell", "terminal.shell-titles", "Folder and command as the title",
-            "The folder at the prompt, the running command otherwise. A program’s own title still wins. Needs shell integration.",
+            "The folder at the prompt, the running command otherwise. A program's own title still wins. Needs shell integration.",
             SettingKind.Toggle, true),
         new("terminal", "Scrollback", "terminal.scrollback-lines", "Scrollback lines", "How far back you can scroll.",
             SettingKind.Number, (long)Config.DefaultScrollbackLines)
@@ -328,7 +328,7 @@ public static class SettingsCatalog
             "Characters that end a word when you double-click (space and tab always do). Empty: the ones shown.", SettingKind.Text, null)
             { Placeholder = "'\"│`|:;,()[]{}<>$" },
         new("terminal", "Mouse", "terminal.click-to-move", "Click to move the cursor",
-            "At a shell prompt, clicking in the command you’re typing moves the cursor there. Needs shell integration.",
+            "At a shell prompt, clicking in the command you're typing moves the cursor there. Needs shell integration.",
             SettingKind.Toggle, true),
         new("terminal", "Mouse", "terminal.link-click", "Open links with", "Web links and files shown in the terminal.",
             SettingKind.Choice, "ctrl")
@@ -375,22 +375,22 @@ public static class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Tab dot", "attention", "A dot on its tab, and the taskbar button flashes, when you aren’t looking at it."),
+                    new("Tab dot", "attention", "A dot on its tab, and the taskbar button flashes, when you aren't looking at it."),
                     new("Flash the pane", "flash", "Marks the tab too."),
                     new("None", "none"),
                 ],
             },
-        new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows’ default sound too.", SettingKind.Toggle, false),
+        new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows' default sound too.", SettingKind.Toggle, false),
         new("terminal", "Bell", "terminal.screen-flash-bell", "Visual bell",
-            "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc’s bell instead, as set in “Bell”.", SettingKind.Toggle, true),
+            "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell instead, as set in \"Bell\".", SettingKind.Toggle, true),
         new("terminal", "Command line", "cli.remote-control", "Remote control",
-            "Lets zn, Zinc’s command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
+            "Lets zn, Zinc's command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
             SettingKind.Toggle, false),
         new("terminal", "Command line", "cli.path", "Use zn in other terminals",
-            "Adds zn to your PATH, so Windows Terminal and the rest find it too (Zinc’s own terminals always do). Shells started from now on see it.",
+            "Adds zn to your PATH, so Windows Terminal and the rest find it too (Zinc's own terminals always do). Shells started from now on see it.",
             SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
-            "Type Japanese, Chinese, Korean and more with Windows’ input methods (IME). Turn it off if keys behave oddly.",
+            "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). Turn it off if keys behave oddly.",
             SettingKind.Toggle, true),
         new("about", "Updates", "updates.check", "Check for updates automatically",
             "Once a day, and new versions download in the background; you choose when to restart. Only for Zinc installed with its installer.",
@@ -402,7 +402,7 @@ public static class SettingsCatalog
             "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
             SettingKind.Toggle, true),
         new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free memory of hidden tabs",
-            "Background tabs give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with “Low-latency drawing”.",
+            "Background tabs give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
             SettingKind.Toggle, true),
         new("terminal", "Troubleshooting", "window.free-hidden-after", "Free it after",
             "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 60L)
@@ -413,7 +413,7 @@ public static class SettingsCatalog
 
         // ---- Notifications
         new("notifications", "Long commands", "notify.command-finished", "Long command finishes",
-            "In a pane you weren’t looking at.", SettingKind.Choice, "badge")
+            "In a pane you weren't looking at.", SettingKind.Choice, "badge")
             { Choices = NotifyChoices },
         new("notifications", "Long commands", "notify.command-finished-after", "Counts as long after",
             "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 10L)
@@ -421,18 +421,18 @@ public static class SettingsCatalog
         new("notifications", "Long commands", "notify.command-finished-sound", "Sound",
             "Plays when a long command finishes out of view (a Windows notification has its own).", SettingKind.Choice, "off")
             {
-                Choices = [new("None", "off"), new("Windows’ notification sound", "notification"), new("Windows’ default beep", "beep")],
+                Choices = [new("None", "off"), new("Windows' notification sound", "notification"), new("Windows' default beep", "beep")],
             },
         new("notifications", "Programs", "notify.programs", "Program notifications",
             "When a program asks for one, e.g. a build script finishing (OSC 9 or 777).", SettingKind.Choice, "badge")
             { Choices = NotifyChoices },
         new("notifications", "Dot colors", "notify.finished-color", "Finished",
             "A command finished, or a program sent a notification.", SettingKind.Color, null)
-            { NullLabel = "Use Zinc’s green", Placeholder = "Zinc’s green" },
+            { NullLabel = "Use Zinc's green", Placeholder = "Zinc's green" },
         new("notifications", "Dot colors", "notify.bell-color", "Bell", "A program rang the bell.", SettingKind.Color, null)
-            { NullLabel = "Use Zinc’s amber", Placeholder = "Zinc’s amber" },
+            { NullLabel = "Use Zinc's amber", Placeholder = "Zinc's amber" },
         new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed.", SettingKind.Color, null)
-            { NullLabel = "Use Zinc’s red", Placeholder = "Zinc’s red" },
+            { NullLabel = "Use Zinc's red", Placeholder = "Zinc's red" },
 
         // ---- Quick terminal
         new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides it from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text, "win+grave"),
@@ -441,7 +441,7 @@ public static class SettingsCatalog
         new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice, "mouse")
             { Choices = [new("With the pointer", "mouse", "Opens on the screen the pointer is on."), new("Main", "main", "Always opens on the main screen.")] },
         new("quick", "Placement", "quick-terminal.size", "Size",
-            "A percentage or pixels (50%, 600px) along its edge. Empty: 50%, or 70% by 60% at “Center”.", SettingKind.Text, null)
+            "A percentage or pixels (50%, 600px) along its edge. Empty: 50%, or 70% by 60% at \"Center\".", SettingKind.Text, null)
             { Placeholder = "50%" },
         new("quick", "Behavior", "quick-terminal.autohide", "Hide when it loses focus", "", SettingKind.Toggle, true),
         new("quick", "Behavior", "quick-terminal.animation-duration", "Animation", "How long it takes to fade in and out; 0 makes it appear at once.",
@@ -455,7 +455,7 @@ public static class SettingsCatalog
         new("profiles", "General", "command", "Command", "What runs in its tabs: a shell, or any program.", SettingKind.Text, null),
         new("profiles", "General", "working-directory", "Starting folder", "~ (your home), a path, or %VARIABLES%.", SettingKind.Text, null)
             { Placeholder = "~" },
-        new("profiles", "General", "icon", "Icon", "An image file for its tabs (default: the program’s own icon).", SettingKind.Text, null),
+        new("profiles", "General", "icon", "Icon", "An image file for its tabs (default: the program's own icon).", SettingKind.Text, null),
         new("profiles", "General", "hidden", "Hidden", "Kept out of the menus (its tabs still reopen).", SettingKind.Toggle, false),
     ];
 
@@ -475,7 +475,7 @@ public static class SettingsCatalog
     public static IReadOnlyDictionary<string, string> FileOnly { get; } = new Dictionary<string, string>
     {
         ["colors.palette"] = "Palette colors by number (palette.1 = \"#AC4242\") are set in config.toml.",
-        ["shaders.folders"] = "Folders of shaders to choose from: added and taken out on the shaders page (the library’s … menu).",
+        ["shaders.folders"] = "Folders of shaders to choose from: added and taken out on the shaders page (the library's … menu).",
     };
 
     public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);
@@ -487,7 +487,7 @@ public static class SettingsCatalog
     public static IReadOnlyList<SettingFold> Folds { get; } =
     [
         new(null, null, "font.builtin-glyphs", ["font.adjust-box-thickness"]),
-        new("Background, text, cursor and selection", "The scheme’s, unless you pick your own.", null,
+        new("Background, text, cursor and selection", "The scheme's, unless you pick your own.", null,
             ["colors.background", "colors.foreground", "colors.cursor", "colors.cursor-text", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
         new(null, null, "window.tab-groups", ["window.group-tab-strip"]),

@@ -104,7 +104,7 @@ internal sealed partial class SettingsWindow
 
         if (_keyRows.Children.Count == 0)
         {
-            _keyRows.Children.Add(Note($"No action matches “{query}”."));
+            _keyRows.Children.Add(Note($"No action matches \"{query}\"."));
         }
     }
 
@@ -342,7 +342,7 @@ internal sealed partial class SettingsWindow
 
             var keys = _config.Keybindings;
             (problem.Text, confirm.IsEnabled, confirm.Content) =
-                chord.ToConfig() == null ? ("config.toml has no name for that key, so it can’t be saved here.", false, "Add")
+                chord.ToConfig() == null ? ("config.toml has no name for that key, so it can't be saved here.", false, "Add")
                 : keys.StartsSequence(chord) ? ($"{chord} starts key sequences; change those in config.toml.", false, "Add")
                 : keys.TryGet(chord, out var other) && other == current ? ("Already one of its keys.", false, "Add")
                 : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other)}. Replace moves it here.", true, "Replace")

@@ -142,7 +142,7 @@ public class KeysConfigTests
         Assert.Contains("config.toml:4: 'ctrl+a>': a key is missing around '>'", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:5: 'hyper+x': unknown key 'hyper'"));
         Assert.Contains("config.toml:6: unknown action 'teleport'", config.Warnings);
-        Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:7: a key’s action is text"));
+        Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:7: a key's action is text"));
 
         // The first binding of a chord stands.
         Assert.True(config.Keybindings.TryGet(KeyChord.Parse("ctrl+shift+c"), out var copy));

@@ -526,7 +526,7 @@ public sealed partial class TerminalControl : UserControl
             // tab, which then closes on a key like a failed session, rather than take the app down.
             Log.Write($"pane: couldn't start {_commandLine}: {ex.Message}");
             _exited = true;
-            session.WriteToScreen($"\x1b[0;31mCouldn’t start {_commandLine}\x1b[0m\r\n{ex.Message}\r\n\r\n" +
+            session.WriteToScreen($"\x1b[0;31mCouldn't start {_commandLine}\x1b[0m\r\n{ex.Message}\r\n\r\n" +
                 "\x1b[0;2mShell commands (dir, ls, cd) need a shell: run the shell and type them there. " +
                 "Press any key to close.\x1b[0m");
         }
