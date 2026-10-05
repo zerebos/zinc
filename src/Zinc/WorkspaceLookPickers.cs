@@ -55,43 +55,58 @@ internal static class WorkspaceLookPickers
         return item;
     }
 
-    /// <summary>A swatch per color and "None"; <paramref name="picked"/> gets the color (null: none).</summary>
+    /// <summary>
+    /// A swatch per color and "No color", as a GridView like the icons (arrow keys move, screen readers hear the
+    /// selection); <paramref name="picked"/> gets the color (null: none).
+    /// </summary>
     public static FrameworkElement Colors(Windows.UI.Color? current, Action<Windows.UI.Color?> picked)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        var none = Swatch(null, "No color", current == null, picked);
-        row.Children.Add(none);
+        var grid = new GridView
+        {
+            SelectionMode = ListViewSelectionMode.Single,
+            IsItemClickEnabled = true,
+            MaxWidth = (WorkspaceColors.All.Count + 1) * 40,
+        };
+        AutomationProperties.SetName(grid, "Workspace color");
+        grid.Items.Add(Swatch(null, "No color"));
         foreach (var (name, rgb) in WorkspaceColors.All)
         {
-            var color = ToColor(rgb);
-            row.Children.Add(Swatch(color, name, current == color, picked));
+            grid.Items.Add(Swatch(ToColor(rgb), name));
         }
 
+        grid.SelectedItem = grid.Items.OfType<GridViewItem>().FirstOrDefault(i => (Windows.UI.Color?)i.Tag == current);
+        // A click (also on the color already chosen), or a selection by keyboard or automation.
+        grid.ItemClick += (_, e) => picked((Windows.UI.Color?)((FrameworkElement)e.ClickedItem).Tag);
+        grid.SelectionChanged += (_, _) =>
+        {
+            if (grid.SelectedItem is GridViewItem { } item)
+            {
+                picked((Windows.UI.Color?)item.Tag);
+            }
+        };
         return new StackPanel
         {
             Spacing = 8,
-            Children = { new TextBlock { Text = "Color", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold }, row },
+            Children = { new TextBlock { Text = "Color", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold }, grid },
         };
     }
 
-    private static Button Swatch(Windows.UI.Color? color, string label, bool selected, Action<Windows.UI.Color?> picked)
+    // A round swatch in a GridView cell (the cell's own selected border marks the chosen one).
+    private static GridViewItem Swatch(Windows.UI.Color? color, string label)
     {
-        var swatch = new Button
+        var dot = new Border
         {
-            Width = 26,
-            Height = 26,
-            Padding = new Thickness(0),
-            CornerRadius = new CornerRadius(13),
-            BorderThickness = new Thickness(selected ? 2 : 1),
-            BorderBrush = selected
-                ? (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"]
-                : (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"],
+            Width = 22,
+            Height = 22,
+            CornerRadius = new CornerRadius(11),
+            BorderThickness = new Thickness(1),
+            BorderBrush = (Brush)Application.Current.Resources["ControlStrongStrokeColorDefaultBrush"],
             Background = color is { } c ? new SolidColorBrush(c) : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            Content = color == null ? new FontIcon { Glyph = ((char)0xE711).ToString(), FontSize = 10 } : null,
+            Child = color == null ? new FontIcon { Glyph = ((char)0xE711).ToString(), FontSize = 10 } : null,
         };
-        AutomationProperties.SetName(swatch, label);
-        ToolTipService.SetToolTip(swatch, label);
-        swatch.Click += (_, _) => picked(color);
-        return swatch;
+        var item = new GridViewItem { Tag = color, Width = 34, Height = 34, MinWidth = 0, MinHeight = 0, Content = dot };
+        AutomationProperties.SetName(item, label);
+        ToolTipService.SetToolTip(item, label);
+        return item;
     }
 }
