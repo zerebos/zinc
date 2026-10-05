@@ -67,7 +67,7 @@ internal sealed class GlyphAtlas : IDisposable
     /// the process's life. Panes share atlases, and a pane's own formats go when its font or scale changes: a character
     /// reserved with one and drawn after it was gone failed the frame (seen after moving to a monitor with another scale).
     /// </summary>
-    public readonly record struct TextStyle(string Family, float Size, bool Bold, bool Italic);
+    public readonly record struct TextStyle(string Family, float Size, int Weight, bool Italic);
 
     // Never made during a frame if it can be helped (PrepareFormat, from SetFont): the first layout with a format naming
     // the bundled font's file (file:///...ttf#Cascadia Mono NF) has Win2D resolve the path through Windows.Storage, a COM
@@ -83,7 +83,7 @@ internal sealed class GlyphAtlas : IDisposable
             {
                 FontFamily = style.Family,
                 FontSize = style.Size,
-                FontWeight = style.Bold ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
+                FontWeight = new Windows.UI.Text.FontWeight((ushort)style.Weight),
                 FontStyle = style.Italic ? Windows.UI.Text.FontStyle.Italic : Windows.UI.Text.FontStyle.Normal,
                 WordWrapping = CanvasWordWrapping.NoWrap,
                 HorizontalAlignment = CanvasHorizontalAlignment.Center, // centered in its cell(s), as a cell showed it

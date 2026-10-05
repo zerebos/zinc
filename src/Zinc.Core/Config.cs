@@ -215,6 +215,43 @@ public sealed record Config
     /// <summary>Primary font family; glyphs it lacks fall back through DirectWrite.</summary>
     public string FontFamily { get; init; } = "Cascadia Mono NF"; // ships with Zinc (Fonts)
 
+    /// <summary>The weight of normal text (100-900, 400 = normal). Config: <c>[font] weight = "light"</c> (or a number).</summary>
+    public int FontWeight { get; init; } = 400;
+
+    /// <summary>The weight of bold text (700 = bold). Config: <c>[font] bold-weight = "semibold"</c> (or a number).</summary>
+    public int BoldWeight { get; init; } = 700;
+
+    /// <summary>
+    /// Families tried, in order, for characters the font lacks, before Windows' own fallback: "Symbols Nerd Font, Noto
+    /// Sans JP". Empty: Windows' alone. Config: <c>[font] fallback = ["…", "…"]</c> (or one string, comma-separated).
+    /// </summary>
+    public string FontFallback { get; init; } = "";
+
+    /// <summary><see cref="FontFallback"/> as a list.</summary>
+    public IReadOnlyList<string> FontFallbacks =>
+        FontFallback.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>Font weights by name (CSS's, as DirectWrite's): "semibold" = 600; also "semi-bold" and the numbers.</summary>
+    public static bool TryWeight(string value, out int weight)
+    {
+        weight = value.Replace("-", "").Replace(" ", "").ToLowerInvariant() switch
+        {
+            "thin" => 100,
+            "extralight" or "ultralight" => 200,
+            "light" => 300,
+            "semilight" => 350,
+            "normal" or "regular" => 400,
+            "medium" => 500,
+            "semibold" or "demibold" => 600,
+            "bold" => 700,
+            "extrabold" or "ultrabold" => 800,
+            "black" or "heavy" => 900,
+            var n when int.TryParse(n, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number is >= 1 and <= 999 => number,
+            _ => 0,
+        };
+        return weight > 0;
+    }
+
     /// <summary>
     /// Box drawing, block elements, Symbols for Legacy Computing, Powerline and Braille drawn by
     /// Ghostty's sprite rasterizer (seamless in any font) rather than taken from the font.
@@ -625,6 +662,9 @@ public sealed record Config
         return key switch
         {
             "font-family" when value.Length > 0 => this with { FontFamily = value },
+            "font-weight" when TryWeight(value, out var weight) => this with { FontWeight = weight },
+            "font-bold-weight" when TryWeight(value, out var boldWeight) => this with { BoldWeight = boldWeight },
+            "font-fallback" => this with { FontFallback = string.Join(", ", value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) },
             "builtin-glyphs" when bool.TryParse(value, out var builtin) => this with { BuiltinGlyphs = builtin },
             "adjust-box-thickness" when TryAdjustment(value, out var adjust) => this with { AdjustBoxThickness = adjust },
             "adjust-cell-height" when TryAdjustment(value, out var cellHeight) => this with { AdjustCellHeight = cellHeight },

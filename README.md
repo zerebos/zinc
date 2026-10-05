@@ -161,6 +161,12 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   ships with Zinc and needs no installing. A family that isn't installed falls back to it,
   then to Cascadia Mono and Consolas.
 - `size`: in points; `Ctrl+0` resets to this.
+- `weight` and `bold-weight`: how heavy normal and bold text are: `"thin"`, `"extra-light"`, `"light"`, `"normal"`
+  (default for `weight`), `"medium"`, `"semibold"`, `"bold"` (default for `bold-weight`), `"extra-bold"`, `"black"`,
+  or a number from 100 to 900. A font without that weight shows its nearest one (the bundled Cascadia Mono NF has
+  them all).
+- `fallback`: fonts for characters your font lacks, tried in order before Windows picks one:
+  `fallback = ["Symbols Nerd Font", "Noto Sans JP"]` (or one string with commas). Empty (default): Windows' choice.
 - `builtin-glyphs`: `true` (default) draws box drawing, block elements, Symbols for Legacy
   Computing (sextants, wedges: what editors like flow draw their tabs with), Powerline
   separators and Braille with Ghostty's own sprite rasterizer instead of taking them from the

@@ -10,6 +10,9 @@ is the version it builds, and hands it to the installer as the release notes).
 - A menu on right-click in a terminal: copy, paste and find; open or copy the link you clicked; copy the command you
   clicked, or select or copy its output (with shell integration); split, new tab, close. Each item shows its key.
   Shift+F10 or the Menu key opens it at the cursor.
+- Font weight and bold weight, from thin to black (Appearance > Font). A font without that weight shows its nearest.
+- Fallback fonts: pick the fonts for characters yours lacks (Japanese, symbols, icons), tried in order before
+  Windows chooses (Appearance > Font).
 
 ### Changed
 - Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set

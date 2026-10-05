@@ -24,6 +24,24 @@ public class ConfigFileTests : IDisposable
     }
 
     [Fact]
+    public void FontWeightsAndFallbacks()
+    {
+        var config = Parse("[font]\nweight = \"light\"\nbold-weight = 600\nfallback = [\"Symbols Nerd Font\", \" Noto Sans JP \"]").Global;
+        Assert.Equal(300, config.FontWeight);
+        Assert.Equal(600, config.BoldWeight);
+        Assert.Equal(["Symbols Nerd Font", "Noto Sans JP"], config.FontFallbacks);
+
+        var one = Parse("[font]\nfallback = \"MS Mincho, Segoe UI Symbol\"\nweight = \"semi-bold\"").Global;
+        Assert.Equal(["MS Mincho", "Segoe UI Symbol"], one.FontFallbacks);
+        Assert.Equal(600, one.FontWeight);
+
+        var none = Parse("[font]\nweight = \"heaviest\"").Global;
+        Assert.Equal(400, none.FontWeight);
+        Assert.Empty(none.FontFallbacks);
+        Assert.Contains(Parse("[font]\nweight = \"heaviest\"").Warnings, w => w.Contains("weight"));
+    }
+
+    [Fact]
     public void NoProfilesGivesImplicitDefault()
     {
         var config = Parse("[font]\nsize = 12");

@@ -55,6 +55,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
     // The same fonts, as the glyph atlas makes its own formats from them (it's shared: it mustn't hold a pane's).
     private readonly GlyphAtlas.TextStyle[] _textStyles = new GlyphAtlas.TextStyle[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
+
+    // [font] fallback: per variant, each family found (its text style and face), tried in order for characters the font
+    // lacks; which one draws each character is remembered (-1: none, Windows picks).
+    private readonly List<(GlyphAtlas.TextStyle Style, CanvasFontFace Face)>[] _fallbacks = [[], [], [], []];
+    private readonly Dictionary<(int Codepoint, int Variant), int> _fallbackFor = [];
     private readonly Dictionary<(uint, int), int> _glyphCache = new();
     // The first 2,048 codepoints (Latin, Greek, Cyrillic...) per variant: glyph index + 1, 0 = not looked up yet.
     // Every cell of every frame asks; an array beats the dictionary's tuple hashing.
@@ -234,12 +239,13 @@ public sealed unsafe class TerminalRenderer : IDisposable
         TextFontFamily = bundled ? BundledFonts.FormatFamily(italic: false) : _fontFamily;
         for (var v = 0; v < 4; v++)
         {
-            var weight = (v & 1) != 0 ? FontWeights.Bold : FontWeights.Normal;
+            var weightValue = (v & 1) != 0 ? _config.BoldWeight : _config.FontWeight;
+            var weight = new Windows.UI.Text.FontWeight((ushort)weightValue);
             var style = (v & 2) != 0 ? FontStyle.Italic : FontStyle.Normal;
             var italic = (v & 2) != 0;
             _formats[v]?.Dispose(); // the previous size's (each zoom step, each scale change)
             _centered[v]?.Dispose();
-            _textStyles[v] = new(bundled ? BundledFonts.FormatFamily(italic) : _fontFamily, _fontSize, (v & 1) != 0, italic);
+            _textStyles[v] = new(bundled ? BundledFonts.FormatFamily(italic) : _fontFamily, _fontSize, weightValue, italic);
             _formats[v] = new CanvasTextFormat
             {
                 FontFamily = bundled ? BundledFonts.FormatFamily(italic) : _fontFamily,
@@ -275,7 +281,26 @@ public sealed unsafe class TerminalRenderer : IDisposable
             // (Not when it is the font: what that lacks, it lacks.)
             var bundledMatches = bundled ? null : BundledFonts.Set(italic)?.GetMatchingFonts(BundledFonts.Family, weight, FontStretch.Normal, style).Fonts;
             _bundledFaces[v] = bundledMatches is { Count: > 0 } ? bundledMatches[0] : null;
+
+            _fallbacks[v].Clear();
+            foreach (var family in _config.FontFallbacks)
+            {
+                if (fonts.GetMatchingFonts(family, weight, FontStretch.Normal, style).Fonts is { Count: > 0 } found)
+                {
+                    var fallback = new GlyphAtlas.TextStyle(family, _fontSize, weightValue, italic);
+                    GlyphAtlas.PrepareFormat(device, fallback);
+                    _fallbacks[v].Add((fallback, found[0]));
+                }
+                else if (v == 0)
+                {
+                    Log.Write($"font: fallback {family} isn't installed");
+                }
+            }
         }
+
+        _fallbackFor.Clear();
+        Log.Write($"font: weights {_config.FontWeight}/{_config.BoldWeight}" +
+            (_fallbacks[0].Count > 0 ? $", fallback {string.Join(", ", _fallbacks[0].Select(f => f.Style.Family))}" : ""));
 
         _glyphCache.Clear();
         Array.Clear(_glyphFast);
@@ -478,7 +503,9 @@ public sealed unsafe class TerminalRenderer : IDisposable
             _gridX = (int)MathF.Floor(padX);
             _gridY = (int)MathF.Floor(padY);
             // The shared atlas for this font, size, scale and offset (another pane's, if one draws the same).
-            var key = new GlyphAtlases.Key(GlyphAtlases.Key.DeviceOf(ds.Device), TextFontFamily, _fontSize, m, padX - _gridX, padY - _gridY);
+            // Weights and fallback families change what tiles hold, so they're part of which atlas this is.
+            var font = $"{TextFontFamily}|{_config.FontWeight}/{_config.BoldWeight}|{_config.FontFallback}";
+            var key = new GlyphAtlases.Key(GlyphAtlases.Key.DeviceOf(ds.Device), font, _fontSize, m, padX - _gridX, padY - _gridY);
             if (_atlasKey != key)
             {
                 ReleaseAtlas();
@@ -1036,7 +1063,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
             return false;
         }
 
-        var format = _textStyles[cell.FontVariant];
+        var format = FallbackStyle(codepoint, cell.FontVariant);
 
         var cluster = single ? null : CellText(ref cell);
         var color = cell.Fg;
@@ -1057,6 +1084,24 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var m = Metrics;
         _frameSprites.Add((tile.Page, _atlas.Destination(_gridX + column * (int)m.WidthPx, _gridY + row * (int)m.HeightPx), tile.Source, tint));
         return true;
+    }
+
+    /// <summary>The style a character the font lacks is drawn in: the first [font] fallback family that has it, else the font's own (Windows picks).</summary>
+    private GlyphAtlas.TextStyle FallbackStyle(int codepoint, int variant)
+    {
+        var fallbacks = _fallbacks[variant];
+        if (fallbacks.Count == 0)
+        {
+            return _textStyles[variant];
+        }
+
+        if (!_fallbackFor.TryGetValue((codepoint, variant), out var index))
+        {
+            index = fallbacks.FindIndex(f => f.Face.HasCharacter((uint)codepoint));
+            _fallbackFor[(codepoint, variant)] = index;
+        }
+
+        return index >= 0 ? fallbacks[index].Style : _textStyles[variant];
     }
 
     /// <summary>

@@ -112,6 +112,23 @@ public static class SettingsCatalog
         new("appearance", "Font", "font.family", "Font", "Any monospace font; Nerd Fonts show prompt icons.", SettingKind.Font, "Cascadia Mono NF"),
         new("appearance", "Font", "font.size", "Size", "Ctrl+0 returns to this size.", SettingKind.Number, 10.5)
             { Unit = "pt", Minimum = 4, Maximum = 72, Step = 0.5 },
+        new("appearance", "Font", "font.weight", "Weight",
+            "How heavy normal text is. A font without that weight shows its nearest one.", SettingKind.Choice, "normal")
+            { Choices = [
+                    new("Thin", "thin"), new("Extra light", "extra-light"), new("Light", "light"), new("Normal", "normal"),
+                    new("Medium", "medium"), new("Semibold", "semibold"), new("Bold", "bold"), new("Extra bold", "extra-bold"),
+                    new("Black", "black"),
+                ] },
+        new("appearance", "Font", "font.bold-weight", "Bold weight", "How heavy bold text is.", SettingKind.Choice, "bold")
+            { Choices = [
+                    new("Thin", "thin"), new("Extra light", "extra-light"), new("Light", "light"), new("Normal", "normal"),
+                    new("Medium", "medium"), new("Semibold", "semibold"), new("Bold", "bold"), new("Extra bold", "extra-bold"),
+                    new("Black", "black"),
+                ] },
+        new("appearance", "Font", "font.fallback", "Fallback fonts",
+            "For characters your font lacks, tried in order before Windows picks one. Separate them with commas.",
+            SettingKind.Text, null)
+            { Placeholder = "Symbols Nerd Font, Noto Sans JP" },
         new("appearance", "Font", "font.adjust-cell-height", "Line height",
             "More room between lines: a percentage (20%) or pixels (2). Negative for less. Text stays centered.", SettingKind.Text, null)
             { Placeholder = "0", NumbersAsNumbers = true },
