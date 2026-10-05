@@ -33,17 +33,20 @@ Claims come in a fixed order. Lead with the first; never lead with the last two.
 
 ## 4. Voice
 
-Crafted, calm, detail-obsessed. Zinc gets out of your way but notices things for you.
+**Calm and precise. Zinc gets out of your way, but notices things for you.**
 
-- **Specific over superlative.** "Box drawing meets without seams in any font" beats "beautiful rendering".
-- **Calm.** No exclamation marks, no "blazing", "insanely" or "game-changing".
-- **Honest about limits.** State plainly what isn't there yet.
-- **Short sentences, plain words.**
+- **In the interface**, follow `ux-writing.md`. It is the source of truth for every word inside the app.
+- **In marketing, the README, docs and release notes**:
+  - **Specific over superlative.** Name the detail: "Box drawing meets without seams in any font" beats "beautiful rendering". (The interface does the opposite and names the familiar thing; that's deliberate.)
+  - **Calm.** No exclamation marks, no "blazing", "insanely" or "game-changing".
+  - **Honest about limits.** Docs and release notes state plainly what isn't there yet. The interface doesn't advertise limits.
+  - **Short sentences, plain words.**
 
-**Ghostty lineage.**
-- Say: "built on libghostty", "uses Ghostty's terminal engine", "the same core that powers Ghostty".
-- Never say: "Ghostty for Windows", "a Ghostty port", or anything implying an official Ghostty project.
+**Ghostty lineage**
+- Say: "built on libghostty", "uses Ghostty's terminal engine", "the same core that powers Ghostty". Credit it in the About page, README and docs.
+- Never say "Ghostty for Windows", "a Ghostty port", or anything implying an official Ghostty project.
 - Never borrow Ghostty's visuals: no ghosts, its icon style or its colours.
+- In the interface, don't compare Zinc to other terminals at all (see `ux-writing.md`).
 
 ## 5. The mark: Quadrant
 
@@ -212,6 +215,7 @@ run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the s
 | `quadrant-construction.png` | Construction sheet |
 | `Lit Cell`, `Lit Cell Light` | Ghostty-format scheme files |
 | `lit-cell*.windows-terminal.json` | The same schemes for Windows Terminal |
+| `ux-writing.md` | How Zinc's interface is written |
 
 ## 13. Don't
 
