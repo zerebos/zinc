@@ -21,7 +21,17 @@ is the version it builds, and hands it to the installer as the release notes).
   (Appearance > Colors).
 - Open in Zinc from File Explorer: right-click a folder or a drive (Layout > When you come back; off by default).
 
+### Changed
+- Settings: pages inside a page (a profile, color schemes, shaders, the scheme editor) show where you are in their
+  heading (Profiles > PowerShell); click any part to go back up, or use the back arrow in the title bar.
+- Settings: in a narrower window the sidebar folds to icons, and to a menu button when narrower still.
+- Settings: headings and text use Windows' own text styles.
+- The welcome window's page dots slide from page to page.
+- Workspace colors are a grid like the icons: arrow keys move between them, and screen readers name the chosen one.
+
 ### Fixed
+- Arrow keys in the workspace icon and color choosers picked the next one and closed the menu. They move between
+  choices now; Enter, Space or a click picks.
 - Settings: the preview at the top of Appearance and profile pages lost its first lines for good when its rows got
   taller (line height) or the window narrower. It grows to fit now, and lays itself out again at each size.
 
