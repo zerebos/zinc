@@ -16,6 +16,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - A sound when a long command finishes out of view: Windows' notification sound or its beep (Notifications).
 - Turn off the question before closing or quitting while a command runs (Layout > Closing).
 - How far a resize key moves a pane's divider (Layout > Panes > Resize step).
+- Line height: more room between lines, as a percentage or in pixels (Appearance > Font). Box drawing still joins up.
 
 ## 0.1.0-dev.282 (2026-10-05)
 

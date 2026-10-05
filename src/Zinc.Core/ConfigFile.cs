@@ -663,6 +663,7 @@ public sealed class ConfigFile
             ["font.size"] = ("font-size", v => Number(v)),
             ["font.builtin-glyphs"] = ("builtin-glyphs", v => Bool(v)),
             ["font.adjust-box-thickness"] = ("adjust-box-thickness", v => v is string a ? a : Number(v)),
+            ["font.adjust-cell-height"] = ("adjust-cell-height", v => v is string a ? a : Number(v)),
             ["colors.background"] = ("background", v => v as string),
             ["colors.foreground"] = ("foreground", v => v as string),
             ["colors.cursor"] = ("cursor-color", v => v as string),

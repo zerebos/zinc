@@ -112,6 +112,9 @@ public static class SettingsCatalog
         new("appearance", "Font", "font.family", "Font", "Any monospace font; Nerd Fonts show prompt icons.", SettingKind.Font, "Cascadia Mono NF"),
         new("appearance", "Font", "font.size", "Size", "Ctrl+0 returns to this size.", SettingKind.Number, 10.5)
             { Unit = "pt", Minimum = 4, Maximum = 72, Step = 0.5 },
+        new("appearance", "Font", "font.adjust-cell-height", "Line height",
+            "More room between lines: a percentage (20%) or pixels (2). Negative for less. Text stays centered.", SettingKind.Text, null)
+            { Placeholder = "0", NumbersAsNumbers = true },
         new("appearance", "Font", "font.builtin-glyphs", "Built-in glyphs",
             "Zinc draws box lines, blocks and Powerline shapes itself, so they join up in any font.",
             SettingKind.Toggle, true),

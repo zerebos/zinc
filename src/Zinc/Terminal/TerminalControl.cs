@@ -574,7 +574,7 @@ public sealed partial class TerminalControl : UserControl
         ApplyShaders(config);
         if (_renderer.HasResources)
         {
-            if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize)
+            if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize || old.AdjustCellHeight != config.AdjustCellHeight)
             {
                 var size = old.FontSize != config.FontSize ? ZoomedFontSize() : _renderer.FontSize;
                 _renderer.SetFont(Creator, size, DisplayScale);

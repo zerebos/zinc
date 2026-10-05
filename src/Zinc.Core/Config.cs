@@ -223,6 +223,24 @@ public sealed record Config
         (var pixels, false) => thickness + (int)Math.Round(pixels),
     });
 
+    /// <summary>
+    /// Taller or shorter cells (Ghostty's adjust-cell-height): pixels at 100% scale, or a percentage of the font's own
+    /// line height; text stays centered in them. Config: <c>[font] adjust-cell-height = 2 | "20%"</c>.
+    /// </summary>
+    public (double Amount, bool Percent) AdjustCellHeight { get; init; }
+
+    /// <summary>A cell's height in device pixels: the font's <paramref name="natural"/> one, adjusted (never below half of it).</summary>
+    public uint AdjustedCellHeight(uint natural, float scale)
+    {
+        var extra = AdjustCellHeight switch
+        {
+            (0, _) => 0,
+            (var percent, true) => Math.Round(natural * percent / 100),
+            (var pixels, false) => Math.Round(pixels * scale),
+        };
+        return (uint)Math.Max(Math.Ceiling(natural / 2.0), natural + extra);
+    }
+
     /// <summary>Font size in points, like Ghostty and Windows Terminal.</summary>
     public float FontSize { get; init; } = DefaultFontSize;
 
@@ -587,6 +605,7 @@ public sealed record Config
             "font-family" when value.Length > 0 => this with { FontFamily = value },
             "builtin-glyphs" when bool.TryParse(value, out var builtin) => this with { BuiltinGlyphs = builtin },
             "adjust-box-thickness" when TryAdjustment(value, out var adjust) => this with { AdjustBoxThickness = adjust },
+            "adjust-cell-height" when TryAdjustment(value, out var cellHeight) => this with { AdjustCellHeight = cellHeight },
             "font-size" when TryFloat(value, out var size) && size > 0 => this with { FontSize = size },
             "command" when value.Length > 0 => this with { Command = value },
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },

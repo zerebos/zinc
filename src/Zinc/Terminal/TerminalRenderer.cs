@@ -295,10 +295,13 @@ public sealed unsafe class TerminalRenderer : IDisposable
         using var layout = new CanvasTextLayout(device, "MMMMMMMMMM", _formats[0], float.MaxValue, float.MaxValue);
         var bounds = layout.LayoutBounds;
         var widthPx = (uint)Math.Max(1, Math.Round(bounds.Width / 10 * scale));
-        var heightPx = (uint)Math.Max(1, Math.Ceiling(bounds.Height * scale));
+        var naturalPx = (uint)Math.Max(1, Math.Ceiling(bounds.Height * scale));
+        // adjust-cell-height: the extra (or missing) height is split above and below, so the text stays centered.
+        var heightPx = _config.AdjustedCellHeight(naturalPx, scale);
+        var baselinePx = MathF.Round(layout.LineMetrics[0].Baseline * scale) + MathF.Floor(((float)heightPx - naturalPx) / 2);
         Metrics = new CellMetrics(
             widthPx / scale, heightPx / scale,
-            MathF.Round(layout.LineMetrics[0].Baseline * scale) / scale,
+            baselinePx / scale,
             widthPx, heightPx, scale);
     }
 
