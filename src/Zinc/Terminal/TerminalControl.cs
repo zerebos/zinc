@@ -595,7 +595,10 @@ public sealed partial class TerminalControl : UserControl
         ApplyShaders(config);
         if (_renderer.HasResources)
         {
-            if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize || old.AdjustCellHeight != config.AdjustCellHeight)
+            // Anything SetFont reads: the faces, formats and cell size are made there (weights and fallbacks too:
+            // without them here, a weight changed live showed only after the next family change).
+            if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize || old.AdjustCellHeight != config.AdjustCellHeight ||
+                old.FontWeight != config.FontWeight || old.BoldWeight != config.BoldWeight || old.FontFallback != config.FontFallback)
             {
                 var size = old.FontSize != config.FontSize ? ZoomedFontSize() : _renderer.FontSize;
                 _renderer.SetFont(Creator, size, DisplayScale);
