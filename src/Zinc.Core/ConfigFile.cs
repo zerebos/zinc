@@ -467,6 +467,11 @@ public sealed class ConfigFile
                     case ["discover", ..]:
                         _warnings.Add($"{e.Where}: [discover] takes wsl, powershell, cmd, git-bash, msys2, ssh or visual-studio = true or false");
                         break;
+                    case ["environment", _] when e.Value is string:
+                        break; // applied below, after the groups
+                    case ["environment", ..]:
+                        _warnings.Add($"{e.Where}: [environment] takes NAME = \"value\" (an empty value removes it)");
+                        break;
                     case [var group, _, ..] when Groups.Contains(group):
                         break; // applied below, themes first
                     default:
@@ -476,6 +481,7 @@ public sealed class ConfigFile
             }
 
             global = ApplyGroups(global, _entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: false);
+            global = WithEnvironment(global, _entries);
 
             // Empty sections count too, in their place among the others.
             var sectioned = _profileSections.Concat(profileOrder).Distinct().ToList();
@@ -534,6 +540,8 @@ public sealed class ConfigFile
                             break;
                         case [var group, _, ..] when Groups.Contains(group):
                             break;
+                        case ["environment", _] when e.Value is string:
+                            break; // below, over the global ones
                         default:
                             _warnings.Add($"{e.Where}: unknown or invalid profile setting '{e.Key}'");
                             break;
@@ -541,6 +549,7 @@ public sealed class ConfigFile
                 }
 
                 config = ApplyGroups(config, entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: true);
+                config = WithEnvironment(config, entries);
                 profiles.Add(new Profile(id, name, config, hidden || missing != ProfileMissing.None)
                 {
                     Found = foundAs != null, InFile = true, FoundName = foundAs?.Name, FoundCommand = foundAs?.Command,
@@ -597,6 +606,22 @@ public sealed class ConfigFile
             };
         }
 
+        /// <summary><paramref name="config"/>'s variables with <paramref name="entries"/>' <c>environment.NAME</c> ones over them.</summary>
+        private static Config WithEnvironment(Config config, IEnumerable<Entry> entries)
+        {
+            Dictionary<string, string>? variables = null;
+            foreach (var e in entries)
+            {
+                if (e.Path is ["environment", var name] && e.Value is string value)
+                {
+                    variables ??= new Dictionary<string, string>(config.EnvironmentVariables, StringComparer.OrdinalIgnoreCase);
+                    variables[name] = value;
+                }
+            }
+
+            return variables == null ? config : config with { EnvironmentVariables = variables };
+        }
+
         private static Config FromDiscovery(Config config, DiscoveredProfile found) =>
             config with { Command = found.Command, Icon = found.Icon ?? config.Icon };
 
@@ -651,6 +676,7 @@ public sealed class ConfigFile
             ["terminal.close-on-exit"] = ("close-on-exit", v => v as string),
             ["terminal.bell"] = ("bell", v => v as string),
             ["terminal.bell-sound"] = ("bell-sound", v => Bool(v)),
+            ["terminal.reload-environment"] = ("reload-environment", v => Bool(v)),
             ["terminal.screen-flash-bell"] = ("screen-flash-bell", v => Bool(v)),
             ["terminal.program-titles"] = ("program-titles", v => Bool(v)),
             ["terminal.shell-titles"] = ("shell-titles", v => Bool(v)),

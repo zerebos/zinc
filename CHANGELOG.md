@@ -6,6 +6,12 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### New
+- New tabs pick up environment changes: a PATH an installer changed works without restarting Zinc, as in
+  Windows Terminal (Terminal > Shell > Pick up environment changes).
+- Environment variables of your own, for every program (Terminal > Shell) or per profile (on its page), in
+  config.toml's `[environment]`. `%PATH%` and the like work in values; an empty value removes a variable.
+
 ## 0.1.0-dev.282 (2026-10-05)
 
 ### New

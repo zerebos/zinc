@@ -279,6 +279,21 @@ public sealed record Config
     /// <summary>The bell also plays Windows' default sound. Config: <c>bell-sound = true</c>.</summary>
     public bool BellSound { get; init; }
 
+    /// <summary>
+    /// New tabs read environment variables from Windows when they start (as Windows Terminal), so a PATH an installer
+    /// changed works without restarting Zinc; merged over Zinc's own, nothing removed. Config: <c>reload-environment</c>.
+    /// </summary>
+    public bool ReloadEnvironment { get; init; } = true;
+
+    /// <summary>
+    /// Variables set for the programs started (<c>[environment]</c>, a profile's <c>[profile.x.environment]</c> over it);
+    /// an empty value removes the variable.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> EnvironmentVariables { get; init; } = NoVariables;
+
+    // One empty set for every config without variables: configs compare as records, and two empty dictionaries don't.
+    private static readonly IReadOnlyDictionary<string, string> NoVariables = new Dictionary<string, string>();
+
     /// <summary>A program's screen flash (a "visible bell") rings the bell instead. Config: <c>screen-flash-bell = false</c>.</summary>
     public bool ScreenFlashBell { get; init; } = true;
 
@@ -609,6 +624,7 @@ public sealed record Config
             "close-on-exit" when TryMode<CloseOnExit>(value, out var close) => this with { CloseOnExit = close },
             "bell" when TryMode<BellMode>(value, out var bell) => this with { Bell = bell },
             "bell-sound" when bool.TryParse(value, out var sound) => this with { BellSound = sound },
+            "reload-environment" when bool.TryParse(value, out var reload) => this with { ReloadEnvironment = reload },
             "screen-flash-bell" when bool.TryParse(value, out var screenFlash) => this with { ScreenFlashBell = screenFlash },
             "input-method" when bool.TryParse(value, out var ime) => this with { InputMethod = ime },
             "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },

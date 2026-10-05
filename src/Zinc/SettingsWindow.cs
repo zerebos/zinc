@@ -382,6 +382,11 @@ internal sealed partial class SettingsWindow : Window
             foreach (var group in SettingsCatalog.All.Where(s => s.Section == _section).GroupBy(s => s.Group))
             {
                 AddGroup(group.Key, group);
+                if (_section == "terminal" && group.Key == "Shell")
+                {
+                    _page.Children.Add(EnvironmentCard(null)); // [environment]: a table, not one value
+                }
+
                 if (group.Key == "When you come back")
                 {
                     DefaultTerminalCard(); // Windows' setting, not one of config.toml's
@@ -1083,6 +1088,8 @@ internal sealed partial class SettingsWindow : Window
             };
             _page.Children.Add(Card(field with { Placeholder = hint }, id));
         }
+
+        _page.Children.Add(EnvironmentCard(id));
 
         _page.Children.Add(Note("The settings below come from the defaults until you change them here; the reset arrow gives one back."));
         foreach (var group in SettingsCatalog.All.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))

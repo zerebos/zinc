@@ -472,18 +472,29 @@ public sealed partial class TerminalControl : UserControl
 
         try
         {
+            // The program's environment: Windows' variables as they are now (a PATH changed since Zinc started), then the
+            // config's; shell integration and zn add theirs on top, each reading the variables as the program gets them.
+            var ours = Zinc.Pty.ChildEnvironment.Ours();
+            var environment = Zinc.Pty.ChildEnvironment.Changes(ours, _config.ReloadEnvironment ? Zinc.Pty.ChildEnvironment.Fresh() : null,
+                _config.EnvironmentVariables);
+            string? Inherited(string name) => environment.TryGetValue(name, out var set) ? set : ours.GetValueOrDefault(name);
+
             var launch = new ShellLaunch(_commandLine, new Dictionary<string, string?>());
             var scripts = Path.Combine(AppContext.BaseDirectory, ShellIntegration.FolderName);
             if (_config.ShellIntegration == ShellIntegrationMode.Auto && Directory.Exists(scripts))
             {
-                launch = ShellIntegration.Prepare(_commandLine, scripts, Environment.GetEnvironmentVariable);
+                launch = ShellIntegration.Prepare(_commandLine, scripts, Inherited);
                 if (launch.CommandLine != _commandLine || launch.Environment.Count > 0)
                 {
                     Log.Write($"pane: shell integration: {launch.CommandLine} (+{launch.Environment.Count} variables)");
                 }
             }
 
-            var environment = new Dictionary<string, string?>(launch.Environment);
+            foreach (var (name, value) in launch.Environment)
+            {
+                environment[name] = value;
+            }
+
             LaunchEnvironment?.Invoke(environment);
             session.Start(launch.CommandLine, _workingDirectory, cols, rows, environment);
             TypeStartupInputWhenReady(session);

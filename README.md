@@ -279,6 +279,14 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `shell-titles`: `true` (default) names the tab from the shell's marks (shell integration, ours or the
   shell's own): the folder at the prompt (`~` for your home), the command while one runs. A title the
   running program sets itself (vim, htop) still wins until it ends. Shells without marks keep their own titles.
+- `reload-environment`: `true` (default) gives each new tab the environment variables Windows has now, as
+  Windows Terminal does, so a PATH an installer changed works without restarting Zinc (new and changed
+  variables only: nothing Zinc was started with is removed). `false`: Zinc's own, as when it started.
+
+**`[environment]`**: variables for every program Zinc starts, `NAME = "value"`; a profile's
+`[profile.<id>.environment]` sets its own over them. `%NAME%` in a value is that variable as the program would
+otherwise get it (`PATH = "%PATH%;C:\\tools"`); an empty value removes the variable (`NO_COLOR = ""`). Settings
+has them under Terminal > Shell and on each profile's page.
 
 **`[shaders]`**: custom shaders over the terminal's picture, Ghostty's way (its `custom-shader`
 and `custom-shader-animation`): GLSL fragment shaders in [Shadertoy](https://www.shadertoy.com)'s form, so
