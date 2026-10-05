@@ -93,10 +93,11 @@ of its own, next to your terminals: each change is written to `config.toml` righ
 as you make it (only that line changes; choosing a default removes the line), and **Undo changes**
 (at the bottom while there are changes) puts the file back as it was when you opened the window.
 Each setting shows its key in the file; the arrow beside a changed setting's name resets it.
-Color schemes are shown in their own colors (type to filter the list), and a color setting offers
-the scheme's 16 colors, "use the scheme's", or any color. **Find a setting** searches settings,
-key bindings and a profile's own settings ("font size ubuntu"), each under where it lives; "Show
-in …" (or Enter, for the first result) goes there and highlights it. **Appearance** and each
+Color schemes are shown in their own colors (on their own page), and a color setting offers
+the scheme's 16 colors, "use the scheme's", or any color. **Find a setting** (in the title bar;
+Ctrl+F or F3 from anywhere in the window) searches settings, key bindings and a profile's own
+settings ("font size ubuntu"), each under where it lives; "Show in …" (or Enter, for the first
+result) goes there and highlights it, and Esc clears the search. **Appearance** and each
 profile's page keep a small preview terminal at the top, showing that page's font, colors and
 padding as you change them (hidden when the window is too short for it; **Hide preview** beside
 the heading puts it away, remembered). Moving through a color scheme list (pointer or arrow keys)

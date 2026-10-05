@@ -527,7 +527,9 @@ ROADMAP, is the current list of what's next, kept up to date with the user).
   so it's a popup window that closes when the window isn't in front: automate it with
   `.scratch/tools/pick-in-flyout.ps1`); colour flyout = scheme's 16 chips (`TerminalTheme.BaseColors`,
   libghostty's built-ins via `TerminalSession.BuiltinBaseColors`) + "Use the scheme's color" + full
-  picker. Pass 5 part 2: `SettingsWindow.Search.cs` (results = settings + a named profile's own
+  picker. Search box (2026-10-05): in the title bar, a WinAppSDK `TitleBar` (Content = the AutoSuggestBox, no suggestions;
+  `TitleBarContentHorizontalAlignment` = Stretch, else it sized to its placeholder; caption buttons Tall, 48 px, in this
+  window only), Ctrl+F / F3 = KeyboardAccelerators on the root, Esc = `ClearSearch`. Pass 5 part 2: `SettingsWindow.Search.cs` (results = settings + a named profile's own
   settings + key bindings, words AND-matched; `_cards` registry → `GoTo` (sets section without the nav
   handler via `_navigating`; search box re-renders only on `UserInput`) → `Reveal` (bring into view,
   focus, `Flash` = accent border 2px with padding -1 so nothing moves, ColorAnimation back);

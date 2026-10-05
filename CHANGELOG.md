@@ -17,6 +17,8 @@ is the version it builds, and hands it to the installer as the release notes).
 - Color schemes have their own page too (Appearance > Color scheme): the scheme in use (or your light and dark
   pair) with Edit and New scheme, and all ~650 schemes as cards you can filter by Dark, Light or Yours and search.
   Click one to see it in the preview, again to take it back; Use puts it in place.
+- Settings: the search box is in the title bar now (Ctrl+F or F3 goes there, Esc clears it), and pages use more of
+  a wide window (up to 1000 px, as Windows Settings).
 
 ### Changed
 - Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, Terminal > Troubleshooting
