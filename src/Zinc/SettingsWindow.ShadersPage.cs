@@ -169,12 +169,12 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(library);
 
         // A card per shader: a click previews it (again: stops); "In use" when the list has it; Add or Remove; a menu.
-        var rowsByFile = new Dictionary<string, (Button Card, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry)>(StringComparer.OrdinalIgnoreCase);
+        var rowsByFile = new Dictionary<string, (Border Ring, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry)>(StringComparer.OrdinalIgnoreCase);
         var cards = new List<Button>();
 
         bool InList(ShaderEntry entry) => ShownShaderFiles(profile).Contains(entry.File, StringComparer.OrdinalIgnoreCase);
 
-        void ShowToggle((Button Card, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry) row)
+        void ShowToggle((Border Ring, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry) row)
         {
             var inList = InList(row.Entry);
             row.Toggle.Content = inList ? "Remove" : "Add";
@@ -187,7 +187,7 @@ internal sealed partial class SettingsWindow
             foreach (var row in rowsByFile.Values)
             {
                 var on = row.Entry.File.Equals(_previewedShader, StringComparison.OrdinalIgnoreCase);
-                row.Card.BorderBrush = (Brush)Application.Current.Resources[on ? "AccentFillColorDefaultBrush" : "CardStrokeColorDefaultBrush"];
+                row.Ring.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
                 if (!on)
                 {
                     row.Detail.Visibility = Visibility.Collapsed;
@@ -309,11 +309,13 @@ internal sealed partial class SettingsWindow
             ToolTipService.SetToolTip(options, "More");
             AutomationProperties.SetName(options, $"More for {entry.Name}");
 
+            var ring = SelectionRing(new Thickness(16, 10, 8, 10)); // the card's padding
+            Grid.SetColumnSpan(ring, 3);
             var grid = new Grid
             {
                 ColumnSpacing = 8,
                 ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
-                Children = { text, toggle, options },
+                Children = { text, toggle, options, ring },
             };
             Grid.SetColumn(toggle, 1);
             Grid.SetColumn(options, 2);
@@ -362,7 +364,7 @@ internal sealed partial class SettingsWindow
                 }
             }), handledEventsToo: true);
             cards.Add(card);
-            rowsByFile[entry.File] = (card, toggle, inUse, detail, entry);
+            rowsByFile[entry.File] = (ring, toggle, inUse, detail, entry);
             ShowToggle(rowsByFile[entry.File]);
             return card;
         }
@@ -583,6 +585,21 @@ internal sealed partial class SettingsWindow
         library.Children.Add(DescriptionText("Reading the shaders…"));
         LoadLibrary();
     }
+
+    /// <summary>
+    /// The accent ring of a library card (one that's a Button) while it's the one previewed: drawn over the card's own border
+    /// from inside its content (<paramref name="cardPadding"/> out), so the hover and press states, which set the button's
+    /// border themselves, can't take it away.
+    /// </summary>
+    private static Border SelectionRing(Thickness cardPadding) => new()
+    {
+        BorderBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
+        BorderThickness = new Thickness(1),
+        CornerRadius = new CornerRadius(6),
+        Margin = new Thickness(-cardPadding.Left - 1, -cardPadding.Top - 1, -cardPadding.Right - 1, -cardPadding.Bottom - 1),
+        IsHitTestVisible = false,
+        Visibility = Visibility.Collapsed,
+    };
 
     /// <summary>A heading for a part of a page ("In use", "Library"): one size up from a group's.</summary>
     private static TextBlock PartTitle(string title) =>

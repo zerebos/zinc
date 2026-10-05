@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Zinc.Terminal;
 
 namespace Zinc.Settings;
 
@@ -15,13 +16,14 @@ public enum SchemeKind
 /// A scheme in the library: its name, whether it's dark (its background, as <see cref="Config.IsDark"/> judges), whether it's
 /// yours (a file in your themes folder) and whether yours stands in for one Zinc comes with (a customized copy).
 /// </summary>
-public sealed record SchemeEntry(string Name, bool IsDark, bool Yours, bool ReplacesBundled);
+public sealed record SchemeEntry(string Name, string File, bool IsDark, bool Yours, bool ReplacesBundled);
 
 /// <summary>Every scheme for the color schemes page, read from disk, and the page's filters.</summary>
 public static class SchemeCatalog
 {
-    // Whether a scheme file is dark, by file and its last write: ~650 files are read once a run, then again only when edited.
-    private static readonly ConcurrentDictionary<string, (DateTime Written, bool Dark)> Darkness = new(StringComparer.OrdinalIgnoreCase);
+    // Each scheme file's colors, by file and its last write: ~650 files are read once a run (by List, off the UI thread),
+    // then again only when edited.
+    private static readonly ConcurrentDictionary<string, (DateTime Written, TerminalTheme Theme)> Themes = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Every scheme in <paramref name="themes"/>, sorted by name (yours over Zinc's of the same name).</summary>
     public static IReadOnlyList<SchemeEntry> List(ThemeLibrary themes)
@@ -37,7 +39,7 @@ public static class SchemeCatalog
                 continue;
             }
 
-            entries.Add(new SchemeEntry(name, IsDark(file!), own, own && bundled.ContainsKey(name)));
+            entries.Add(new SchemeEntry(name, file!, IsDark(file!), own, own && bundled.ContainsKey(name)));
         }
 
         return entries;
@@ -57,35 +59,28 @@ public static class SchemeCatalog
     }
 
     /// <summary>Whether scheme file <paramref name="file"/> has a dark background (no background: Zinc's own, dark).</summary>
-    public static bool IsDark(string file)
+    public static bool IsDark(string file) => new Config { Theme = Theme(file) }.IsDark;
+
+    /// <summary>Scheme file <paramref name="file"/>'s colors (read once, and again after it changes); unreadable: Zinc's own.</summary>
+    public static TerminalTheme Theme(string file)
     {
         DateTime written;
         try
         {
             written = File.GetLastWriteTimeUtc(file);
+            if (Themes.TryGetValue(file, out var known) && known.Written == written)
+            {
+                return known.Theme;
+            }
+
+            var theme = ThemeLibrary.ApplyFile(new Config { Theme = TerminalTheme.SchemeBase }, file).Theme;
+            Themes[file] = (written, theme);
+            return theme;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return true;
+            return TerminalTheme.SchemeBase;
         }
-
-        if (Darkness.TryGetValue(file, out var known) && known.Written == written)
-        {
-            return known.Dark;
-        }
-
-        bool dark;
-        try
-        {
-            dark = ThemeLibrary.ApplyFile(new Config { Theme = Zinc.Terminal.TerminalTheme.SchemeBase }, file).IsDark;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return true;
-        }
-
-        Darkness[file] = (written, dark);
-        return dark;
     }
 
     // A folder's files by name; none if it's missing or can't be read.

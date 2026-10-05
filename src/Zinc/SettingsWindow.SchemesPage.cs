@@ -205,8 +205,11 @@ internal sealed partial class SettingsWindow
         var status = DescriptionText("Reading the schemes…");
         _page.Children.Add(status);
 
-        // Cards are built as they come into view (and dropped when scrolled away); each knows how to show the state.
+        // Cards are made as they come into view; one scrolled away waits in a pool and comes back showing another scheme
+        // (making one is ~30 elements and three button templates: making them anew while scrolling fast left gaps).
+        // Each one in view knows how to show the state.
         var shownCards = new Dictionary<UIElement, Action>();
+        var spareCards = new Stack<Button>();
         var grid = new ItemsRepeater
         {
             Layout = new UniformGridLayout
@@ -219,6 +222,7 @@ internal sealed partial class SettingsWindow
             },
             XYFocusKeyboardNavigation = XYFocusKeyboardNavigationMode.Enabled,
             TabFocusNavigation = KeyboardNavigationMode.Once,
+            VerticalCacheLength = 6, // cards ready three screens above and below
         };
         AutomationProperties.SetName(grid, "Schemes");
         _page.Children.Add(grid);
@@ -307,10 +311,12 @@ internal sealed partial class SettingsWindow
         }
 
         // A card: the scheme as itself on top (its name and 16 colors on its background); under it "In use", whose it is,
-        // Use and a menu. The card is a button: a click previews (Space too), Enter uses it.
-        Button SchemeCard(SchemeEntry entry)
+        // Use and a menu. The card is a button: a click previews (Space too), Enter uses it. Made once, shown with any
+        // scheme (Show), so a card can be reused for another.
+        (Button Card, Action<SchemeEntry> Show, Action Update) NewCard()
         {
-            var theme = SchemeTiles.ThemeOf(_config.Themes, entry.Name) ?? TerminalTheme.Default;
+            SchemeEntry entry = null!;
+            var sample = new SchemeSample();
             var inUseBadge = new TextBlock
             {
                 Text = "✓ In use",
@@ -318,25 +324,15 @@ internal sealed partial class SettingsWindow
                 Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { inUseBadge } };
-            if (entry.Yours)
-            {
-                var whose = new TextBlock { Text = entry.ReplacesBundled ? "Your copy" : "Yours", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
-                if (entry.ReplacesBundled)
-                {
-                    ToolTipService.SetToolTip(whose, "Your edited copy, used instead of the one Zinc comes with.");
-                }
-
-                badges.Children.Add(whose);
-            }
-
+            var whose = new TextBlock { FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
+            var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { inUseBadge, whose } };
             var use = new Button { MinWidth = 72, VerticalAlignment = VerticalAlignment.Center };
             use.Click += (_, _) => Use(entry.Name);
             var options = new MenuFlyout();
             options.Opening += (_, _) => MenuFor(options, entry);
             var optionsButton = new Button
             {
-                Content = new FontIcon { Glyph = "", FontSize = 14 },
+                Content = new FontIcon { Glyph = "\uE712", FontSize = 14 },
                 Flyout = options,
                 Padding = new Thickness(10, 8, 10, 8),
                 VerticalAlignment = VerticalAlignment.Center,
@@ -344,7 +340,6 @@ internal sealed partial class SettingsWindow
                 BorderThickness = new Thickness(0),
             };
             ToolTipService.SetToolTip(optionsButton, "More");
-            AutomationProperties.SetName(optionsButton, $"More for {entry.Name}");
             var footer = new Grid
             {
                 ColumnSpacing = 4,
@@ -355,12 +350,14 @@ internal sealed partial class SettingsWindow
             Grid.SetColumn(use, 1);
             Grid.SetColumn(optionsButton, 2);
             Grid.SetRow(footer, 1);
+            var ring = SelectionRing(new Thickness(0));
+            Grid.SetRowSpan(ring, 2);
             var card = new Button
             {
                 Content = new Grid
                 {
                     RowDefinitions = { new() { Height = GridLength.Auto }, new() { Height = GridLength.Auto } },
-                    Children = { SchemeTiles.Sample(theme, entry.Name), footer },
+                    Children = { sample.Element, footer, ring },
                 },
                 Padding = new Thickness(0),
                 HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -368,10 +365,9 @@ internal sealed partial class SettingsWindow
                 VerticalAlignment = VerticalAlignment.Top,
                 CornerRadius = new CornerRadius(6),
                 Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
                 BorderThickness = new Thickness(1),
             };
-            AutomationProperties.SetName(card, entry.Name);
-            AutomationProperties.SetHelpText(card, $"{(entry.IsDark ? "Dark" : "Light")} scheme. Space previews it; Enter uses it.");
             card.Click += (_, _) => Preview(entry.Name);
             card.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler((_, e) =>
             {
@@ -389,16 +385,48 @@ internal sealed partial class SettingsWindow
                 use.Content = label;
                 use.IsEnabled = !entry.Name.Equals(Target(), StringComparison.OrdinalIgnoreCase);
                 AutomationProperties.SetName(use, $"{label}: {entry.Name}");
-                var previewed = entry.Name.Equals(_previewedScheme, StringComparison.OrdinalIgnoreCase);
-                card.BorderBrush = (Brush)Application.Current.Resources[previewed ? "AccentFillColorDefaultBrush" : "CardStrokeColorDefaultBrush"];
+                ring.Visibility = entry.Name.Equals(_previewedScheme, StringComparison.OrdinalIgnoreCase) ? Visibility.Visible : Visibility.Collapsed;
             }
 
-            Update();
-            shownCards[card] = Update;
-            return card;
+            void Show(SchemeEntry shown)
+            {
+                entry = shown;
+                sample.Show(SchemeCatalog.Theme(shown.File), shown.Name);
+                SetText(whose, shown.ReplacesBundled ? "Your copy" : shown.Yours ? "Yours" : "");
+                ToolTipService.SetToolTip(whose, shown.ReplacesBundled ? "Your edited copy, used instead of the one Zinc comes with." : null);
+                AutomationProperties.SetName(card, shown.Name);
+                AutomationProperties.SetHelpText(card, $"{(shown.IsDark ? "Dark" : "Light")} scheme. Space previews it; Enter uses it.");
+                AutomationProperties.SetName(optionsButton, $"More for {shown.Name}");
+                Update();
+            }
+
+            return (card, Show, Update);
         }
 
-        grid.ItemTemplate = new SchemeCardFactory(data => SchemeCard((SchemeEntry)data), element => shownCards.Remove(element));
+        var cardParts = new Dictionary<Button, (Action<SchemeEntry> Show, Action Update)>();
+        grid.ItemTemplate = new SchemeCardFactory(
+            data =>
+            {
+                if (!spareCards.TryPop(out var card))
+                {
+                    var made = NewCard();
+                    card = made.Card;
+                    cardParts[card] = (made.Show, made.Update);
+                }
+
+                var (show, update) = cardParts[card];
+                show((SchemeEntry)data);
+                shownCards[card] = update;
+                return card;
+            },
+            element =>
+            {
+                shownCards.Remove(element);
+                if (element is Button card)
+                {
+                    spareCards.Push(card);
+                }
+            });
 
         void FillLibrary()
         {

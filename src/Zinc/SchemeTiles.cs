@@ -93,43 +93,6 @@ internal static class SchemeTiles
         };
     }
 
-    /// <summary>
-    /// A scheme's sample for the color schemes page's cards: its name in its text color, then its 16 colors in one row,
-    /// on its background (rounded at the top: the card's footer goes under it).
-    /// </summary>
-    public static Border Sample(TerminalTheme theme, string label)
-    {
-        var chips = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
-        var colors = theme.BaseColors;
-        for (var i = 0; i < 16; i++)
-        {
-            chips.Children.Add(new Border { Width = 11, Height = 11, CornerRadius = new CornerRadius(2), Background = new SolidColorBrush(ToColor(colors[i])) });
-        }
-
-        return new Border
-        {
-            Background = new SolidColorBrush(ToColor(theme.Background)),
-            CornerRadius = new CornerRadius(5, 5, 0, 0),
-            Padding = new Thickness(12, 10, 12, 12),
-            Child = new StackPanel
-            {
-                Spacing = 8,
-                Children =
-                {
-                    new TextBlock
-                    {
-                        Text = label,
-                        Foreground = new SolidColorBrush(ToColor(theme.Foreground)),
-                        FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-                        FontSize = 14,
-                        TextTrimming = TextTrimming.CharacterEllipsis,
-                    },
-                    chips,
-                },
-            },
-        };
-    }
-
     /// <summary>Makes <paramref name="list"/> (items: scheme names) show each as its tile, built when it's scrolled into view.</summary>
     public static void ShowAsTiles(ListViewBase list, ThemeLibrary themes, string? defaultLabel)
     {
@@ -342,5 +305,57 @@ internal sealed partial class SchemePicker : Button
         _flyout.Hide();
         Show(name);
         Picked?.Invoke(name);
+    }
+}
+
+/// <summary>
+/// A scheme's sample on the color schemes page's cards: its name in its text color, then its 16 colors in one row, on its
+/// background (rounded at the top: the card's footer goes under it). Shown again with another scheme when its card is reused.
+/// </summary>
+internal sealed class SchemeSample
+{
+    /// <summary>What goes on the card.</summary>
+    public Border Element { get; }
+
+    private readonly SolidColorBrush _background = new();
+    private readonly SolidColorBrush _foreground = new();
+    private readonly SolidColorBrush[] _chips = new SolidColorBrush[16];
+    private readonly TextBlock _name;
+
+    public SchemeSample()
+    {
+        var chips = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
+        for (var i = 0; i < 16; i++)
+        {
+            _chips[i] = new SolidColorBrush();
+            chips.Children.Add(new Border { Width = 11, Height = 11, CornerRadius = new CornerRadius(2), Background = _chips[i] });
+        }
+
+        _name = new TextBlock
+        {
+            Foreground = _foreground,
+            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+            FontSize = 14,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        Element = new Border
+        {
+            Background = _background,
+            CornerRadius = new CornerRadius(5, 5, 0, 0),
+            Padding = new Thickness(12, 10, 12, 12),
+            Child = new StackPanel { Spacing = 8, Children = { _name, chips } },
+        };
+    }
+
+    public void Show(TerminalTheme theme, string label)
+    {
+        _name.Text = label;
+        _background.Color = SchemeTiles.ToColor(theme.Background);
+        _foreground.Color = SchemeTiles.ToColor(theme.Foreground);
+        var colors = theme.BaseColors;
+        for (var i = 0; i < 16; i++)
+        {
+            _chips[i].Color = SchemeTiles.ToColor(colors[i]);
+        }
     }
 }

@@ -25,15 +25,15 @@ public sealed class SchemeCatalogTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     [Fact]
-    public void ListsEverySchemeWithItsLightnessAndWhoseItIs() =>
+    public void ListsEverySchemeWithItsLightnessAndWhoseItIs()
+    {
+        var all = SchemeCatalog.List(_library);
         Assert.Equal(
-            [
-                new SchemeEntry("dracula", IsDark: false, Yours: true, ReplacesBundled: true),
-                new SchemeEntry("Mine", IsDark: true, Yours: true, ReplacesBundled: false),
-                new SchemeEntry("Paper", IsDark: false, Yours: false, ReplacesBundled: false),
-                new SchemeEntry("Plain", IsDark: true, Yours: false, ReplacesBundled: false),
-            ],
-            SchemeCatalog.List(_library));
+            [("dracula", false, true, true), ("Mine", true, true, false), ("Paper", false, false, false), ("Plain", true, false, false)],
+            all.Select(e => (e.Name, e.IsDark, e.Yours, e.ReplacesBundled)));
+        Assert.Equal(Path.Combine(_user, "dracula"), all[0].File); // yours, not Zinc's
+        Assert.Equal(0xfa, SchemeCatalog.Theme(all[0].File).Background.R);
+    }
 
     [Fact]
     public void FiltersByKindAndName()
