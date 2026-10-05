@@ -3,7 +3,8 @@
 WinUI 3 (C#, .NET 10, Windows App SDK 2.5.x, unpackaged + self-contained) terminal
 emulator on **libghostty-vt** (Ghostty's VT core, C API via P/Invoke), ConPTY, and
 Win2D. See README.md for user-facing docs. Session history, open issues and the
-test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if it exists).
+test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if it exists: its top section,
+ROADMAP, is the current list of what's next, kept up to date with the user).
 
 ## Build / run
 
