@@ -99,6 +99,8 @@ internal sealed partial class SettingsWindow : Window
             IsBackButtonVisible = false,
             IsPaneToggleButtonVisible = false,
         };
+        _titleBar = titleBar;
+        titleBar.BackRequested += (_, _) => _backTo?.Invoke();
         // WinUI centers the content at its own width (the box then fit its placeholder): stretched, the box grows to its
         // MaxWidth, centered, and shrinks with the window.
         titleBar.Resources["TitleBarContentHorizontalAlignment"] = HorizontalAlignment.Stretch;
@@ -170,7 +172,8 @@ internal sealed partial class SettingsWindow : Window
 
         _nav = new NavigationView
         {
-            PaneDisplayMode = NavigationViewPaneDisplayMode.Left,
+            // Full sidebar when wide, icons when narrower, behind the title bar's hamburger when narrow (Windows Settings').
+            PaneDisplayMode = NavigationViewPaneDisplayMode.Auto,
             IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed,
             IsSettingsVisible = false,
             IsPaneToggleButtonVisible = false,
@@ -200,6 +203,9 @@ internal sealed partial class SettingsWindow : Window
             _scroller.ChangeView(null, 0, null, disableAnimation: true);
         }
 
+        // The sidebar folded (icons, or hidden in a narrow window): the title bar's hamburger opens it.
+        _titleBar.PaneToggleRequested += (_, _) => _nav.IsPaneOpen = !_nav.IsPaneOpen;
+        _nav.DisplayModeChanged += (_, e) => _titleBar.IsPaneToggleButtonVisible = e.DisplayMode != NavigationViewDisplayMode.Expanded;
         _nav.SelectionChanged += (_, e) =>
         {
             if (!_navigating && e.SelectedItem is NavigationViewItem { Tag: string id })
@@ -321,18 +327,7 @@ internal sealed partial class SettingsWindow : Window
         _libraryPinned = false;
         _librarySpacer = null;
         var query = _search.Text.Trim();
-        var heading = new TextBlock
-        {
-            Text = query.Length > 0 ? "Results"
-                : _editingScheme is { } scheme ? scheme
-                : _editingShaders ? _shadersProfile is { } shadersOf ? $"Shaders: {_config.FindProfile(shadersOf)?.Name ?? shadersOf}" : "Shaders"
-                : _editingSchemes ? _schemesProfile is { } schemesOf ? $"Color schemes: {_config.FindProfile(schemesOf)?.Name ?? schemesOf}" : "Color schemes"
-                : _section == "profiles" && _editing is { } editing ? _config.FindProfile(editing)?.Name ?? editing
-                : SettingsCatalog.Sections.First(s => s.Id == _section).Title,
-            FontSize = 28,
-            FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 8, 0, 12),
-        };
+        var heading = Heading(); // the breadcrumb (SettingsWindow.Trail.cs)
         _page.Children.Add(heading);
         if (query.Length == 0 && _editingScheme == null && !_editingShaders && !_editingSchemes && _section == "about")
         {
@@ -1050,13 +1045,6 @@ internal sealed partial class SettingsWindow : Window
     private void ProfileEditor(string id)
     {
         var profile = _config.FindProfile(id);
-        var back = new HyperlinkButton { Content = "‹ All profiles", Padding = new Thickness(0, 2, 0, 2) };
-        back.Click += (_, _) =>
-        {
-            _editing = null;
-            Render();
-        };
-        _page.Children.Insert(0, back);
         if (profile is { Missing: not ProfileMissing.None })
         {
             var why = new InfoBar

@@ -83,9 +83,6 @@ internal sealed partial class SettingsWindow
     private void SchemeEditor(string name)
     {
         var file = _config.Themes.Customize(name);
-        var back = new HyperlinkButton { Content = "‹ Back", Padding = new Thickness(0, 2, 0, 2) };
-        back.Click += (_, _) => LeaveSchemeEditor();
-        _page.Children.Insert(0, back);
         if (file == null)
         {
             _page.Children.Add(Note("This scheme isn't there any more."));

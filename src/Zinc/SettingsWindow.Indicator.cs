@@ -26,6 +26,10 @@ internal sealed partial class SettingsWindow
         // A selection slides there; anything else that moves the item (resizing) just follows.
         _nav.SelectionChanged += (_, _) => _indicator.SlideNext();
         _nav.LayoutUpdated += (_, _) => PlaceIndicator();
+        // A narrow window hides the sidebar behind the hamburger: the pill goes and comes with it.
+        _nav.PaneOpened += (_, _) => PlaceIndicator();
+        _nav.PaneClosed += (_, _) => PlaceIndicator();
+        _nav.DisplayModeChanged += (_, _) => PlaceIndicator();
     }
 
     private void PlaceIndicator()
@@ -35,8 +39,13 @@ internal sealed partial class SettingsWindow
             return;
         }
 
-        // No section selected (search results): no pill.
-        _indicator.Layer.Visibility = _nav.SelectedItem == null ? Visibility.Collapsed : Visibility.Visible;
+        // No section selected (search results), or the sidebar hidden (a narrow window, hamburger closed): no pill.
+        var hidden = _nav.SelectedItem == null || (_nav.DisplayMode == NavigationViewDisplayMode.Minimal && !_nav.IsPaneOpen);
+        _indicator.Layer.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
+        if (hidden)
+        {
+            return;
+        }
         if (_nav.SelectedItem is not NavigationViewItem { XamlRoot: not null } item || item.ActualHeight <= 0)
         {
             return;

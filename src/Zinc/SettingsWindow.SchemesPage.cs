@@ -81,10 +81,6 @@ internal sealed partial class SettingsWindow
 
     private void SchemesPage(string? profile)
     {
-        var back = new HyperlinkButton { Content = "‹ Back", Padding = new Thickness(0, 2, 0, 2) };
-        AutomationProperties.SetName(back, "Back");
-        back.Click += (_, _) => LeaveSchemes();
-        _page.Children.Insert(0, back);
         var setting = SettingsCatalog.Find("colors.theme")!;
         var path = SchemePath(profile);
         _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it; click again to stop."));

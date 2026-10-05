@@ -64,10 +64,6 @@ internal sealed partial class SettingsWindow
 
     private void ShadersPage(string? profile)
     {
-        var back = new HyperlinkButton { Content = "‹ Back", Padding = new Thickness(0, 2, 0, 2) };
-        AutomationProperties.SetName(back, "Back");
-        back.Click += (_, _) => LeaveShaders();
-        _page.Children.Insert(0, back);
         var setting = SettingsCatalog.Find("shaders.files")!;
         var error = ErrorText();
         _page.Children.Add(Note(setting.Description + " Click a shader in the library to preview it; click again to stop."));
