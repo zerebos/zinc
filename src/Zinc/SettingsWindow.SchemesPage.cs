@@ -223,7 +223,7 @@ internal sealed partial class SettingsWindow
         {
             Layout = new UniformGridLayout
             {
-                MinItemWidth = 250,
+                MinItemWidth = 300, // room for the name beside the buttons (at 250 most were cut short)
                 MinItemHeight = 132,
                 MinRowSpacing = 8,
                 MinColumnSpacing = 8,
