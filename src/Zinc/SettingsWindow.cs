@@ -35,7 +35,10 @@ internal sealed partial class SettingsWindow : Window
     private readonly AutoSuggestBox _search;
 
     // Bottom padding: room for the undo bar floating over the last card.
-    private readonly StackPanel _page = new() { Spacing = 4, MaxWidth = 960, Padding = new Thickness(40, 12, 40, 96) };
+    /// <summary>The page's widest (cards up to 1000 px, as Windows Settings' and the Community Toolkit's settings samples), with its margins.</summary>
+    private const double PageWidth = 1000 + 2 * 40;
+
+    private readonly StackPanel _page = new() { Spacing = 4, MaxWidth = PageWidth, Padding = new Thickness(40, 12, 40, 96) };
     private readonly ScrollViewer _scroller = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
 
     // What the scroller holds: a plain stretching grid with the page centered in it. The page itself in the scroller

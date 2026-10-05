@@ -341,7 +341,7 @@ internal sealed class SchemeSample
         var mono = new FontFamily("Cascadia Mono, Consolas");
         TextBlock Text(params (string Text, Brush? Color)[] runs)
         {
-            var block = new TextBlock { FontFamily = mono, FontSize = 12, LineHeight = 18, Foreground = _foreground, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center };
+            var block = new TextBlock { FontFamily = mono, FontSize = 13, LineHeight = 20, Foreground = _foreground, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center };
             foreach (var (text, color) in runs)
             {
                 var run = new Microsoft.UI.Xaml.Documents.Run { Text = text };
@@ -358,7 +358,7 @@ internal sealed class SchemeSample
 
         StackPanel Line(params UIElement[] parts)
         {
-            var line = new StackPanel { Orientation = Orientation.Horizontal, Height = 18 };
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Height = 20 };
             foreach (var part in parts)
             {
                 line.Children.Add(part);
@@ -370,17 +370,17 @@ internal sealed class SchemeSample
         var selected = new Border
         {
             Background = _selectionBackground,
-            Child = new TextBlock { Text = "app.cs", FontFamily = mono, FontSize = 12, LineHeight = 18, Foreground = _selectionForeground, VerticalAlignment = VerticalAlignment.Center },
+            Child = new TextBlock { Text = "app.cs", FontFamily = mono, FontSize = 13, LineHeight = 20, Foreground = _selectionForeground, VerticalAlignment = VerticalAlignment.Center },
         };
-        var cursor = new Border { Width = 7, Height = 15, Background = _cursor, VerticalAlignment = VerticalAlignment.Center };
+        var cursor = new Border { Width = 8, Height = 17, Background = _cursor, VerticalAlignment = VerticalAlignment.Center };
         var lines = new StackPanel
         {
             Padding = new Thickness(12, 9, 12, 8),
             Children =
             {
-                Line(Text(("~/zinc", _palette[4]), (" ❯ ", _palette[2]), ("git diff --stat", null))),
-                Line(Text(("M" + Space, _palette[3])), selected, Text(("  ", null), ("+12", _palette[2]), (" -3", _palette[1]), ("  # 2 files", _palette[8]))),
-                Line(Text(("fn", _palette[5]), (" main() { ", null), ("\"hello\"", _palette[6]), (" }" + Space, null)), cursor),
+                Line(Text(("~/zinc", _palette[4]), (" ❯ ", _palette[2]), ("git diff --stat HEAD~1", null))),
+                Line(Text(("M" + Space, _palette[3])), selected, Text(("  ", null), ("+12", _palette[2]), (" -3", _palette[1]), ("  # 2 files changed", _palette[8]))),
+                Line(Text(("fn", _palette[5]), (" main() { ", null), ("let", _palette[5]), (" x = ", null), ("\"hello\"", _palette[6]), ("; }" + Space, null)), cursor),
             },
         };
 

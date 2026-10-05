@@ -31,7 +31,7 @@ internal sealed partial class SettingsWindow
     private const double PreviewRoom = 560;
 
     /// <summary>Pinned above the scrolling page: the page's heading (and back link), then the preview.</summary>
-    private readonly StackPanel _pinned = new() { MaxWidth = 960, Padding = new Thickness(40, 12, 40, 4) };
+    private readonly StackPanel _pinned = new() { MaxWidth = PageWidth, Padding = new Thickness(40, 12, 40, 4) };
 
     private TerminalControl? _preview;
     private Border? _previewFrame;
