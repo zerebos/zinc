@@ -39,8 +39,8 @@ When a situation isn't covered below (a new notice, a hint, a first-run moment),
 
 - **Say the consequence, not the mechanism.** "When off, the window resizes smoothly." "Compact shrinks inactive tabs to their icon." A description that restates the name adds nothing; leave it out instead.
 - **Say when a change doesn't apply right away**: "Applies to windows opened from now on.", "Restart Zinc to apply." Put it in the description, where it's read before changing it.
-- **Recommend when there's a safe answer**: "If your shell doesn't support bracketed paste, choose “Always”."
-- **Refer to other settings and choices by their exact label, in quotes**: "Only with the “Vintage” cursor."
+- **Recommend when there's a safe answer**: *If your shell doesn't support bracketed paste, choose "Always".*
+- **Refer to other settings and choices by their exact label, in quotes**: *Only with the "Vintage" cursor.*
 
 ## Choices
 
@@ -63,7 +63,7 @@ The attention dot's colours and the words around it say the same thing. Use thes
 | State | Colour token | Wording |
 |---|---|---|
 | Work finished out of view | `attention` | "Finished": "Build finished in workspace 2" |
-| A program is waiting on the person | `caution` | "Needs you": "ssh needs you in “prod”" |
+| A program is waiting on the person | `caution` | "Needs you": *ssh needs you in "prod"* |
 | The command that finished out of view failed | `error` | "Failed": "Tests failed (exit 1) in workspace 2" |
 
 - Lead with the command or program, then what happened, then where.
@@ -81,7 +81,8 @@ The attention dot's colours and the words around it say the same thing. Use thes
 
 - **No period** on names, labels, buttons, choice labels or tooltips that are a single phrase.
 - **Periods** on descriptions and any text of more than one sentence.
-- **Curly quotes and apostrophes** in interface text (“Vintage”, Zinc’s); straight quotes only inside code, paths and config values.
+- **Straight double quotes** for quoting labels and names ("Vintage"), and straight apostrophes (Zinc's). Never curly quotes, never single quotes for quoting. Consistency matters more than style, and straight quotes are what everyone types.
+- (In this guide, an example that itself contains a quoted label is shown in *italics* instead of quotes.)
 - **Code, keys, paths and values** appear exactly as typed, never quoted or recapitalized: `config.toml`, Ctrl+A > C, `C:\Users`.
 - **Keyboard shortcuts** use Windows' notation: Ctrl+Shift+T, Win+`.
 
