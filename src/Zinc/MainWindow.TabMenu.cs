@@ -32,7 +32,7 @@ public sealed partial class MainWindow
         }
 
         colors.Items.Add(new MenuFlyoutSeparator());
-        colors.Items.Add(new MenuFlyoutItem { Text = "Reset", Command = Run(() => SetTabColor(tab, null)) });
+        colors.Items.Add(new MenuFlyoutItem { Text = "No color", Command = Run(() => SetTabColor(tab, null)) });
         menu.Items.Add(colors);
         menu.Items.Add(Item("Workspace icon…", ((char)0xE8B9).ToString(), null, () => ShowIconPicker(tab)));
 
@@ -46,7 +46,7 @@ public sealed partial class MainWindow
         menu.Items.Add(folder);
         menu.Opening += (_, _) =>
         {
-            current.Text = tab.Folder is { } f ? f.Path : "None: tabs start in their profile's folder";
+            current.Text = tab.Folder is { } f ? f.Path : "No folder set: tabs start in their profile's folder";
             clear.IsEnabled = tab.Folder != null;
         };
 
@@ -64,7 +64,7 @@ public sealed partial class MainWindow
         split.Items.Add(Item("Move pane to new window", null, null, () => MovePaneToNewWindow(tab, tab.Active)));
         menu.Items.Add(split);
 
-        menu.Items.Add(Item("Export text…", "", null, () => _ = ExportText(tab)));
+        menu.Items.Add(Item("Save tab text…", "", null, () => _ = ExportText(tab)));
 
         menu.Items.Add(Item("Move workspace to new window", "", null, () => MoveToNewWindow(tab)));
 
@@ -125,7 +125,7 @@ public sealed partial class MainWindow
         var box = new TextBox
         {
             Text = tab.CustomTitle ?? tab.Header.Title,
-            PlaceholderText = "Empty resets to the app's title",
+            PlaceholderText = "Leave empty to use the program's title",
             MinWidth = 240,
         };
         var flyout = new Flyout { Content = box, Placement = FlyoutPlacementMode.Bottom };

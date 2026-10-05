@@ -116,7 +116,7 @@ public sealed partial class TerminalControl
             catch (RegexMatchTimeoutException)
             {
                 _matches.Clear();
-                problem = "Pattern too slow";
+                problem = "Pattern too slow; simplify it";
             }
         }
 
@@ -251,8 +251,8 @@ public sealed partial class TerminalControl
 
         _searchCase = Toggle("Aa", "Match case");
         _searchRegex = Toggle(".*", "Regular expression");
-        var up = IconButton("\uE70E", "Search up (Enter)", () => StepMatch(older: true));
-        var down = IconButton("\uE70D", "Search down (Shift+Enter)", () => StepMatch(older: false));
+        var up = IconButton("\uE70E", "Previous match (Enter)", () => StepMatch(older: true));
+        var down = IconButton("\uE70D", "Next match (Shift+Enter)", () => StepMatch(older: false));
         var close = IconButton("\uE711", "Close (Esc)", CloseSearch);
 
         _searchPanel = new Border

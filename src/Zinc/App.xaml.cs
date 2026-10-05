@@ -397,7 +397,7 @@ public partial class App : Application
         if (_windows.LastOrDefault() is { } front && _windows.Any(w => w.RunningCommands().Any()))
         {
             front.Activate();
-            if (!await front.ConfirmQuit(_windows.ToList()))
+            if (!await front.ConfirmQuit(_windows.ToList(), restartForUpdate))
             {
                 return;
             }

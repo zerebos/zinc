@@ -14,7 +14,7 @@ internal static class WorkspaceLookPickers
 {
     public static Windows.UI.Color ToColor(uint rgb) => Windows.UI.Color.FromArgb(0xFF, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
 
-    /// <summary>"No icon" and every icon; <paramref name="picked"/> gets the name (null: none).</summary>
+    /// <summary>"Profile's icon" (none of its own) and every icon; <paramref name="picked"/> gets the name (null: none).</summary>
     public static FrameworkElement Icons(string? current, Action<string?> picked)
     {
         var grid = new GridView
@@ -24,7 +24,7 @@ internal static class WorkspaceLookPickers
             MaxWidth = 7 * 46,
         };
         AutomationProperties.SetName(grid, "Workspace icon");
-        grid.Items.Add(Cell(null, new TextBlock { Text = "None", FontSize = 11, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center }, "No icon"));
+        grid.Items.Add(Cell(null, new TextBlock { Text = "None", FontSize = 11, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center }, "Profile's icon"));
         foreach (var (name, glyph) in WorkspaceIcons.All)
         {
             grid.Items.Add(Cell(name, new FontIcon { Glyph = glyph.ToString(), FontSize = 18 }, name));

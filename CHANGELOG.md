@@ -18,6 +18,11 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Changed
 - Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, Terminal > Troubleshooting
   > Input methods turns it off.
+- Clearer wording across the app (settings, menus, notices, the palette). Some names changed:
+  - "Window glass" is now Window background (Mica, Acrylic, Clear), with Window tint and Window tint color.
+  - Palette: "Color scheme for this tab…", "Default color scheme…", "Workspace folder…", "Save tab text…",
+    "Go to workspace: …".
+  - Tooltips show your own shortcuts.
 
 ### Fixed
 - Settings: while searching (or editing a profile or a scheme), clicking the section that was open before did

@@ -11,8 +11,8 @@ public sealed partial class MainWindow
     private IEnumerable<PaletteCommand> ArgumentCommands(WorkspaceTab tab)
     {
         PaletteCommand Asks(string title, Action ask) => new(title, null, ask, AsksArgument: true);
-        yield return Asks("Change color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: false));
-        yield return Asks("Set default color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: true));
+        yield return Asks("Color scheme for this tab…", () => PickColorScheme(tab, tab.Active, asDefault: false));
+        yield return Asks("Default color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: true));
         yield return Asks("New tab running…", () => AskPaletteArgument(new PaletteArgument(
             $"A command to run in a new {ShellName(tab.Active)} tab here, e.g. htop or npm test",
             Submit: line => NewShellTabRunning(tab, line))));

@@ -39,8 +39,7 @@
                         Padding="8,0"
                         Background="Transparent"
                         BorderThickness="0"
-                        AutomationProperties.Name="Open a profile"
-                        ToolTipService.ToolTip="Open a profile (Ctrl+Shift+Space)">
+                        AutomationProperties.Name="Open a profile">
                         <FontIcon FontSize="12" Glyph="&#xE70D;" />
                         <Button.Flyout>
                             <MenuFlyout x:Name="NewTabMenu" Placement="BottomEdgeAlignedLeft" />
@@ -94,7 +93,7 @@
                 </InfoBar.Content>
             </InfoBar>
             <!-- Something failed and was survived (App.UnhandledException); details in crash.log. -->
-            <InfoBar x:Name="ErrorNotice" IsOpen="False" Severity="Error" Title="Something went wrong">
+            <InfoBar x:Name="ErrorNotice" IsOpen="False" Severity="Error" Title="Zinc hit an error and kept running">
                 <InfoBar.ActionButton>
                     <Button x:Name="OpenCrashLogButton" Content="Open crash log" />
                 </InfoBar.ActionButton>

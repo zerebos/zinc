@@ -331,8 +331,8 @@ public sealed partial class MainWindow
         }
 
         HotkeyNotice.Message =
-            $"{key} is in use by another app (Windows Terminal's quake mode uses Win+`). " +
-            "Pick another in Settings > Quick terminal, or free the key: Zinc tries again whenever one of its windows is activated.";
+            $"{key} is taken by another app (Windows Terminal uses Win+` for its quake mode). " +
+            "Choose another key in Settings > Quick terminal, or close that app; Zinc tries again when you come back to it.";
         HotkeyNotice.IsOpen = true;
     }
 

@@ -55,7 +55,7 @@ public sealed partial class MainWindow : Window
         public Attention Attention { get; set; }
 
         /// <summary>
-        /// A color scheme chosen for this tab alone (the palette's "Change color scheme…"); its
+        /// A color scheme chosen for this tab alone (the palette's "Color scheme for this tab…"); its
         /// <see cref="Profile"/> then carries that scheme. Re-applied on reload and restore.
         /// </summary>
         public string? ColorScheme { get; set; }
@@ -230,6 +230,7 @@ public sealed partial class MainWindow : Window
         MenuKeySuppressor.Attach(this);
         ConfirmWindowClose();
 
+        ToolTipService.SetToolTip(NewTabMenuButton, ShortcutTip("Open a profile", new ActionInvocation(TerminalAction.OpenNewTabMenu)));
         Tabs.Loaded += (_, _) => DisableTabAnimations();
         if (config.Global.WorkspaceTabs == WorkspaceTabs.Left && !quick)
         {
@@ -516,6 +517,7 @@ public sealed partial class MainWindow : Window
         if (group.Tag is not Border host)
         {
             var view = new GroupView();
+            view.SetAddToolTip(ShortcutTip("New tab in this pane", new ActionInvocation(TerminalAction.NewTab)));
             // Groups can move between workspaces, so look the workspace up when it's needed.
             view.TabClicked += pane => WithTabOf(group, t => ShowGroupTab(t, pane));
             view.TabCloseClicked += pane => WithTabOf(group, t => AskClosePane(t, pane));
@@ -1029,8 +1031,7 @@ public sealed partial class MainWindow : Window
         if (VisualDescendants(Tabs).OfType<Button>().FirstOrDefault(b => b.Name == "AddButton") is { } add)
         {
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(add, "New workspace");
-            var keys = Shortcut(new ActionInvocation(TerminalAction.NewWorkspace));
-            ToolTipService.SetToolTip(add, keys != null ? $"New workspace ({keys})" : "New workspace");
+            ToolTipService.SetToolTip(add, ShortcutTip("New workspace", new ActionInvocation(TerminalAction.NewWorkspace)));
         }
     }
 
@@ -1434,6 +1435,18 @@ public sealed partial class MainWindow : Window
 
     /// <summary>The shortcut shown for an action in menus, from the current bindings.</summary>
     private string? Shortcut(ActionInvocation action) => _keybindings.ShortcutFor(action);
+
+    /// <summary>
+    /// A tooltip: <paramref name="text"/> plus the action's shortcut, read from the current bindings each
+    /// time it opens (so a key change in config.toml shows); just the text while the action is unbound.
+    /// </summary>
+    private ToolTip ShortcutTip(string text, ActionInvocation action)
+    {
+        string Text() => Shortcut(action) is { } keys ? $"{text} ({keys})" : text;
+        var tip = new ToolTip { Content = Text() };
+        tip.Opened += (_, _) => tip.Content = Text();
+        return tip;
+    }
 
     /// <summary>A profile's shortcut: bound by id, or by its position in the menu (0-based).</summary>
     private string? ShortcutForProfile(Profile profile, int index) =>

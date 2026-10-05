@@ -220,7 +220,11 @@ public sealed partial class MainWindow
     /// Asks before closing terminals the shell says are running a command. True to go ahead
     /// (nothing running, or the user agreed).
     /// </summary>
-    private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes)
+    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes) => ConfirmClose(panes, "Closing", "Close");
+
+    /// <param name="doing">What the answer does, as the reason ("Closing", "Quitting").</param>
+    /// <param name="button">The primary button's label ("Close", "Quit").</param>
+    private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button)
     {
         var running = panes.Select(p => p.Control.RunningCommand).OfType<ShellCommand>().ToList();
         if (running.Count == 0)
@@ -241,8 +245,8 @@ public sealed partial class MainWindow
             {
                 XamlRoot = root,
                 Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running",
-                Content = $"{list}\n\nClosing stops {(running.Count == 1 ? "it" : "them")}.",
-                PrimaryButtonText = "Close",
+                Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "it" : "them")}.",
+                PrimaryButtonText = button,
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
             };
@@ -332,9 +336,10 @@ public sealed partial class MainWindow
     internal IEnumerable<ShellCommand> RunningCommands() =>
         AllTabs().SelectMany(t => t.Workspace.Tabs).Select(p => p.Control.RunningCommand).OfType<ShellCommand>();
 
-    /// <summary>Asks this window's question for the whole app (quitting).</summary>
-    internal Task<bool> ConfirmQuit(IEnumerable<MainWindow> windows) =>
-        ConfirmClose(windows.SelectMany(w => w.AllTabs()).SelectMany(t => t.Workspace.Tabs));
+    /// <summary>Asks this window's question for the whole app (quitting, or restarting for an update).</summary>
+    internal Task<bool> ConfirmQuit(IEnumerable<MainWindow> windows, bool restart = false) =>
+        ConfirmClose(windows.SelectMany(w => w.AllTabs()).SelectMany(t => t.Workspace.Tabs),
+            restart ? "Restarting" : "Quitting", restart ? "Restart" : "Quit");
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FlashInfo

@@ -93,7 +93,7 @@ public static partial class ClipboardText
         var (title, message) = why switch
         {
             PasteConcern.CouldRunCommands => ($"Paste {lines} lines?",
-                "Here each line break acts as Enter, so each line runs as a command as it arrives."),
+                "Each line runs as a command as soon as it's pasted."),
             PasteConcern.MultipleLines => ($"Paste {lines} lines?", "The program receives them as one paste."),
             _ => ($"Paste {kb} KB?", "That's a lot of text; once it starts, it can't be stopped."),
         };

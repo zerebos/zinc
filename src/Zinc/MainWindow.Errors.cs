@@ -51,7 +51,7 @@ public sealed partial class MainWindow
             };
         }
 
-        ErrorNotice.Message = $"{exception.GetType().Name}: {exception.Message.TrimEnd('.')}. Zinc kept running; the details are in crash.log.";
+        ErrorNotice.Message = $"{exception.Message.TrimEnd('.')}. Details are in crash.log.";
         ErrorNotice.IsOpen = true;
     }
 }

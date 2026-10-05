@@ -405,7 +405,7 @@ public sealed partial class MainWindow
         foreach (var t in AllTabs())
         {
             var target = t;
-            commands.Add(new PaletteCommand($"Switch to workspace: {t.Header.Title}", null,
+            commands.Add(new PaletteCommand($"Go to workspace: {t.Header.Title}", null,
                 () => Tabs.SelectedItem = target.Item, Remember: false, Icon: target.Active.Profile));
         }
 
@@ -463,7 +463,7 @@ public sealed partial class MainWindow
         }
 
         commands.Add(new PaletteCommand("Workspace icon…", null, () => AskWorkspaceIcon(tab), AsksArgument: true));
-        commands.Add(new PaletteCommand("Set workspace folder…", null, () => AskWorkspaceFolder(tab), AsksArgument: true));
+        commands.Add(new PaletteCommand("Workspace folder…", null, () => AskWorkspaceFolder(tab), AsksArgument: true));
         if (tab.Folder != null)
         {
             Custom("Clear workspace folder", () => ClearWorkspaceFolder(tab));
@@ -482,7 +482,7 @@ public sealed partial class MainWindow
         }, AsksArgument: true));
         Action(TerminalAction.NextAttention);
         Custom("Rename workspace…", () => ShowRename(tab));
-        Custom("Export text…", () => _ = ExportText(tab));
+        Custom("Save tab text…", () => _ = ExportText(tab));
         commands.AddRange(ArgumentCommands(tab));
         Action(TerminalAction.NewWindow);
         if (_workspaceList != null)
@@ -563,7 +563,7 @@ public sealed partial class MainWindow
         {
             var target = t;
             var switchKeys = index < 8 ? Keys(new ActionInvocation(TerminalAction.SwitchToTab, index)) : null;
-            commands.Add(new PaletteCommand($"Switch to workspace: {t.Header.Title}", switchKeys,
+            commands.Add(new PaletteCommand($"Go to workspace: {t.Header.Title}", switchKeys,
                 () => Tabs.SelectedItem = target.Item, Remember: false, Icon: target.Active.Profile));
             index++;
         }
@@ -577,7 +577,7 @@ public sealed partial class MainWindow
             Custom($"Workspace color: {name}", () => SetTabColor(tab, color));
         }
 
-        Custom("Workspace color: Reset", () => SetTabColor(tab, null));
+        Custom("Workspace color: None", () => SetTabColor(tab, null));
         if (_quick)
         {
             commands.RemoveAll(c => AboutTabsOrWorkspaces(c.Title)); // one terminal: no tabs, no workspaces

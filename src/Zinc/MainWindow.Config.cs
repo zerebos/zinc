@@ -126,12 +126,17 @@ public sealed partial class MainWindow
         ConfigNotice.Severity = applied ? InfoBarSeverity.Warning : InfoBarSeverity.Error;
         ConfigNotice.Title = applied
             ? "Some settings in config.toml were ignored"
-            : "config.toml isn't valid TOML; the previous settings stay in force";
+            : "config.toml has an error";
         const int shown = 4;
         var lines = config.Warnings.Take(shown).ToList();
         if (config.Warnings.Count > shown)
         {
             lines.Add($"…and {config.Warnings.Count - shown} more");
+        }
+
+        if (!applied)
+        {
+            lines.Insert(0, "Your previous settings stay until it's fixed.");
         }
 
         ConfigNotice.Message = string.Join("\n", lines);

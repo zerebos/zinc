@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Zinc.Input;
 using Zinc.Terminal;
 using Windows.ApplicationModel.DataTransfer;
 
@@ -135,7 +136,7 @@ public sealed partial class MainWindow
             },
         };
         AutomationProperties.SetName(add, "New workspace");
-        ToolTipService.SetToolTip(add, "New workspace (Ctrl+Alt+T)");
+        ToolTipService.SetToolTip(add, ShortcutTip("New workspace", new ActionInvocation(TerminalAction.NewWorkspace)));
         add.Click += (_, _) => OpenNewWorkspace();
 
         NewTabMenuButton.Height = 32;

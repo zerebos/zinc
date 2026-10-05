@@ -23,6 +23,7 @@ internal sealed partial class GroupView : Grid
     private readonly Grid _strip = new() { Height = StripHeight };
     private readonly Border _content = new();
     private readonly Dictionary<MainWindow.TerminalTab, TabItem> _items = new();
+    private readonly Button _add;
 
     public GroupView()
     {
@@ -40,7 +41,8 @@ internal sealed partial class GroupView : Grid
             BorderThickness = new Thickness(0),
         };
         AutomationProperties.SetName(add, "New tab in this pane");
-        ToolTipService.SetToolTip(add, "New tab in this pane (Ctrl+Shift+T)");
+        ToolTipService.SetToolTip(add, "New tab in this pane"); // the window adds its shortcut (SetAddToolTip)
+        _add = add;
         add.Click += (_, _) => NewTabClicked?.Invoke();
 
         // Tabs scroll when they don't fit; the + stays pinned after them.
@@ -284,6 +286,9 @@ internal sealed partial class GroupView : Grid
 
     /// <summary>Lets go of the shown terminal (the group is moving to another window).</summary>
     public void Release() => _content.Child = null;
+
+    /// <summary>The + button's tooltip (the window's, which knows the current key bindings).</summary>
+    public void SetAddToolTip(ToolTip tip) => ToolTipService.SetToolTip(_add, tip);
 
     public static string TitleOf(MainWindow.TerminalTab tab) => tab.Title;
 

@@ -103,7 +103,7 @@ public sealed partial class MainWindow
             BorderBrush = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"],
             Content = content,
         };
-        AutomationProperties.SetName(center, "Search commands");
+        AutomationProperties.SetName(center, "Command palette");
         center.Click += (_, _) => OpenCommandPalette();
         Grid.SetColumn(center, 1);
         row.Children.Add(center);

@@ -23,7 +23,7 @@ public sealed partial class MainWindow
         if (show)
         {
             UpdateNotice.Title = $"Zinc {Updater.NewVersion} is ready";
-            UpdateNotice.Message = "Restart Zinc to switch to it now, or it installs the next time you quit.";
+            UpdateNotice.Message = "Restart to update now, or it installs when you quit.";
         }
 
         UpdateNotice.IsOpen = show;

@@ -225,10 +225,10 @@ internal static class Updater
     {
         UpdateStatus.NotInstalled => "Updates come with Zinc's installer: this copy wasn't installed by it.",
         UpdateStatus.Idle => $"Version {CurrentVersion}.",
-        UpdateStatus.Checking => "Checking for updates...",
+        UpdateStatus.Checking => "Checking for updates…",
         // No number until there is one: a server that doesn't say how big a file is (compressed on the fly) leaves
         // Velopack at 0 until the end, and a tester watched "0%" the whole download.
-        UpdateStatus.Downloading => Progress > 0 ? $"Downloading {NewVersion}: {Progress}%" : $"Downloading {NewVersion}...",
+        UpdateStatus.Downloading => Progress > 0 ? $"Downloading {NewVersion}: {Progress}%" : $"Downloading {NewVersion}…",
         UpdateStatus.Ready => $"{NewVersion} is ready: it installs when you restart Zinc, or the next time you quit.",
         UpdateStatus.UpToDate => $"Up to date ({CurrentVersion}). Checked {LastChecked:t}.",
         UpdateStatus.Failed => $"Couldn't check for updates: {Error}",

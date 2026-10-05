@@ -359,7 +359,6 @@ internal sealed partial class WorkspaceList : Grid
             };
             AutomationProperties.SetName(_close, "Close the new workspace page");
             AutomationProperties.SetName(this, "New workspace");
-            ToolTipService.SetToolTip(this, "New workspace");
             _close.Click += (_, _) => CloseClicked?.Invoke();
             SetColumn(_close, 1);
             Children.Add(_close);
