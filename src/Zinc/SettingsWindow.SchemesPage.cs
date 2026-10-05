@@ -561,13 +561,15 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// A split button drawn like the buttons around it. Its halves (and their backgrounds) fill under its outline, so the see-through outline
-    /// shows over the button's fill (lighter); a plain button's fill stops inside its outline, which shows over what's
-    /// behind. Each half is pulled in by the outline's width, so the outline shows over the card as a plain button's does.
+    /// A split button drawn like the buttons around it. Its halves (and their backgrounds) fill under its see-through outline,
+    /// so it read lighter than a plain button, whose fill stops inside it: each part is pulled in by the outline's width.
+    /// Done once the template exists: on Loaded, or for a button shown later (a split button appears once a light/dark pair
+    /// is on) on its first size. (A subclass overriding OnApplyTemplate can't be made: WinUI gives a C# subclass of
+    /// SplitButton no template and throws.)
     /// </summary>
     private static SplitButton LikePlainButton(SplitButton split)
     {
-        split.Loaded += (_, _) =>
+        void Inset()
         {
             var left = new Thickness(1, 1, 0, 1);
             var right = new Thickness(0, 1, 1, 1);
@@ -577,12 +579,15 @@ internal sealed partial class SettingsWindow
                 ("SecondaryBackgroundGrid", right), ("SecondaryButton", right),
             })
             {
-                if (FindPart(split, part) is FrameworkElement half)
+                if (FindPart(split, part) is FrameworkElement element && element.Margin != margin)
                 {
-                    half.Margin = margin;
+                    element.Margin = margin;
                 }
             }
-        };
+        }
+
+        split.Loaded += (_, _) => Inset();
+        split.SizeChanged += (_, _) => Inset();
         return split;
     }
 

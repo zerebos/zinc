@@ -822,6 +822,10 @@ and read state after the write (see `_titleDirty`).
 ## Windows / WinUI / ConPTY footguns
 
 - WinUI 3: `FontWeights` is `Microsoft.UI.Text.FontWeights`; `Colors` is `Microsoft.UI.Colors`.
+- A C# subclass of `SplitButton` (to override OnApplyTemplate) gets no template and throws 0x800F1000 "Cannot apply a
+  Style with TargetType SplitButton to ContentControl", even with `DefaultStyleKey = typeof(SplitButton)`. Change template
+  parts from outside instead, once they exist: an element shown later (Collapsed at Loaded) has no template at Loaded, but
+  gets its first SizeChanged right after it's built (`LikePlainButton` in SettingsWindow.SchemesPage.cs).
 - TabView's style defaults to `VerticalAlignment=Top`: without `Stretch` it's only as tall as
   its strip and tab content gets 0 px (panes never start their session).
 - TabView unloads hidden tabs' content and reloads it on selection. Never tie session
