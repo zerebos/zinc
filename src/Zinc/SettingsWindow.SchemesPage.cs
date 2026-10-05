@@ -224,7 +224,7 @@ internal sealed partial class SettingsWindow
             Layout = new UniformGridLayout
             {
                 MinItemWidth = 250,
-                MinItemHeight = 104,
+                MinItemHeight = 132,
                 MinRowSpacing = 8,
                 MinColumnSpacing = 8,
                 ItemsStretch = UniformGridLayoutItemsStretch.Fill,
@@ -273,7 +273,8 @@ internal sealed partial class SettingsWindow
             UpdateCards();
         }
 
-        // A card: the scheme as itself on top (its name and 16 colors on its background); under it "In use", whose it is,
+        // A card: the scheme as itself on top (SchemeSample: a few colored terminal lines, its 16 colors as a band); under it
+        // its name, "In use", whose it is,
         // Use and Edit (a pencil). With a light/dark pair, Use is a split button: its main part puts the scheme on the side
         // it suits (a dark scheme on the dark side; already there: the other side), its arrow offers both. The card is a
         // button: a click previews (Space too), Enter uses it. Made once, shown with any scheme (Show), so a card can be
@@ -284,13 +285,25 @@ internal sealed partial class SettingsWindow
             var sample = new SchemeSample();
             var inUseBadge = new TextBlock
             {
-                Text = "✓ In use",
-                FontSize = 12,
+                Text = "✓",
+                FontSize = 13,
                 Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
                 VerticalAlignment = VerticalAlignment.Center,
             };
             var whose = new TextBlock { FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
-            var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { inUseBadge, whose } };
+            ToolTipService.SetToolTip(inUseBadge, "In use");
+            // A check when it's in use, the name in the UI font (readable whatever the scheme's contrast; shortened when
+            // the buttons leave it little room), and whose it is.
+            var name = new TextBlock { FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+            var badges = new Grid
+            {
+                ColumnSpacing = 6,
+                VerticalAlignment = VerticalAlignment.Center,
+                ColumnDefinitions = { new() { Width = GridLength.Auto }, new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto } },
+                Children = { inUseBadge, name, whose },
+            };
+            Grid.SetColumn(name, 1);
+            Grid.SetColumn(whose, 2);
             var forLight = false; // the side the split button's main part sets
             var use = new Button { Content = "Use", MinWidth = 72, VerticalAlignment = VerticalAlignment.Center };
             use.Click += (_, _) => Use(entry.Name, false);
@@ -390,11 +403,14 @@ internal sealed partial class SettingsWindow
             void Show(SchemeEntry shown)
             {
                 entry = shown;
-                sample.Show(SchemeCatalog.Theme(shown.File), shown.Name);
+                sample.Show(SchemeCatalog.Theme(shown.File));
+                name.Text = shown.Name;
+                ToolTipService.SetToolTip(name, shown.Name);
                 SetText(whose, shown.ReplacesBundled ? "Your copy" : shown.Yours ? "Yours" : "");
                 ToolTipService.SetToolTip(whose, shown.ReplacesBundled ? "Your edited copy, used instead of the one Zinc comes with." : null);
                 AutomationProperties.SetName(card, shown.Name);
                 AutomationProperties.SetHelpText(card, $"{(shown.IsDark ? "Dark" : "Light")} scheme. Space previews it; Enter uses it.");
+                AutomationProperties.SetName(inUseBadge, "In use");
                 var editTip = shown.Yours ? "Edit colors" : "Edit colors (makes your copy)";
                 ToolTipService.SetToolTip(edit, editTip);
                 AutomationProperties.SetName(edit, $"{editTip}: {shown.Name}");

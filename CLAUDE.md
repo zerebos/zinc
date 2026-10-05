@@ -377,7 +377,7 @@ ROADMAP, is the current list of what's next, kept up to date with the user).
   In use = follow switch + a slot per side (Edit); Library = pills All/Dark/Light/Yours + search + "+" (`NewSchemeFlyout`
   with `sources`: a "Start from" list) + … over an **ItemsRepeater** (UniformGridLayout, cards made by `SchemeCardFactory`
   only in view, scrolled-away ones pooled and re-`Show`n: ~650; it virtualizes inside the page's StackPanel/ScrollViewer;
-  `VerticalCacheLength` 6), card = Button (`SchemeSample` + footer: ✓ In use, Yours/Your copy, Use or, with a pair, a
+  `VerticalCacheLength` 6), card = Button (`SchemeSample`: 3 colored terminal lines + the palette as an 8 px-per-row band; footer: ✓ (in use), name, Yours/Your copy, Use or, with a pair, a
   SplitButton "Use for dark/light" = the side the scheme suits, the other once it's there, arrow = both; pencil =
   `CustomizeScheme`: the editor has open/restore/delete); click = `PreviewScheme`, again = stop; the accent ring =
   `SelectionRing` over the border (hover states can't hide it; shaders cards too); sticky header shared with the shaders

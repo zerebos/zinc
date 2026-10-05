@@ -309,53 +309,119 @@ internal sealed partial class SchemePicker : Button
 }
 
 /// <summary>
-/// A scheme's sample on the color schemes page's cards: its name in its text color, then its 16 colors in one row, on its
-/// background (rounded at the top: the card's footer goes under it). Shown again with another scheme when its card is reused.
+/// A scheme's sample on the color schemes page's cards: three lines of terminal colored as programs color them (a prompt; a
+/// diff line with a selected word; a code line with the cursor), then its 16 colors as a band along the bottom edge (normal
+/// over bright). Text on the scheme's background says more than color chips: low contrast shows. Shown again with another
+/// scheme when its card is reused (only brushes change).
 /// </summary>
 internal sealed class SchemeSample
 {
+    private const double BandHeight = 8;
+
+    // A TextBlock drops a trailing space: these stay (before the selected word and the cursor).
+    private const string Space = "\u00A0";
+
     /// <summary>What goes on the card.</summary>
-    public Border Element { get; }
+    public Grid Element { get; }
 
     private readonly SolidColorBrush _background = new();
     private readonly SolidColorBrush _foreground = new();
-    private readonly SolidColorBrush[] _chips = new SolidColorBrush[16];
-    private readonly TextBlock _name;
+    private readonly SolidColorBrush _cursor = new();
+    private readonly SolidColorBrush _selectionBackground = new();
+    private readonly SolidColorBrush _selectionForeground = new();
+    private readonly SolidColorBrush[] _palette = new SolidColorBrush[16];
 
     public SchemeSample()
     {
-        var chips = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
         for (var i = 0; i < 16; i++)
         {
-            _chips[i] = new SolidColorBrush();
-            chips.Children.Add(new Border { Width = 11, Height = 11, CornerRadius = new CornerRadius(2), Background = _chips[i] });
+            _palette[i] = new SolidColorBrush();
         }
 
-        _name = new TextBlock
+        var mono = new FontFamily("Cascadia Mono, Consolas");
+        TextBlock Text(params (string Text, Brush? Color)[] runs)
         {
-            Foreground = _foreground,
-            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-            FontSize = 14,
-            TextTrimming = TextTrimming.CharacterEllipsis,
+            var block = new TextBlock { FontFamily = mono, FontSize = 12, LineHeight = 18, Foreground = _foreground, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center };
+            foreach (var (text, color) in runs)
+            {
+                var run = new Microsoft.UI.Xaml.Documents.Run { Text = text };
+                if (color != null)
+                {
+                    run.Foreground = color;
+                }
+
+                block.Inlines.Add(run);
+            }
+
+            return block;
+        }
+
+        StackPanel Line(params UIElement[] parts)
+        {
+            var line = new StackPanel { Orientation = Orientation.Horizontal, Height = 18 };
+            foreach (var part in parts)
+            {
+                line.Children.Add(part);
+            }
+
+            return line;
+        }
+
+        var selected = new Border
+        {
+            Background = _selectionBackground,
+            Child = new TextBlock { Text = "app.cs", FontFamily = mono, FontSize = 12, LineHeight = 18, Foreground = _selectionForeground, VerticalAlignment = VerticalAlignment.Center },
         };
-        Element = new Border
+        var cursor = new Border { Width = 7, Height = 15, Background = _cursor, VerticalAlignment = VerticalAlignment.Center };
+        var lines = new StackPanel
+        {
+            Padding = new Thickness(12, 9, 12, 8),
+            Children =
+            {
+                Line(Text(("~/zinc", _palette[4]), (" ❯ ", _palette[2]), ("git diff --stat", null))),
+                Line(Text(("M" + Space, _palette[3])), selected, Text(("  ", null), ("+12", _palette[2]), (" -3", _palette[1]), ("  # 2 files", _palette[8]))),
+                Line(Text(("fn", _palette[5]), (" main() { ", null), ("\"hello\"", _palette[6]), (" }" + Space, null)), cursor),
+            },
+        };
+
+        var band = new Grid();
+        for (var c = 0; c < 8; c++)
+        {
+            band.ColumnDefinitions.Add(new ColumnDefinition());
+        }
+
+        band.RowDefinitions.Add(new RowDefinition { Height = new GridLength(BandHeight) });
+        band.RowDefinitions.Add(new RowDefinition { Height = new GridLength(BandHeight) });
+        for (var i = 0; i < 16; i++)
+        {
+            var cell = new Border { Background = _palette[i] };
+            Grid.SetColumn(cell, i % 8);
+            Grid.SetRow(cell, i / 8);
+            band.Children.Add(cell);
+        }
+
+        Grid.SetRow(band, 1);
+        Element = new Grid
         {
             Background = _background,
             CornerRadius = new CornerRadius(5, 5, 0, 0),
-            Padding = new Thickness(12, 10, 12, 12),
-            Child = new StackPanel { Spacing = 8, Children = { _name, chips } },
+            RowDefinitions = { new() { Height = GridLength.Auto }, new() { Height = GridLength.Auto } },
+            Children = { lines, band },
         };
     }
 
-    public void Show(TerminalTheme theme, string label)
+    public void Show(TerminalTheme theme)
     {
-        _name.Text = label;
         _background.Color = SchemeTiles.ToColor(theme.Background);
         _foreground.Color = SchemeTiles.ToColor(theme.Foreground);
+        _cursor.Color = SchemeTiles.ToColor(theme.Cursor);
+        // No selection colors in the scheme: Zinc inverts the text's.
+        _selectionBackground.Color = SchemeTiles.ToColor(theme.SelectionBackground ?? theme.Foreground);
+        _selectionForeground.Color = SchemeTiles.ToColor(theme.SelectionForeground ?? (theme.SelectionBackground == null ? theme.Background : theme.Foreground));
         var colors = theme.BaseColors;
         for (var i = 0; i < 16; i++)
         {
-            _chips[i].Color = SchemeTiles.ToColor(colors[i]);
+            _palette[i].Color = SchemeTiles.ToColor(colors[i]);
         }
     }
 }
