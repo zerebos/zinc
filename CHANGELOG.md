@@ -17,7 +17,7 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ### Fixed
 - Settings: while searching (or editing a profile or a scheme), clicking the section that was open before did
-  nothing; it goes back to that section now.
+  nothing; it goes back to that section now. Search results no longer show a section as selected.
 
 ## 0.1.0-dev.254 (2026-10-04)
 

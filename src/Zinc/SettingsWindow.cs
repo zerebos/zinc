@@ -92,6 +92,8 @@ internal sealed partial class SettingsWindow : Window
         {
             if (e.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
+                // Results belong to no section: none selected, so any can be clicked (back with the box cleared).
+                SelectSection(_search.Text.Trim().Length > 0 ? null : _section);
                 Render();
             }
         };

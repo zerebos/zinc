@@ -138,6 +138,21 @@ internal sealed partial class SettingsWindow
         }
     }
 
+    /// <summary>Marks <paramref name="section"/> in the sidebar (null: none), without navigating.</summary>
+    private void SelectSection(string? section)
+    {
+        _navigating = true;
+        try
+        {
+            _nav.SelectedItem = section == null ? null
+                : _nav.MenuItems.Concat(_nav.FooterMenuItems).OfType<NavigationViewItem>().FirstOrDefault(i => (string)i.Tag == section);
+        }
+        finally
+        {
+            _navigating = false;
+        }
+    }
+
     /// <summary>
     /// Shows <paramref name="section"/> (a profile's page, or the keyboard page filtered), then
     /// brings setting <paramref name="key"/>'s card into view, focuses it and flashes it.

@@ -30,7 +30,14 @@ internal sealed partial class SettingsWindow
 
     private void PlaceIndicator()
     {
-        if (_indicator == null || _nav.SelectedItem is not NavigationViewItem { XamlRoot: not null } item || item.ActualHeight <= 0)
+        if (_indicator == null)
+        {
+            return;
+        }
+
+        // No section selected (search results): no pill.
+        _indicator.Layer.Visibility = _nav.SelectedItem == null ? Visibility.Collapsed : Visibility.Visible;
+        if (_nav.SelectedItem is not NavigationViewItem { XamlRoot: not null } item || item.ActualHeight <= 0)
         {
             return;
         }

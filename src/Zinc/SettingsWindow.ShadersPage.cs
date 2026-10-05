@@ -30,6 +30,20 @@ internal sealed partial class SettingsWindow
 
     private void OpenShaders(string? profile)
     {
+        // From anywhere, search results included: a sub-page of Appearance, or of the profile's page.
+        _navigating = true;
+        try
+        {
+            _search.Text = "";
+        }
+        finally
+        {
+            _navigating = false;
+        }
+
+        _section = profile == null ? "appearance" : "profiles";
+        _editing = profile;
+        SelectSection(_section);
         _editingShaders = true;
         _shadersProfile = profile;
         _previewedShader = null;
@@ -217,10 +231,10 @@ internal sealed partial class SettingsWindow
             }
 
             var text = new StackPanel { Spacing = 2, Children = { name } };
-            if (entry.Description is { } about)
-            {
-                text.Children.Add(new TextBlock { Text = about, Opacity = 0.75, TextWrapping = TextWrapping.Wrap });
-            }
+            // A line about it, or a note there isn't one (the rows keep one height, and their buttons apart).
+            text.Children.Add(entry.Description is { } about
+                ? new TextBlock { Text = about, Opacity = 0.75, TextWrapping = TextWrapping.Wrap }
+                : new TextBlock { Text = "No description in the file.", Opacity = 0.5, FontStyle = Windows.UI.Text.FontStyle.Italic });
 
             var detail = DescriptionText();
             detail.Visibility = Visibility.Collapsed;
