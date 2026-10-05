@@ -27,6 +27,9 @@ internal sealed partial class SettingsWindow
 
     private const double PreviewHeight = 172;
 
+    /// <summary>The tallest the preview grows to fit its script (taller rows, a narrow window).</summary>
+    private const double PreviewMaxHeight = 300;
+
     /// <summary>A page area shorter than this has no room for the preview (it would leave little for the settings).</summary>
     private const double PreviewRoom = 560;
 
@@ -81,6 +84,16 @@ internal sealed partial class SettingsWindow
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_previewFrame, "Preview");
             Closed += (_, _) => _preview.Close();
+            // It can't scroll: taller rows or a narrow window make its script need more room, so the frame grows to fit
+            // it (and back), up to a cap past which the top of the script scrolls out of view.
+            _preview.PreviewHeightNeeded += needed =>
+            {
+                var height = Math.Clamp(Math.Ceiling(needed) + 2, PreviewHeight, PreviewMaxHeight); // + the frame's border
+                if (_previewFrame != null && Math.Abs(_previewFrame.Height - height) >= 1)
+                {
+                    _previewFrame.Height = height;
+                }
+            };
         }
         else
         {

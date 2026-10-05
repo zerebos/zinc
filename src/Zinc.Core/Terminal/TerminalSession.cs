@@ -704,6 +704,20 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public void ScrollToRow(ulong row) =>
         ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Row, Value = (nint)row });
 
+    /// <summary>Rows written so far: those scrolled into the scrollback, and the screen's down to the cursor's.</summary>
+    public int RowsUsed()
+    {
+        GhosttyTerminalScrollbar sb;
+        ushort y = 0;
+        lock (Lock)
+        {
+            Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
+            Native.TerminalGet(_terminal, TerminalData.CursorY, &y);
+        }
+
+        return (int)(sb.Total - sb.Len) + y + 1;
+    }
+
     public GhosttyTerminalScrollbar GetScrollbar()
     {
         GhosttyTerminalScrollbar sb;

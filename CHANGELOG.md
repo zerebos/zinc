@@ -21,6 +21,10 @@ is the version it builds, and hands it to the installer as the release notes).
   (Appearance > Colors).
 - Open in Zinc from File Explorer: right-click a folder or a drive (Layout > When you come back; off by default).
 
+### Fixed
+- Settings: the preview at the top of Appearance and profile pages lost its first lines for good when its rows got
+  taller (line height) or the window narrower. It grows to fit now, and lays itself out again at each size.
+
 ## 0.1.0-dev.282 (2026-10-05)
 
 ### New

@@ -122,6 +122,22 @@ public sealed partial class TerminalControl : UserControl
     private string? _previewScript;
 
     /// <summary>
+    /// A preview's script laid out at its grid: the height (DIPs) it needs to show all of it, its padding included. It
+    /// can't be scrolled, so taller rows (line height) or a narrow window, which wrap or push its lines up, tell the
+    /// host to grow it.
+    /// </summary>
+    public event Action<double>? PreviewHeightNeeded;
+
+    /// <summary>Shows the preview's script afresh at the grid's size (resizing reflowed it into the scrollback).</summary>
+    private void ReplayPreview(TerminalSession session, string script)
+    {
+        session.WriteToScreen("\u001b[H\u001b[2J\u001b[3J"); // home, clear the screen, clear the scrollback
+        session.WriteToScreen(script);
+        var m = _renderer.Metrics;
+        PreviewHeightNeeded?.Invoke(session.RowsUsed() * m.Height + _config.PaddingTop + _config.PaddingBottom + 1);
+    }
+
+    /// <summary>
     /// A terminal that runs nothing and shows <paramref name="script"/> (the settings' preview):
     /// drawn like any pane, cursor as if focused, not interactive. <see cref="ApplyConfig"/> updates it.
     /// </summary>
@@ -373,6 +389,7 @@ public sealed partial class TerminalControl : UserControl
         var place = GridLayout.Place(Surface.ActualWidth, Surface.ActualHeight, _config.PaddingLeft, _config.PaddingRight,
             _config.PaddingTop, _config.PaddingBottom, m.Width, m.Height, m.Scale, _config.PaddingBalance);
         var (cols, rows) = (place.Columns, place.Rows);
+        var resized = cols != _cols || rows != _rows;
         _cols = cols;
         _rows = rows;
         (_gridLeft, _gridTop) = (place.Left, place.Top);
@@ -388,6 +405,10 @@ public sealed partial class TerminalControl : UserControl
             // Resize even when the grid is unchanged: the cell pixel size
             // (reported to apps via XTWINOPS/mouse pixels) may have changed.
             _session.Resize(cols, rows, m.WidthPx, m.HeightPx);
+            if (resized && _previewScript is { } script)
+            {
+                ReplayPreview(_session, script);
+            }
         }
 
         Redraw();
@@ -457,7 +478,7 @@ public sealed partial class TerminalControl : UserControl
         _session = session;
         if (_previewScript is { } script)
         {
-            session.WriteToScreen(script);
+            ReplayPreview(session, script);
             return;
         }
 
