@@ -11,7 +11,7 @@ The name ties in quietly. Copper-doped zinc sulfide is the classic phosphor, and
 ## 2. Name
 
 - **Zinc**, capitalised, in prose. The wordmark is always lowercase: `zinc`.
-- CLI and executable: `zinc`.
+- App executable: `Zinc.exe`. CLI: **`zn`**. Zn is zinc's chemical symbol, so the command echoes the same story as the name and the icon. (Windows can't give one GUI executable a console, so the two are separate binaries, the same split as VS Code's `Code.exe` and `code`.)
 - Never "Zinc Terminal" as the product name. Where context is needed, use the descriptor: "Zinc, a precise, native terminal for Windows."
 - Ghostty lineage line (About page, README): *"Zinc: what makes ghosts glow in the dark."* This is a story nod to libghostty, never a visual one.
 
@@ -23,11 +23,13 @@ The name ties in quietly. Copper-doped zinc sulfide is the classic phosphor, and
 
 Claims come in a fixed order. Lead with the first; never lead with the last two.
 
-1. **Precision and craft: the headline.** Pixel-exact box drawing, blocks and Powerline shapes that meet without seams in any font; synchronized output; correct rendering of every program's output.
+1. **Precision and craft: the headline.** *Precise in what it draws, and in how you tune it.*
+   - **In what it draws:** pixel-exact box drawing, blocks and Powerline shapes that meet without seams in any font; synchronized output; correct rendering of every program's output.
+   - **In how you tune it:** hundreds of settings, each one explained in plain words, applied the moment you change it, and one click from undo. Lead with the clarity, which is the distinctive part; the depth ("hundreds of settings") is the supporting fact.
 2. **Workflow: the reason to stay.** Workspaces that reopen where you left them, automatic shell integration and the attention system. "A terminal that knows what your commands are doing."
 3. **Native Windows polish: the proof of care.** WinUI 3, Mica, tray, global hotkey, per-DPI icons, automatic shell discovery.
 4. **Speed: a given, not a headline.** No "fastest" or comparative speed claims until benchmarks are published.
-5. **Flexibility: a supporting point only.**
+5. **Customization depth: show it, don't claim it.** Power users who tune ("rice") their setups respond to seeing them, so use screenshots of tuned Zinc windows and a theme gallery, not the word "flexible". Avoid counting settings against other terminals: it's a moving target, and it frames Zinc against them rather than on its own terms.
 
 **Audience:** developers on Windows who live in the terminal and move between PowerShell, WSL, Git Bash and SSH; people who've used Ghostty, kitty or WezTerm elsewhere; people who notice when a prompt segment doesn't join.
 
@@ -147,6 +149,7 @@ Brand colours apply to the **app chrome only**. They never touch terminal conten
 
 - **Geist Mono Regular, lowercase**, outlined in exported assets.
 - Order: **wordmark, then mark**, like a cursor at the end of a typed line. The mark never comes first.
+- **Scope:** this applies to brand lockups (the Geist Mono wordmark with the Quadrant mark, as on the site, README and welcome page). OS-native pairings of the app icon and the name in the system font (title bar, taskbar, Start, installer, Settings > Apps) follow Windows' own icon-then-name layout. That's correct, not a violation.
 - The mark's height equals the ascender height (baseline to the top of the `h`), and it sits on the baseline.
 - The gap is half a monospace character's advance, measured from the end of the text.
 - Clear space is 25% of the ascender height on every side, measured from visible ink.
@@ -226,7 +229,7 @@ run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the s
 - Don't let brand colours touch terminal content (bundled schemes are fine; they're user-selectable).
 - Don't use amber in the mark or for failures.
 - Don't downscale the vector tile for 64 px and below; use the masters.
-- Don't set the wordmark in capitals or another typeface, or put the mark in front of it.
+- Don't set the wordmark in capitals or another typeface, or put the mark in front of it (OS-native icon-and-title layouts excepted; see §10).
 - Don't call Zinc "Ghostty for Windows", or lead with speed claims.
 
 ## 14. How the app applies it (decided 2026-10-01, after a side-by-side review)
