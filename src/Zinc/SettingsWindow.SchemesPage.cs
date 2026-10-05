@@ -21,12 +21,11 @@ internal sealed partial class SettingsWindow
 
     private string? _schemesProfile;
 
-    // The library scheme in the preview, the library as last read, its filters, and which side of a light/dark pair Use sets.
+    // The library scheme in the preview, the library as last read, and its filters.
     private string? _previewedScheme;
     private IReadOnlyList<SchemeEntry> _schemeList = [];
     private SchemeKind _schemeKind;
     private string _schemeQuery = "";
-    private bool _schemeForLight;
 
     /// <summary>Zinc's own scheme: in force where none is chosen.</summary>
     private const string ZincScheme = "Lit Cell";
@@ -53,7 +52,6 @@ internal sealed partial class SettingsWindow
         _previewedScheme = null;
         _schemeKind = SchemeKind.All;
         _schemeQuery = "";
-        _schemeForLight = ConfigFile.SystemScheme == Zinc.Ghostty.ColorScheme.Light; // the side in force now
         PreviewForLibrary(open: true);
         Render();
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
@@ -91,7 +89,7 @@ internal sealed partial class SettingsWindow
         var path = SchemePath(profile);
         _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it; click again to stop."));
 
-        // ---- In use: the scheme, or the pair; following Windows' light/dark; which side Use sets.
+        // ---- In use: the scheme, or the pair; following Windows' light/dark.
         var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
         reset.Click += (_, _) => Write(path, null);
         var description = DescriptionText();
@@ -111,11 +109,6 @@ internal sealed partial class SettingsWindow
             DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followPanel));
         var slots = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 4) };
         _page.Children.Add(slots);
-        var sides = new RadioButtons { MaxColumns = 2, Items = { "Dark scheme", "Light scheme" } };
-        AutomationProperties.SetName(sides, "Use sets");
-        var sidesCard = CardLayout(new TextBlock { Text = "Use sets" }, null,
-            DescriptionText("Which of the two the library's Use button replaces."), null, null, sides);
-        _page.Children.Add(sidesCard);
 
         follow.Toggled += (_, _) =>
         {
@@ -137,7 +130,7 @@ internal sealed partial class SettingsWindow
             }
         };
 
-        // A slot: one scheme in force, its tile, Edit and New scheme….
+        // A slot: one scheme in force, its tile and Edit.
         Border Slot(string label, string about, string? name)
         {
             var shown = name ?? ZincScheme;
@@ -145,7 +138,6 @@ internal sealed partial class SettingsWindow
             tile.Width = ControlWidth;
             var edit = new Button { Content = $"Edit {shown}" };
             edit.Click += (_, _) => CustomizeScheme(name, path);
-            var newScheme = new Button { Content = "New scheme…", Flyout = NewSchemeFlyout(() => shown, () => name, path) };
             var text = new StackPanel
             {
                 Spacing = 1,
@@ -154,13 +146,13 @@ internal sealed partial class SettingsWindow
                 {
                     new TextBlock { Text = label },
                     DescriptionText(about),
-                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 8, 0, 0), Children = { edit, newScheme } },
+                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 8, 0, 0), Children = { edit } },
                 },
             };
             return CardBorder(TextAndControl(text, tile));
         }
 
-        // ---- Library: a heading with the count; one toolbar row (dark, light, yours as pills; a search; a menu); a card per
+        // ---- Library: a heading with the count; one toolbar row (dark, light, yours as pills; a search; New scheme; a menu); a card per
         // scheme in a grid. The heading and the toolbar stay in view once scrolled to (StickLibraryHeader).
         var libraryTitle = PartTitle("Library");
         var pills = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -175,6 +167,25 @@ internal sealed partial class SettingsWindow
         };
         ToolTipService.SetToolTip(more, "More");
         AutomationProperties.SetName(more, "More");
+        // New scheme: a copy of the one previewed, else the one in use (or any: "Start from"). With a pair, "Use it now" puts it
+        // on the side its starting scheme suits.
+        var add = new Button
+        {
+            Content = new FontIcon { Glyph = "\uE710", FontSize = 14 }, // add (+)
+            Padding = new Thickness(10, 8, 10, 8),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        ToolTipService.SetToolTip(add, "New scheme…");
+        AutomationProperties.SetName(add, "New scheme");
+        add.Flyout = NewSchemeFlyout(
+            () => _previewedScheme ?? SchemeSides(ShownScheme(profile)).Dark ?? ZincScheme,
+            start =>
+            {
+                var (dark, light) = SchemeSides(ShownScheme(profile));
+                return light != null && !(_schemeList.FirstOrDefault(e => e.Name.Equals(start, StringComparison.OrdinalIgnoreCase))?.IsDark ?? true) ? light : dark;
+            },
+            path,
+            () => [.. _schemeList.Select(e => e.Name)]);
         var menu = new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
         var openFolder = new MenuFlyoutItem { Text = "Open themes folder", Icon = new FontIcon { Glyph = "" } };
         openFolder.Click += (_, _) => OpenThemesFolder();
@@ -194,11 +205,12 @@ internal sealed partial class SettingsWindow
         {
             ColumnSpacing = 8,
             Margin = new Thickness(0, 0, 0, 8),
-            ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
-            Children = { pillScroller, filter, more },
+            ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
+            Children = { pillScroller, filter, add, more },
         };
         Grid.SetColumn(filter, 1);
-        Grid.SetColumn(more, 2);
+        Grid.SetColumn(add, 2);
+        Grid.SetColumn(more, 3);
         var libraryHeader = new StackPanel { Children = { libraryTitle, toolbar } };
         _page.Children.Add(libraryHeader);
         _stickLibrary = () => StickLibraryHeader(libraryHeader);
@@ -235,26 +247,18 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        bool Following() => SchemeSides(ShownScheme(profile)).Light != null;
-
-        // The side Use replaces: with a pair, the one chosen; else the scheme.
-        string Target()
-        {
-            var (dark, light) = SchemeSides(ShownScheme(profile));
-            return light != null && _schemeForLight ? light : dark ?? ZincScheme;
-        }
-
         bool InForce(string name)
         {
             var (dark, light) = SchemeSides(ShownScheme(profile));
             return name.Equals(dark ?? ZincScheme, StringComparison.OrdinalIgnoreCase) || name.Equals(light, StringComparison.OrdinalIgnoreCase);
         }
 
-        void Use(string name)
+        // Puts scheme name in place: the scheme, or with a pair, its light or dark side.
+        void Use(string name, bool forLight)
         {
             var (dark, light) = SchemeSides(ShownScheme(profile));
             _previewedScheme = null; // in force now: the preview shows it anyway
-            Write(path, light == null ? name : _schemeForLight ? $"light:{name},dark:{dark}" : $"light:{light},dark:{name}");
+            Write(path, light == null ? name : forLight ? $"light:{name},dark:{dark}" : $"light:{light},dark:{name}");
         }
 
         void Preview(string name)
@@ -272,47 +276,11 @@ internal sealed partial class SettingsWindow
             UpdateCards();
         }
 
-        void MenuFor(MenuFlyout options, SchemeEntry entry)
-        {
-            options.Items.Clear();
-            var edit = new MenuFlyoutItem { Text = entry.Yours ? "Edit colors" : "Edit colors (makes your copy)" };
-            edit.Click += (_, _) => CustomizeScheme(entry.Name, path);
-            options.Items.Add(edit);
-            if (entry.Yours && _config.Themes.Find(entry.Name) is { } file)
-            {
-                var open = new MenuFlyoutItem { Text = "Open in editor" };
-                open.Click += (_, _) => OpenInEditor(file);
-                options.Items.Add(open);
-            }
-
-            if (entry.ReplacesBundled)
-            {
-                var original = new MenuFlyoutItem { Text = "Restore the original" };
-                ToolTipService.SetToolTip(original, $"Deletes your copy: {entry.Name} as Zinc comes with it is used again.");
-                original.Click += (_, _) =>
-                {
-                    try
-                    {
-                        _config.Themes.BackToOriginal(entry.Name);
-                    }
-                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                    {
-                        Log.Write($"settings: couldn't remove scheme {entry.Name}: {ex.Message}");
-                    }
-                };
-                options.Items.Add(original);
-            }
-            else if (entry.Yours)
-            {
-                var delete = new MenuFlyoutItem { Text = "Delete…" };
-                delete.Click += (_, _) => DeleteScheme(entry.Name);
-                options.Items.Add(delete);
-            }
-        }
-
         // A card: the scheme as itself on top (its name and 16 colors on its background); under it "In use", whose it is,
-        // Use and a menu. The card is a button: a click previews (Space too), Enter uses it. Made once, shown with any
-        // scheme (Show), so a card can be reused for another.
+        // Use and Edit (a pencil). With a light/dark pair, Use is a split button: its main part puts the scheme on the side
+        // it suits (a dark scheme on the dark side; already there: the other side), its arrow offers both. The card is a
+        // button: a click previews (Space too), Enter uses it. Made once, shown with any scheme (Show), so a card can be
+        // reused for another.
         (Button Card, Action<SchemeEntry> Show, Action Update) NewCard()
         {
             SchemeEntry entry = null!;
@@ -326,29 +294,38 @@ internal sealed partial class SettingsWindow
             };
             var whose = new TextBlock { FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
             var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { inUseBadge, whose } };
-            var use = new Button { MinWidth = 72, VerticalAlignment = VerticalAlignment.Center };
-            use.Click += (_, _) => Use(entry.Name);
-            var options = new MenuFlyout();
-            options.Opening += (_, _) => MenuFor(options, entry);
-            var optionsButton = new Button
+            var forLight = false; // the side the split button's main part sets
+            var use = new Button { Content = "Use", MinWidth = 72, VerticalAlignment = VerticalAlignment.Center };
+            use.Click += (_, _) => Use(entry.Name, false);
+            var forDarkItem = new MenuFlyoutItem { Text = "Use for dark mode" };
+            forDarkItem.Click += (_, _) => Use(entry.Name, false);
+            var forLightItem = new MenuFlyoutItem { Text = "Use for light mode" };
+            forLightItem.Click += (_, _) => Use(entry.Name, true);
+            var split = new SplitButton
             {
-                Content = new FontIcon { Glyph = "\uE712", FontSize = 14 },
-                Flyout = options,
+                VerticalAlignment = VerticalAlignment.Center,
+                Flyout = new MenuFlyout { Items = { forDarkItem, forLightItem }, Placement = FlyoutPlacementMode.BottomEdgeAlignedRight },
+            };
+            split.Click += (_, _) => Use(entry.Name, forLight);
+            var edit = new Button
+            {
+                Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 }, // edit (pencil)
                 Padding = new Thickness(10, 8, 10, 8),
                 VerticalAlignment = VerticalAlignment.Center,
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                 BorderThickness = new Thickness(0),
             };
-            ToolTipService.SetToolTip(optionsButton, "More");
+            edit.Click += (_, _) => CustomizeScheme(entry.Name, path);
             var footer = new Grid
             {
                 ColumnSpacing = 4,
                 Padding = new Thickness(12, 6, 4, 6),
                 ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
-                Children = { badges, use, optionsButton },
+                Children = { badges, use, split, edit },
             };
             Grid.SetColumn(use, 1);
-            Grid.SetColumn(optionsButton, 2);
+            Grid.SetColumn(split, 1);
+            Grid.SetColumn(edit, 2);
             Grid.SetRow(footer, 1);
             var ring = SelectionRing(new Thickness(0));
             Grid.SetRowSpan(ring, 2);
@@ -371,9 +348,13 @@ internal sealed partial class SettingsWindow
             card.Click += (_, _) => Preview(entry.Name);
             card.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler((_, e) =>
             {
-                if (e.Key == Windows.System.VirtualKey.Enter && ReferenceEquals(e.OriginalSource, card) && use.IsEnabled)
+                if (e.Key == Windows.System.VirtualKey.Enter && ReferenceEquals(e.OriginalSource, card))
                 {
-                    Use(entry.Name);
+                    if (use.Visibility == Visibility.Visible ? use.IsEnabled : split.IsEnabled)
+                    {
+                        Use(entry.Name, use.Visibility != Visibility.Visible && forLight);
+                    }
+
                     e.Handled = true;
                 }
             }), handledEventsToo: true);
@@ -381,10 +362,33 @@ internal sealed partial class SettingsWindow
             void Update()
             {
                 inUseBadge.Visibility = InForce(entry.Name) ? Visibility.Visible : Visibility.Collapsed;
-                var label = Following() ? _schemeForLight ? "Use for light" : "Use for dark" : "Use";
-                use.Content = label;
-                use.IsEnabled = !entry.Name.Equals(Target(), StringComparison.OrdinalIgnoreCase);
-                AutomationProperties.SetName(use, $"{label}: {entry.Name}");
+                var (dark, light) = SchemeSides(ShownScheme(profile));
+                var pair = light != null;
+                use.Visibility = pair ? Visibility.Collapsed : Visibility.Visible;
+                split.Visibility = pair ? Visibility.Visible : Visibility.Collapsed;
+                if (!pair)
+                {
+                    use.IsEnabled = !InForce(entry.Name);
+                    AutomationProperties.SetName(use, $"Use {entry.Name}");
+                }
+                else
+                {
+                    var inDark = entry.Name.Equals(dark, StringComparison.OrdinalIgnoreCase);
+                    var inLight = entry.Name.Equals(light, StringComparison.OrdinalIgnoreCase);
+                    forLight = !entry.IsDark;
+                    if (forLight ? inLight : inDark)
+                    {
+                        forLight = !forLight; // already on the side it suits: the main part offers the other
+                    }
+
+                    var label = forLight ? "Use for light" : "Use for dark";
+                    split.Content = label;
+                    split.IsEnabled = !(inDark && inLight);
+                    forDarkItem.IsEnabled = !inDark;
+                    forLightItem.IsEnabled = !inLight;
+                    AutomationProperties.SetName(split, $"{label}: {entry.Name}");
+                }
+
                 ring.Visibility = entry.Name.Equals(_previewedScheme, StringComparison.OrdinalIgnoreCase) ? Visibility.Visible : Visibility.Collapsed;
             }
 
@@ -396,7 +400,9 @@ internal sealed partial class SettingsWindow
                 ToolTipService.SetToolTip(whose, shown.ReplacesBundled ? "Your edited copy, used instead of the one Zinc comes with." : null);
                 AutomationProperties.SetName(card, shown.Name);
                 AutomationProperties.SetHelpText(card, $"{(shown.IsDark ? "Dark" : "Light")} scheme. Space previews it; Enter uses it.");
-                AutomationProperties.SetName(optionsButton, $"More for {shown.Name}");
+                var editTip = shown.Yours ? "Edit colors" : "Edit colors (makes your copy)";
+                ToolTipService.SetToolTip(edit, editTip);
+                AutomationProperties.SetName(edit, $"{editTip}: {shown.Name}");
                 Update();
             }
 
@@ -439,13 +445,13 @@ internal sealed partial class SettingsWindow
                 : ofKind.Count == 1 ? "Library · 1 scheme" : $"Library · {ofKind.Count} schemes";
             SetText(status, shown.Count > 0 ? ""
                 : query.Length > 0 ? $"Nothing matches “{query}”."
-                : _schemeKind == SchemeKind.Yours ? "None yet. Edit colors on any scheme, or New scheme…, makes one of yours."
+                : _schemeKind == SchemeKind.Yours ? "None yet. Editing any scheme's colors, or New scheme (+), makes one of yours."
                 : "No schemes here.");
         }
 
         foreach (var (kind, label) in new[] { (SchemeKind.All, "All"), (SchemeKind.Dark, "Dark"), (SchemeKind.Light, "Light"), (SchemeKind.Yours, "Yours") })
         {
-            // Pills, as the Store's: the one shown is checked (accent). Dark or Light while following also picks the side Use sets.
+            // Pills, as the Store's: the one shown is checked (accent).
             var pill = new ToggleButton { Content = label, IsChecked = kind == _schemeKind, CornerRadius = new CornerRadius(16), Padding = new Thickness(16, 5, 16, 6) };
             pill.Click += (_, _) =>
             {
@@ -455,27 +461,11 @@ internal sealed partial class SettingsWindow
                     other.IsChecked = ReferenceEquals(other, pill);
                 }
 
-                if (kind is SchemeKind.Dark or SchemeKind.Light && Following())
-                {
-                    _schemeForLight = kind == SchemeKind.Light;
-                    quiet = true;
-                    sides.SelectedIndex = _schemeForLight ? 1 : 0;
-                    quiet = false;
-                }
-
                 FillLibrary();
             };
             pills.Children.Add(pill);
         }
 
-        sides.SelectionChanged += (_, _) =>
-        {
-            if (!quiet && sides.SelectedIndex >= 0)
-            {
-                _schemeForLight = sides.SelectedIndex == 1;
-                UpdateCards();
-            }
-        };
         filter.TextChanged += (_, _) =>
         {
             _schemeQuery = filter.Text;
@@ -502,9 +492,7 @@ internal sealed partial class SettingsWindow
 
             quiet = true;
             follow.IsOn = light != null;
-            sides.SelectedIndex = _schemeForLight ? 1 : 0;
             quiet = false;
-            sidesCard.Visibility = light != null ? Visibility.Visible : Visibility.Collapsed;
             slots.Children.Clear();
             if (light == null)
             {

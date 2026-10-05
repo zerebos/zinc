@@ -374,12 +374,15 @@ ROADMAP, is the current list of what's next, kept up to date with the user).
   the same). Tests that check the child's size must wait for the settle.
 - Color schemes page (2026-10-04, the shaders page's design): Appearance's (or a profile's) Color scheme card = `SchemeCard`
   (tiles of the scheme / pair on a button) → `OpenSchemes(profile)` → `SettingsWindow.SchemesPage.cs` (`_editingSchemes`;
-  In use = follow switch + a slot per side (Edit, New scheme…) + "Use sets" (`_schemeForLight`; the Dark/Light pills set
-  it too); Library = pills All/Dark/Light/Yours + search + … over an **ItemsRepeater** (UniformGridLayout, cards built by
-  `SchemeCardFactory` only in view: ~650; it virtualizes inside the page's StackPanel/ScrollViewer), card = Button
-  (`SchemeTiles.Sample` + footer: ✓ In use, Yours/Your copy, Use, … menu); click = `PreviewScheme`, again = stop;
-  sticky header shared with the shaders page). Core `Settings/SchemeCatalog` (List: lightness by file+mtime cache,
-  yours/copies; Filter; tested). `SchemePicker` (flyout) is now only the welcome window's.
+  In use = follow switch + a slot per side (Edit); Library = pills All/Dark/Light/Yours + search + "+" (`NewSchemeFlyout`
+  with `sources`: a "Start from" list) + … over an **ItemsRepeater** (UniformGridLayout, cards made by `SchemeCardFactory`
+  only in view, scrolled-away ones pooled and re-`Show`n: ~650; it virtualizes inside the page's StackPanel/ScrollViewer;
+  `VerticalCacheLength` 6), card = Button (`SchemeSample` + footer: ✓ In use, Yours/Your copy, Use or, with a pair, a
+  SplitButton "Use for dark/light" = the side the scheme suits, the other once it's there, arrow = both; pencil =
+  `CustomizeScheme`: the editor has open/restore/delete); click = `PreviewScheme`, again = stop; the accent ring =
+  `SelectionRing` over the border (hover states can't hide it; shaders cards too); sticky header shared with the shaders
+  page). Core `Settings/SchemeCatalog` (List with each file's colors read off the UI thread, cached by file+mtime
+  (`Theme`); yours/copies; Filter; tested). `SchemePicker` (flyout) is now only the welcome window's.
   Test: `.scratch/tools/schemes-page-shot.ps1 [-Extra '[colors]...'] [-Invoke 'Use for dark: X']`.
 - Scheme editor (`SettingsWindow.SchemeEditor.cs`): "Edit X" buttons on the color schemes page → `CustomizeScheme`
   (`ThemeLibrary.Customize`: the user's file, else a copy of the bundled one into themes\ that stands in for it;

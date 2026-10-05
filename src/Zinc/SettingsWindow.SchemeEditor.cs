@@ -146,7 +146,7 @@ internal sealed partial class SettingsWindow
         var open = new Button { Content = "Open in editor" };
         open.Click += (_, _) => OpenInEditor(file);
         buttons.Children.Add(open);
-        buttons.Children.Add(new Button { Content = "Save as new scheme…", Flyout = NewSchemeFlyout(() => name, () => name, _schemeThemePath) });
+        buttons.Children.Add(new Button { Content = "Save as new scheme…", Flyout = NewSchemeFlyout(() => name, _ => name, _schemeThemePath) });
         if (!replaces)
         {
             var delete = new Button { Content = "Delete scheme" };
@@ -180,10 +180,11 @@ internal sealed partial class SettingsWindow
     private IReadOnlyList<string> _schemeThemePath = ["colors", "theme"];
 
     /// <summary>
-    /// A name for a new scheme, copied from <paramref name="from"/> (the scheme in use, or the one being
-    /// edited); with "Use it now", it replaces <paramref name="replacing"/> where it's chosen. Then the editor opens on it.
+    /// A name for a new scheme, copied from <paramref name="from"/> (the one being edited; with <paramref name="sources"/>,
+    /// the first choice of a "Start from" list); with "Use it now", it replaces <paramref name="replacing"/> (given the
+    /// scheme it starts from) where it's chosen. Then the editor opens on it.
     /// </summary>
-    private Flyout NewSchemeFlyout(Func<string> from, Func<string?> replacing, IReadOnlyList<string> themePath)
+    private Flyout NewSchemeFlyout(Func<string> from, Func<string, string?> replacing, IReadOnlyList<string> themePath, Func<IReadOnlyList<string>>? sources = null)
     {
         var name = new TextBox { PlaceholderText = "Name", Width = 260 };
         AutomationProperties.SetName(name, "New scheme's name");
@@ -197,10 +198,21 @@ internal sealed partial class SettingsWindow
         var use = new CheckBox { Content = "Use it now", IsChecked = true };
         var create = new Button { Content = "Create", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         var intro = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
-        var flyout = new Flyout { Content = new StackPanel { Spacing = 8, Children = { intro, name, problem, use, create } } };
+        var start = new ComboBox { Header = "Start from", Width = 260, Visibility = sources == null ? Visibility.Collapsed : Visibility.Visible };
+        AutomationProperties.SetName(start, "Start from");
+        var flyout = new Flyout { Content = new StackPanel { Spacing = 8, Children = { intro, name, start, problem, use, create } } };
         flyout.Opening += (_, _) =>
         {
-            intro.Text = $"A copy of {from()} to change as you like, yours in the themes folder.";
+            intro.Text = sources == null
+                ? $"A copy of {from()} to change as you like, yours in the themes folder."
+                : "A copy of a scheme to change as you like, yours in the themes folder.";
+            if (sources != null)
+            {
+                var names = sources();
+                start.ItemsSource = names;
+                start.SelectedItem = names.FirstOrDefault(n => n.Equals(from(), StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault();
+            }
+
             name.Text = "";
             problem.Visibility = Visibility.Collapsed;
         };
@@ -215,9 +227,10 @@ internal sealed partial class SettingsWindow
             }
 
             var created = name.Text.Trim();
+            var origin = sources != null && start.SelectedItem is string chosen ? chosen : from();
             try
             {
-                if (_config.Themes.Create(created, from()) == null)
+                if (_config.Themes.Create(created, origin) == null)
                 {
                     return;
                 }
@@ -232,7 +245,7 @@ internal sealed partial class SettingsWindow
             flyout.Hide();
             if (use.IsChecked == true)
             {
-                UseScheme(themePath, replacing(), created);
+                UseScheme(themePath, replacing(origin), created);
             }
 
             CustomizeScheme(created, themePath);
