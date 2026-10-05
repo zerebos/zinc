@@ -3,10 +3,12 @@ using System.Globalization;
 using System.Numerics;
 using Microsoft.UI;
 using Microsoft.UI.Text;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Zinc.Settings;
 using Zinc.Terminal;
@@ -74,22 +76,33 @@ internal sealed partial class SettingsWindow : Window
         Updater.Changed += ShowUpdateStatus;
         Closed += (_, _) => Updater.Changed -= ShowUpdateStatus;
 
-        // Title bar: the app's mark and the window's name, in the caption area.
-        var titleBar = new StackPanel
+        // The search box: in the title bar (as the main window's command center, and as Store, Photos and WinUI Gallery
+        // have theirs). No suggestions: typing shows the results page, Enter goes to the first result, Esc clears it.
+        _search = new AutoSuggestBox
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 10,
-            Height = 40,
-            Padding = new Thickness(16, 0, 0, 0),
-            Children =
-            {
-                new Image { Width = 16, Height = 16, Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"))) },
-                new TextBlock { Text = "Zinc Settings", VerticalAlignment = VerticalAlignment.Center, FontSize = 12 },
-            },
+            PlaceholderText = "Find a setting",
+            QueryIcon = new SymbolIcon(Symbol.Find),
+            MaxWidth = 480,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center,
         };
-
-        _search = new AutoSuggestBox { PlaceholderText = "Find a setting", QueryIcon = new SymbolIcon(Symbol.Find) };
         AutomationProperties.SetName(_search, "Find a setting");
+        ToolTipService.SetToolTip(_search, "Find a setting (Ctrl+F)");
+
+        // Title bar: the app's mark, the window's name, and the search box in the middle. WinUI's TitleBar keeps the box
+        // clickable and the rest draggable; a box in it needs the tall caption (48 px), as in Windows Settings.
+        var titleBar = new TitleBar
+        {
+            Title = "Zinc Settings",
+            IconSource = new ImageIconSource { ImageSource = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(Path.Combine(AppContext.BaseDirectory, "Assets", "Zinc.ico"))) },
+            Content = _search,
+            IsBackButtonVisible = false,
+            IsPaneToggleButtonVisible = false,
+        };
+        // WinUI centers the content at its own width (the box then fit its placeholder): stretched, the box grows to its
+        // MaxWidth, centered, and shrinks with the window.
+        titleBar.Resources["TitleBarContentHorizontalAlignment"] = HorizontalAlignment.Stretch;
+        AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
         // Typing searches; the window clearing the box itself (going to a result) doesn't.
         _search.TextChanged += (_, e) =>
         {
@@ -101,6 +114,14 @@ internal sealed partial class SettingsWindow : Window
             }
         };
         _search.QuerySubmitted += (_, _) => _jumps.FirstOrDefault()?.Invoke();
+        _search.KeyDown += (_, e) =>
+        {
+            if (e.Key == Windows.System.VirtualKey.Escape && _search.Text.Length > 0)
+            {
+                ClearSearch();
+                e.Handled = true;
+            }
+        };
 
         // The undo bar: floats at the bottom while there are changes to undo.
         ToolTipService.SetToolTip(_undo, "Puts config.toml back as it was when Settings opened");
@@ -154,7 +175,6 @@ internal sealed partial class SettingsWindow : Window
             IsSettingsVisible = false,
             IsPaneToggleButtonVisible = false,
             OpenPaneLength = 250,
-            AutoSuggestBox = _search,
             Content = PageArea(),
         };
         foreach (var section in SettingsCatalog.Sections)
@@ -209,8 +229,29 @@ internal sealed partial class SettingsWindow : Window
         root.Children.Add(titleBar);
         root.Children.Add(_nav);
         SetUpIndicator(root);
+        // Ctrl+F (and F3) go to the search box from anywhere in the window.
+        foreach (var (key, modifiers) in new[] { (Windows.System.VirtualKey.F, Windows.System.VirtualKeyModifiers.Control), (Windows.System.VirtualKey.F3, Windows.System.VirtualKeyModifiers.None) })
+        {
+            var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
+            accelerator.Invoked += (_, e) =>
+            {
+                _search.Focus(FocusState.Keyboard);
+                e.Handled = true;
+            };
+            root.KeyboardAccelerators.Add(accelerator);
+        }
+
+        root.KeyboardAcceleratorPlacementMode = KeyboardAcceleratorPlacementMode.Hidden; // no "Ctrl+F" tooltips on the page
         Content = root;
         SetTitleBar(titleBar);
+        Render();
+    }
+
+    /// <summary>Empties the search box and goes back to the section it was searched from.</summary>
+    private void ClearSearch()
+    {
+        _search.Text = "";
+        SelectSection(_section);
         Render();
     }
 
