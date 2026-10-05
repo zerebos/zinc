@@ -531,7 +531,7 @@ internal sealed partial class SettingsWindow : Window
         };
         _updateCheck = new Button { Content = "Check for updates" };
         _updateCheck.Click += (_, _) => _ = Updater.CheckAsync();
-        _updateRestart = new Button { Content = "Restart now", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
+        _updateRestart = new Button { Content = "Restart Zinc", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         AutomationProperties.SetName(_updateRestart, "Restart to update");
         _updateRestart.Click += (_, _) => Updater.RestartNow();
         _updateNotes = new HyperlinkButton { Padding = new Thickness(0, 2, 0, 0), FontSize = 12 };
@@ -611,7 +611,7 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>The debug log's file: show it, copy it (with the version and Windows on top) for a bug report, or start it afresh.</summary>
     private Border LogFileRow()
     {
-        var copy = new Button { Content = "Copy" };
+        var copy = new Button { Content = "Copy log" };
         AutomationProperties.SetName(copy, "Copy the debug log");
         copy.Click += (_, _) => Guard("copying the log", () =>
         {
@@ -621,12 +621,12 @@ internal sealed partial class SettingsWindow : Window
             copy.Content = "Copied";
         });
 
-        var clear = new Button { Content = "Clear" };
+        var clear = new Button { Content = "Clear log" };
         AutomationProperties.SetName(clear, "Clear the debug log");
         clear.Click += (_, _) => Guard("clearing the log", () =>
         {
             Log.Clear();
-            copy.Content = "Copy";
+            copy.Content = "Copy log";
         });
 
         var open = new Button { Content = "Open folder" };
@@ -645,7 +645,7 @@ internal sealed partial class SettingsWindow : Window
     {
         var (windows, panes) = App.Instance.Counts();
         var report = Zinc.Pty.MemoryReport.Measure(windows, panes);
-        var copy = new Button { Content = "Copy" };
+        var copy = new Button { Content = "Copy details" };
         AutomationProperties.SetName(copy, "Copy the memory details");
         copy.Click += (_, _) =>
         {
@@ -653,7 +653,7 @@ internal sealed partial class SettingsWindow : Window
             copy.Content = "Copied";
         };
 
-        var refresh = new Button { Content = "Refresh" };
+        var refresh = new Button { Content = "Measure again" };
         AutomationProperties.SetName(refresh, "Measure memory again");
         refresh.Click += (_, _) => Render();
         _page.Children.Add(Row("Memory", report.Summary + ". Most of it is Windows' UI framework, the graphics driver, and your terminals' screens and scrollback.",
@@ -880,7 +880,7 @@ internal sealed partial class SettingsWindow : Window
             what.Add("hidden");
         }
 
-        var edit = new Button { Content = "Edit", VerticalAlignment = VerticalAlignment.Center };
+        var edit = new Button { Content = "Edit profile", VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(edit, $"Edit {profile.Name}");
         edit.Click += (_, _) =>
         {

@@ -28,8 +28,12 @@ is the version it builds, and hands it to the installer as the release notes).
 - Settings: headings and text use Windows' own text styles.
 - The welcome window's page dots slide from page to page.
 - Workspace colors are a grid like the icons: arrow keys move between them, and screen readers name the chosen one.
-- Wording: confirm buttons say what they do ("Delete profile", "Delete scheme"), key sequences show as Ctrl+A > C
-  everywhere, and settings refer to each other by their exact names in quotes.
+- Wording: buttons say what they do ("Delete profile", "Close workspace", "Quit Zinc", "Don't allow"), key
+  sequences show as Ctrl+A > C everywhere, and settings refer to each other by their exact names in quotes.
+- An update that's ready offers "Restart Zinc" or "Install when I quit" (it always installs when you quit).
+- A dot's meaning is in words: tab tooltips, screen readers and the tab switcher ("@") say "finished",
+  "failed (exit 1)" or "needs you". The command-finished notification reads "npm test failed (exit 1)", then where
+  and how long.
 
 ### Fixed
 - Arrow keys in the workspace icon and color choosers picked the next one and closed the menu. They move between

@@ -345,6 +345,7 @@ internal sealed partial class GroupView : Grid
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private bool _active, _hovered;
         private Attention _attention;
+        private string? _words;
         private TerminalProgress _progress = TerminalProgress.None;
 
         public TabItem(MainWindow.TerminalTab tab)
@@ -427,11 +428,14 @@ internal sealed partial class GroupView : Grid
             _attention = attention;
             _progress = progress;
             ShowSlot();
-            if (_title.Text != title)
+            // The title, and what its dot means, for the tooltip and screen readers.
+            var words = AttentionWords.For(attention, _tab.FailedExit);
+            if (_title.Text != title || words != _words)
             {
                 _title.Text = title;
-                AutomationProperties.SetName(this, title);
-                ToolTipService.SetToolTip(this, title);
+                _words = words;
+                AutomationProperties.SetName(this, AttentionWords.Name(title, words));
+                ToolTipService.SetToolTip(this, AttentionWords.ToolTip(title, words));
             }
 
             // The profile's background can change (a config reload).

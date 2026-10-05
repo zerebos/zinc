@@ -21,7 +21,7 @@ internal sealed partial class SettingsWindow
         software.Checked += (_, _) => _benchmarkSoftware = true;
         software.Unchecked += (_, _) => _benchmarkSoftware = false;
 
-        var run = new Button { Content = _benchmarkRunning ? "Running…" : "Run", IsEnabled = !_benchmarkRunning };
+        var run = new Button { Content = _benchmarkRunning ? "Running…" : "Run benchmark", IsEnabled = !_benchmarkRunning };
         AutomationProperties.SetName(run, "Run the drawing benchmark");
         run.Click += (_, _) => RunBenchmark();
 
@@ -114,7 +114,7 @@ internal sealed partial class SettingsWindow
             Add(i + 1, 3, $"{result.FrameMs:0.0} / {result.Draw.P95 + result.Flush.P95:0.0} ms");
         }
 
-        var copy = new Button { Content = "Copy", HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
+        var copy = new Button { Content = "Copy results", HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top };
         AutomationProperties.SetName(copy, "Copy the benchmark results");
         copy.Click += (_, _) =>
         {

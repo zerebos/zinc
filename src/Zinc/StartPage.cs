@@ -70,8 +70,8 @@ internal sealed partial class StartPage : UserControl
         AutomationProperties.SetName(_folderList, "Folder");
         AutomationProperties.SetName(_name, "Workspace name");
 
-        var start = new Button { Content = "Start", Style = (Style)Application.Current.Resources["AccentButtonStyle"], MinWidth = 90 };
-        AutomationProperties.SetName(start, "Start");
+        var start = new Button { Content = "Open workspace", Style = (Style)Application.Current.Resources["AccentButtonStyle"], MinWidth = 90 };
+        AutomationProperties.SetName(start, "Open workspace");
         start.Click += (_, _) => Start();
         _showPage.Checked += (_, _) => ShowPageChanged?.Invoke(true);
         _showPage.Unchecked += (_, _) => ShowPageChanged?.Invoke(false);

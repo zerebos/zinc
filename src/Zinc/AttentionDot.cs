@@ -28,6 +28,46 @@ internal enum Attention
 }
 
 /// <summary>
+/// A dot's state in words (docs/ux-writing.md, "Attention and notifications"), for tooltips, accessible names and the
+/// tab switcher: "finished", "failed (exit 1)", "needs you" (the bell), "has a notification".
+/// </summary>
+internal static class AttentionWords
+{
+    public static string? For(Attention attention, int? exitCode = null) => attention switch
+    {
+        Attention.Finished => "finished",
+        Attention.Failed => exitCode is { } code ? $"failed (exit {code})" : "failed",
+        Attention.Bell => "needs you",
+        Attention.Notified => "has a notification",
+        _ => null,
+    };
+
+    /// <summary>Several tabs' states, most urgent first: "failed (exit 1)", or "1 failed, 2 finished".</summary>
+    public static string? Summary(IReadOnlyList<(Attention Attention, int? ExitCode)> tabs)
+    {
+        var wanting = tabs.Where(t => t.Attention != Attention.None).ToList();
+        if (wanting.Count <= 1)
+        {
+            return wanting.Count == 0 ? null : For(wanting[0].Attention, wanting[0].ExitCode);
+        }
+
+        return string.Join(", ", wanting.GroupBy(t => t.Attention).OrderByDescending(g => g.Key).Select(g => g.Key switch
+        {
+            Attention.Bell => $"{g.Count()} {(g.Count() == 1 ? "needs" : "need")} you",
+            Attention.Notified => $"{g.Count()} {(g.Count() == 1 ? "notification" : "notifications")}",
+            _ => $"{g.Count()} {For(g.Key)}",
+        }));
+    }
+
+    /// <summary>"Title, failed (exit 1)": an accessible name with the state after the title.</summary>
+    public static string Name(string title, string? words) => words == null ? title : $"{title}, {words}";
+
+    /// <summary>The title, and the state on a line of its own ("Failed (exit 1)").</summary>
+    public static string ToolTip(string title, string? words) =>
+        words == null ? title : $"{title}\n{char.ToUpperInvariant(words[0])}{words[1..]}";
+}
+
+/// <summary>
 /// A tab's status mark: the <see cref="Attention"/> dot, a lit cell (a rounded square, docs/brand.md
 /// §9: green finished or a program's notification, amber the bell, red failed), else a small ring
 /// while a program reports progress (OSC 9;4). After a tab's title, or on its icon's corner (ringed

@@ -104,7 +104,7 @@ public sealed partial class MainWindow
     private async void CloseTabs(IEnumerable<WorkspaceTab> tabs)
     {
         var list = tabs.ToList();
-        if (!await ConfirmClose(list.SelectMany(t => t.Workspace.Tabs).ToList()))
+        if (!await ConfirmClose(list.SelectMany(t => t.Workspace.Tabs).ToList(), list.Count == 1 ? "workspace" : "workspaces"))
         {
             return;
         }

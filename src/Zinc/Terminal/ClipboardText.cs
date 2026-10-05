@@ -131,7 +131,7 @@ public static partial class ClipboardText
                     },
                 },
             },
-            PrimaryButtonText = "Paste",
+            PrimaryButtonText = title.TrimEnd('?'),
             CloseButtonText = "Cancel",
             DefaultButton = why == PasteConcern.CouldRunCommands
                 ? Microsoft.UI.Xaml.Controls.ContentDialogButton.Close
@@ -180,7 +180,7 @@ public static partial class ClipboardText
                 Content = content,
                 PrimaryButtonText = "Allow once",
                 SecondaryButtonText = "Allow in this tab",
-                CloseButtonText = "Deny",
+                CloseButtonText = "Don't allow",
                 DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close,
             };
             var result = await dialog.ShowAsync();

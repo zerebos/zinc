@@ -54,6 +54,9 @@ public sealed partial class MainWindow : Window
         /// <summary>A long command finished (or failed) here out of view; cleared once seen.</summary>
         public Attention Attention { get; set; }
 
+        /// <summary>The exit code of the command that failed here (with <see cref="Attention.Failed"/>), for its words.</summary>
+        public int? FailedExit { get; set; }
+
         /// <summary>
         /// A color scheme chosen for this tab alone (the palette's "Color scheme for this tab…"); its
         /// <see cref="Profile"/> then carries that scheme. Re-applied on reload and restore.
@@ -921,7 +924,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Closes a workspace when you ask to: asks first if a command is running.</summary>
     private async void CloseTab(WorkspaceTab tab)
     {
-        if (await ConfirmClose(tab.Workspace.Tabs.ToList()))
+        if (await ConfirmClose(tab.Workspace.Tabs.ToList(), "workspace"))
         {
             Ui.Guard("closing a workspace", () => CloseTabNow(tab));
         }

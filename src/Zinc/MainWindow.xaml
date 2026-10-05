@@ -87,8 +87,8 @@
             <InfoBar x:Name="UpdateNotice" IsOpen="False" Severity="Informational" IsClosable="False">
                 <InfoBar.Content>
                     <StackPanel Margin="0,0,0,12" Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="RestartForUpdateButton" Content="Restart now" Style="{ThemeResource AccentButtonStyle}" />
-                        <Button x:Name="UpdateLaterButton" Content="Later" />
+                        <Button x:Name="RestartForUpdateButton" Content="Restart Zinc" Style="{ThemeResource AccentButtonStyle}" />
+                        <Button x:Name="UpdateLaterButton" Content="Install when I quit" />
                     </StackPanel>
                 </InfoBar.Content>
             </InfoBar>

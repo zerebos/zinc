@@ -387,7 +387,7 @@ public static class SettingsCatalog
             "Lets zn, Zinc's command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
             SettingKind.Toggle, false),
         new("terminal", "Command line", "cli.path", "Use zn in other terminals",
-            "Adds zn to your PATH, so Windows Terminal and the rest find it too (Zinc's own terminals always do). Shells started from now on see it.",
+            "Adds zn to your PATH, so other terminals find it too (Zinc's own terminals always do). Shells started from now on see it.",
             SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
             "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). Turn it off if keys behave oddly.",

@@ -26,16 +26,17 @@ public sealed partial class MainWindow
         }
 
         var attention = command.Failed ? Attention.Failed : Attention.Finished;
-        if (attention > pane.Attention)
+        if (attention > pane.Attention || attention == Attention.Failed)
         {
             pane.Attention = attention;
+            pane.FailedExit = command.Failed ? command.ExitCode : null;
         }
 
         Log.Write($"attention: '{command.Text}' {attention} after {took.TotalSeconds:0}s");
         UpdateFocusBorders(tab);
-        var result = command.Failed ? $"failed (exit {command.ExitCode})" : "finished";
+        // The command, what happened, then where (docs/ux-writing.md): "npm test failed (exit 1)", "In "api", after 3 min".
         var toast = Alert(global.NotifyCommandFinished, tab, pane,
-            $"{command.Text ?? "A command"}", $"{char.ToUpperInvariant(result[0])}{result[1..]} after {Elapsed(took)} · {tab.Header.Title}");
+            $"{command.Text ?? "A command"} {AttentionWords.For(attention, command.ExitCode)}", $"In \"{tab.Header.Title}\", after {Elapsed(took)}");
         if (!toast)
         {
             PlayFinishedSound(global.CommandFinishedSound);
@@ -232,7 +233,8 @@ public sealed partial class MainWindow
     private static void ShowWorkspaceAttention(WorkspaceTab tab)
     {
         tab.Header.SetAttention(tab.Workspace.Tabs.Select(t => t.Attention).DefaultIfEmpty().Max(),
-            tab.Workspace.Tabs.Count(t => t.Attention != Attention.None));
+            tab.Workspace.Tabs.Count(t => t.Attention != Attention.None),
+            AttentionWords.Summary([.. tab.Workspace.Tabs.Select(t => (t.Attention, t.FailedExit))]));
         var progress = tab.Workspace.Tabs.Select(t => t.Control.Progress).Where(p => p.Active)
             .OrderByDescending(p => p.State == Ghostty.TerminalProgressState.Error).FirstOrDefault();
         tab.Header.SetProgress(progress.Active ? progress : TerminalProgress.None);
@@ -260,11 +262,12 @@ public sealed partial class MainWindow
     /// Asks before closing terminals the shell says are running a command. True to go ahead
     /// (nothing running, or the user agreed).
     /// </summary>
-    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes) =>
-        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", "Close") : Task.FromResult(true);
+    /// <param name="what">What closes, for the button: "tab", "workspace", "window".</param>
+    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string what) =>
+        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", $"Close {what}") : Task.FromResult(true);
 
     /// <param name="doing">What the answer does, as the reason ("Closing", "Quitting").</param>
-    /// <param name="button">The primary button's label ("Close", "Quit").</param>
+    /// <param name="button">The primary button's label, a verb and its object ("Close tab", "Quit Zinc").</param>
     private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button)
     {
         var running = panes.Select(p => p.Control.RunningCommand).OfType<ShellCommand>().ToList();
@@ -309,7 +312,7 @@ public sealed partial class MainWindow
     /// <summary>Closes a terminal tab when you ask to (not when its shell has exited).</summary>
     private async void AskClosePane(WorkspaceTab tab, TerminalTab pane)
     {
-        if (await ConfirmClose([pane]))
+        if (await ConfirmClose([pane], "tab"))
         {
             Ui.Guard("closing a tab", () => ClosePane(tab, pane));
         }
@@ -321,7 +324,7 @@ public sealed partial class MainWindow
 
     private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes)
     {
-        if (await ConfirmClose(panes))
+        if (await ConfirmClose(panes, panes.Count == 1 ? "tab" : "tabs"))
         {
             Ui.Guard("closing tabs", () =>
             {
@@ -354,7 +357,7 @@ public sealed partial class MainWindow
             }
 
             args.Cancel = true;
-            if (await ConfirmClose(panes))
+            if (await ConfirmClose(panes, "window"))
             {
                 _closeConfirmed = true;
                 Ui.Guard("closing a window", Close);
@@ -381,7 +384,7 @@ public sealed partial class MainWindow
     internal Task<bool> ConfirmQuit(IEnumerable<MainWindow> windows, bool restart = false) =>
         !_config.Global.ConfirmQuit ? Task.FromResult(true)
             : ConfirmClose(windows.SelectMany(w => w.AllTabs()).SelectMany(t => t.Workspace.Tabs),
-                restart ? "Restarting" : "Quitting", restart ? "Restart" : "Quit");
+                restart ? "Restarting" : "Quitting", restart ? "Restart Zinc" : "Quit Zinc");
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FlashInfo

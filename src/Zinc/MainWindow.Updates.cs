@@ -1,6 +1,6 @@
 namespace Zinc;
 
-// A downloaded update (Updater): a notice in each window, with Restart now and Later.
+// A downloaded update (Updater): a notice in each window, with Restart Zinc and Install when I quit.
 public sealed partial class MainWindow
 {
     private void SetUpUpdateNotice()

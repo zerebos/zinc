@@ -28,6 +28,7 @@ internal sealed partial class TabHeader : Grid
     private bool _compact, _dotElsewhere;
     private Attention _attention;
     private int _attentionCount;
+    private string? _attentionWords;
     private Zinc.Terminal.TerminalProgress _progress = Zinc.Terminal.TerminalProgress.None;
 
     public TabHeader(FrameworkElement owner)
@@ -44,17 +45,22 @@ internal sealed partial class TabHeader : Grid
         PlaceDot();
     }
 
-    /// <summary>A command finished (or failed) here while you weren't looking; <paramref name="count"/> tabs want you.</summary>
-    public void SetAttention(Attention attention, int count = 1)
+    /// <summary>
+    /// A command finished (or failed) here while you weren't looking; <paramref name="count"/> tabs want you;
+    /// <paramref name="words"/> says so (<see cref="AttentionWords.Summary"/>) for the tooltip and screen readers.
+    /// </summary>
+    public void SetAttention(Attention attention, int count = 1, string? words = null)
     {
         count = attention == Attention.None ? 0 : Math.Max(1, count);
-        if (attention == _attention && count == _attentionCount)
+        words = attention == Attention.None ? null : words;
+        if (attention == _attention && count == _attentionCount && words == _attentionWords)
         {
             return;
         }
 
         _attention = attention;
         _attentionCount = count;
+        _attentionWords = words;
         ShowDot();
         UpdateToolTip();
         AttentionChanged?.Invoke();
@@ -185,7 +191,6 @@ internal sealed partial class TabHeader : Grid
         {
             _owner = value;
             UpdateToolTip();
-            AutomationProperties.SetName(_owner, _title.Text);
         }
     }
 
@@ -198,12 +203,14 @@ internal sealed partial class TabHeader : Grid
 
         _title.Text = title;
         UpdateToolTip();
-        AutomationProperties.SetName(_owner, title);
     }
 
-    /// <summary>The title, and how many tabs want you when that's more than one (the rail shows no number).</summary>
-    private void UpdateToolTip() =>
-        ToolTipService.SetToolTip(_owner, _attentionCount >= 2 ? $"{_title.Text}\n{_attentionCount} tabs need attention" : _title.Text);
+    /// <summary>The title, and what its dot means (the rail shows no number); the accessible name says the same.</summary>
+    private void UpdateToolTip()
+    {
+        ToolTipService.SetToolTip(_owner, AttentionWords.ToolTip(_title.Text, _attentionWords));
+        AutomationProperties.SetName(_owner, AttentionWords.Name(_title.Text, _attentionWords));
+    }
 
     private Profile? _profile;
     private FontIcon? _workspaceIcon;

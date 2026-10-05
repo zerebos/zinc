@@ -20,11 +20,16 @@ public sealed partial class MainWindow
                 () => BringToPane(e.Workspace, e.Tab), Remember: false, Icon: e.Tab, IsTab: true));
     }
 
-    /// <summary>"title · what it runs (or its folder) · workspace": what the switcher searches.</summary>
+    /// <summary>"title · its dot's state · what it runs (or its folder) · workspace": what the switcher searches.</summary>
     private static string TabLabel(WorkspaceTab workspace, int number, TerminalTab tab, bool withWorkspace)
     {
         var title = GroupView.TitleOf(tab);
         var parts = new List<string> { title };
+        if (AttentionWords.For(tab.Attention, tab.FailedExit) is { } words)
+        {
+            parts.Add(words); // why it's listed first, and searchable ("failed")
+        }
+
         if (tab.Control.RunningCommand is { Text: { } running })
         {
             parts.Add($"running {running}");

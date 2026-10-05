@@ -44,7 +44,7 @@ public sealed partial class MainWindow
                 BringForward();
                 return CliReply.Done();
             case "window close":
-                if (!request.Force && !await ConfirmClose(AllTabs().SelectMany(t => t.Workspace.Tabs).ToList()))
+                if (!request.Force && !await ConfirmClose(AllTabs().SelectMany(t => t.Workspace.Tabs).ToList(), "window"))
                 {
                     return NotClosed();
                 }
@@ -76,7 +76,7 @@ public sealed partial class MainWindow
                 BringToPane(tab, pane);
                 return CliReply.Done();
             case "workspace close":
-                if (!request.Force && !await ConfirmClose(tab.Workspace.Tabs.ToList()))
+                if (!request.Force && !await ConfirmClose(tab.Workspace.Tabs.ToList(), "workspace"))
                 {
                     return NotClosed();
                 }
@@ -84,7 +84,7 @@ public sealed partial class MainWindow
                 CloseTabNow(tab);
                 return CliReply.Done();
             case "pane close":
-                if (!request.Force && !await ConfirmClose(group.Tabs.ToList()))
+                if (!request.Force && !await ConfirmClose(group.Tabs.ToList(), "pane"))
                 {
                     return NotClosed();
                 }
@@ -96,7 +96,7 @@ public sealed partial class MainWindow
 
                 return CliReply.Done();
             case "terminal close":
-                if (!request.Force && !await ConfirmClose([pane]))
+                if (!request.Force && !await ConfirmClose([pane], "tab"))
                 {
                     return NotClosed();
                 }
