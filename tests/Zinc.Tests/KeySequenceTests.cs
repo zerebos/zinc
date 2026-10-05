@@ -25,7 +25,7 @@ public class KeySequenceTests
     {
         var keys = KeySequence.Parse(text);
         Assert.Equal([K("ctrl+a"), K("c")], keys.Keys);
-        Assert.Equal("Ctrl+A, C", keys.ToString());
+        Assert.Equal("Ctrl+A > C", keys.ToString());
     }
 
     [Theory]
@@ -46,7 +46,7 @@ public class KeySequenceTests
         Assert.Empty(config.Warnings);
         Assert.Equal(3, config.Keybindings.Sequences.Count);
         // Labels: a sequence where there's no single chord for the action; else the chord.
-        Assert.Equal("Ctrl+A, R", config.Keybindings.ShortcutFor(TerminalAction.ReloadConfig));
+        Assert.Equal("Ctrl+A > R", config.Keybindings.ShortcutFor(TerminalAction.ReloadConfig));
         Assert.Equal("Alt+Shift+Plus", config.Keybindings.ShortcutFor(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)));
     }
 
@@ -144,7 +144,7 @@ public class KeySequenceTests
             "ctrl+a>c" = "new-tab"
             "ctrl+a>c>x" = "quit"
             """);
-        Assert.Contains("config.toml:3: Ctrl+A, C, X can't be reached: Ctrl+A, C runs first", config.Warnings);
+        Assert.Contains("config.toml:3: Ctrl+A > C > X can’t be reached: Ctrl+A > C runs first", config.Warnings);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class KeySequenceTests
             "ctrl+a > c" = "quit"
             "ctrl+a>x" = "none"
             """);
-        Assert.Contains("config.toml:3: Ctrl+A, C is already bound (config.toml:2)", config.Warnings);
+        Assert.Contains("config.toml:3: Ctrl+A > C is already bound (config.toml:2)", config.Warnings);
         Assert.Single(config.Keybindings.Sequences);
     }
 

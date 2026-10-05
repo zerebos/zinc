@@ -86,7 +86,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it; click again to stop."));
 
         // ---- In use: the scheme, or the pair; following Windows' light/dark.
-        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
+        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc’s own: Lit Cell" : "Back to the scheme every profile inherits");
         reset.Click += (_, _) => Write(path, null);
         var description = DescriptionText();
         var inUse = PartTitle("In use");
@@ -102,7 +102,7 @@ internal sealed partial class SettingsWindow
         var quiet = false; // showing values, not changing them
         var (followPanel, follow) = Switch("Follow Windows light/dark");
         _page.Children.Add(CardLayout(new TextBlock { Text = "Follow Windows light/dark" }, null,
-            DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followPanel));
+            DescriptionText("Two schemes: one while Windows is light, one while it’s dark."), null, null, followPanel));
         var slots = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 4) };
         _page.Children.Add(slots);
 
@@ -182,7 +182,7 @@ internal sealed partial class SettingsWindow
         var menu = new MenuFlyout { Placement = FlyoutPlacementMode.BottomEdgeAlignedRight };
         var openFolder = new MenuFlyoutItem { Text = "Open themes folder", Icon = new FontIcon { Glyph = "" } };
         openFolder.Click += (_, _) => OpenThemesFolder();
-        var source = new MenuFlyoutItem { Text = "Where Zinc's schemes come from", Icon = new FontIcon { Glyph = "" } };
+        var source = new MenuFlyoutItem { Text = "Where Zinc’s schemes come from", Icon = new FontIcon { Glyph = "" } };
         source.Click += (_, _) => OpenLink("https://github.com/mbadolato/iTerm2-Color-Schemes");
         menu.Items.Add(openFolder);
         menu.Items.Add(source);
@@ -403,7 +403,7 @@ internal sealed partial class SettingsWindow
                 name.Text = shown.Name;
                 ToolTipService.SetToolTip(name, shown.Name);
                 SetText(whose, shown.ReplacesBundled ? "Your copy" : shown.Yours ? "Yours" : "");
-                ToolTipService.SetToolTip(whose, shown.ReplacesBundled ? "Your edited copy, used instead of the one Zinc comes with." : null);
+                ToolTipService.SetToolTip(whose, shown.ReplacesBundled ? "Your edited copy, used instead of the one Zinc comes with" : null);
                 AutomationProperties.SetName(card, shown.Name);
                 AutomationProperties.SetHelpText(card, $"{(shown.IsDark ? "Dark" : "Light")} scheme. Space previews it; Enter uses it.");
                 AutomationProperties.SetName(inUseBadge, "In use");
@@ -452,7 +452,7 @@ internal sealed partial class SettingsWindow
                 : ofKind.Count == 1 ? "Library · 1 scheme" : $"Library · {ofKind.Count} schemes";
             SetText(status, shown.Count > 0 ? ""
                 : query.Length > 0 ? $"Nothing matches “{query}”."
-                : _schemeKind == SchemeKind.Yours ? "None yet. Editing any scheme's colors, or New scheme (+), makes one of yours."
+                : _schemeKind == SchemeKind.Yours ? "None yet. Editing any scheme’s colors, or “New scheme” (+), makes one of yours."
                 : "No schemes here.");
         }
 
@@ -503,7 +503,7 @@ internal sealed partial class SettingsWindow
             slots.Children.Clear();
             if (light == null)
             {
-                slots.Children.Add(Slot(setting.Label, dark == null && profile == null ? "Zinc's own." : "", dark));
+                slots.Children.Add(Slot(setting.Label, dark == null && profile == null ? "Zinc’s own." : "", dark));
             }
             else
             {
@@ -532,7 +532,7 @@ internal sealed partial class SettingsWindow
             catch (Exception ex)
             {
                 Log.Crash("listing color schemes", ex);
-                SetText(status, $"Couldn't list the schemes: {ex.Message}");
+                SetText(status, $"Couldn’t list the schemes: {ex.Message}");
             }
         }
 

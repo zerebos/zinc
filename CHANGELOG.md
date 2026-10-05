@@ -28,6 +28,8 @@ is the version it builds, and hands it to the installer as the release notes).
 - Settings: headings and text use Windows' own text styles.
 - The welcome window's page dots slide from page to page.
 - Workspace colors are a grid like the icons: arrow keys move between them, and screen readers name the chosen one.
+- Wording: confirm buttons say what they do ("Delete profile", "Delete scheme"), key sequences show as Ctrl+A > C
+  everywhere, and Settings, notices and dialogs use proper quotes and apostrophes.
 
 ### Fixed
 - Arrow keys in the workspace icon and color choosers picked the next one and closed the menu. They move between

@@ -172,7 +172,7 @@ public sealed class ConfigFile
             // startup, the defaults) rather than apply a file it couldn't see.
             var defaults = Parse("", path, discover: ProfileDiscovery.Discover);
             return new ConfigFile(defaults.Global, defaults.Profiles, defaults.DefaultProfile,
-                [$"{System.IO.Path.GetFileName(path)}: couldn't be read ({ex.Message})"], hasErrors: true,
+                [$"{System.IO.Path.GetFileName(path)}: couldn’t be read ({ex.Message})"], hasErrors: true,
                 path, defaults.Keybindings, defaults.Themes);
         }
 
@@ -270,7 +270,7 @@ public sealed class ConfigFile
             {
                 if (table is not TableSyntax { Name: { } name } t)
                 {
-                    _warnings.Add($"{System.IO.Path.GetFileName(file)}:{table.Span.Start.Line + 1}: arrays of tables ([[...]]) aren't used by Zinc");
+                    _warnings.Add($"{System.IO.Path.GetFileName(file)}:{table.Span.Start.Line + 1}: arrays of tables ([[...]]) aren’t used by Zinc");
                     continue;
                 }
 
@@ -312,7 +312,7 @@ public sealed class ConfigFile
                         }
                         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                         {
-                            _warnings.Add($"{include.Where}: couldn't read {included} ({ex.Message})");
+                            _warnings.Add($"{include.Where}: couldn’t read {included} ({ex.Message})");
                             _hasErrors = true; // as with a file that isn't valid TOML: keep what's in force
                             continue;
                         }
@@ -339,7 +339,7 @@ public sealed class ConfigFile
 
             if (!File.Exists(full))
             {
-                _warnings.Add($"{at.Where}: can't find included file {pattern}");
+                _warnings.Add($"{at.Where}: can’t find included file {pattern}");
                 return [];
             }
 
@@ -444,7 +444,7 @@ public sealed class ConfigFile
                         }
                         else
                         {
-                            _warnings.Add($"{e.Where}: a key's action is text, like \"split right\" or \"none\"");
+                            _warnings.Add($"{e.Where}: a key’s action is text, like \"split right\" or \"none\"");
                         }
 
                         break;
@@ -475,7 +475,7 @@ public sealed class ConfigFile
                     case [var group, _, ..] when Groups.Contains(group):
                         break; // applied below, themes first
                     default:
-                        _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
+                        _warnings.Add($"{e.Where}: unknown setting {e.Key}");
                         break;
                 }
             }
@@ -543,7 +543,7 @@ public sealed class ConfigFile
                         case ["environment", _] when e.Value is string:
                             break; // below, over the global ones
                         default:
-                            _warnings.Add($"{e.Where}: unknown or invalid profile setting '{e.Key}'");
+                            _warnings.Add($"{e.Where}: unknown or invalid profile setting {e.Key}");
                             break;
                     }
                 }
@@ -591,7 +591,7 @@ public sealed class ConfigFile
             var defaultProfile = profiles.FirstOrDefault(p => p.Id == defaultId) ?? profiles.FirstOrDefault(p => !p.Hidden) ?? profiles[0];
             if (defaultId != null && defaultProfile.Id != defaultId)
             {
-                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn't a profile; using '{defaultProfile.Id}'");
+                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn’t a profile; using '{defaultProfile.Id}'");
             }
 
             var keybindings = Keybindings.Configure(keys, _warnings);
@@ -807,7 +807,7 @@ public sealed class ConfigFile
 
             if (legacy is not { } l)
             {
-                _warnings.Add($"{e.Where}: unknown setting '{e.Key}'");
+                _warnings.Add($"{e.Where}: unknown setting {e.Key}");
                 return config;
             }
 
@@ -826,7 +826,7 @@ public sealed class ConfigFile
                 {
                     if (_themes.Find(side) == null)
                     {
-                        _warnings.Add($"{at.Where}: no color scheme named '{side}' (looked in {_themes.UserFolder} and the bundled ones)");
+                        _warnings.Add($"{at.Where}: no color scheme named “{side}” (looked in {_themes.UserFolder} and the bundled ones)");
                     }
                 }
 
@@ -839,7 +839,7 @@ public sealed class ConfigFile
                 return themed with { PairedDark = null };
             }
 
-            _warnings.Add($"{at.Where}: no color scheme named '{name}' (looked in {_themes.UserFolder} and the bundled ones)");
+            _warnings.Add($"{at.Where}: no color scheme named “{name}” (looked in {_themes.UserFolder} and the bundled ones)");
             return config;
         }
 

@@ -85,7 +85,7 @@ internal sealed partial class SettingsWindow
         var file = _config.Themes.Customize(name);
         if (file == null)
         {
-            _page.Children.Add(Note("This scheme isn't there any more."));
+            _page.Children.Add(Note("This scheme isn’t there any more."));
             return;
         }
 
@@ -184,7 +184,7 @@ internal sealed partial class SettingsWindow
     private Flyout NewSchemeFlyout(Func<string> from, Func<string, string?> replacing, IReadOnlyList<string> themePath, Func<IReadOnlyList<string>>? sources = null)
     {
         var name = new TextBox { PlaceholderText = "Name", Width = 260 };
-        AutomationProperties.SetName(name, "New scheme's name");
+        AutomationProperties.SetName(name, "New scheme’s name");
         var problem = new TextBlock
         {
             Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
@@ -250,7 +250,7 @@ internal sealed partial class SettingsWindow
                 var typed = start.Text.Trim();
                 if (names.FirstOrDefault(n => n.Equals(typed, StringComparison.OrdinalIgnoreCase)) is not { } known)
                 {
-                    problem.Text = typed.Length == 0 ? "Pick a scheme to start from." : $"There's no scheme called {typed}.";
+                    problem.Text = typed.Length == 0 ? "Pick a scheme to start from." : $"There’s no scheme called {typed}.";
                     problem.Visibility = Visibility.Visible;
                     return;
                 }
@@ -267,7 +267,7 @@ internal sealed partial class SettingsWindow
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                problem.Text = $"Couldn't save it: {ex.Message}";
+                problem.Text = $"Couldn’t save it: {ex.Message}";
                 problem.Visibility = Visibility.Visible;
                 return;
             }
@@ -330,8 +330,8 @@ internal sealed partial class SettingsWindow
             {
                 XamlRoot = Content.XamlRoot,
                 Title = $"Delete {name}?",
-                Content = "Removes its file from the themes folder. Anywhere it's used goes back to the default colors.",
-                PrimaryButtonText = "Delete it",
+                Content = "Removes its file from the themes folder. Anywhere it’s used goes back to the default colors.",
+                PrimaryButtonText = "Delete scheme",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
             };

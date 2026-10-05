@@ -94,7 +94,7 @@ internal sealed partial class SettingsWindow
                         FontSize = 12,
                     },
                 },
-                PrimaryButtonText = "Website",
+                PrimaryButtonText = "Open website",
                 CloseButtonText = "Close",
                 DefaultButton = ContentDialogButton.Close,
             };

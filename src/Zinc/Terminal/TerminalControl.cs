@@ -526,7 +526,7 @@ public sealed partial class TerminalControl : UserControl
             // tab, which then closes on a key like a failed session, rather than take the app down.
             Log.Write($"pane: couldn't start {_commandLine}: {ex.Message}");
             _exited = true;
-            session.WriteToScreen($"\x1b[0;31mCouldn't start {_commandLine}\x1b[0m\r\n{ex.Message}\r\n\r\n" +
+            session.WriteToScreen($"\x1b[0;31mCouldn’t start {_commandLine}\x1b[0m\r\n{ex.Message}\r\n\r\n" +
                 "\x1b[0;2mShell commands (dir, ls, cd) need a shell: run the shell and type them there. " +
                 "Press any key to close.\x1b[0m");
         }
@@ -624,8 +624,8 @@ public sealed partial class TerminalControl : UserControl
         // Like Windows Terminal: keep a failed session on screen so its output can be read.
         _exited = true;
         _session.WriteToScreen(code == 0
-            ? "\r\n\x1b[0;2m[process exited; press any key to close]\x1b[0m"
-            : $"\r\n\x1b[0;2m[process exited with code {code} (0x{code:X8}); press any key to close]\x1b[0m");
+            ? "\r\n\x1b[0;2m[Process exited. Press any key to close.]\x1b[0m"
+            : $"\r\n\x1b[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\x1b[0m");
     }
 
     // Held in a field: a timer only a local references is collected and stops firing.

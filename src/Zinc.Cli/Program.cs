@@ -56,7 +56,7 @@ internal static class Program
 
         if (!reply.Ok)
         {
-            Console.Error.WriteLine(reply.Error ?? "Zinc couldn't do that.");
+            Console.Error.WriteLine(reply.Error ?? "Zinc gave no reason. Its log (Settings > About > Troubleshooting) may say more.");
             return CliProtocol.ExitCodeFor(reply);
         }
 

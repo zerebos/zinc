@@ -252,8 +252,8 @@ public sealed class KeySequence : IEquatable<KeySequence>
     public bool StartsWith(IReadOnlyList<KeyChord> pressed) =>
         pressed.Count <= Keys.Count && pressed.Select((k, i) => Keys[i] == k).All(x => x);
 
-    /// <summary>Display form: "Ctrl+A, C".</summary>
-    public override string ToString() => string.Join(", ", Keys);
+    /// <summary>Display form: "Ctrl+A > C", as config.toml writes it.</summary>
+    public override string ToString() => string.Join(" > ", Keys);
 
     public bool Equals(KeySequence? other) => other != null && Keys.SequenceEqual(other.Keys);
 
@@ -507,7 +507,7 @@ public sealed class Keybindings
             if (bindings.Sequences.FirstOrDefault(s => s.Keys.Keys.Count < keys.Keys.Count && keys.StartsWith(s.Keys.Keys)) is { Keys: { } shorter } &&
                 seenSequences.TryGetValue(keys, out var where))
             {
-                warnings.Add($"{where}: {keys} can't be reached: {shorter} runs first");
+                warnings.Add($"{where}: {keys} can’t be reached: {shorter} runs first");
             }
         }
 

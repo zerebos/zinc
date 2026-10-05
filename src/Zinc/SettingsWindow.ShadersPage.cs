@@ -90,7 +90,7 @@ internal sealed partial class SettingsWindow
             if (!_config.Global.LowLatencyDrawing)
             {
                 var off = ErrorText();
-                off.Text = "Shaders need 'Low-latency drawing', which is off (Terminal > Troubleshooting).";
+                off.Text = "Shaders need “Low-latency drawing”, which is off (Terminal > Troubleshooting).";
                 off.Visibility = Visibility.Visible;
                 rows.Children.Add(off);
             }
@@ -262,7 +262,7 @@ internal sealed partial class SettingsWindow
             if (entry.UsesTime)
             {
                 var animated = new TextBlock { Text = "Animated", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
-                ToolTipService.SetToolTip(animated, "Keeps redrawing while the terminal is idle. The 'Animation' setting decides when.");
+                ToolTipService.SetToolTip(animated, "Keeps redrawing while the terminal is idle. The “Animation” setting decides when.");
                 name.Children.Add(animated);
             }
 
@@ -493,7 +493,7 @@ internal sealed partial class SettingsWindow
                 catch (Exception ex)
                 {
                     Log.Crash("picking shaders", ex);
-                    Show(error, $"Couldn't open the file picker: {ex.Message}");
+                    Show(error, $"Couldn’t open the file picker: {ex.Message}");
                 }
             };
             menu.Items.Add(addFolder);
@@ -546,7 +546,7 @@ internal sealed partial class SettingsWindow
             catch (Exception ex)
             {
                 Log.Crash("listing shaders", ex);
-                Show(status, $"Couldn't list the shaders: {ex.Message}");
+                Show(status, $"Couldn’t list the shaders: {ex.Message}");
             }
         }
 

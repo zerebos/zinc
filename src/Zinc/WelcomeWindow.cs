@@ -174,7 +174,7 @@ internal sealed partial class WelcomeWindow : Window
 
         var last = index == _pages.Length - 1;
         _back.Visibility = index > 0 ? Visibility.Visible : Visibility.Collapsed;
-        _next.Content = !last ? "Next" : _firstRun ? "Get started" : "Save";
+        _next.Content = !last ? "Next" : _firstRun ? "Get started" : "Save settings";
         AutomationProperties.SetName(_next, (string)_next.Content);
         if (_save != null)
         {
@@ -246,7 +246,7 @@ internal sealed partial class WelcomeWindow : Window
             Spacing = 12,
             Children =
             {
-                Note("A few choices to start with. Change them any time in Settings, or come back here: Ctrl+Shift+P, then 'Welcome…'."),
+                Note("A few choices to start with. Change them any time in Settings, or come back here: Ctrl+Shift+P, then “Welcome…”."),
                 new Border { Height = 8 },
                 SectionTitle("How do you like to work?"),
                 cards,
@@ -599,7 +599,7 @@ internal sealed partial class WelcomeWindow : Window
             Children =
             {
                 SectionTitle("When a long command finishes"),
-                Note("A command that ran 10 seconds or more puts a dot on its tab if you weren't looking. " +
+                Note("A command that ran 10 seconds or more puts a dot on its tab if you weren’t looking. " +
                      "If Zinc is in the background, also:"),
                 flash,
                 toast,
@@ -644,7 +644,7 @@ internal sealed partial class WelcomeWindow : Window
         // Coming back later to change one thing: save from any page.
         if (!_firstRun)
         {
-            _save = new Button { Content = "Save", MinWidth = 96 };
+            _save = new Button { Content = "Save settings", MinWidth = 96 };
             _save.Click += (_, _) => Save();
             buttons.Children.Insert(0, _save);
         }

@@ -136,7 +136,7 @@ public sealed partial class MainWindow
 
         if (!applied)
         {
-            lines.Insert(0, "Your previous settings stay until it's fixed.");
+            lines.Insert(0, "Your previous settings stay until it’s fixed.");
         }
 
         ConfigNotice.Message = string.Join("\n", lines);

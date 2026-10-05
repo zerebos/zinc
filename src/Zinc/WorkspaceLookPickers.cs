@@ -27,7 +27,7 @@ internal static class WorkspaceLookPickers
             MaxWidth = 7 * 46,
         };
         AutomationProperties.SetName(grid, "Workspace icon");
-        grid.Items.Add(Cell(null, new TextBlock { Text = "None", FontSize = 11, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center }, "Profile's icon"));
+        grid.Items.Add(Cell(null, new TextBlock { Text = "None", FontSize = 11, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center }, "Profile’s icon"));
         foreach (var (name, glyph) in WorkspaceIcons.All)
         {
             grid.Items.Add(Cell(name, new FontIcon { Glyph = glyph.ToString(), FontSize = 18 }, name));

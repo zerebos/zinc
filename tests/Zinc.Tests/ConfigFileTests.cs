@@ -179,9 +179,9 @@ public class ConfigFileTests : IDisposable
             """);
 
         Assert.Contains("config.toml:2: ignored font.size = \"huge\"", config.Warnings);
-        Assert.Contains("config.toml:3: unknown setting 'font.colour'", config.Warnings);
+        Assert.Contains("config.toml:3: unknown setting font.colour", config.Warnings);
         Assert.Contains("config.toml:9: [window] applies to the whole app, not to one profile", config.Warnings);
-        Assert.Contains("config.toml:10: unknown or invalid profile setting 'flavor'", config.Warnings);
+        Assert.Contains("config.toml:10: unknown or invalid profile setting flavor", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:14:")); // a TOML syntax error
         Assert.DoesNotContain(config.Warnings, w => w.Contains("keys")); // reserved for keybindings
 
@@ -230,7 +230,7 @@ public class ConfigFileTests : IDisposable
     public void UnknownThemesWarn()
     {
         var config = Parse("[colors]\ntheme = \"No Such Scheme\"");
-        Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:2: no color scheme named 'No Such Scheme'"));
+        Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:2: no color scheme named “No Such Scheme”"));
         Assert.Contains(config.Warnings, w => !w.Contains("../"));
         Assert.Contains(Parse("[colors]\ntheme = \"../config.toml\"").Warnings, w => w.Contains("no color scheme"));
     }
@@ -261,7 +261,7 @@ public class ConfigFileTests : IDisposable
         // Held open with no sharing, as some editors do mid-save.
         using var held = new FileStream(Path.Combine(_dir, "locked.toml"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         var config = Parse(main);
-        Assert.Contains(config.Warnings, w => w.Contains("couldn't read") && w.Contains("locked.toml"));
+        Assert.Contains(config.Warnings, w => w.Contains("couldn’t read") && w.Contains("locked.toml"));
         Assert.True(config.HasErrors); // a reload keeps what's in force rather than apply half a config
     }
 
@@ -281,7 +281,7 @@ public class ConfigFileTests : IDisposable
         WriteFile("config.toml", main);
         WriteFile("loop.toml", "include = \"config.toml\"");
         var config = Parse(main);
-        Assert.Contains(config.Warnings, w => w.Contains("can't find included file missing.toml"));
+        Assert.Contains(config.Warnings, w => w.Contains("can’t find included file missing.toml"));
         Assert.Contains(config.Warnings, w => w.Contains("included more than once"));
     }
 

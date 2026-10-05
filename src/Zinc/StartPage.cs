@@ -513,7 +513,7 @@ internal sealed partial class StartPage : UserControl
         _iconButton.Content = _icon is { } name && Zinc.Panes.WorkspaceIcons.Glyph(name) is { } glyph
             ? new FontIcon { Glyph = glyph.ToString(), FontSize = 16 }
             : new IconSourceElement { IconSource = ProfileIcons.For(_profile), Width = 16, Height = 16, Opacity = 0.6 };
-        ToolTipService.SetToolTip(_iconButton, _icon == null ? "Profile's icon" : $"Icon: {_icon}");
+        ToolTipService.SetToolTip(_iconButton, _icon == null ? "Profile’s icon" : $"Icon: {_icon}");
         _colorButton.Content = new Border
         {
             Width = 16,
