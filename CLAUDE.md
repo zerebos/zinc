@@ -183,6 +183,11 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
   output under `_flashLock`, holds `CSI ? 5 h` 250 ms; `l` in time = bell, else applied late by
   `_flashTimer` → `ExpireFlash`; ConPTY passes both through, often in one read), `program-titles`
   (`TerminalControl.Title` is "" while off).
+- Context menu (2026-10-05): `[terminal] right-click` = menu (default) | copy-paste (the old behavior) | paste →
+  `TerminalControl.ContextMenu.cs` (opened on the button's *release*; Shift+F10 / the Menu key at the cursor whatever the
+  setting; items run through `Invoke` with their keys shown; link items via `LinkUnder`, command items via Core
+  `TerminalSession.CommandAt(viewportRow)`, tested). `test:menu:col:row` opens it; `.scratch/tools/context-menu-test.ps1
+  [-Cell c:r] [-Invoke "Split right"]` lists the items over UIA (popups don't show in PrintWindow) and can run one.
 - File drops: Core `Terminal/DroppedPaths.cs` (Windows path → the pane's shell path via its
   `LinkContext`, the reverse of `LinkTarget.Classify`; `PathQuoting` Posix/PowerShell/Windows;
   tested) ← `TerminalControl.Drop.cs` (DragOver/Drop for StorageItems only, marked Handled, so tab
