@@ -130,13 +130,18 @@ internal sealed partial class SettingsWindow
             }
         };
 
-        // A slot: one scheme in force, its tile and Edit beside it (the tile names the scheme).
+        // A slot: one scheme in force, its tile and Edit (the cards' pencil) beside it (the tile names the scheme).
         Border Slot(string label, string about, string? name)
         {
             var shown = name ?? ZincScheme;
             var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? TerminalTheme.Default, shown);
             tile.Width = ControlWidth;
-            var edit = new Button { Content = "Edit", VerticalAlignment = VerticalAlignment.Stretch };
+            var edit = CardButtonLook(new Button
+            {
+                Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 }, // edit (pencil), as on the cards
+                Padding = new Thickness(9, 8, 9, 8),
+                VerticalAlignment = VerticalAlignment.Stretch,
+            });
             AutomationProperties.SetName(edit, $"Edit {shown}");
             ToolTipService.SetToolTip(edit, $"Edit {shown}'s colors");
             edit.Click += (_, _) => CustomizeScheme(name, path);
@@ -553,6 +558,9 @@ internal sealed partial class SettingsWindow
         }
 
         button.BorderBrush = (Brush)stroke;
+        // A plain button's fill stops inside its border, so the see-through border showed the card behind it (darker);
+        // the split button's fill goes under it. Under it for both.
+        button.BackgroundSizing = BackgroundSizing.OuterBorderEdge;
         return button;
     }
 
