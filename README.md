@@ -176,12 +176,16 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   your own go in `%APPDATA%\Zinc\themes\`, one file per scheme in Ghostty's theme format
   (`background = #181818`, `palette = 1=#AC4242`, ...), named as `theme` refers to them. Yours
   win over bundled ones with the same name.
-  **Customize** (Settings > Appearance, "Edit colors") edits the scheme in force: its background, text,
+  Settings > Appearance > Color scheme opens the **color schemes page**: the scheme in force (or the light
+  and dark pair, with "Follow Windows light/dark"), then every scheme as a card, filtered by Dark, Light or
+  Yours and by name. Click a card to see it in the preview (again to stop); **Use** puts it in place (with
+  a pair, the side "Use sets" names; the Dark and Light filters pick that side too).
+  **Edit** (on the page, and "Edit colors" in a card's menu) edits a scheme: its background, text,
   cursor, selection and 16 palette colors, each with a color picker. A bundled scheme is copied into
-  your `themes\` folder first and the copy is used instead of it everywhere ("Back to the original"
+  your `themes\` folder first and the copy is used instead of it everywhere ("Restore the original"
   deletes the copy); your own are edited in place. Every pane using the scheme changes as you edit,
-  and "Undo changes" puts the file back as it was when you opened it. **New scheme…** (there, and
-  "Save as a new scheme…" in the editor) starts a scheme of your own as a copy, under a name you give;
+  and "Undo changes" puts the file back as it was when you opened it. **New scheme…** (on the page, and
+  "Save as new scheme…" in the editor) starts a scheme of your own as a copy, under a name you give;
   "Delete scheme" removes one of yours (where it was chosen, Zinc's own colors take its place).
   Without a theme, Zinc's own colors: "Lit Cell", phosphor green on near-black (it and its
   light partner come with Zinc by name: `theme = "light:Lit Cell Light,dark:Lit Cell"` follows

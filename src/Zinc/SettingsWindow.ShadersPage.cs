@@ -49,7 +49,7 @@ internal sealed partial class SettingsWindow
         _previewedShader = null;
         _shaderSource = null;
         _shaderQuery = "";
-        PreviewForShaders(open: true);
+        PreviewForLibrary(open: true);
         Render();
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
@@ -58,7 +58,7 @@ internal sealed partial class SettingsWindow
     {
         _editingShaders = false;
         _previewedShader = null;
-        PreviewForShaders(open: false);
+        PreviewForLibrary(open: false);
         Render();
     }
 
@@ -599,7 +599,7 @@ internal sealed partial class SettingsWindow
 
     private void StickLibraryHeader(StackPanel header)
     {
-        if (_sticking || !_editingShaders || _scroller.Content is not UIElement content)
+        if (_sticking || !(_editingShaders || _editingSchemes) || _scroller.Content is not UIElement content)
         {
             return;
         }
@@ -653,7 +653,7 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Hooks the scroller once: each scroll lets the shaders page keep its library header in view.</summary>
+    /// <summary>Hooks the scroller once: each scroll lets the shaders or color schemes page keep its library header in view.</summary>
     private void HookLibrarySticking()
     {
         if (!_stickHooked)

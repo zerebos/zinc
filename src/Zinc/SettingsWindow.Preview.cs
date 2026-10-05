@@ -41,6 +41,7 @@ internal sealed partial class SettingsWindow
         _search.Text.Trim().Length > 0 ? null
         : _editingScheme is { } scheme ? _config.Themes.Apply(_config.Global, scheme) ?? _config.Global
         : _editingShaders ? _shadersProfile is { } shadersOf ? _config.FindProfile(shadersOf)?.Config ?? _config.Global : _config.Global
+        : _editingSchemes ? _schemesProfile is { } schemesOf ? _config.FindProfile(schemesOf)?.Config ?? _config.Global : _config.Global
         : _section == "appearance" ? _config.Global
         : _section == "profiles" && _editing is { } id ? _config.FindProfile(id)?.Config ?? _config.Global
         : null;
@@ -195,10 +196,10 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    // Shown on the shaders page, though hidden (previewing a shader would show nothing otherwise).
+    // Shown on the shaders and color schemes pages, though hidden (previewing from the library would show nothing otherwise).
     private bool _previewShownForPicker;
 
-    private void PreviewForShaders(bool open)
+    private void PreviewForLibrary(bool open)
     {
         if (open && _previewHidden)
         {

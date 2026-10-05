@@ -113,14 +113,8 @@ internal sealed partial class SettingsWindow
     /// <summary>Adds <paramref name="setting"/>'s card(s) to the page; returns its main card (the scheme's: the scheme itself).</summary>
     private Border AddSettingCards(SettingDef setting, string? profile)
     {
-        if (setting.Kind == SettingKind.Scheme)
-        {
-            var cards = SchemeCards(setting, profile).ToList();
-            cards.ForEach(_page.Children.Add);
-            return cards[1];
-        }
-
-        var card = setting.Kind == SettingKind.Files ? ShaderFilesCard(setting, profile)
+        var card = setting.Kind == SettingKind.Scheme ? SchemeCard(setting, profile)
+            : setting.Kind == SettingKind.Files ? ShaderFilesCard(setting, profile)
             : profile == null ? Card(setting) : OverrideCard(setting, profile);
         _page.Children.Add(card);
         return card;
@@ -165,10 +159,10 @@ internal sealed partial class SettingsWindow
             _search.Text = "";
             _section = section;
             _editing = profile;
-            if (_editingShaders)
+            if (_editingShaders || _editingSchemes)
             {
-                _editingShaders = false;
-                PreviewForShaders(open: false);
+                _editingShaders = _editingSchemes = false;
+                PreviewForLibrary(open: false);
             }
 
             if (keyFilter != null)

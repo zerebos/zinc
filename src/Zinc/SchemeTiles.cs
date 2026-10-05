@@ -93,6 +93,43 @@ internal static class SchemeTiles
         };
     }
 
+    /// <summary>
+    /// A scheme's sample for the color schemes page's cards: its name in its text color, then its 16 colors in one row,
+    /// on its background (rounded at the top: the card's footer goes under it).
+    /// </summary>
+    public static Border Sample(TerminalTheme theme, string label)
+    {
+        var chips = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
+        var colors = theme.BaseColors;
+        for (var i = 0; i < 16; i++)
+        {
+            chips.Children.Add(new Border { Width = 11, Height = 11, CornerRadius = new CornerRadius(2), Background = new SolidColorBrush(ToColor(colors[i])) });
+        }
+
+        return new Border
+        {
+            Background = new SolidColorBrush(ToColor(theme.Background)),
+            CornerRadius = new CornerRadius(5, 5, 0, 0),
+            Padding = new Thickness(12, 10, 12, 12),
+            Child = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = label,
+                        Foreground = new SolidColorBrush(ToColor(theme.Foreground)),
+                        FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+                        FontSize = 14,
+                        TextTrimming = TextTrimming.CharacterEllipsis,
+                    },
+                    chips,
+                },
+            },
+        };
+    }
+
     /// <summary>Makes <paramref name="list"/> (items: scheme names) show each as its tile, built when it's scrolled into view.</summary>
     public static void ShowAsTiles(ListViewBase list, ThemeLibrary themes, string? defaultLabel)
     {

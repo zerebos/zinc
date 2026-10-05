@@ -166,10 +166,10 @@ internal sealed partial class SettingsWindow : Window
             _section = id;
             _editing = null;
             _editingScheme = null;
-            if (_editingShaders)
+            if (_editingShaders || _editingSchemes)
             {
-                _editingShaders = false;
-                PreviewForShaders(open: false);
+                _editingShaders = _editingSchemes = false;
+                PreviewForLibrary(open: false);
             }
 
             _search.Text = "";
@@ -189,7 +189,7 @@ internal sealed partial class SettingsWindow : Window
         _nav.ItemInvoked += (_, e) =>
         {
             if (!_navigating && e.InvokedItemContainer is NavigationViewItem { Tag: string id } item && ReferenceEquals(item, _nav.SelectedItem) &&
-                (_search.Text.Trim().Length > 0 || _editing != null || _editingScheme != null || _editingShaders))
+                (_search.Text.Trim().Length > 0 || _editing != null || _editingScheme != null || _editingShaders || _editingSchemes))
             {
                 Navigate(id);
             }
@@ -282,6 +282,7 @@ internal sealed partial class SettingsWindow : Window
             Text = query.Length > 0 ? "Results"
                 : _editingScheme is { } scheme ? scheme
                 : _editingShaders ? _shadersProfile is { } shadersOf ? $"Shaders: {_config.FindProfile(shadersOf)?.Name ?? shadersOf}" : "Shaders"
+                : _editingSchemes ? _schemesProfile is { } schemesOf ? $"Color schemes: {_config.FindProfile(schemesOf)?.Name ?? schemesOf}" : "Color schemes"
                 : _section == "profiles" && _editing is { } editing ? _config.FindProfile(editing)?.Name ?? editing
                 : SettingsCatalog.Sections.First(s => s.Id == _section).Title,
             FontSize = 28,
@@ -289,7 +290,7 @@ internal sealed partial class SettingsWindow : Window
             Margin = new Thickness(0, 8, 0, 12),
         };
         _page.Children.Add(heading);
-        if (query.Length == 0 && _editingScheme == null && !_editingShaders && _section == "about")
+        if (query.Length == 0 && _editingScheme == null && !_editingShaders && !_editingSchemes && _section == "about")
         {
             heading.Visibility = Visibility.Collapsed; // About's lockup is its heading
         }
@@ -308,6 +309,10 @@ internal sealed partial class SettingsWindow : Window
         else if (_editingShaders)
         {
             ShadersPage(_shadersProfile);
+        }
+        else if (_editingSchemes)
+        {
+            SchemesPage(_schemesProfile);
         }
         else if (_section == "about")
         {
@@ -400,10 +405,7 @@ internal sealed partial class SettingsWindow : Window
             }
             else if (setting.Kind == SettingKind.Scheme)
             {
-                foreach (var card in SchemeCards(setting, null))
-                {
-                    _page.Children.Add(card);
-                }
+                _page.Children.Add(SchemeCard(setting, null));
             }
             else if (setting.Kind == SettingKind.Files)
             {
@@ -1046,7 +1048,7 @@ internal sealed partial class SettingsWindow : Window
             {
                 if (setting.Kind == SettingKind.Scheme)
                 {
-                    rows.AddRange(SchemeCards(setting, id));
+                    rows.Add(SchemeCard(setting, id));
                 }
                 else if (setting.Kind == SettingKind.Files)
                 {
@@ -1282,178 +1284,66 @@ internal sealed partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// The color scheme as cards: "Follow Windows light/dark", then the scheme ("Dark scheme"
-    /// while following) and, while following, "Light scheme". Written as one key, a name or
-    /// <c>"light:X,dark:Y"</c>. In a profile (<paramref name="profile"/>), inherited until changed.
+    /// The color scheme as a card: the scheme in force (both of a light/dark pair) as tiles on a button that opens the color
+    /// schemes page (SettingsWindow.SchemesPage.cs). In a profile: inherited until changed there; the reset arrow inherits again.
     /// </summary>
-    private IEnumerable<Border> SchemeCards(SettingDef setting, string? profile)
+    private Border SchemeCard(SettingDef setting, string? profile)
     {
-        IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
-        var names = _config.Themes.Names();
-
-        // Pickers showing each scheme as a tile. A profile has no "Default (Lit Cell)" to pick:
-        // without a scheme of its own it inherits.
-        var scheme = new SchemePicker(_config.Themes, names, profile == null ? DefaultSchemeLabel : null, "Color scheme");
-        var light = new SchemePicker(_config.Themes, names, null, "Light scheme");
-        var (followSwitch, follow) = Switch("Follow Windows light/dark");
-        var label = new TextBlock { Text = setting.Label };
+        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
         var description = DescriptionText();
-        var reset = ResetArrow(setting.Label, profile == null
-            ? "Back to the default (removes it from config.toml)"
-            : "Back to the scheme every profile inherits");
-        var lightCard = CardLayout(new TextBlock { Text = "Light scheme" }, null, DescriptionText("While Windows is in light mode."), null, null, light);
-        var local = false; // showing a value: not a change
-
-        object? Own() => profile == null ? _config.ValueOf(setting.Key) : _config.ValueOf(profile, setting.Key);
-        object? Inherited() => profile == null ? null : _config.ValueOf(setting.Key);
-
-        void Layout(bool pair, object? own)
+        var tiles = new StackPanel { Spacing = 3 };
+        var chevron = new FontIcon { Glyph = ((char)0xE76C).ToString(), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
+        var content = new Grid
         {
-            label.Text = pair ? "Dark scheme" : setting.Label;
-            lightCard.Visibility = pair ? Visibility.Visible : Visibility.Collapsed;
-            reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
-            if (pair || profile == null)
-            {
-                SetText(description, pair ? "While Windows is in dark mode." : setting.Description);
-            }
-            else
-            {
-                InheritedText(description, setting, Describe(setting, Inherited()), own != null);
-            }
-        }
-
-        void Display(object? value, object? own)
-        {
-            local = true;
-            var text = value as string;
-            var pair = text != null && ThemeLibrary.TryParsePair(text, out _, out _);
-            follow.IsOn = pair;
-            if (pair && ThemeLibrary.TryParsePair(text!, out var l, out var d))
-            {
-                scheme.Show(d, scheme.Contains(d));
-                light.Show(l, light.Contains(l));
-            }
-            else if (text != null)
-            {
-                scheme.Show(text, scheme.Contains(text));
-            }
-            else
-            {
-                scheme.Show(null, selected: profile == null); // Zinc's own; a profile: placeholder
-            }
-
-            scheme.Placeholder = Describe(setting, value);
-            light.Placeholder = "Choose a scheme";
-            Layout(pair, own);
-            local = false;
-        }
-
-        void Commit(string? value)
-        {
-            Write(path, value);
-            Layout(follow.IsOn, value);
-        }
-
-        void Changed()
-        {
-            if (local || _updating)
-            {
-                return;
-            }
-
-            if (follow.IsOn)
-            {
-                if (light.Selected is { } l && scheme.Selected is { } d)
-                {
-                    Commit($"light:{l},dark:{d}");
-                }
-            }
-            else if (scheme.HasSelection)
-            {
-                Commit(scheme.Selected); // null: Zinc's own
-            }
-        }
-
-        scheme.Picked += _ => Changed();
-        light.Picked += _ => Changed();
-        // Moving through a list previews each scheme (by itself, even while following light/dark).
-        scheme.Highlighted += name => PreviewScheme(path, name);
-        light.Highlighted += name => PreviewScheme(path, name);
-        scheme.HighlightEnded += RefreshPreview;
-        light.HighlightEnded += RefreshPreview;
-        follow.Toggled += (_, _) =>
-        {
-            if (local || _updating)
-            {
-                return;
-            }
-
-            if (follow.IsOn)
-            {
-                // The scheme in use becomes the dark side (Zinc's own: Lit Cell), and the light
-                // side starts from its counterpart.
-                local = true;
-                var dark = scheme.Selected ?? names.FirstOrDefault(n => n == "Lit Cell") ?? names.FirstOrDefault();
-                scheme.Show(dark);
-                light.Show(ThemeLibrary.LightCounterpart(dark, names));
-                local = false;
-            }
-
-            Changed();
+            ColumnSpacing = 8,
+            ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto } },
+            Children = { tiles, chevron },
         };
-        reset.Click += (_, _) =>
-        {
-            FocusAfterReset(reset, scheme);
-            Write(path, null);
-            Display(Inherited(), null);
-        };
+        Grid.SetColumn(chevron, 1);
+        var open = new Button { Content = content, Width = ControlWidth, Padding = new Thickness(3, 3, 8, 3), HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        AutomationProperties.SetName(open, profile == null ? "Browse schemes" : $"Browse schemes for {profile}");
+        ToolTipService.SetToolTip(open, "Browse schemes");
+        open.Click += (_, _) => OpenSchemes(profile);
+        IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
 
         void Refresh()
         {
-            var own = Own();
-            Display(own ?? Inherited(), own);
-        }
-
-        _refreshers.Add(Refresh);
-        Quietly(Refresh);
-        var followCard = CardLayout(new TextBlock { Text = "Follow Windows light/dark" }, null,
-            DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followSwitch);
-        var main = CardLayout(label, reset, description, profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", null, scheme);
-        _cards[(profile, setting.Key)] = (main, scheme);
-
-        // Customize: the scheme(s) in force, edited on a page of their own.
-        var customizeDark = new Button();
-        var customizeLight = new Button();
-        string? darkName = null, lightName = null;
-        customizeDark.Click += (_, _) => CustomizeScheme(darkName, path);
-        customizeLight.Click += (_, _) => CustomizeScheme(lightName, path);
-        var customizeText = DescriptionText();
-        void ShowCustomize()
-        {
-            var value = (Own() ?? Inherited()) as string;
-            if (value != null && ThemeLibrary.TryParsePair(value, out var l, out var d))
+            var own = OwnScheme(profile);
+            var (dark, light) = SchemeSides(ShownScheme(profile));
+            reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
+            if (profile == null)
             {
-                (darkName, lightName) = (d, l);
+                SetText(description, light != null ? "Follows Windows light/dark." : setting.Description);
             }
             else
             {
-                (darkName, lightName) = (value, null);
+                InheritedText(description, setting, Describe(setting, InheritedScheme(profile)), own != null);
             }
 
-            customizeDark.Content = $"Edit {darkName ?? "Lit Cell"}";
-            customizeLight.Content = $"Edit {lightName}";
-            customizeLight.Visibility = lightName != null ? Visibility.Visible : Visibility.Collapsed;
-            SetText(customizeText, darkName == null
-                ? "Changes show live in every pane using it. Editing Lit Cell makes your own copy."
-                : "Changes show live in every pane using it.");
+            Border Tile(string? name, string label) =>
+                SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? Zinc.Terminal.TerminalTheme.Default, label);
+            tiles.Children.Clear();
+            if (light == null)
+            {
+                tiles.Children.Add(Tile(dark, dark ?? ZincScheme));
+            }
+            else
+            {
+                tiles.Children.Add(Tile(dark, $"Dark: {dark}"));
+                tiles.Children.Add(Tile(light, $"Light: {light}"));
+            }
         }
 
-        _refreshers.Add(ShowCustomize);
-        ShowCustomize();
-        var newScheme = new Button { Content = "New scheme…", Flyout = NewSchemeFlyout(() => darkName ?? "Lit Cell", () => darkName, path) };
-        var customizeCard = CardLayout(new TextBlock { Text = "Edit colors" }, null, customizeText, null, null,
-            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { customizeDark, customizeLight, newScheme } });
-        return [followCard, main, lightCard, customizeCard];
+        reset.Click += (_, _) =>
+        {
+            FocusAfterReset(reset, open);
+            Write(path, null);
+        };
+        _refreshers.Add(Refresh);
+        Refresh();
+        var card = CardLayout(new TextBlock { Text = setting.Label }, reset, description, profile == null ? setting.Key : $"profile.{profile}.{setting.Key}", null, open);
+        _cards[(profile, setting.Key)] = (card, open);
+        return card;
     }
 
     /// <summary>A setting's description, and what its chosen option means.</summary>
@@ -1714,7 +1604,7 @@ internal sealed partial class SettingsWindow : Window
         SettingKind.Font => FontControl(commit),
         _ when profile != null && setting.Section == "profiles" && setting.Key is "command" or "working-directory" or "icon" =>
             BrowseControl(setting, commit),
-        _ => TextControl(setting, commit), // SettingKind.Scheme has cards of its own (SchemeCards)
+        _ => TextControl(setting, commit), // SettingKind.Scheme has a card of its own (SchemeCard)
     };
 
     private static (FrameworkElement, Action<object?>) ToggleControl(SettingDef setting, Action<object?> commit)

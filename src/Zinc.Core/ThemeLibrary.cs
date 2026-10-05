@@ -13,6 +13,9 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
     public string UserFolder => userFolder;
 
+    /// <summary>The schemes that come with Zinc.</summary>
+    public string BundledFolder => bundledFolder;
+
     /// <summary>
     /// A theme that follows Windows' light/dark mode, written as Ghostty does:
     /// <c>"light:Catppuccin Latte,dark:Catppuccin Mocha"</c> (either order; a missing side uses

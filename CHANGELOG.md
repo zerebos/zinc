@@ -14,6 +14,9 @@ is the version it builds, and hands it to the installer as the release notes).
 - Shaders have their own settings page (Appearance > Shaders > Edit shaders): your list, and a library of
   Zinc's shaders, yours and the folders you add (a collection you cloned, say), each with a line about it.
   Click one to see it in the preview (and whether it compiles), again to take it back; Add puts it in your list.
+- Color schemes have their own page too (Appearance > Color scheme): the scheme in use (or your light and dark
+  pair) with Edit and New scheme, and all ~650 schemes as cards you can filter by Dark, Light or Yours and search.
+  Click one to see it in the preview, again to take it back; Use puts it in place.
 
 ### Changed
 - Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, Terminal > Troubleshooting
