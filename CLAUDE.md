@@ -354,7 +354,7 @@ test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if 
   page writes it); `Describe` = the first sentence-like comment; tested; tests touching `ShaderPaths.BundledFolder` share
   an xUnit collection). App: the card (`ShaderFilesCard`: summary, compile check, Edit shaders) -> `OpenShaders(profile)`
   -> sub-page `SettingsWindow.ShadersPage.cs` (`_editingShaders`/`_shadersProfile`, like `_editingScheme`; In use =
-  `ShaderRow`s + Animation; Library = filter + source chips + rows (wide button = click to preview / again to stop:
+  `ShaderRow`s + Animation; Library = SelectorBar tabs per source (above: where from is a view, not a filter) + filter and count + headings with counts and a divider under All (none under one source's tab) + rows (wide button = click to preview / again to stop:
   `_previewedShader` -> `ApplyShaderPreview` -> `PreviewShaders(list + it)`; Add/Remove; Enter toggles, arrows move);
   folder chips + Add a folder/file; `_addedShaderFolders`/`_hiddenShaderFolders` until the reload; a hidden preview shows
   on the page: `PreviewForShaders`). Sidebar clicks/GoTo leave it. Test: `.scratch/tools/shaders-page-shot.ps1`.

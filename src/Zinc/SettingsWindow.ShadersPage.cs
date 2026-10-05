@@ -132,12 +132,30 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(GroupTitle("Library"));
         var filter = new TextBox { PlaceholderText = "Filter by name or description", Text = _shaderQuery };
         AutomationProperties.SetName(filter, "Filter shaders");
-        var sources = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        // Where from, as tabs above the search (a view of the library, not a filter on the results).
+        var sources = new SelectorBar();
+        AutomationProperties.SetName(sources, "Where the shaders come from");
+        var count = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
+        var searchRow = new Grid
+        {
+            ColumnSpacing = 12,
+            ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto } },
+            Children = { filter, count },
+        };
+        Grid.SetColumn(count, 1);
         var status = DescriptionText();
         AutomationProperties.SetLiveSetting(status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
         var library = new StackPanel { Spacing = 2 };
         var folders = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        var libraryCard = CardBorder(new StackPanel { Spacing = 8, Children = { filter, new ScrollViewer { Content = sources, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }, status, library } });
+        var libraryCard = CardBorder(new StackPanel
+        {
+            Spacing = 8,
+            Children =
+            {
+                new ScrollViewer { Content = sources, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled },
+                searchRow, status, library,
+            },
+        });
         _page.Children.Add(libraryCard);
         _page.Children.Add(new ScrollViewer { Content = folders, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(0, 4, 0, 0) });
 
@@ -302,6 +320,7 @@ internal sealed partial class SettingsWindow
             wideButtons.Clear();
             var query = _shaderQuery.Trim();
             var shown = 0;
+            var all = 0;
             foreach (var section in _shaderLibrary)
             {
                 if (_shaderSource != null && section.Title != _shaderSource)
@@ -309,6 +328,7 @@ internal sealed partial class SettingsWindow
                     continue;
                 }
 
+                all += section.Shaders.Count;
                 var matches = section.Shaders.Where(s => query.Length == 0 || s.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
                     (s.Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
                 if (matches.Count == 0 && !(section.Missing && query.Length == 0))
@@ -316,8 +336,19 @@ internal sealed partial class SettingsWindow
                     continue;
                 }
 
-                var header = new StackPanel { Margin = new Thickness(8, library.Children.Count == 0 ? 0 : 10, 0, 4) };
-                header.Children.Add(new TextBlock { Text = section.Title, FontWeight = FontWeights.SemiBold });
+                // Under All, a heading per source (its name, how many, its folder, a line under); under one source's tab,
+                // only its folder (the tab names it).
+                var header = new StackPanel { Spacing = 2, Margin = new Thickness(8, library.Children.Count == 0 ? 4 : 20, 8, 4) };
+                if (_shaderSource == null)
+                {
+                    header.Children.Add(new TextBlock
+                    {
+                        Text = $"{section.Title} · {section.Shaders.Count}",
+                        FontSize = 16,
+                        FontWeight = FontWeights.SemiBold,
+                    });
+                }
+
                 if (section.Folder != null)
                 {
                     header.Children.Add(new TextBlock
@@ -327,7 +358,21 @@ internal sealed partial class SettingsWindow
                     });
                 }
 
-                library.Children.Add(header);
+                if (_shaderSource == null)
+                {
+                    header.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
+                    {
+                        Height = 1,
+                        Margin = new Thickness(0, 6, 0, 0),
+                        Fill = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
+                    });
+                }
+
+                if (header.Children.Count > 0)
+                {
+                    library.Children.Add(header);
+                }
+
                 foreach (var entry in matches)
                 {
                     library.Children.Add(Row(entry));
@@ -335,6 +380,7 @@ internal sealed partial class SettingsWindow
                 }
             }
 
+            count.Text = query.Length > 0 ? $"{shown} of {all} shaders" : all == 1 ? "1 shader" : $"{all} shaders";
             if (shown == 0 && _shaderLibrary.Count > 0)
             {
                 library.Children.Add(DescriptionText(query.Length > 0 ? $"Nothing matches “{query}”." : "No shaders here."));
@@ -345,29 +391,39 @@ internal sealed partial class SettingsWindow
 
         void FillSources()
         {
-            sources.Children.Clear();
-            foreach (var title in _shaderLibrary.Select(s => s.Title).Prepend(null))
+            _fillingSources = true;
+            try
             {
-                var chip = new ToggleButton
+                sources.Items.Clear();
+                if (_shaderSource != null && _shaderLibrary.All(s => s.Title != _shaderSource))
                 {
-                    Content = title ?? $"All ({_shaderLibrary.Sum(s => s.Shaders.Count)})",
-                    IsChecked = title == _shaderSource,
-                    CornerRadius = new CornerRadius(14),
-                    Padding = new Thickness(12, 4, 12, 4),
-                };
-                chip.Click += (_, _) =>
-                {
-                    _shaderSource = title;
-                    foreach (var other in sources.Children.OfType<ToggleButton>())
-                    {
-                        other.IsChecked = ReferenceEquals(other, chip);
-                    }
+                    _shaderSource = null; // its folder is gone
+                }
 
-                    FillLibrary();
-                };
-                sources.Children.Add(chip);
+                foreach (var title in _shaderLibrary.Select(s => s.Title).Prepend(null))
+                {
+                    var tab = new SelectorBarItem { Text = title ?? "All", Tag = title };
+                    sources.Items.Add(tab);
+                    if (title == _shaderSource)
+                    {
+                        sources.SelectedItem = tab;
+                    }
+                }
+            }
+            finally
+            {
+                _fillingSources = false;
             }
         }
+
+        sources.SelectionChanged += (_, _) =>
+        {
+            if (!_fillingSources && sources.SelectedItem is SelectorBarItem tab)
+            {
+                _shaderSource = tab.Tag as string;
+                FillLibrary();
+            }
+        };
 
         void FillFolders()
         {
@@ -488,6 +544,9 @@ internal sealed partial class SettingsWindow
         library.Children.Add(DescriptionText("Reading the shaders…"));
         LoadLibrary();
     }
+
+    // The tabs are being rebuilt: their selection changes aren't the user's.
+    private bool _fillingSources;
 
     // Folders taken out since config.toml was last read (gone from the library at once).
     private readonly List<string> _hiddenShaderFolders = [];
