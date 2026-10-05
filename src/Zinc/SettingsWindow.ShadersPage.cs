@@ -111,7 +111,12 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        var listTitle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { GroupTitle("In use"), reset } };
+        // The group title's margins on the row, so the arrow centers on the title's text, not on its margins too.
+        var inUse = GroupTitle("In use");
+        var listTitle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = inUse.Margin, Children = { inUse, reset } };
+        inUse.Margin = new Thickness(0);
+        inUse.VerticalAlignment = VerticalAlignment.Center;
+        reset.VerticalAlignment = VerticalAlignment.Center;
         _page.Children.Add(listTitle);
         if (profile != null)
         {
