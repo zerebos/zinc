@@ -130,26 +130,18 @@ internal sealed partial class SettingsWindow
             }
         };
 
-        // A slot: one scheme in force, its tile and Edit.
+        // A slot: one scheme in force, its tile and Edit beside it (the tile names the scheme).
         Border Slot(string label, string about, string? name)
         {
             var shown = name ?? ZincScheme;
             var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? TerminalTheme.Default, shown);
             tile.Width = ControlWidth;
-            var edit = new Button { Content = $"Edit {shown}" };
+            var edit = new Button { Content = "Edit", VerticalAlignment = VerticalAlignment.Stretch };
+            AutomationProperties.SetName(edit, $"Edit {shown}");
+            ToolTipService.SetToolTip(edit, $"Edit {shown}'s colors");
             edit.Click += (_, _) => CustomizeScheme(name, path);
-            var text = new StackPanel
-            {
-                Spacing = 1,
-                VerticalAlignment = VerticalAlignment.Center,
-                Children =
-                {
-                    new TextBlock { Text = label },
-                    DescriptionText(about),
-                    new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 8, 0, 0), Children = { edit } },
-                },
-            };
-            return CardBorder(TextAndControl(text, tile));
+            return CardLayout(new TextBlock { Text = label }, null, DescriptionText(about), null, null,
+                new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { tile, edit } });
         }
 
         // ---- Library: a heading with the count; one toolbar row (dark, light, yours as pills; a search; New scheme; a menu); a card per
@@ -295,31 +287,29 @@ internal sealed partial class SettingsWindow
             var whose = new TextBlock { FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
             var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { inUseBadge, whose } };
             var forLight = false; // the side the split button's main part sets
-            var use = new Button { Content = "Use", MinWidth = 72, VerticalAlignment = VerticalAlignment.Center };
+            var use = CardButtonLook(new Button { Content = "Use", MinWidth = 72, VerticalAlignment = VerticalAlignment.Center });
             use.Click += (_, _) => Use(entry.Name, false);
             var forDarkItem = new MenuFlyoutItem { Text = "Use for dark mode" };
             forDarkItem.Click += (_, _) => Use(entry.Name, false);
             var forLightItem = new MenuFlyoutItem { Text = "Use for light mode" };
             forLightItem.Click += (_, _) => Use(entry.Name, true);
-            var split = new SplitButton
+            var split = CardButtonLook(new SplitButton
             {
                 VerticalAlignment = VerticalAlignment.Center,
                 Flyout = new MenuFlyout { Items = { forDarkItem, forLightItem }, Placement = FlyoutPlacementMode.BottomEdgeAlignedRight },
-            };
+            });
             split.Click += (_, _) => Use(entry.Name, forLight);
-            var edit = new Button
+            var edit = CardButtonLook(new Button
             {
                 Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 }, // edit (pencil)
-                Padding = new Thickness(10, 8, 10, 8),
-                VerticalAlignment = VerticalAlignment.Center,
-                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                BorderThickness = new Thickness(0),
-            };
+                Padding = new Thickness(9, 8, 9, 8),
+                VerticalAlignment = VerticalAlignment.Stretch,
+            });
             edit.Click += (_, _) => CustomizeScheme(entry.Name, path);
             var footer = new Grid
             {
                 ColumnSpacing = 4,
-                Padding = new Thickness(12, 6, 4, 6),
+                Padding = new Thickness(12, 6, 6, 6),
                 ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
                 Children = { badges, use, split, edit },
             };
@@ -547,6 +537,23 @@ internal sealed partial class SettingsWindow
         }
 
         LoadLibrary();
+    }
+
+    /// <summary>
+    /// One outline for the buttons on a scheme card: a split button draws its border all around (and a plain button only
+    /// a faint top edge), so with a light/dark pair the cards' buttons looked heavier. Set before the template applies.
+    /// </summary>
+    private static T CardButtonLook<T>(T button) where T : Control
+    {
+        var stroke = Application.Current.Resources["ControlStrokeColorSecondaryBrush"]; // what a split button shows
+        var prefix = button is SplitButton ? "SplitButton" : "Button";
+        foreach (var state in new[] { "", "PointerOver", "Pressed" })
+        {
+            button.Resources[$"{prefix}BorderBrush{state}"] = stroke;
+        }
+
+        button.BorderBrush = (Brush)stroke;
+        return button;
     }
 
     /// <summary>Opens the themes folder next to config.toml (made if it isn't there yet).</summary>

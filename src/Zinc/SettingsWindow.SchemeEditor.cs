@@ -198,8 +198,29 @@ internal sealed partial class SettingsWindow
         var use = new CheckBox { Content = "Use it now", IsChecked = true };
         var create = new Button { Content = "Create", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         var intro = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
-        var start = new ComboBox { Header = "Start from", Width = 260, Visibility = sources == null ? Visibility.Collapsed : Visibility.Visible };
+        // "Start from" (when the caller lists schemes): a search box filled in with the suggested scheme; typing narrows the list.
+        var start = new AutoSuggestBox
+        {
+            Header = "Start from",
+            Width = 260,
+            QueryIcon = new SymbolIcon(Symbol.Find),
+            Visibility = sources == null ? Visibility.Collapsed : Visibility.Visible,
+        };
         AutomationProperties.SetName(start, "Start from");
+        IReadOnlyList<string> names = [];
+        start.TextChanged += (_, e) =>
+        {
+            if (e.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
+            {
+                var typed = start.Text.Trim();
+                start.ItemsSource = names.Where(n => n.Contains(typed, StringComparison.OrdinalIgnoreCase)).Take(50).ToList();
+            }
+        };
+        start.GotFocus += (_, _) =>
+        {
+            start.ItemsSource = names.Take(50).ToList(); // something to pick from before typing
+        };
+        start.SuggestionChosen += (_, e) => start.Text = e.SelectedItem as string ?? start.Text;
         var flyout = new Flyout { Content = new StackPanel { Spacing = 8, Children = { intro, name, start, problem, use, create } } };
         flyout.Opening += (_, _) =>
         {
@@ -208,9 +229,8 @@ internal sealed partial class SettingsWindow
                 : "A copy of a scheme to change as you like, yours in the themes folder.";
             if (sources != null)
             {
-                var names = sources();
-                start.ItemsSource = names;
-                start.SelectedItem = names.FirstOrDefault(n => n.Equals(from(), StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault();
+                names = sources();
+                start.Text = names.FirstOrDefault(n => n.Equals(from(), StringComparison.OrdinalIgnoreCase)) ?? names.FirstOrDefault() ?? "";
             }
 
             name.Text = "";
@@ -227,7 +247,20 @@ internal sealed partial class SettingsWindow
             }
 
             var created = name.Text.Trim();
-            var origin = sources != null && start.SelectedItem is string chosen ? chosen : from();
+            var origin = from();
+            if (sources != null)
+            {
+                var typed = start.Text.Trim();
+                if (names.FirstOrDefault(n => n.Equals(typed, StringComparison.OrdinalIgnoreCase)) is not { } known)
+                {
+                    problem.Text = typed.Length == 0 ? "Pick a scheme to start from." : $"There's no scheme called {typed}.";
+                    problem.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                origin = known;
+            }
+
             try
             {
                 if (_config.Themes.Create(created, origin) == null)
