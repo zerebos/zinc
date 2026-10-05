@@ -36,6 +36,19 @@ public enum LinkClick
     Click,
 }
 
+/// <summary>What a right-click in a terminal does. Config: <c>right-click = menu | copy-paste | paste</c>.</summary>
+public enum RightClick
+{
+    /// <summary>A menu: copy, paste, find, the link or command under the pointer, split, close.</summary>
+    Menu,
+
+    /// <summary>Copies a selection, or pastes when there's none (the Windows console's way).</summary>
+    CopyPaste,
+
+    /// <summary>Pastes.</summary>
+    Paste,
+}
+
 public enum ShellIntegrationMode
 {
     /// <summary>PowerShell, bash and zsh get it (after the user's own startup files).</summary>
@@ -275,6 +288,9 @@ public sealed record Config
 
     /// <summary>What opens a link. Config: <c>link-click</c>.</summary>
     public LinkClick LinkClick { get; init; }
+
+    /// <summary>What a right-click does (unless a program uses the mouse). Config: <c>right-click</c>.</summary>
+    public RightClick RightClick { get; init; }
 
     /// <summary>The middle button pastes (unless a program uses the mouse). Config: <c>middle-click-paste = true</c>.</summary>
     public bool MiddleClickPaste { get; init; }
@@ -680,6 +696,7 @@ public sealed record Config
             "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
             "shell-integration" when TryMode<ShellIntegrationMode>(value, out var integration) => this with { ShellIntegration = integration },
             "link-click" when TryMode<LinkClick>(value, out var linkClick) => this with { LinkClick = linkClick },
+            "right-click" when TryMode<RightClick>(value, out var rightClick) => this with { RightClick = rightClick },
             "middle-click-paste" when bool.TryParse(value, out var middle) => this with { MiddleClickPaste = middle },
             "notify-command-finished" when TryMode<NotifyMode>(value, out var notify) => this with { NotifyCommandFinished = notify },
             "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },

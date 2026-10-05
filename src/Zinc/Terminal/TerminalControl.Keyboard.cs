@@ -156,6 +156,16 @@ public sealed partial class TerminalControl
             return;
         }
 
+        // Shift+F10 and the Menu key: the context menu, as everywhere in Windows (whatever right-click does).
+        if ((e.Key == Windows.System.VirtualKey.Application && !state.Ctrl && !state.Alt && !state.Shift) ||
+            (e.Key == Windows.System.VirtualKey.F10 && state.Shift && !state.Ctrl && !state.Alt))
+        {
+            e.Handled = true;
+            _charHandledByKeyDown = true;
+            ShowContextMenuAtCursor();
+            return;
+        }
+
         // Alt+F4 is Windows' (close the window: a main window asks first if something runs, the quick terminal hides);
         // encoded, it reached the shell as an escape sequence (a beep in most) and the window stayed.
         if (e.Key == Windows.System.VirtualKey.F4 && state.Alt && !state.Ctrl && !state.Shift)

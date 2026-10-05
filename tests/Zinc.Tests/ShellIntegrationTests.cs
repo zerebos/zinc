@@ -217,4 +217,19 @@ public class ShellIntegrationTests
         Assert.True(session.SelectOutput(command!));
         Assert.Equal("a.txt\nb.txt", session.GetSelectionText()?.Replace("\r\n", "\n"));
     }
+
+    [Fact]
+    public void FindsTheCommandOnARow()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        session.WriteToScreen(Command("ls", "a.txt\r\nb.txt\r\n", 0));
+        session.WriteToScreen(Command("pwd", "/home\r\n", 0));
+        session.WriteToScreen("\e]133;A\a$ ");
+
+        Assert.Equal("ls", session.CommandAt(0)?.Text);   // its prompt
+        Assert.Equal("ls", session.CommandAt(2)?.Text);   // its output
+        Assert.Equal("pwd", session.CommandAt(3)?.Text);
+        Assert.Null(session.CommandAt(5));                // the prompt still waiting: nothing ran there
+        Assert.Null(session.CommandAt(20));
+    }
 }

@@ -68,9 +68,19 @@ public sealed partial class TerminalControl
 
         if (props.IsRightButtonPressed)
         {
-            // Windows Terminal convention: right-click copies a selection, or pastes.
-            if (HasSelection()) CopySelection();
-            else PasteFromClipboard();
+            switch (_config.RightClick)
+            {
+                case RightClick.Menu:
+                    _menuOnRelease = point.Position; // opened on release, as Windows' menus are (TerminalControl.ContextMenu.cs)
+                    break;
+                case RightClick.CopyPaste when HasSelection():
+                    CopySelection();
+                    break;
+                default:
+                    PasteFromClipboard();
+                    break;
+            }
+
             return;
         }
 
@@ -132,6 +142,13 @@ public sealed partial class TerminalControl
         }
 
         e.Handled = true;
+        if (_menuOnRelease is { } menuAt)
+        {
+            _menuOnRelease = null;
+            ShowContextMenu(menuAt);
+            return;
+        }
+
         if (_selecting)
         {
             _selecting = false;

@@ -679,6 +679,7 @@ public sealed class ConfigFile
             ["terminal.bell-sound"] = ("bell-sound", v => Bool(v)),
             ["terminal.reload-environment"] = ("reload-environment", v => Bool(v)),
             ["terminal.link-click"] = ("link-click", v => v as string),
+            ["terminal.right-click"] = ("right-click", v => v as string),
             ["terminal.middle-click-paste"] = ("middle-click-paste", v => Bool(v)),
             ["terminal.screen-flash-bell"] = ("screen-flash-bell", v => Bool(v)),
             ["terminal.program-titles"] = ("program-titles", v => Bool(v)),

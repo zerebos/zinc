@@ -593,6 +593,28 @@ public sealed unsafe partial class TerminalSession
         return commands.LastOrDefault(c => c.Ran);
     }
 
+    /// <summary>
+    /// The command that ran on viewport row <paramref name="viewportRow"/> (its prompt, command line or output: what a
+    /// right-click there means), or null.
+    /// </summary>
+    public ShellCommand? CommandAt(int viewportRow)
+    {
+        var row = (long)GetScrollbar().Offset + viewportRow;
+        var commands = Commands();
+        for (var i = commands.Count - 1; i >= 0; i--)
+        {
+            var c = commands[i];
+            if (c.PromptRow <= row)
+            {
+                // Its rows end where the next prompt starts (the last output row can be that prompt's row).
+                var end = i + 1 < commands.Count ? Math.Min(c.LastRow, commands[i + 1].PromptRow - 1) : c.LastRow;
+                return c.Ran && row <= end ? c : null;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Selects a command's output (trailing blank rows left out); false if it has none.</summary>
     public bool SelectOutput(ShellCommand command)
     {

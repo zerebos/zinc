@@ -242,6 +242,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `link-click`: what opens a link (a web address, or an OSC 8 hyperlink): `"ctrl"` (default, Ctrl+click;
   holding Ctrl underlines them), `"alt"` (Alt+click), or `"click"` (a plain click; dragging across a link
   still selects it, and a program using the mouse still gets the click).
+- `right-click`: `"menu"` (default: copy, paste, find, the link or command you clicked, split and close),
+  `"copy-paste"` (copies a selection, or pastes when there's none, as the Windows console does) or `"paste"`.
+  A program using the mouse gets the click; Shift+right-click is Zinc's. Shift+F10 or the Menu key opens the menu
+  at the cursor whatever this says.
 - `middle-click-paste`: `false` (default) or `true`: the middle button pastes, unless the program uses the mouse.
 - `click-to-move`: `true` (default) or `false`: at a shell prompt, clicking in the command you're
   typing moves the cursor there (Ghostty's `cursor-click-to-move`). It needs the prompt marks of

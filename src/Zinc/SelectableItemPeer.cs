@@ -22,7 +22,7 @@ internal sealed partial class SelectableItemPeer(FrameworkElement owner, Automat
 {
     protected override AutomationControlType GetAutomationControlTypeCore() => type;
 
-    protected override string GetClassNameCore() => owner.GetType().Name;
+    protected override string GetClassNameCore() => Owner.GetType().Name;
 
     protected override bool IsControlElementCore() => true;
 
@@ -31,11 +31,11 @@ internal sealed partial class SelectableItemPeer(FrameworkElement owner, Automat
     protected override object? GetPatternCore(PatternInterface pattern) =>
         pattern == PatternInterface.SelectionItem ? this : base.GetPatternCore(pattern);
 
-    public bool IsSelected => ((ISelectableItem)owner).IsSelectedItem;
+    public bool IsSelected => ((ISelectableItem)Owner).IsSelectedItem;
 
     public IRawElementProviderSimple? SelectionContainer => null;
 
-    public void Select() => ((ISelectableItem)owner).SelectItem();
+    public void Select() => ((ISelectableItem)Owner).SelectItem();
 
     public void AddToSelection() => Select();
 

@@ -1382,6 +1382,15 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord.StartsWith("test:menu:"))
+            {
+                // The context menu as a right-click on viewport cell "col:row" of the focused pane opens it.
+                var cell = chord["test:menu:".Length..].Split(':');
+                Log.Write($"test {chord}");
+                Ui.Guard("test:menu", () => tab.Active.Control.ShowContextMenuAtCell(int.Parse(cell[0]), int.Parse(cell[1])));
+                return;
+            }
+
             if (chord.StartsWith("test:drop:"))
             {
                 // Files dropped on the focused pane ("|" between paths), without a real drag.

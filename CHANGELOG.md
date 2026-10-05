@@ -6,6 +6,15 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### New
+- A menu on right-click in a terminal: copy, paste and find; open or copy the link you clicked; copy the command you
+  clicked, or select or copy its output (with shell integration); split, new tab, close. Each item shows its key.
+  Shift+F10 or the Menu key opens it at the cursor.
+
+### Changed
+- Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set
+  Terminal > Mouse > Right-click to "Copy or paste" (or "Paste").
+
 ## 0.1.0-dev.306 (2026-10-05)
 
 ### New

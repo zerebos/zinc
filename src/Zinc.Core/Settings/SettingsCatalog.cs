@@ -330,6 +330,16 @@ public static class SettingsCatalog
         new("terminal", "Mouse", "terminal.click-to-move", "Click to move the cursor",
             "At a shell prompt, clicking in the command you're typing moves the cursor there. Needs shell integration.",
             SettingKind.Toggle, true),
+        new("terminal", "Mouse", "terminal.right-click", "Right-click", "Shift+F10 or the Menu key opens the menu anywhere.",
+            SettingKind.Choice, "menu")
+            {
+                Choices =
+                [
+                    new("Menu", "menu", "Copy, paste, find, the link or command you clicked, split and close."),
+                    new("Copy or paste", "copy-paste", "Copies a selection, or pastes when there's none."),
+                    new("Paste", "paste"),
+                ],
+            },
         new("terminal", "Mouse", "terminal.link-click", "Open links with", "Web links and files shown in the terminal.",
             SettingKind.Choice, "ctrl")
             {
