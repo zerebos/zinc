@@ -96,6 +96,8 @@ if ($InstallGitHook) {
 #!/bin/sh
 $hookMarker
 # Reinstall Zinc in the background after each commit (scripts/install.ps1 -RemoveGitHook to undo).
+# Only on main: commits on other branches (experiments) never replace the installed copy.
+[ "`$(git rev-parse --abbrev-ref HEAD)" = "main" ] || exit 0
 log="`$(git rev-parse --git-dir)/zinc-install.log"
 nohup pwsh -NoProfile -File scripts/install.ps1 -Quiet > "`$log" 2>&1 &
 "@ -replace "`r", '' | Set-Content -NoNewline -Encoding utf8NoBOM $hook
