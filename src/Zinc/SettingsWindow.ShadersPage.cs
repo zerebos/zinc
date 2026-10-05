@@ -112,7 +112,7 @@ internal sealed partial class SettingsWindow
         }
 
         // The group title's margins on the row, so the arrow centers on the title's text, not on its margins too.
-        var inUse = GroupTitle("In use");
+        var inUse = PartTitle("In use");
         var listTitle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = inUse.Margin, Children = { inUse, reset } };
         inUse.Margin = new Thickness(0);
         inUse.VerticalAlignment = VerticalAlignment.Center;
@@ -130,8 +130,7 @@ internal sealed partial class SettingsWindow
 
         // ---- Library, as the Store's: a heading with the count; one toolbar row on the page (where from as pills, a search,
         // a menu for folders and files); then each shader as a card of its own, under a heading per source.
-        var libraryTitle = GroupTitle("Library");
-        _page.Children.Add(libraryTitle);
+        var libraryTitle = PartTitle("Library");
         var sources = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         AutomationProperties.SetName(sources, "Where the shaders come from");
         var filter = new TextBox { PlaceholderText = "Search", Text = _shaderQuery, Width = 240, VerticalAlignment = VerticalAlignment.Center };
@@ -160,7 +159,10 @@ internal sealed partial class SettingsWindow
         };
         Grid.SetColumn(filter, 1);
         Grid.SetColumn(more, 2);
-        _page.Children.Add(toolbar);
+        // The heading and the toolbar stay in view once the library's scrolled to (StickLibraryHeader).
+        var libraryHeader = new StackPanel { Children = { libraryTitle, toolbar } };
+        _page.Children.Add(libraryHeader);
+        _stickLibrary = () => StickLibraryHeader(libraryHeader);
         var status = ErrorText(); // only when something went wrong (reading the folders)
         _page.Children.Add(status);
         var library = new StackPanel { Spacing = 4 };
@@ -237,7 +239,7 @@ internal sealed partial class SettingsWindow
 
                 if (loaded.Errors.Count == 0)
                 {
-                    SetText(row.Detail, entry.UsesTime ? "In the preview. Compiles; moves on its own: it redraws while the terminal is idle." : "In the preview. Compiles.");
+                    SetText(row.Detail, entry.UsesTime ? "In the preview. Compiles. Animated: it redraws even while the terminal is idle." : "In the preview. Compiles.");
                 }
                 else
                 {
@@ -263,7 +265,9 @@ internal sealed partial class SettingsWindow
             var name = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = entry.Name, FontWeight = FontWeights.SemiBold } } };
             if (entry.UsesTime)
             {
-                name.Children.Add(new TextBlock { Text = "moves on its own", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center });
+                var animated = new TextBlock { Text = "Animated", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
+                ToolTipService.SetToolTip(animated, "Redraws even while the terminal is idle (Animation sets when).");
+                name.Children.Add(animated);
             }
 
             name.Children.Add(inUse);
@@ -391,8 +395,6 @@ internal sealed partial class SettingsWindow
                 if (_shaderSource == null)
                 {
                     var heading = GroupTitle($"{section.Title} · {section.Shaders.Count}");
-                    heading.FontWeight = FontWeights.Normal;
-                    heading.Opacity = 0.9;
                     if (library.Children.Count == 0)
                     {
                         heading.Margin = new Thickness(0, 8, 0, 6);
@@ -575,10 +577,90 @@ internal sealed partial class SettingsWindow
             ApplyShaderPreview(); // a reload shows the config in force: the previewed one goes back on top
         });
         _shaderRows = RefreshList;
+        HookLibrarySticking();
         WatchShaderFiles();
         Quietly(RefreshList);
         library.Children.Add(DescriptionText("Reading the shaders…"));
         LoadLibrary();
+    }
+
+    /// <summary>A heading for a part of a page ("In use", "Library"): one size up from a group's.</summary>
+    private static TextBlock PartTitle(string title) =>
+        new() { Text = title, FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 24, 0, 8) };
+
+    // The library's heading and toolbar, kept in view: moved into the pinned area (under the preview) once scrolled up to
+    // it, back when scrolled above it. A spacer of its height takes its place in the page, and the scroll moves by that
+    // height each way, so nothing on screen jumps.
+    private Action? _stickLibrary;
+    private bool _libraryPinned;
+    private Border? _librarySpacer;
+    private bool _sticking;
+    private bool _stickHooked;
+
+    private void StickLibraryHeader(StackPanel header)
+    {
+        if (_sticking || !_editingShaders || _scroller.Content is not UIElement content)
+        {
+            return;
+        }
+
+        _sticking = true;
+        try
+        {
+            if (!_libraryPinned)
+            {
+                var top = header.TransformToVisual(content).TransformPoint(default).Y;
+                var height = header.ActualHeight;
+                if (height > 0 && _scroller.VerticalOffset >= top)
+                {
+                    var at = _page.Children.IndexOf(header);
+                    if (at < 0)
+                    {
+                        return;
+                    }
+
+                    _librarySpacer = new Border { Height = height };
+                    _page.Children.RemoveAt(at);
+                    _page.Children.Insert(at, _librarySpacer);
+                    _pinned.Children.Add(header);
+                    _libraryPinned = true;
+                    _scroller.ChangeView(null, _scroller.VerticalOffset + height, null, disableAnimation: true);
+                }
+            }
+            else if (_librarySpacer is { } spacer)
+            {
+                var top = spacer.TransformToVisual(content).TransformPoint(default).Y;
+                var height = spacer.Height;
+                if (_scroller.VerticalOffset < top + height)
+                {
+                    _pinned.Children.Remove(header);
+                    var at = _page.Children.IndexOf(spacer);
+                    _page.Children.RemoveAt(at);
+                    _page.Children.Insert(at, header);
+                    _libraryPinned = false;
+                    _librarySpacer = null;
+                    _scroller.ChangeView(null, Math.Max(0, _scroller.VerticalOffset - height), null, disableAnimation: true);
+                }
+            }
+        }
+        catch (ArgumentException)
+        {
+            // not in the tree (a page being rebuilt)
+        }
+        finally
+        {
+            _sticking = false;
+        }
+    }
+
+    /// <summary>Hooks the scroller once: each scroll lets the shaders page keep its library header in view.</summary>
+    private void HookLibrarySticking()
+    {
+        if (!_stickHooked)
+        {
+            _stickHooked = true;
+            _scroller.ViewChanged += (_, _) => _stickLibrary?.Invoke();
+        }
     }
 
     // Folders taken out since config.toml was last read (gone from the library at once).

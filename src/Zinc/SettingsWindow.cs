@@ -273,6 +273,9 @@ internal sealed partial class SettingsWindow : Window
         _cards.Clear();
         _foldOf.Clear();
         _jumps.Clear();
+        _stickLibrary = null; // a page of its own sets it again
+        _libraryPinned = false;
+        _librarySpacer = null;
         var query = _search.Text.Trim();
         var heading = new TextBlock
         {

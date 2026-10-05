@@ -244,7 +244,8 @@ internal sealed partial class SettingsWindow
                 icon.Glyph = ""; // check mark
                 icon.Foreground = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
                 icon.Opacity = 1;
-                SetText(state, loaded.Shaders[0].UsesTime ? "Compiles. Moves on its own." : "Compiles.");
+                SetText(state, loaded.Shaders[0].UsesTime ? "Compiles. Animated." : "Compiles.");
+                ToolTipService.SetToolTip(state, loaded.Shaders[0].UsesTime ? "Animated: it redraws even while the terminal is idle (Animation sets when)." : null);
             }
             else
             {

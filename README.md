@@ -297,7 +297,7 @@ shaders written for Ghostty work unchanged
 - Settings > Appearance > Shaders > **Edit shaders** opens their own page, the preview at the top. **In use**:
   your list, in order, with whether each compiles (and why not), to reorder, open in your editor or remove; and
   Animation. **Library**: Zinc's shaders, yours (`shaders\` next to config.toml) and those in folders you added,
-  each a card with a line about it (its first comment), whether it moves on its own and whether it's in use;
+  each a card with a line about it (its first comment), whether it's animated and whether it's in use;
   pills choose where from, the search box filters, and the **…** menu adds a folder or a file, or stops listing a
   folder. Click a card to run it in the preview after yours (and see whether it compiles), click it again to
   take it back; **Add** / **Remove** changes the list (Enter does too; arrows move between shaders). A profile's
