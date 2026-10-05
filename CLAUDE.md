@@ -6,6 +6,10 @@ Win2D. See README.md for user-facing docs. Session history, open issues and the
 test harness live in `.scratch/` (gitignored; read `.scratch/NOTES.md` first if it exists: its top section,
 ROADMAP, is the current list of what's next, kept up to date with the user).
 
+**Any text shown in the product** (labels, buttons, descriptions, tooltips, dialogs, notices, errors, the palette,
+the welcome and About pages, zn's output) **follows `docs/ux-writing.md`** where it can: read it before writing new
+UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
+
 ## Build / run
 
 - `scripts/build-libghostty.sh x64` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit).
