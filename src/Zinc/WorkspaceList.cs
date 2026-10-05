@@ -154,7 +154,7 @@ internal sealed partial class WorkspaceList : Grid
         {
             if (_page == null)
             {
-                _page = new PageItem { Compact = _compact };
+                _page = new PageItem { Compact = _compact, Selecting = () => PageClicked?.Invoke() };
                 _page.Tapped += (_, e) =>
                 {
                     e.Handled = true;
@@ -211,7 +211,7 @@ internal sealed partial class WorkspaceList : Grid
     {
         if (!_byTab.TryGetValue(tab, out var item))
         {
-            item = new Item(tab) { Compact = _compact };
+            item = new Item(tab) { Compact = _compact, Selecting = () => ItemClicked?.Invoke(tab) };
             item.Tapped += (_, e) =>
             {
                 e.Handled = true;
@@ -325,7 +325,7 @@ internal sealed partial class WorkspaceList : Grid
 
     /// <summary>One workspace: icon + title, close button (the list draws the selection pill).</summary>
     /// <summary>The new-workspace page's entry: + and "New workspace", highlighted while shown, with a close button.</summary>
-    private sealed partial class PageItem : Grid
+    private sealed partial class PageItem : Grid, ISelectableItem
     {
         private readonly StackPanel _label;
         private readonly TextBlock _text = new() { Text = "New workspace", VerticalAlignment = VerticalAlignment.Center };
@@ -377,6 +377,16 @@ internal sealed partial class WorkspaceList : Grid
 
         public event Action? CloseClicked;
 
+        /// <summary>What a click does (set by the list), for screen readers selecting it.</summary>
+        public Action? Selecting { get; set; }
+
+        public bool IsSelectedItem => _selected;
+
+        public void SelectItem() => Selecting?.Invoke();
+
+        protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
+            new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.ListItem);
+
         public bool Compact
         {
             set
@@ -405,7 +415,7 @@ internal sealed partial class WorkspaceList : Grid
         }
     }
 
-    private sealed partial class Item : Grid
+    private sealed partial class Item : Grid, ISelectableItem
     {
         private readonly Button _close;
 
@@ -472,6 +482,16 @@ internal sealed partial class WorkspaceList : Grid
         }
 
         public event Action? CloseClicked;
+
+        /// <summary>What a click does (set by the list), for screen readers selecting it.</summary>
+        public Action? Selecting { get; set; }
+
+        public bool IsSelectedItem => _selected;
+
+        public void SelectItem() => Selecting?.Invoke();
+
+        protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
+            new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.ListItem);
 
         public bool Compact
         {

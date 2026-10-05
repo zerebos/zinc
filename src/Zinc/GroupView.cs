@@ -296,7 +296,7 @@ internal sealed partial class GroupView : Grid
     {
         if (!_items.TryGetValue(tab, out var item))
         {
-            item = new TabItem(tab);
+            item = new TabItem(tab) { Selecting = () => TabClicked?.Invoke(tab) };
             item.Tapped += (_, e) =>
             {
                 e.Handled = true;
@@ -327,7 +327,7 @@ internal sealed partial class GroupView : Grid
     }
 
     /// <summary>One tab in the strip: icon, title, close button.</summary>
-    private sealed partial class TabItem : Grid
+    private sealed partial class TabItem : Grid, ISelectableItem
     {
         private readonly TextBlock _title = new()
         {
@@ -413,6 +413,16 @@ internal sealed partial class GroupView : Grid
         }
 
         public event Action? CloseClicked;
+
+        /// <summary>What a click does (set by the list), for screen readers selecting it.</summary>
+        public Action? Selecting { get; set; }
+
+        public bool IsSelectedItem => _active;
+
+        public void SelectItem() => Selecting?.Invoke();
+
+        protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
+            new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.TabItem);
 
         private void ShowSlot()
         {

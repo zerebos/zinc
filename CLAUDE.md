@@ -867,6 +867,9 @@ and read state after the write (see `_titleDirty`).
 - Set a tab's content once (a Grid) and rebuild inside it: a ContentControl's old content
   isn't detached until its next layout pass.
 - Panels (Grid) have no OnPointer* overrides — subscribe to PointerPressed etc.
+- Panels have no automation peer either: an `AutomationProperties.Name` on a Grid reaches no screen reader. Items
+  built from panels (sidebar workspaces, pane tabs) use `SelectableItemPeer` (ListItem/TabItem, Select = a click;
+  2026-10-05, found when the dots got words). `uia.ps1 -Action list` prints ListItems too.
 - Standalone ScrollBar: `IndicatorMode.None` *hides* it (it doesn't mean "full bar"). Widen with
   `VisualStateManager.GoToState(bar, "Expanded"/"Collapsed")` (what ScrollViewer does); GoToState
   returns false until the template has applied. Expansion is driven by a right-edge hot zone as

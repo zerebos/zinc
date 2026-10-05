@@ -36,6 +36,8 @@ is the version it builds, and hands it to the installer as the release notes).
   and how long.
 
 ### Fixed
+- Screen readers can now find and pick workspaces in the sidebar and tabs in a pane's tab strip. Before, they
+  skipped them entirely.
 - Arrow keys in the workspace icon and color choosers picked the next one and closed the menu. They move between
   choices now; Enter, Space or a click picks.
 - Settings: the preview at the top of Appearance and profile pages lost its first lines for good when its rows got
