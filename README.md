@@ -297,13 +297,13 @@ shaders written for Ghostty work unchanged
 - Settings > Appearance > Shaders > **Edit shaders** opens their own page, the preview at the top. **In use**:
   your list, in order, with whether each compiles (and why not), to reorder, open in your editor or remove; and
   Animation. **Library**: Zinc's shaders, yours (`shaders\` next to config.toml) and those in folders you added,
-  each with a line about it (its first comment) and whether it moves on its own, filtered by name or by where it
-  comes from. Click one to run it in the preview after yours (and see whether it compiles), click it again to
+  each a card with a line about it (its first comment), whether it moves on its own and whether it's in use;
+  pills choose where from, the search box filters, and the **…** menu adds a folder or a file, or stops listing a
+  folder. Click a card to run it in the preview after yours (and see whether it compiles), click it again to
   take it back; **Add** / **Remove** changes the list (Enter does too; arrows move between shaders). A profile's
   page has the same, inherited until you change it there.
 - `folders`: folders of shaders the library lists, a collection you cloned for instance
-  (`folders = ["~/dev/ghostty-shaders"]`). The page's "Add a folder…" and the folder chips (to stop listing one)
-  write it for you.
+  (`folders = ["~/dev/ghostty-shaders"]`). The library's **…** menu writes it for you.
 - Profiles can have their own (`[profile.x.shaders]`, `files = []` for none). Shaders need
   `low-latency-drawing` (the default). What a shader gets: all of Ghostty's uniforms: the picture so far
   (`iChannel0`), size, time, frame, date, focus, the cursor (where and how it's drawn, the previous one and

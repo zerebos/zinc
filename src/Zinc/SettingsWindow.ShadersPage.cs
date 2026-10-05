@@ -13,7 +13,7 @@ namespace Zinc;
 
 // The shaders page: a sub-page of Appearance (or of a profile's page), opened by the Custom shaders card's Edit shaders.
 // The list in force (order, compile state, open, remove) and its Animation setting; then the library: Zinc's shaders,
-// yours and the folders you added, filtered by name or source. A click on a shader runs it in the preview above, after
+// yours and the folders you added (Store-style: pills for where from, a search, a card per shader). A click on a shader runs it in the preview above, after
 // the list's own, and checks it compiles; a click again takes it back. Add or Remove changes the list.
 internal sealed partial class SettingsWindow
 {
@@ -128,47 +128,55 @@ internal sealed partial class SettingsWindow
         var animation = SettingsCatalog.Find("shaders.animation")!;
         _page.Children.Add(profile == null ? Card(animation) : OverrideCard(animation, profile));
 
-        // ---- Library
-        _page.Children.Add(GroupTitle("Library"));
-        var filter = new TextBox { PlaceholderText = "Filter by name or description", Text = _shaderQuery };
-        AutomationProperties.SetName(filter, "Filter shaders");
-        // Where from, as tabs above the search (a view of the library, not a filter on the results).
-        var sources = new SelectorBar();
+        // ---- Library, as the Store's: a heading with the count; one toolbar row on the page (where from as pills, a search,
+        // a menu for folders and files); then each shader as a card of its own, under a heading per source.
+        var libraryTitle = GroupTitle("Library");
+        _page.Children.Add(libraryTitle);
+        var sources = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         AutomationProperties.SetName(sources, "Where the shaders come from");
-        var count = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
-        var searchRow = new Grid
+        var filter = new TextBox { PlaceholderText = "Search", Text = _shaderQuery, Width = 240, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetName(filter, "Search shaders");
+        var more = new Button
         {
-            ColumnSpacing = 12,
-            ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto } },
-            Children = { filter, count },
+            Content = new FontIcon { Glyph = "", FontSize = 14 }, // more (…)
+            Padding = new Thickness(10, 8, 10, 8),
+            VerticalAlignment = VerticalAlignment.Center,
         };
-        Grid.SetColumn(count, 1);
-        var status = DescriptionText();
-        AutomationProperties.SetLiveSetting(status, Microsoft.UI.Xaml.Automation.Peers.AutomationLiveSetting.Polite);
-        var library = new StackPanel { Spacing = 2 };
-        var folders = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        var libraryCard = CardBorder(new StackPanel
+        ToolTipService.SetToolTip(more, "Folders and files");
+        AutomationProperties.SetName(more, "Folders and files");
+        var pills = new ScrollViewer
         {
-            Spacing = 8,
-            Children =
-            {
-                new ScrollViewer { Content = sources, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled },
-                searchRow, status, library,
-            },
-        });
-        _page.Children.Add(libraryCard);
-        _page.Children.Add(new ScrollViewer { Content = folders, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, Margin = new Thickness(0, 4, 0, 0) });
+            Content = sources,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        var toolbar = new Grid
+        {
+            ColumnSpacing = 8,
+            Margin = new Thickness(0, 0, 0, 4),
+            ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
+            Children = { pills, filter, more },
+        };
+        Grid.SetColumn(filter, 1);
+        Grid.SetColumn(more, 2);
+        _page.Children.Add(toolbar);
+        var status = ErrorText(); // only when something went wrong (reading the folders)
+        _page.Children.Add(status);
+        var library = new StackPanel { Spacing = 4 };
+        _page.Children.Add(library);
 
-        // A row per shader: what it is (a click previews it), and Add or Remove.
-        var rowsByFile = new Dictionary<string, (Border Row, Button Toggle, TextBlock Detail, ShaderEntry Entry)>(StringComparer.OrdinalIgnoreCase);
-        var wideButtons = new List<Button>();
+        // A card per shader: a click previews it (again: stops); "In use" when the list has it; Add or Remove; a menu.
+        var rowsByFile = new Dictionary<string, (Button Card, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry)>(StringComparer.OrdinalIgnoreCase);
+        var cards = new List<Button>();
 
         bool InList(ShaderEntry entry) => ShownShaderFiles(profile).Contains(entry.File, StringComparer.OrdinalIgnoreCase);
 
-        void ShowToggle((Border Row, Button Toggle, TextBlock Detail, ShaderEntry Entry) row)
+        void ShowToggle((Button Card, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry) row)
         {
             var inList = InList(row.Entry);
             row.Toggle.Content = inList ? "Remove" : "Add";
+            row.InUse.Visibility = inList ? Visibility.Visible : Visibility.Collapsed;
             AutomationProperties.SetName(row.Toggle, $"{(inList ? "Remove" : "Add")} {row.Entry.Name}");
         }
 
@@ -177,8 +185,7 @@ internal sealed partial class SettingsWindow
             foreach (var row in rowsByFile.Values)
             {
                 var on = row.Entry.File.Equals(_previewedShader, StringComparison.OrdinalIgnoreCase);
-                row.Row.Background = on ? (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"] : null;
-                row.Row.BorderBrush = on ? (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"] : null;
+                row.Card.BorderBrush = (Brush)Application.Current.Resources[on ? "AccentFillColorDefaultBrush" : "CardStrokeColorDefaultBrush"];
                 if (!on)
                 {
                     row.Detail.Visibility = Visibility.Collapsed;
@@ -189,13 +196,13 @@ internal sealed partial class SettingsWindow
         void Toggle(ShaderEntry entry)
         {
             var files = ShownShaders(profile);
-            var removing = InList(entry); // (read before saving: the list changes once config.toml is read again)
-            var saved = removing
-                ? SaveShaders(profile, [.. files.Where(w => !ShaderPaths.Resolve(w, _config.Path).Equals(entry.File, StringComparison.OrdinalIgnoreCase))], error)
-                : SaveShaders(profile, [.. files, entry.Written], error);
-            if (saved)
+            if (InList(entry))
             {
-                SetText(status, removing ? $"{entry.Name}: taken out of the list." : $"{entry.Name}: added to the list.");
+                SaveShaders(profile, [.. files.Where(w => !ShaderPaths.Resolve(w, _config.Path).Equals(entry.File, StringComparison.OrdinalIgnoreCase))], error);
+            }
+            else
+            {
+                SaveShaders(profile, [.. files, entry.Written], error);
             }
         }
 
@@ -206,7 +213,6 @@ internal sealed partial class SettingsWindow
                 _previewedShader = null; // the same one again: back to the list as it is
                 ShowPreviewed();
                 ApplyShaderPreview();
-                SetText(status, "");
                 return;
             }
 
@@ -231,7 +237,7 @@ internal sealed partial class SettingsWindow
 
                 if (loaded.Errors.Count == 0)
                 {
-                    SetText(row.Detail, entry.UsesTime ? "Compiles. Moves on its own: it redraws while the terminal is idle." : "Compiles.");
+                    SetText(row.Detail, entry.UsesTime ? "In the preview. Compiles; moves on its own: it redraws while the terminal is idle." : "In the preview. Compiles.");
                 }
                 else
                 {
@@ -245,40 +251,95 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        Border Row(ShaderEntry entry)
+        Button ShaderCard(ShaderEntry entry)
         {
+            var inUse = new TextBlock
+            {
+                Text = "✓ In use",
+                FontSize = 12,
+                Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+                VerticalAlignment = VerticalAlignment.Center,
+            };
             var name = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { new TextBlock { Text = entry.Name, FontWeight = FontWeights.SemiBold } } };
             if (entry.UsesTime)
             {
                 name.Children.Add(new TextBlock { Text = "moves on its own", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center });
             }
 
-            var text = new StackPanel { Spacing = 2, Children = { name } };
-            // A line about it, or a note there isn't one (the rows keep one height, and their buttons apart).
-            text.Children.Add(entry.Description is { } about
-                ? new TextBlock { Text = about, Opacity = 0.75, TextWrapping = TextWrapping.Wrap }
-                : new TextBlock { Text = "No description in the file.", Opacity = 0.5, FontStyle = Windows.UI.Text.FontStyle.Italic });
-
+            name.Children.Add(inUse);
             var detail = DescriptionText();
             detail.Visibility = Visibility.Collapsed;
-            text.Children.Add(detail);
-            var wide = new Button
+            var text = new StackPanel
             {
-                Content = text,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Spacing = 2,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children =
+                {
+                    name,
+                    // A line about it, or a note there isn't one (the cards keep one height).
+                    entry.Description is { } about
+                        ? new TextBlock { Text = about, FontSize = 12, Opacity = 0.75, TextWrapping = TextWrapping.Wrap }
+                        : new TextBlock { Text = "No description in the file.", FontSize = 12, Opacity = 0.5, FontStyle = Windows.UI.Text.FontStyle.Italic },
+                    detail,
+                },
+            };
+
+            var toggle = new Button { VerticalAlignment = VerticalAlignment.Center, MinWidth = 96 };
+            toggle.Click += (_, _) => Toggle(entry);
+            var menu = new MenuFlyout();
+            var open = new MenuFlyoutItem { Text = "Open in an editor" };
+            open.Click += (_, _) => OpenShader(entry.File);
+            var reveal = new MenuFlyoutItem { Text = "Show in its folder" };
+            reveal.Click += (_, _) => Reveal(entry.File);
+            menu.Items.Add(open);
+            menu.Items.Add(reveal);
+            var options = new Button
+            {
+                Content = new FontIcon { Glyph = "", FontSize = 14 },
+                Flyout = menu,
+                Padding = new Thickness(10, 8, 10, 8),
+                VerticalAlignment = VerticalAlignment.Center,
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                 BorderThickness = new Thickness(0),
-                Padding = new Thickness(8, 6, 8, 6),
             };
-            AutomationProperties.SetName(wide, entry.Name);
-            AutomationProperties.SetHelpText(wide, $"{entry.Description} Click to preview; Enter adds or removes.".Trim());
-            ToolTipService.SetToolTip(wide, entry.File);
-            wide.Click += (_, _) => Preview(entry);
-            // Enter adds or removes (Space previews: a button's click); arrows move between shaders.
-            wide.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler((_, e) =>
+            ToolTipService.SetToolTip(options, "More");
+            AutomationProperties.SetName(options, $"More for {entry.Name}");
+
+            var grid = new Grid
             {
-                var at = wideButtons.IndexOf(wide);
+                ColumnSpacing = 8,
+                ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto }, new() { Width = GridLength.Auto } },
+                Children = { text, toggle, options },
+            };
+            Grid.SetColumn(toggle, 1);
+            Grid.SetColumn(options, 2);
+
+            // The card itself is the button (its hover covers all of it, the Add button too); the buttons in it take their
+            // own clicks.
+            var card = new Button
+            {
+                Content = grid,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(16, 10, 8, 10),
+                CornerRadius = new CornerRadius(4),
+                Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"],
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                BorderThickness = new Thickness(1),
+            };
+            AutomationProperties.SetName(card, entry.Name);
+            AutomationProperties.SetHelpText(card, $"{entry.Description} Click to preview; Enter adds or removes.".Trim());
+            ToolTipService.SetToolTip(card, entry.File);
+            card.Click += (_, _) => Preview(entry);
+            // Enter adds or removes (Space previews: a button's click); arrows move between shaders.
+            card.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler((s, e) =>
+            {
+                if (!ReferenceEquals(e.OriginalSource, card))
+                {
+                    return; // a key on the Add or menu button inside
+                }
+
+                var at = cards.IndexOf(card);
                 if (e.Key == Windows.System.VirtualKey.Enter)
                 {
                     Toggle(entry);
@@ -287,37 +348,26 @@ internal sealed partial class SettingsWindow
                 else if (e.Key is Windows.System.VirtualKey.Down or Windows.System.VirtualKey.Up)
                 {
                     var next = at + (e.Key == Windows.System.VirtualKey.Down ? 1 : -1);
-                    if (next >= 0 && next < wideButtons.Count)
+                    if (next >= 0 && next < cards.Count)
                     {
-                        wideButtons[next].Focus(FocusState.Keyboard);
-                        wideButtons[next].StartBringIntoView();
+                        cards[next].Focus(FocusState.Keyboard);
+                        cards[next].StartBringIntoView();
                     }
 
                     e.Handled = true;
                 }
             }), handledEventsToo: true);
-            wideButtons.Add(wide);
-
-            var toggle = new Button { VerticalAlignment = VerticalAlignment.Center, MinWidth = 88 };
-            toggle.Click += (_, _) => Toggle(entry);
-            var grid = new Grid
-            {
-                ColumnSpacing = 8,
-                ColumnDefinitions = { new() { Width = new GridLength(1, GridUnitType.Star) }, new() { Width = GridLength.Auto } },
-                Children = { wide, toggle },
-            };
-            Grid.SetColumn(toggle, 1);
-            var row = new Border { Child = grid, CornerRadius = new CornerRadius(4), BorderThickness = new Thickness(1), Padding = new Thickness(0, 0, 8, 0) };
-            rowsByFile[entry.File] = (row, toggle, detail, entry);
+            cards.Add(card);
+            rowsByFile[entry.File] = (card, toggle, inUse, detail, entry);
             ShowToggle(rowsByFile[entry.File]);
-            return row;
+            return card;
         }
 
         void FillLibrary()
         {
             library.Children.Clear();
             rowsByFile.Clear();
-            wideButtons.Clear();
+            cards.Clear();
             var query = _shaderQuery.Trim();
             var shown = 0;
             var all = 0;
@@ -336,51 +386,39 @@ internal sealed partial class SettingsWindow
                     continue;
                 }
 
-                // Under All, a heading per source (its name, how many, its folder, a line under); under one source's tab,
-                // only its folder (the tab names it).
-                var header = new StackPanel { Spacing = 2, Margin = new Thickness(8, library.Children.Count == 0 ? 4 : 20, 8, 4) };
+                // Under All, a heading per source, as every group in Settings (with its count), and its folder; under one
+                // source's pill, only its folder.
                 if (_shaderSource == null)
                 {
-                    header.Children.Add(new TextBlock
+                    var heading = GroupTitle($"{section.Title} · {section.Shaders.Count}");
+                    heading.FontWeight = FontWeights.Normal;
+                    heading.Opacity = 0.9;
+                    if (library.Children.Count == 0)
                     {
-                        Text = $"{section.Title} · {section.Shaders.Count}",
-                        FontSize = 16,
-                        FontWeight = FontWeights.SemiBold,
-                    });
+                        heading.Margin = new Thickness(0, 8, 0, 6);
+                    }
+
+                    library.Children.Add(heading);
                 }
 
                 if (section.Folder != null)
                 {
-                    header.Children.Add(new TextBlock
+                    library.Children.Add(new TextBlock
                     {
                         Text = section.Missing ? $"Not found: {section.Folder}" : section.Folder,
                         FontSize = 12, Opacity = 0.7, TextTrimming = TextTrimming.CharacterEllipsis,
+                        Margin = new Thickness(0, _shaderSource == null ? -4 : 4, 0, 4),
                     });
-                }
-
-                if (_shaderSource == null)
-                {
-                    header.Children.Add(new Microsoft.UI.Xaml.Shapes.Rectangle
-                    {
-                        Height = 1,
-                        Margin = new Thickness(0, 6, 0, 0),
-                        Fill = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"],
-                    });
-                }
-
-                if (header.Children.Count > 0)
-                {
-                    library.Children.Add(header);
                 }
 
                 foreach (var entry in matches)
                 {
-                    library.Children.Add(Row(entry));
+                    library.Children.Add(ShaderCard(entry));
                     shown++;
                 }
             }
 
-            count.Text = query.Length > 0 ? $"{shown} of {all} shaders" : all == 1 ? "1 shader" : $"{all} shaders";
+            libraryTitle.Text = query.Length > 0 ? $"Library · {shown} of {all} shaders" : all == 1 ? "Library · 1 shader" : $"Library · {all} shaders";
             if (shown == 0 && _shaderLibrary.Count > 0)
             {
                 library.Children.Add(DescriptionText(query.Length > 0 ? $"Nothing matches “{query}”." : "No shaders here."));
@@ -391,70 +429,41 @@ internal sealed partial class SettingsWindow
 
         void FillSources()
         {
-            _fillingSources = true;
-            try
+            sources.Children.Clear();
+            if (_shaderSource != null && _shaderLibrary.All(s => s.Title != _shaderSource))
             {
-                sources.Items.Clear();
-                if (_shaderSource != null && _shaderLibrary.All(s => s.Title != _shaderSource))
-                {
-                    _shaderSource = null; // its folder is gone
-                }
-
-                foreach (var title in _shaderLibrary.Select(s => s.Title).Prepend(null))
-                {
-                    var tab = new SelectorBarItem { Text = title ?? "All", Tag = title };
-                    sources.Items.Add(tab);
-                    if (title == _shaderSource)
-                    {
-                        sources.SelectedItem = tab;
-                    }
-                }
+                _shaderSource = null; // its folder is gone
             }
-            finally
+
+            foreach (var title in _shaderLibrary.Select(s => s.Title).Prepend(null))
             {
-                _fillingSources = false;
+                // Pills, as the Store's: the one shown is checked (accent).
+                var pill = new ToggleButton
+                {
+                    Content = title ?? "All",
+                    IsChecked = title == _shaderSource,
+                    CornerRadius = new CornerRadius(16),
+                    Padding = new Thickness(16, 5, 16, 6),
+                };
+                pill.Click += (_, _) =>
+                {
+                    _shaderSource = title;
+                    foreach (var other in sources.Children.OfType<ToggleButton>())
+                    {
+                        other.IsChecked = ReferenceEquals(other, pill);
+                    }
+
+                    FillLibrary();
+                };
+                sources.Children.Add(pill);
             }
         }
 
-        sources.SelectionChanged += (_, _) =>
+        // The toolbar's menu: add a folder or a file; stop listing a folder you added.
+        void FillMenu()
         {
-            if (!_fillingSources && sources.SelectedItem is SelectorBarItem tab)
-            {
-                _shaderSource = tab.Tag as string;
-                FillLibrary();
-            }
-        };
-
-        void FillFolders()
-        {
-            folders.Children.Clear();
-            foreach (var folder in ShaderFolders())
-            {
-                var name = Path.GetFileName(folder.TrimEnd('\\', '/'));
-                var chip = new Button
-                {
-                    Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Children = { new TextBlock { Text = name }, new FontIcon { Glyph = "", FontSize = 10 } } },
-                    CornerRadius = new CornerRadius(14),
-                    Padding = new Thickness(12, 4, 10, 4),
-                };
-                ToolTipService.SetToolTip(chip, $"Stop listing {folder}");
-                AutomationProperties.SetName(chip, $"Stop listing {name}");
-                chip.Click += (_, _) =>
-                {
-                    _addedShaderFolders.RemoveAll(f => f.Equals(folder, StringComparison.OrdinalIgnoreCase));
-                    WriteShaderFolders([.. WrittenShaderFolders().Where(w => !ShaderPaths.ResolveFolder(w, _config.Path).Equals(folder, StringComparison.OrdinalIgnoreCase))]);
-                    _hiddenShaderFolders.Add(folder); // gone at once, before config.toml is read again
-                    if (_shaderSource == name)
-                    {
-                        _shaderSource = null;
-                    }
-
-                    LoadLibrary();
-                };
-                folders.Children.Add(chip);
-            }
-
-            var addFolder = new Button { Content = "Add a folder…" };
+            var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
+            var addFolder = new MenuFlyoutItem { Text = "Add a folder…", Icon = new FontIcon { Glyph = "" } };
             addFolder.Click += (_, _) =>
             {
                 var folder = FolderDialog.Pick(WinRT.Interop.WindowNative.GetWindowHandle(this), ShaderFolders().LastOrDefault(), "Add a folder of shaders");
@@ -469,8 +478,8 @@ internal sealed partial class SettingsWindow
                 _shaderSource = Path.GetFileName(folder.TrimEnd('\\', '/'));
                 LoadLibrary();
             };
-            var fromFile = new Button { Content = "Add a file…" };
-            fromFile.Click += async (_, _) =>
+            var addFile = new MenuFlyoutItem { Text = "Add a file…", Icon = new FontIcon { Glyph = "" } };
+            addFile.Click += async (_, _) =>
             {
                 // Code after an await resumes as queued work, where an exception would end the app.
                 try
@@ -487,8 +496,35 @@ internal sealed partial class SettingsWindow
                     Show(error, $"Couldn't open the file picker: {ex.Message}");
                 }
             };
-            folders.Children.Add(addFolder);
-            folders.Children.Add(fromFile);
+            menu.Items.Add(addFolder);
+            menu.Items.Add(addFile);
+            var listed = ShaderFolders();
+            if (listed.Count > 0)
+            {
+                menu.Items.Add(new MenuFlyoutSeparator());
+            }
+
+            foreach (var folder in listed)
+            {
+                var name = Path.GetFileName(folder.TrimEnd('\\', '/'));
+                var stop = new MenuFlyoutItem { Text = $"Stop listing {name}", Icon = new FontIcon { Glyph = "" } };
+                ToolTipService.SetToolTip(stop, folder);
+                stop.Click += (_, _) =>
+                {
+                    _addedShaderFolders.RemoveAll(f => f.Equals(folder, StringComparison.OrdinalIgnoreCase));
+                    WriteShaderFolders([.. WrittenShaderFolders().Where(w => !ShaderPaths.ResolveFolder(w, _config.Path).Equals(folder, StringComparison.OrdinalIgnoreCase))]);
+                    _hiddenShaderFolders.Add(folder); // gone at once, before config.toml is read again
+                    if (_shaderSource == name)
+                    {
+                        _shaderSource = null;
+                    }
+
+                    LoadLibrary();
+                };
+                menu.Items.Add(stop);
+            }
+
+            more.Flyout = menu;
         }
 
         async void LoadLibrary()
@@ -504,13 +540,13 @@ internal sealed partial class SettingsWindow
                 }
 
                 FillSources();
-                FillFolders();
+                FillMenu();
                 FillLibrary();
             }
             catch (Exception ex)
             {
                 Log.Crash("listing shaders", ex);
-                SetText(status, $"Couldn't list the shaders: {ex.Message}");
+                Show(status, $"Couldn't list the shaders: {ex.Message}");
             }
         }
 
@@ -521,9 +557,9 @@ internal sealed partial class SettingsWindow
         };
         filter.KeyDown += (_, e) =>
         {
-            if (e.Key == Windows.System.VirtualKey.Down && wideButtons.Count > 0)
+            if (e.Key == Windows.System.VirtualKey.Down && cards.Count > 0)
             {
-                wideButtons[0].Focus(FocusState.Keyboard);
+                cards[0].Focus(FocusState.Keyboard);
                 e.Handled = true;
             }
         };
@@ -544,9 +580,6 @@ internal sealed partial class SettingsWindow
         library.Children.Add(DescriptionText("Reading the shaders…"));
         LoadLibrary();
     }
-
-    // The tabs are being rebuilt: their selection changes aren't the user's.
-    private bool _fillingSources;
 
     // Folders taken out since config.toml was last read (gone from the library at once).
     private readonly List<string> _hiddenShaderFolders = [];
