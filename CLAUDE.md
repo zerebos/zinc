@@ -137,6 +137,15 @@ ROADMAP, is the current list of what's next, kept up to date with the user).
   sections go after the last `[profile.*]`; other new tables at the end),
   `ShellResolver.cs` (`Resolve` for the first tab: args > ZINC_SHELL > profile;
   `ForProfile` for tabs opened later).
+- Settings batch from the Tabby/Muxy comparison (2026-10-05): child environment = Core `Pty/ChildEnvironment` (`Changes`:
+  `reload-environment` merges Windows' current variables (`Fresh` = CreateEnvironmentBlock) over Zinc's, nothing removed;
+  then `[environment]` / `[profile.x.environment]`, `%NAME%` expanded, empty = remove; shell integration and zn read the
+  result via `Inherited`; Settings card `SettingsWindow.Environment.cs`). `link-click` (ctrl|alt|click: a plain click opens
+  on release if not dragged, `_pendingLink`), `middle-click-paste`, `[window] confirm-close/confirm-quit`,
+  `pane-resize-step`, `[notify] command-finished-sound` (PlaySound alias / MessageBeep; not with a toast),
+  `[font] adjust-cell-height` (`Config.AdjustedCellHeight`; baseline moved by half), `[colors] palette-generate/-harmonious`
+  (`ghostty_color_palette_generate` in `TerminalSession.ApplyTheme`, theme-set entries kept via the skip mask),
+  `[window] explorer-menu` (Core `Shell/ExplorerMenu`, App `ExplorerIntegration`; drives pass `C:\.`, see why there).
 - `Input/KeyDecision.cs` — "character path or key encoder?" for a key press (pure, tested).
   Bindings run in the terminal's OnKeyDown; with focus elsewhere (tab strip, sidebar, a button),
   `MainWindow.OnWindowKeyDown` (Root.KeyDown, unhandled only) runs Ctrl/Alt chords through the
