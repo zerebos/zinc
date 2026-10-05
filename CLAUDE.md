@@ -826,8 +826,10 @@ and read state after the write (see `_titleDirty`).
 - Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>` (install.ps1
   computes the version like Directory.Build.props; the timestamp keeps names sortable); the
   user's Start Menu shortcut points at the newest. A post-commit hook (if installed)
-  reinstalls in the background after every commit — including Claude's; log at
-  `.git/zinc-install.log`. Installed zinc.exe processes are the user's own
+  reinstalls in the background after every commit on `main` (only `main`, since 2026-10-05: experiment branches never
+  replace the installed copy) — including Claude's; log at `.git/zinc-install.log`. **It builds the working tree
+  while it runs: after a commit on main, wait for it to finish (a new folder under versions\, no install pwsh left)
+  before switching branches or popping a stash** — once it installed a stash's uncommitted experiment as "-dirty". Installed zinc.exe processes are the user's own
   windows: never kill `Get-Process zinc` blindly — filter by Path to the dev bin/.
 
 ## Windows / WinUI / ConPTY footguns
