@@ -70,7 +70,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Insert(0, back);
         var setting = SettingsCatalog.Find("shaders.files")!;
         var error = ErrorText();
-        _page.Children.Add(Note(setting.Description + " Click one in the library to see it in the preview, and again to take it back."));
+        _page.Children.Add(Note(setting.Description + " Click a shader in the library to preview it; click again to stop."));
 
         // ---- In use
         var description = DescriptionText();
@@ -94,7 +94,7 @@ internal sealed partial class SettingsWindow
             if (!_config.Global.LowLatencyDrawing)
             {
                 var off = ErrorText();
-                off.Text = "Shaders need low-latency drawing, which is off: Terminal > Troubleshooting.";
+                off.Text = "Shaders need 'Low-latency drawing', which is off (Terminal > Troubleshooting).";
                 off.Visibility = Visibility.Visible;
                 rows.Children.Add(off);
             }
@@ -132,7 +132,7 @@ internal sealed partial class SettingsWindow
         // a menu for folders and files); then each shader as a card of its own, under a heading per source.
         var libraryTitle = PartTitle("Library");
         var sources = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-        AutomationProperties.SetName(sources, "Where the shaders come from");
+        AutomationProperties.SetName(sources, "Shader sources");
         var filter = new TextBox { PlaceholderText = "Search", Text = _shaderQuery, Width = 240, VerticalAlignment = VerticalAlignment.Center };
         AutomationProperties.SetName(filter, "Search shaders");
         var more = new Button
@@ -239,7 +239,7 @@ internal sealed partial class SettingsWindow
 
                 if (loaded.Errors.Count == 0)
                 {
-                    SetText(row.Detail, entry.UsesTime ? "In the preview. Compiles. Animated: it redraws even while the terminal is idle." : "In the preview. Compiles.");
+                    SetText(row.Detail, "In the preview. Compiles.");
                 }
                 else
                 {
@@ -266,7 +266,7 @@ internal sealed partial class SettingsWindow
             if (entry.UsesTime)
             {
                 var animated = new TextBlock { Text = "Animated", FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
-                ToolTipService.SetToolTip(animated, "Redraws even while the terminal is idle (Animation sets when).");
+                ToolTipService.SetToolTip(animated, "Keeps redrawing while the terminal is idle. The 'Animation' setting decides when.");
                 name.Children.Add(animated);
             }
 
@@ -291,9 +291,9 @@ internal sealed partial class SettingsWindow
             var toggle = new Button { VerticalAlignment = VerticalAlignment.Center, MinWidth = 96 };
             toggle.Click += (_, _) => Toggle(entry);
             var menu = new MenuFlyout();
-            var open = new MenuFlyoutItem { Text = "Open in an editor" };
+            var open = new MenuFlyoutItem { Text = "Open in editor" };
             open.Click += (_, _) => OpenShader(entry.File);
-            var reveal = new MenuFlyoutItem { Text = "Show in its folder" };
+            var reveal = new MenuFlyoutItem { Text = "Open folder" };
             reveal.Click += (_, _) => Reveal(entry.File);
             menu.Items.Add(open);
             menu.Items.Add(reveal);
@@ -332,7 +332,7 @@ internal sealed partial class SettingsWindow
                 BorderThickness = new Thickness(1),
             };
             AutomationProperties.SetName(card, entry.Name);
-            AutomationProperties.SetHelpText(card, $"{entry.Description} Click to preview; Enter adds or removes.".Trim());
+            AutomationProperties.SetHelpText(card, $"{entry.Description} Space previews; Enter adds or removes.".Trim());
             ToolTipService.SetToolTip(card, entry.File);
             card.Click += (_, _) => Preview(entry);
             // Enter adds or removes (Space previews: a button's click); arrows move between shaders.

@@ -370,7 +370,7 @@ internal sealed partial class SettingsWindow : Window
         if (show)
         {
             _undo.Content = count == 1 ? "Undo 1 change" : $"Undo {count} changes";
-            AutomationProperties.SetName(_undo, "Undo changes");
+            AutomationProperties.SetName(_undo, (string)_undo.Content);
         }
 
         if (show == _snackbarShown)
@@ -445,7 +445,7 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(Row(TerminalSession.Version.Replace("zinc", "Zinc"),
             "Zinc: what makes ghosts glow in the dark. Built on libghostty, the terminal engine that powers Ghostty; the open-source software Zinc ships is listed below.",
             null));
-        _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
+        _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open in editor", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
         _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
             ButtonRow(("Open", () => App.Instance.ShowWelcome(firstRun: false)))));
         UpdatesGroup();
@@ -607,7 +607,7 @@ internal sealed partial class SettingsWindow : Window
         var refresh = new Button { Content = "Refresh" };
         AutomationProperties.SetName(refresh, "Measure memory again");
         refresh.Click += (_, _) => Render();
-        _page.Children.Add(Row("Memory", report.Summary + ". Most of it is native: Windows' UI framework, the graphics card's driver and the terminals' screens and scrollback.",
+        _page.Children.Add(Row("Memory", report.Summary + ". Most of it is Windows' UI framework, the graphics driver, and your terminals' screens and scrollback.",
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { refresh, copy } }));
     }
 
@@ -790,7 +790,7 @@ internal sealed partial class SettingsWindow : Window
         else
         {
             label.Text = kept > 0
-                ? $"Off: {kept} profile{(kept == 1 ? "" : "s")} you changed {(kept == 1 ? "is" : "are")} kept, but can't open."
+                ? $"Off. {kept} profile{(kept == 1 ? "" : "s")} you changed can't open until it's on again."
                 : _config.ValueOf($"discover.{source}") is not false ? "Nothing found on this PC." : "Off.";
         }
 
@@ -1440,12 +1440,12 @@ internal sealed partial class SettingsWindow : Window
                 (darkName, lightName) = (value, null);
             }
 
-            customizeDark.Content = $"Customize {darkName ?? "Lit Cell"}";
-            customizeLight.Content = $"Customize {lightName}";
+            customizeDark.Content = $"Edit {darkName ?? "Lit Cell"}";
+            customizeLight.Content = $"Edit {lightName}";
             customizeLight.Visibility = lightName != null ? Visibility.Visible : Visibility.Collapsed;
             SetText(customizeText, darkName == null
-                ? "Change its colors, live. The default colors are Lit Cell's: editing them makes a copy you can change."
-                : "Change its colors, live: every pane using it follows.");
+                ? "Changes show live in every pane using it. Editing Lit Cell makes your own copy."
+                : "Changes show live in every pane using it.");
         }
 
         _refreshers.Add(ShowCustomize);

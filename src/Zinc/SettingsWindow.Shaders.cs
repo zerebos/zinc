@@ -63,7 +63,7 @@ internal sealed partial class SettingsWindow
     /// </summary>
     private Border ShaderFilesCard(SettingDef setting, string? profile)
     {
-        var reset = ResetArrow(setting.Label, profile == null ? "No custom shaders (removes them from config.toml)" : "Back to the shaders every profile inherits");
+        var reset = ResetArrow(setting.Label, profile == null ? "Back to the default: no shaders" : "Back to the shaders every profile inherits");
         var description = DescriptionText();
         var summary = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
         var state = DescriptionText();
@@ -89,7 +89,7 @@ internal sealed partial class SettingsWindow
 
             summary.Text = files.Count == 0 ? "None." : string.Join(", ", files.Select(ShaderName));
             SetText(state, !_config.Global.LowLatencyDrawing && files.Count > 0
-                ? "They need low-latency drawing, which is off (Terminal > Troubleshooting)."
+                ? "Shaders need 'Low-latency drawing', which is off (Terminal > Troubleshooting)."
                 : "");
             if (files.Count > 0 && _config.Global.LowLatencyDrawing)
             {
@@ -105,7 +105,7 @@ internal sealed partial class SettingsWindow
                 var loaded = await ShaderLoader.Load(full);
                 if (current == check && loaded.Errors.Count > 0)
                 {
-                    SetText(state, loaded.Errors.Count == 1 ? $"One doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} don't compile; Edit shaders shows why.");
+                    SetText(state, loaded.Errors.Count == 1 ? $"One doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} don't compile; 'Edit shaders' shows why.");
                     state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 }
             }
@@ -197,7 +197,7 @@ internal sealed partial class SettingsWindow
             {
                 Tool("", "Move up", index > 0, () => save(Moved(index - 1))),
                 Tool("", "Move down", index < files.Count - 1, () => save(Moved(index + 1))),
-                Tool("", "Open in an editor", true, () => OpenShader(full)),
+                Tool("", "Open in editor", true, () => OpenShader(full)),
                 Tool("", "Remove", true, () => save([.. files.Where((_, i) => i != index)])),
             },
         };
@@ -245,7 +245,7 @@ internal sealed partial class SettingsWindow
                 icon.Foreground = (Brush)Application.Current.Resources["SystemFillColorSuccessBrush"];
                 icon.Opacity = 1;
                 SetText(state, loaded.Shaders[0].UsesTime ? "Compiles. Animated." : "Compiles.");
-                ToolTipService.SetToolTip(state, loaded.Shaders[0].UsesTime ? "Animated: it redraws even while the terminal is idle (Animation sets when)." : null);
+                ToolTipService.SetToolTip(state, loaded.Shaders[0].UsesTime ? "Keeps redrawing while the terminal is idle. The 'Animation' setting decides when." : null);
             }
             else
             {

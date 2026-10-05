@@ -42,8 +42,8 @@ public class KeysConfigTests
 
     [Theory]
     [InlineData("toggle-sidebar", -1, "Toggle sidebar")]
-    [InlineData("toggle-sidebar rail", (int)SidebarMode.Rail, "Toggle sidebar rail")]
-    [InlineData("toggle-sidebar auto-hide", (int)SidebarMode.AutoHide, "Toggle sidebar auto-hide")]
+    [InlineData("toggle-sidebar rail", (int)SidebarMode.Rail, "Toggle sidebar: icons only")]
+    [InlineData("toggle-sidebar auto-hide", (int)SidebarMode.AutoHide, "Toggle sidebar: auto-hide")]
     public void ParsesSidebarToggles(string text, int mode, string title)
     {
         var parsed = Actions.Parse(text, out var error);

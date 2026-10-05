@@ -50,7 +50,7 @@ public static class Actions
         new("scroll-to-top", TerminalAction.ScrollToTop, Arg.None, "Scroll to top", "Scroll to the start of the scrollback."),
         new("scroll-to-bottom", TerminalAction.ScrollToBottom, Arg.None, "Scroll to bottom", "Scroll to the prompt."),
         new("jump-to-prompt", TerminalAction.JumpToPrompt, Arg.PromptDirection, "Jump to prompt",
-            "Scroll to the previous or next prompt: \"jump-to-prompt previous\" / \"next\". Needs shell integration; without it, scrolls a line."),
+            "Scroll to the previous or next prompt: \"jump-to-prompt previous\" / \"next\". Without prompt marks, it scrolls a line. Needs shell integration."),
         new("select-output", TerminalAction.SelectOutput, Arg.None, "Select command output",
             "Select the output of the command at the top of the view (or the last command). Needs shell integration."),
         new("copy-output", TerminalAction.CopyOutput, Arg.None, "Copy command output",
@@ -72,11 +72,11 @@ public static class Actions
         new("duplicate-pane", TerminalAction.DuplicatePane, Arg.None, "Duplicate pane", "Split, running the focused tab's command again."),
         new("focus", TerminalAction.MoveFocus, Arg.Direction, "Focus pane", "Focus the neighboring pane: left, right, up or down."),
         new("resize", TerminalAction.ResizePane, Arg.Direction, "Resize pane", "Move the focused pane's divider: left, right, up or down."),
-        new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Open the profile menu", "The ▾ menu of profiles."),
+        new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Profile menu", "The ▾ menu of profiles."),
         new("command-palette", TerminalAction.OpenCommandPalette, Arg.None, "Command palette", "Search every command."),
         new("tab-switcher", TerminalAction.TabSwitcher, Arg.None, "Go to tab…",
             "Search this window's tabs by title, folder or running command (the palette's \"@\"); tabs with a dot come first."),
-        new("next-attention", TerminalAction.NextAttention, Arg.None, "Go to next tab needing attention",
+        new("next-attention", TerminalAction.NextAttention, Arg.None, "Next tab needing attention",
             "Go to the next tab with a dot: failed commands first, then programs' notifications, then finished commands."),
         new("toggle-sidebar", TerminalAction.ToggleSidebar, Arg.OptionalSidebarMode, "Toggle sidebar",
             "With workspace-tabs = \"left\": cycle the workspace list through full, rail and auto-hide. \"toggle-sidebar rail\" (or auto-hide) switches between that and full."),
@@ -87,7 +87,7 @@ public static class Actions
         new("reload-config", TerminalAction.ReloadConfig, Arg.None, "Reload config", "Read config.toml again."),
         new("open-settings", TerminalAction.OpenSettings, Arg.None, "Settings", "Open the settings window."),
         new("quit", TerminalAction.Quit, Arg.None, "Quit Zinc", "Close every window and exit."),
-        new("quit-fresh", TerminalAction.QuitFresh, Arg.None, "Quit and start fresh next time",
+        new("quit-fresh", TerminalAction.QuitFresh, Arg.None, "Quit without saving windows",
             "Close every window and exit without saving them: next time opens a new window."),
     ];
 
@@ -138,7 +138,7 @@ public static class Actions
                 .Append(("The last one", "last")),
             Arg.OptionalProfile => profiles.Select(p => (p.Name, p.Id)).Prepend(("The default profile", "")),
             Arg.CopyMode => [("Always", ""), ("Only when text is selected", "if-selection")],
-            Arg.OptionalSidebarMode => [("Full, icons only, auto-hide in turn", ""), ("Icons only", "rail"), ("Auto-hide", "auto-hide")],
+            Arg.OptionalSidebarMode => [("Each in turn", ""), ("Icons only", "rail"), ("Auto-hide", "auto-hide")],
             Arg.PromptDirection => [("Previous", "previous"), ("Next", "next")],
             _ => [(definition.Title, "")],
         };
@@ -312,7 +312,8 @@ public static class Actions
         {
             { Arg: Arg.Direction } d => $"{d.Title} {invocation.Direction.ToString().ToLowerInvariant()}",
             { Arg: Arg.Workspace } d => invocation.Index < 0 ? "Go to the last workspace" : $"{d.Title} {invocation.Index + 1}",
-            { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 => $"{d.Title} {SidebarModeName(invocation.Index)}",
+            { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 =>
+                $"{d.Title}: {((SidebarMode)invocation.Index == SidebarMode.AutoHide ? "auto-hide" : "icons only")}",
             { Arg: Arg.PromptDirection } => invocation.Index < 0 ? "Jump to previous prompt" : "Jump to next prompt",
             var d => d.Title,
         },

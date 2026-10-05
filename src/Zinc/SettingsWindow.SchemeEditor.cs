@@ -107,7 +107,7 @@ internal sealed partial class SettingsWindow
 
         var replaces = _config.Themes.ReplacesBundled(name);
         _page.Children.Add(Note(replaces
-            ? $"Your copy of {name}, in the themes folder next to config.toml: it's used instead of the one Zinc comes with. Every pane using it changes as you edit."
+            ? $"Your copy of {name}, used instead of the one Zinc comes with. Every pane using it changes as you edit."
             : $"Yours, in the themes folder next to config.toml. Every pane using it changes as you edit."));
 
         var undo = new Button { Content = "Undo changes" };
@@ -125,7 +125,7 @@ internal sealed partial class SettingsWindow
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 8, 0, 0), Children = { undo } };
         if (replaces)
         {
-            var original = new Button { Content = "Back to the original" };
+            var original = new Button { Content = "Restore the original" };
             ToolTipService.SetToolTip(original, $"Deletes your copy: {name} as Zinc comes with it is used again.");
             original.Click += (_, _) =>
             {
@@ -143,10 +143,10 @@ internal sealed partial class SettingsWindow
             buttons.Children.Add(original);
         }
 
-        var open = new Button { Content = "Open file" };
+        var open = new Button { Content = "Open in editor" };
         open.Click += (_, _) => OpenInEditor(file);
         buttons.Children.Add(open);
-        buttons.Children.Add(new Button { Content = "Save as a new scheme…", Flyout = NewSchemeFlyout(() => name, () => name, _schemeThemePath) });
+        buttons.Children.Add(new Button { Content = "Save as new scheme…", Flyout = NewSchemeFlyout(() => name, () => name, _schemeThemePath) });
         if (!replaces)
         {
             var delete = new Button { Content = "Delete scheme" };
@@ -287,8 +287,8 @@ internal sealed partial class SettingsWindow
             {
                 XamlRoot = Content.XamlRoot,
                 Title = $"Delete {name}?",
-                Content = "Its file goes from the themes folder. Where it's chosen, the default colors take its place.",
-                PrimaryButtonText = "Delete",
+                Content = "Removes its file from the themes folder. Anywhere it's used goes back to the default colors.",
+                PrimaryButtonText = "Delete it",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
             };

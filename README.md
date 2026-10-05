@@ -205,7 +205,7 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   windows behind, blurred) or `"none"` (clear: the windows behind, as they are), tinted with
   `[window] backdrop-color` (`"#rrggbb"`; default: the terminal's background) by `[window] backdrop-tint`
   (`0` to `1`, default `0.3`; lower is more see-through; Mica isn't tinted). Settings > Appearance >
-  Background calls them Window glass, Glass color, Glass tint and Terminal background opacity.
+  Background calls them Window background, Window tint color, Window tint and Terminal background opacity.
 - `find-highlight`, `find-highlight-current`: `"#rrggbb"` behind Find's matches and the current one
   (default: see-through yellow and orange).
 - `background`, `foreground`, `cursor`: `"#rrggbb"`.
@@ -338,10 +338,10 @@ and red, darker in light mode).
 
 **Light or dark** (`[window] appearance`): `"system"` (default: as Windows' app mode is when Zinc starts),
 `"light"` or `"dark"`, for windows, menus and dialogs. The terminal keeps its color scheme (`theme = "light:X,dark:Y"`
-follows Windows live). Applies when Zinc starts again: WinUI sets an app's theme once.
+follows Windows live). Restart Zinc to apply: WinUI sets an app's theme once.
 
 **Accent** (`[window] accent`): `"zinc"` (default: Zinc's green on selections, focus lines,
-switches and buttons) or `"windows"` (your Windows accent color). Applies when Zinc starts.
+switches and buttons) or `"windows"` (your Windows accent color). Restart Zinc to apply.
 
 **`[updates]`**: `check = true` (default) lets a Zinc installed with its installer look for a new
 version once a day and download it in the background; a notice then offers to restart into it, or it
@@ -457,7 +457,7 @@ tray with no window open, reopens the saved windows.
 Zinc shows a notification-area icon while it runs. Clicking it brings back the most
 recently used window (or the saved windows); right-clicking offers New window, Show/Hide quick
 terminal, Settings, and Quit Zinc, which closes every window, the hidden quick terminal
-included. Quit Zinc is also in the command palette, next to Quit and start fresh next time,
+included. Quit Zinc is also in the command palette, next to Quit without saving windows,
 which quits without keeping the windows (the next start opens a new one).
 
 `launch-at-login` in `[window]` starts Zinc when you sign in to Windows: `"tray"` without a
@@ -609,10 +609,10 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=zinc`.
 | `Ctrl+Shift+P` | Command palette: every action, profile and workspace, fuzzy-searchable; recently used first. Type `@` to search this window's tabs instead |
 | `Ctrl+Shift+O` | Go to tab: the palette's `@` (title, running command, folder, workspace; tabs with a dot first) |
 
-Some palette commands ask for one more thing in the same box: **Change color scheme…** (this
+Some palette commands ask for one more thing in the same box: **Color scheme for this tab…** (this
 tab only; the list previews each scheme on the tab as you move through it, Esc puts the old one
 back; the tab keeps it across restarts; the scheme's colors replace all of that tab's, including
-ones your config sets), **Set default color scheme…** (writes `colors.theme` in your config,
+ones your config sets), **Default color scheme…** (writes `colors.theme` in your config,
 keeping the rest of the file as it was; colors the config sets itself, like `background`, keep
 winning over the scheme, and the preview shows them that way), **New tab running…** (opens the focused
 tab's shell in the same folder and types the command there, as if by hand: `htop` in a WSL tab,
@@ -772,7 +772,7 @@ default at once. The ▾ menu and Zinc's own start (with nothing to reopen) star
 A workspace's **icon** (a set of Windows' own icons: code, folder, globe, bug, cloud…) shows on its tab
 and in the sidebar instead of its active tab's profile icon; set it on the page, from the workspace's
 menu (**Workspace icon…**) or the palette (which previews each one). **Workspace folder** in the same
-menu (and the palette's **Set workspace folder…** / **Clear workspace folder**) sets or clears its
+menu (and the palette's **Workspace folder…** / **Clear workspace folder**) sets or clears its
 folder after the fact: typed like "New tab in folder…", and the workspace takes the folder's name
 unless you named it yourself. `workspace-colors` in `[window]` colors new workspaces you don't color
 yourself: `"off"` (default), `"folder"` (a workspace started in a folder gets that folder's color, the

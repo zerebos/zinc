@@ -58,7 +58,7 @@ internal sealed partial class SettingsWindow
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderThickness = new Thickness(0),
         };
-        AutomationProperties.SetName(toggle, $"More: {name}");
+        AutomationProperties.SetName(toggle, $"Show more: {name}");
 
         var top = new Grid { Padding = new Thickness(15, 11, 8, 11), Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
         top.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -81,7 +81,7 @@ internal sealed partial class SettingsWindow
             else _openFolds.Remove(id);
             isOpen = show;
             chevron.Rotation = show ? 180 : 0;
-            ToolTipService.SetToolTip(toggle, show ? "Fewer settings" : "More settings");
+            ToolTipService.SetToolTip(toggle, show ? "Show less" : "Show more");
             AutomationProperties.SetItemStatus(toggle, show ? "Open" : "Closed");
 
             // From wherever it is now (a slide may be under way).

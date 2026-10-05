@@ -34,7 +34,7 @@ internal sealed partial class StartPage : UserControl
     private readonly Func<string?, string?> _browse;
     private readonly Dictionary<Profile, string?> _distros = [];
 
-    private readonly TextBox _filter = new() { PlaceholderText = "Filter profiles and folders, or type a folder", Width = 520, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox _filter = new() { PlaceholderText = "Search profiles and folders, or type a path", Width = 520, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly ListView _profileList = new() { SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _folderList = new() { SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _layoutList = new() { SelectionMode = ListViewSelectionMode.Single };
@@ -65,7 +65,7 @@ internal sealed partial class StartPage : UserControl
         _folder = Usual;
         IsTabStop = false;
         AutomationProperties.SetName(this, "New workspace");
-        AutomationProperties.SetName(_filter, "Filter profiles and folders");
+        AutomationProperties.SetName(_filter, "Search profiles and folders, or type a path");
         AutomationProperties.SetName(_profileList, "Profile");
         AutomationProperties.SetName(_folderList, "Folder");
         AutomationProperties.SetName(_name, "Workspace name");
@@ -141,7 +141,7 @@ internal sealed partial class StartPage : UserControl
                 new TextBlock { Text = "New workspace", FontSize = 26, FontWeight = FontWeights.SemiBold },
                 new TextBlock
                 {
-                    Text = $"Choose any of these, then Enter. Or just Enter: {defaultProfile.Name} in its usual folder.",
+                    Text = $"Pick a profile, folder and layout, then press Enter. Enter alone opens {defaultProfile.Name} in its usual folder.",
                     Opacity = 0.7,
                     TextWrapping = TextWrapping.Wrap,
                 },
@@ -513,7 +513,7 @@ internal sealed partial class StartPage : UserControl
         _iconButton.Content = _icon is { } name && Zinc.Panes.WorkspaceIcons.Glyph(name) is { } glyph
             ? new FontIcon { Glyph = glyph.ToString(), FontSize = 16 }
             : new IconSourceElement { IconSource = ProfileIcons.For(_profile), Width = 16, Height = 16, Opacity = 0.6 };
-        ToolTipService.SetToolTip(_iconButton, _icon == null ? "Icon: the profile's" : $"Icon: {_icon}");
+        ToolTipService.SetToolTip(_iconButton, _icon == null ? "Profile's icon" : $"Icon: {_icon}");
         _colorButton.Content = new Border
         {
             Width = 16,
@@ -524,8 +524,8 @@ internal sealed partial class StartPage : UserControl
             Background = _color is { } c ? new SolidColorBrush(c) : new SolidColorBrush(Microsoft.UI.Colors.Transparent),
         };
         ToolTipService.SetToolTip(_colorButton, _colorChosen
-            ? _color is { } chosen ? $"Color: {Zinc.Panes.WorkspaceColors.All.FirstOrDefault(x => WorkspaceLookPickers.ToColor(x.Rgb) == chosen).Name}" : "Color: none"
-            : "Color: automatic (see Settings)");
+            ? _color is { } chosen ? $"Color: {Zinc.Panes.WorkspaceColors.All.FirstOrDefault(x => WorkspaceLookPickers.ToColor(x.Rgb) == chosen).Name}" : "No color"
+            : "Color: automatic");
     }
 
     private static ListViewItem LayoutItem(StartLayout layout)
@@ -587,7 +587,7 @@ internal sealed partial class StartPage : UserControl
     /// <summary>The name box's hint: the name the workspace gets if you type none (the folder's, else the shell's).</summary>
     private void UpdateNameHint()
     {
-        _name.PlaceholderText = _folder.Folder?.Name ?? "From the shell";
+        _name.PlaceholderText = _folder.Folder?.Name ?? "Automatic";
     }
 
     private void Start()

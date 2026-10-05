@@ -25,10 +25,9 @@ internal sealed partial class SettingsWindow
 
     private void KeyboardPage()
     {
-        _page.Children.Add(Note("Keys follow Windows Terminal's defaults; what you change goes in [keys] in config.toml. " +
-            "Click a key to remove it. Key sequences (ctrl+a > c) are listed here and added in config.toml."));
-        var filter = new TextBox { PlaceholderText = "Filter actions or keys", Text = _keyFilter, Margin = new Thickness(0, 12, 0, 8), Width = 360, HorizontalAlignment = HorizontalAlignment.Left };
-        AutomationProperties.SetName(filter, "Filter actions");
+        _page.Children.Add(Note("Click a key to remove it. Key sequences (ctrl+a > c) show here; add them in config.toml."));
+        var filter = new TextBox { PlaceholderText = "Search actions or keys", Text = _keyFilter, Margin = new Thickness(0, 12, 0, 8), Width = 360, HorizontalAlignment = HorizontalAlignment.Left };
+        AutomationProperties.SetName(filter, "Search actions or keys");
         filter.TextChanged += (_, _) =>
         {
             _keyFilter = filter.Text;
@@ -343,10 +342,10 @@ internal sealed partial class SettingsWindow
 
             var keys = _config.Keybindings;
             (problem.Text, confirm.IsEnabled, confirm.Content) =
-                chord.ToConfig() == null ? ("That key can't be written to config.toml yet.", false, "Add")
+                chord.ToConfig() == null ? ("Zinc can't save that key yet.", false, "Add")
                 : keys.StartsSequence(chord) ? ($"{chord} starts key sequences; change those in config.toml.", false, "Add")
                 : keys.TryGet(chord, out var other) && other == current ? ("Already one of its keys.", false, "Add")
-                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other)}: adding it here takes it from there.", true, "Replace")
+                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other)}. Replace moves it here.", true, "Replace")
                 : ("", true, (object)"Add");
         }
 

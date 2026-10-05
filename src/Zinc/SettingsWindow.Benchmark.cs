@@ -142,8 +142,8 @@ internal sealed partial class SettingsWindow
                 table,
                 new TextBlock
                 {
-                    Text = "Program output: how fast Zinc took a busy program's output. Drawn: frames a second it showed. " +
-                        "Frame time: drawing one frame, including the graphics card's part. Copy has the details.",
+                    Text = "Program output: how fast Zinc read a busy program's output. Drawn: frames a second it showed. " +
+                        "Frame time: drawing one frame. Copy has the details.",
                     FontSize = 12,
                     Foreground = secondary,
                     TextWrapping = TextWrapping.Wrap,

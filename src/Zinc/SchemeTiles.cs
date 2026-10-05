@@ -165,8 +165,8 @@ internal sealed partial class SchemePicker : Button
         content.Children.Add(chevron);
         Content = content;
 
-        _filter.PlaceholderText = $"Filter {names.Count} schemes";
-        AutomationProperties.SetName(_filter, "Filter schemes");
+        _filter.PlaceholderText = $"Search {names.Count} schemes";
+        AutomationProperties.SetName(_filter, "Search schemes");
         AutomationProperties.SetName(_list, automationName);
         SchemeTiles.ShowAsTiles(_list, themes, defaultLabel);
         _list.ContainerContentChanging += (_, e) =>

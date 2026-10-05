@@ -216,7 +216,7 @@ internal sealed partial class WelcomeWindow : Window
 
     private (FrameworkElement Page, Button Simple, Button Workspaces, StackPanel OnRow) StylePage()
     {
-        var simple = Card("Simple", "Tabs along the top, one terminal each. Like Windows Terminal.", Mockup(sidebar: false, panes: false));
+        var simple = Card("Simple", "Tabs along the top, one terminal each.", Mockup(sidebar: false, panes: false));
         var workspaces = Card("Workspaces", "Workspaces in a sidebar, each with its own tabs and splits. Good for juggling projects.",
             Mockup(sidebar: true, panes: true));
         simple.Click += (_, _) => { _style = WorkStyle.Simple; ShowStyle(); };
@@ -246,8 +246,7 @@ internal sealed partial class WelcomeWindow : Window
             Spacing = 12,
             Children =
             {
-                Note("A few choices to start with. They all end up in config.toml, and you can change them any time, " +
-                     "or come back here from the command palette (Ctrl+Shift+P): Welcome…"),
+                Note("A few choices to start with. Change them any time in Settings, or come back here: Ctrl+Shift+P, then 'Welcome…'."),
                 new Border { Height = 8 },
                 SectionTitle("How do you like to work?"),
                 cards,
@@ -360,8 +359,8 @@ internal sealed partial class WelcomeWindow : Window
         var list = new ListView { Height = 390, SelectionMode = ListViewSelectionMode.Single };
         AutomationProperties.SetName(list, "Color schemes");
         SchemeTiles.ShowAsTiles(list, _config.Themes, DefaultSchemeLabel); // each scheme drawn in its own colors
-        var search = new TextBox { PlaceholderText = $"Search {names.Count} color schemes" };
-        AutomationProperties.SetName(search, "Search color schemes");
+        var search = new TextBox { PlaceholderText = $"Search {names.Count} schemes" };
+        AutomationProperties.SetName(search, "Search schemes");
         void Fill()
         {
             var query = search.Text.Trim();
@@ -411,8 +410,8 @@ internal sealed partial class WelcomeWindow : Window
         };
 
         // Follow Windows light/dark: the list above picks the dark side, this one the light side.
-        var listLabel = new TextBlock { Text = _follow ? "When Windows is dark" : "Scheme", Opacity = 0.8 };
-        var lightPicker = new SchemePicker(_config.Themes, names, null, "When Windows is light")
+        var listLabel = new TextBlock { Text = _follow ? "Dark scheme" : "Scheme", Opacity = 0.8 };
+        var lightPicker = new SchemePicker(_config.Themes, names, null, "Light scheme")
         {
             Width = double.NaN,
             HorizontalAlignment = HorizontalAlignment.Stretch,
@@ -427,7 +426,7 @@ internal sealed partial class WelcomeWindow : Window
         {
             Spacing = 8,
             Visibility = _follow ? Visibility.Visible : Visibility.Collapsed,
-            Children = { new TextBlock { Text = "When Windows is light" }, lightPicker },
+            Children = { new TextBlock { Text = "Light scheme" }, lightPicker },
         };
         var follow = new ToggleSwitch { Header = "Follow Windows light/dark", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
         AutomationProperties.SetName(follow, "Follow Windows light/dark");
@@ -450,7 +449,7 @@ internal sealed partial class WelcomeWindow : Window
                 lightPicker.Show(_light, _light != null);
             }
 
-            listLabel.Text = _follow ? "When Windows is dark" : "Scheme";
+            listLabel.Text = _follow ? "Dark scheme" : "Scheme";
             lightBox.Visibility = _follow ? Visibility.Visible : Visibility.Collapsed;
             UpdatePreview();
         };
@@ -590,7 +589,7 @@ internal sealed partial class WelcomeWindow : Window
             Children =
             {
                 SectionTitle("Default shell"),
-                Note("New tabs open with it. Found on this PC; each one stays a click away in the ▾ menu."),
+                Note("New tabs open with it. The others stay a click away in the ▾ menu."),
                 shells,
             },
         };
@@ -620,7 +619,7 @@ internal sealed partial class WelcomeWindow : Window
     /// <summary>Skip (or Cancel) on the left, page dots in the middle, Back / Next on the right.</summary>
     private FrameworkElement Footer()
     {
-        var skip = new Button { Content = _firstRun ? "Skip: use the defaults" : "Cancel" };
+        var skip = new Button { Content = _firstRun ? "Use the defaults" : "Cancel" };
         skip.Click += (_, _) => Finish(null);
         _next.Style = (Style)Application.Current.Resources["AccentButtonStyle"];
         _next.Click += (_, _) =>
