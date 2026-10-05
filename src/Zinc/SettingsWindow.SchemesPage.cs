@@ -136,12 +136,12 @@ internal sealed partial class SettingsWindow
             var shown = name ?? ZincScheme;
             var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? TerminalTheme.Default, shown);
             tile.Width = ControlWidth;
-            var edit = CardButtonLook(new Button
+            var edit = new Button
             {
                 Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 }, // edit (pencil), as on the cards
                 Padding = new Thickness(9, 8, 9, 8),
                 VerticalAlignment = VerticalAlignment.Stretch,
-            });
+            };
             AutomationProperties.SetName(edit, $"Edit {shown}");
             ToolTipService.SetToolTip(edit, $"Edit {shown}'s colors");
             edit.Click += (_, _) => CustomizeScheme(name, path);
@@ -292,24 +292,24 @@ internal sealed partial class SettingsWindow
             var whose = new TextBlock { FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
             var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center, Children = { inUseBadge, whose } };
             var forLight = false; // the side the split button's main part sets
-            var use = CardButtonLook(new Button { Content = "Use", MinWidth = 72, VerticalAlignment = VerticalAlignment.Center });
+            var use = new Button { Content = "Use", MinWidth = 72, VerticalAlignment = VerticalAlignment.Center };
             use.Click += (_, _) => Use(entry.Name, false);
             var forDarkItem = new MenuFlyoutItem { Text = "Use for dark mode" };
             forDarkItem.Click += (_, _) => Use(entry.Name, false);
             var forLightItem = new MenuFlyoutItem { Text = "Use for light mode" };
             forLightItem.Click += (_, _) => Use(entry.Name, true);
-            var split = CardButtonLook(new SplitButton
+            var split = LikePlainButton(new SplitButton
             {
                 VerticalAlignment = VerticalAlignment.Center,
                 Flyout = new MenuFlyout { Items = { forDarkItem, forLightItem }, Placement = FlyoutPlacementMode.BottomEdgeAlignedRight },
             });
             split.Click += (_, _) => Use(entry.Name, forLight);
-            var edit = CardButtonLook(new Button
+            var edit = new Button
             {
                 Content = new FontIcon { Glyph = "\uE70F", FontSize = 14 }, // edit (pencil)
                 Padding = new Thickness(9, 8, 9, 8),
                 VerticalAlignment = VerticalAlignment.Stretch,
-            });
+            };
             edit.Click += (_, _) => CustomizeScheme(entry.Name, path);
             var footer = new Grid
             {
@@ -545,23 +545,49 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// One outline for the buttons on a scheme card: a split button draws its border all around (and a plain button only
-    /// a faint top edge), so with a light/dark pair the cards' buttons looked heavier. Set before the template applies.
+    /// A split button drawn like the buttons around it. Its halves (and their backgrounds) fill under its outline, so the see-through outline
+    /// shows over the button's fill (lighter); a plain button's fill stops inside its outline, which shows over what's
+    /// behind. Each half is pulled in by the outline's width, so the outline shows over the card as a plain button's does.
     /// </summary>
-    private static T CardButtonLook<T>(T button) where T : Control
+    private static SplitButton LikePlainButton(SplitButton split)
     {
-        var stroke = Application.Current.Resources["ControlStrokeColorSecondaryBrush"]; // what a split button shows
-        var prefix = button is SplitButton ? "SplitButton" : "Button";
-        foreach (var state in new[] { "", "PointerOver", "Pressed" })
+        split.Loaded += (_, _) =>
         {
-            button.Resources[$"{prefix}BorderBrush{state}"] = stroke;
+            var left = new Thickness(1, 1, 0, 1);
+            var right = new Thickness(0, 1, 1, 1);
+            foreach (var (part, margin) in new[]
+            {
+                ("PrimaryBackgroundGrid", left), ("PrimaryButton", left), ("DividerBackgroundGrid", new Thickness(0, 1, 0, 1)),
+                ("SecondaryBackgroundGrid", right), ("SecondaryButton", right),
+            })
+            {
+                if (FindPart(split, part) is FrameworkElement half)
+                {
+                    half.Margin = margin;
+                }
+            }
+        };
+        return split;
+    }
+
+    /// <summary>The element named <paramref name="name"/> in <paramref name="root"/>'s template, or null.</summary>
+    private static DependencyObject? FindPart(DependencyObject root, string name)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is FrameworkElement { Name: var found } && found == name)
+            {
+                return child;
+            }
+
+            if (FindPart(child, name) is { } deeper)
+            {
+                return deeper;
+            }
         }
 
-        button.BorderBrush = (Brush)stroke;
-        // A plain button's fill stops inside its border, so the see-through border showed the card behind it (darker);
-        // the split button's fill goes under it. Under it for both.
-        button.BackgroundSizing = BackgroundSizing.OuterBorderEdge;
-        return button;
+        return null;
     }
 
     /// <summary>Opens the themes folder next to config.toml (made if it isn't there yet).</summary>
