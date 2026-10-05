@@ -603,7 +603,7 @@ internal sealed partial class SettingsWindow
 
     /// <summary>A heading for a part of a page ("In use", "Library"): one size up from a group's.</summary>
     private static TextBlock PartTitle(string title) =>
-        new() { Text = title, FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 24, 0, 8) };
+        new() { Text = title, Style = TextStyle("SubtitleTextBlockStyle"), Margin = new Thickness(0, 24, 0, 8) };
 
     // The library's heading and toolbar, kept in view: moved into the pinned area (under the preview) once scrolled up to
     // it, back when scrolled above it. A spacer of its height takes its place in the page, and the scroll moves by that

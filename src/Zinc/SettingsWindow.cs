@@ -467,14 +467,17 @@ internal sealed partial class SettingsWindow : Window
         }
     }
 
+    // Text in the theme's type ramp (WinUI Gallery: Typography), not hand-set sizes, so it follows Windows.
+    private static Style TextStyle(string name) => (Style)Application.Current.Resources[name];
+
     private static TextBlock GroupTitle(string title) =>
-        new() { Text = title, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 18, 0, 6) };
+        new() { Text = title, Style = TextStyle("BodyStrongTextBlockStyle"), Margin = new Thickness(0, 18, 0, 6) };
 
     private static TextBlock Note(string text) => new()
     {
         Text = text,
-        TextWrapping = TextWrapping.Wrap,
-        Opacity = 0.7,
+        Style = TextStyle("BodyTextBlockStyle"),
+        Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
         Margin = new Thickness(2, 8, 0, 0),
     };
 
@@ -1482,8 +1485,8 @@ internal sealed partial class SettingsWindow : Window
     {
         var block = new TextBlock
         {
+            Style = TextStyle("CaptionTextBlockStyle"),
             TextWrapping = TextWrapping.Wrap,
-            FontSize = 12,
             Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
         };
         SetText(block, text);
