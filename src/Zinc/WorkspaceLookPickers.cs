@@ -20,6 +20,9 @@ internal static class WorkspaceLookPickers
         var grid = new GridView
         {
             SelectionMode = ListViewSelectionMode.Single,
+            // Arrow keys move between cells; Enter, Space or a click picks. (Following focus, each arrow picked the next
+            // cell, which closed the flyout.)
+            SingleSelectionFollowsFocus = false,
             IsItemClickEnabled = true,
             MaxWidth = 7 * 46,
         };
@@ -64,6 +67,9 @@ internal static class WorkspaceLookPickers
         var grid = new GridView
         {
             SelectionMode = ListViewSelectionMode.Single,
+            // Arrow keys move between cells; Enter, Space or a click picks. (Following focus, each arrow picked the next
+            // cell, which closed the flyout.)
+            SingleSelectionFollowsFocus = false,
             IsItemClickEnabled = true,
             MaxWidth = (WorkspaceColors.All.Count + 1) * 40,
         };
