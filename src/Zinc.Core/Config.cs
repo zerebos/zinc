@@ -505,6 +505,9 @@ public sealed record Config
     /// <summary>Bold text in palette colors 0-7 shows their bright versions (8-15). Config: <c>[colors] bold-is-bright</c>.</summary>
     public bool BoldIsBright { get; init; }
 
+    /// <summary>Colors 16-255 made from the scheme's 16. Config: <c>[colors] palette-generate</c>, <c>palette-harmonious</c>.</summary>
+    public PaletteGeneration PaletteGeneration { get; init; }
+
     /// <summary>How much of faint text's color shows over its background (0.1-1). Config: <c>[colors] faint-opacity</c> (Ghostty's 0.5).</summary>
     public double FaintOpacity { get; init; } = 0.5;
 
@@ -645,6 +648,8 @@ public sealed record Config
             "minimum-contrast" when TryDouble(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
+            "palette-generate" when bool.TryParse(value, out var generate) => this with { PaletteGeneration = PaletteGeneration with { Generate = generate } },
+            "palette-harmonious" when bool.TryParse(value, out var harmonious) => this with { PaletteGeneration = PaletteGeneration with { Harmonious = harmonious } },
             "faint-opacity" when TryDouble(value, out var faint) && faint is >= 0.1 and <= 1 => this with { FaintOpacity = faint },
             "background-opacity" when TryDouble(value, out var backgroundOpacity) && backgroundOpacity is >= 0 and <= 1 =>
                 this with { BackgroundOpacity = backgroundOpacity },

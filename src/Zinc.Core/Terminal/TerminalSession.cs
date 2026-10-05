@@ -69,8 +69,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>The read being fed now was allowed (set around its bytes by <see cref="Feed"/>).</summary>
     private volatile bool _readConsented;
 
-    public TerminalSession(ushort cols, ushort rows, TerminalTheme theme)
+    /// <param name="generation">Whether colors 16-255 are made from the scheme's 16 (<c>palette-generate</c>).</param>
+    public TerminalSession(ushort cols, ushort rows, TerminalTheme theme, PaletteGeneration generation = default)
     {
+        _generation = generation;
         Check(Native.TerminalNew(0, out _terminal, cols, rows));
         _self = GCHandle.Alloc(this);
 
@@ -476,12 +478,13 @@ public sealed unsafe partial class TerminalSession : IDisposable
         return 1;
     }
 
-    public void SetTheme(TerminalTheme theme)
+    public void SetTheme(TerminalTheme theme, PaletteGeneration generation = default)
     {
         lock (Lock)
         {
             if (!_disposed)
             {
+                _generation = generation;
                 ApplyTheme(theme);
             }
         }
@@ -490,6 +493,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     private readonly GhosttyColorRgb[] _builtinPalette = new GhosttyColorRgb[256];
+    private PaletteGeneration _generation;
 
     private static readonly Lazy<GhosttyColorRgb[]> BuiltinBase = new(() =>
     {
@@ -533,6 +537,19 @@ public sealed unsafe partial class TerminalSession : IDisposable
             foreach (var (index, color) in theme.Palette)
             {
                 p[index] = color;
+            }
+
+            if (_generation.Generate)
+            {
+                // 16-255 from the scheme's 16 and its colors (Ghostty's palette-generate), except entries the scheme
+                // or the config set themselves.
+                var skip = stackalloc ulong[4];
+                foreach (var index in theme.Palette.Keys.Where(i => i is >= 16 and < 256))
+                {
+                    skip[index / 64] |= 1UL << (index % 64);
+                }
+
+                Native.ColorPaletteGenerate(p, skip, &bg, &fg, _generation.Harmonious ? (byte)1 : (byte)0, p);
             }
 
             Native.TerminalSet(_terminal, TerminalOption.ColorPalette, p);

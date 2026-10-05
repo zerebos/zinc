@@ -220,6 +220,24 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void GeneratedPaletteFollowsTheSchemeButKeepsEntriesItSets()
+    {
+        // Lit Cell's colors; 196 is the standard cube's pure red, 200 one the theme sets itself.
+        var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [200] = new(1, 2, 3) } };
+        GhosttyColorRgb Indexed(int index, bool generate)
+        {
+            using var session = new TerminalSession(20, 2, theme, new PaletteGeneration(generate, false));
+            session.WriteToScreen($"[38;5;{index}mX");
+            return FirstCellForeground(session);
+        }
+
+        Assert.Equal(new GhosttyColorRgb(0xff, 0, 0), Indexed(196, generate: false));
+        Assert.NotEqual(Indexed(196, generate: false), Indexed(196, generate: true));
+        Assert.Equal(new GhosttyColorRgb(1, 2, 3), Indexed(200, generate: true));
+        Assert.Equal(Indexed(1, generate: false), Indexed(1, generate: true)); // the base 16 stay
+    }
+
+    [Fact]
     public void PaletteOverridesReachTerminal()
     {
         var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(1, 2, 3) } };

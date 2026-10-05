@@ -964,6 +964,11 @@ public static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "ghostty_paste_encode")]
     public static partial GhosttyResult PasteEncode(byte* data, nuint dataLen, byte bracketed, byte* buf, nuint bufLen, out nuint outWritten);
 
+    /// <summary>Derives the 216-color cube and grayscale ramp (16-255) from the base 16 and the colors; set bits in <paramref name="skip"/> (4 words) keep those entries.</summary>
+    [LibraryImport(Lib, EntryPoint = "ghostty_color_palette_generate")]
+    public static partial void ColorPaletteGenerate(GhosttyColorRgb* basePalette, ulong* skip, GhosttyColorRgb* background, GhosttyColorRgb* foreground,
+        byte harmonious, GhosttyColorRgb* output);
+
     [LibraryImport(Lib, EntryPoint = "ghostty_color_scheme_report_encode")]
     public static partial GhosttyResult ColorSchemeReportEncode(ColorScheme scheme, byte* buf, nuint bufLen, out nuint outWritten);
 }

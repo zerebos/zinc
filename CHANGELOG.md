@@ -17,6 +17,8 @@ is the version it builds, and hands it to the installer as the release notes).
 - Turn off the question before closing or quitting while a command runs (Layout > Closing).
 - How far a resize key moves a pane's divider (Layout > Panes > Resize step).
 - Line height: more room between lines, as a percentage or in pixels (Appearance > Font). Box drawing still joins up.
+- Match 256 colors to the scheme: programs using the extended palette get shades made from your scheme's colors
+  (Appearance > Colors).
 
 ## 0.1.0-dev.282 (2026-10-05)
 

@@ -2,6 +2,12 @@ using Zinc.Ghostty;
 
 namespace Zinc.Terminal;
 
+/// <summary>
+/// Colors 16-255 made from a scheme's 16 (Ghostty's <c>palette-generate</c>), and whether a light scheme's keep their
+/// order from background to text (<c>palette-harmonious</c>) instead of running dark to light.
+/// </summary>
+public readonly record struct PaletteGeneration(bool Generate, bool Harmonious);
+
 public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb Foreground, GhosttyColorRgb Cursor)
 {
     /// <summary>

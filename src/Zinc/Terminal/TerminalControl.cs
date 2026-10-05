@@ -407,7 +407,7 @@ public sealed partial class TerminalControl : UserControl
     {
         Log.Write($"pane: start {cols}x{rows}: {_commandLine}");
         var m = _renderer.Metrics;
-        var session = new TerminalSession(cols, rows, _config.Theme);
+        var session = new TerminalSession(cols, rows, _config.Theme, _config.PaletteGeneration);
         session.SetColorScheme(_config.IsDark);
         session.SetScrollback(_config.ScrollbackLines);
         session.SetCursorDefaults(_config.CursorStyle, _config.CursorBlink, _config.CursorStyleAtPrompt);
@@ -546,7 +546,7 @@ public sealed partial class TerminalControl : UserControl
         }
         if (_session is { } session)
         {
-            session.SetTheme(config.Theme);
+            session.SetTheme(config.Theme, config.PaletteGeneration);
             session.SetColorScheme(config.IsDark); // tells programs that asked to hear of it
             ApplyClipboardPermissions(session);
             session.CatchScreenFlash = config.ScreenFlashBell;

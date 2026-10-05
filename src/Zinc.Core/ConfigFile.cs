@@ -719,6 +719,8 @@ public sealed class ConfigFile
             ["colors.minimum-contrast"] = ("minimum-contrast", v => Number(v)),
             ["colors.bold"] = ("bold-color", v => v as string),
             ["colors.bold-is-bright"] = ("bold-is-bright", v => Bool(v)),
+            ["colors.palette-generate"] = ("palette-generate", v => Bool(v)),
+            ["colors.palette-harmonious"] = ("palette-harmonious", v => Bool(v)),
             ["colors.faint-opacity"] = ("faint-opacity", v => Number(v)),
             ["colors.cursor-opacity"] = ("cursor-opacity", v => Number(v)),
             ["colors.background-opacity"] = ("background-opacity", v => Number(v)),

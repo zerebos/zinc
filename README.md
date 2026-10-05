@@ -205,6 +205,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   2031, e.g. neovim) hear of each change, so they can switch their own colors too.
 - `minimum-contrast`: `1` (default: off) to `21`: text that reads worse than this against its
   background (the WCAG contrast ratio; `4.5` is the usual accessibility level) turns black or white.
+- `palette-generate`: `false` (default) or `true`: colors 16 to 255 (the extended palette vim and htop themes
+  use) are made from the scheme's 16, its background and its text (Ghostty's way), instead of the standard
+  ones; entries the scheme or the config set themselves stay. `palette-harmonious = true` makes a light
+  scheme's shades run from its background to its text rather than dark to light.
 - `bold`: `"#rrggbb"` for bold text in the default text color; `bold-is-bright`: `true` shows bold
   text in the first eight colors in their bright versions (as older terminals did).
 - `faint-opacity`: how much of faint (dim) text's color shows, `0.1` to `1` (default `0.5`).
