@@ -19,14 +19,16 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
   out-of-box ConPTY (`conpty.dll` + `OpenConsole.exe` from the
   `Microsoft.Windows.Console.ConPTY` package) and falls back to the inbox one
   if those files are missing.
-- **Win2D** renders the libghostty render state: backgrounds as merged
-  rectangles, text as glyph runs with a fixed one-cell advance so every glyph
-  sits exactly on the grid, and DirectWrite text layout as the fallback for
-  glyphs the primary font lacks (emoji, CJK, clusters).
+- **Win2D** draws the libghostty render state into a swap chain, presented as soon as output pauses:
+  backgrounds as one bitmap, text from a glyph atlas (each glyph drawn once, then copied into its cell, so
+  every glyph sits exactly on the grid) in one batch per frame. Characters the font lacks (CJK, emoji,
+  symbols) are laid out by DirectWrite once and kept in the atlas too; box drawing, blocks, Powerline
+  and Braille come from Ghostty's own sprite rasterizer.
 
 ## Requirements
 
-- Windows 10 1809+ (developed on Windows 11 24H2), x64 or ARM64
+- Windows 10 version 2004 (build 19041) or later, or Windows 11 (developed on Windows 11 24H2); x64
+  (ARM64 isn't built yet)
 - .NET SDK 10
 - Visual Studio Build Tools with the MSVC toolchain and a Windows 10/11 SDK
   (used by Zig to link the DLL; its redistributable Visual C++ runtime, `vcruntime140.dll`, ships
@@ -55,7 +57,7 @@ runs directly.
 
 ```bash
 pwsh scripts/install.ps1                  # Release build -> Start Menu "Zinc" (Raycast finds it)
-pwsh scripts/install.ps1 -InstallGitHook  # also reinstall in the background after each commit
+pwsh scripts/install.ps1 -InstallGitHook  # also reinstall in the background after each commit on main
 pwsh scripts/install.ps1 -Uninstall       # remove install, shortcut and hook (keeps config)
 ```
 
@@ -656,7 +658,7 @@ Children get `COLORTERM=truecolor` and `TERM_PROGRAM=zinc`.
 | --- | --- |
 | `Ctrl+Shift+C`, or `Ctrl+C` with a selection | Copy selection |
 | `Ctrl+V`, `Ctrl+Shift+V`, `Shift+Insert` | Paste (bracketed when the app enables it) |
-| Right click | Copy the selection if there is one, otherwise paste |
+| Right click, `Shift+F10`, the Menu key | A menu: copy, paste, find; open or copy the link you clicked; copy the command you clicked, or select or copy its output; split, new tab, close (`right-click` in `[terminal]`: or copy the selection if there is one, otherwise paste) |
 | Drag / double-click / triple-click | Select cells / word / line |
 | Drop files on a pane | Types their paths at the prompt as its shell writes them (WSL: `/mnt/c/…`, or where its `/etc/wsl.conf` mounts drives, and its own files as `/home/…`; Git Bash and MSYS2: `/c/…`), quoted where needed |
 | Mouse wheel, `Shift+PgUp/PgDn` | Scroll back (`Ctrl+Shift+Home/End` jump to top/bottom) |
@@ -928,43 +930,62 @@ off, or on uninstall). With the debug log on, each command is logged, never the 
 ## Layout
 
 ```
-scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
+scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit (and, through
+                                  build-sprites.sh and build-shader.sh, zinc-sprite.dll and zinc-shader.dll)
 scripts/copy-vcruntime.sh         the Visual C++ runtime the native DLLs need, next to them
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
-assets/brand/                     icon frames, mark and lockups (docs/brand.md)
-src/Zinc.Native.targets        ghostty-vt.dll + bundled ConPTY for runnable projects
+scripts/vt-bench.py               libghostty-vt's parse speed, before and after a Ghostty update
+scripts/install.ps1, release.ps1  local installs; releases (installer + update packages, Velopack)
+scripts/update-themes.sh          refresh the bundled color schemes
+assets/                           brand artwork, fonts, themes, shaders, shell-integration scripts, licenses
+native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
+docs/                             brand.md, ux-writing.md (how the interface talks), shell-integration.md
+src/Zinc.Native.targets        the native DLLs + bundled ConPTY for runnable projects
 src/Zinc.Core/                 everything testable without a window:
-  Ghostty/                          P/Invoke bindings
-  Pty/ConPty.cs                     pseudoconsole + child process + reader thread
-  Terminal/TerminalSession.cs       terminal + pty glue, libghostty callbacks
-  Input/                            scan code -> GhosttyKey map, keyboard layout translation
-  Config.cs, ShellResolver.cs       config file, command resolution
-src/Zinc/                      WinUI app: window, TerminalControl (Win2D render + input)
-tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions, unit tests
+  Ghostty/                          P/Invoke bindings, the built-in glyphs
+  Pty/                              ConPTY (pseudoconsole, child process, reader thread), default terminal
+  Terminal/                         TerminalSession (terminal + pty glue, libghostty callbacks), shell
+                                    integration, links, find, selection, benchmark workloads
+  Input/                            keys and bindings, actions, keyboard layout translation
+  Settings/, Session/, Panes/       the settings catalog and writer, session.json, workspaces and panes
+  Cli/                              zn's protocol (compiled into zn as well)
+  Config.cs, ConfigFile.cs          one resolved config; config.toml, profiles and discovery
+src/Zinc/                      WinUI app: windows, settings, TerminalControl (Win2D render + input)
+src/Zinc.Cli/                  zn, the command-line tool
+tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions (real shells), unit tests
 ```
 
 ## Updating libghostty-vt
 
 The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 
-1. Change `COMMIT` in `scripts/build-libghostty.sh` and run it.
-2. Run `python scripts/gen-keys.py`.
-3. Run `dotnet test`. `AbiTests` compares every binding struct, enum and imported
+1. Run `python scripts/vt-bench.py --save before` (the current DLL's parse speed).
+2. Change `COMMIT` in `scripts/build-libghostty.sh` and run it. It also rebuilds zinc-sprite.dll
+   from Ghostty's sprite code, which isn't part of its API: `SpriteTests` pin what Zinc relies on.
+3. Run `python scripts/gen-keys.py`.
+4. Run `dotnet test`. `AbiTests` compares every binding struct, enum and imported
    function against the library's own ABI manifest (`ghostty_type_json()`).
+5. Run `python scripts/vt-bench.py --compare before`: more than 10% slower is worth a look.
 
 ## Known gaps
 
-- IME (CJK input methods) is untested; there is no composition UI.
-- Keybindings aren't configurable yet.
-- Ligatures are intentionally disabled (glyphs are placed per cell).
-- Desktop notifications are parsed by libghostty but not surfaced yet. Sixel isn't supported
-  (libghostty has no sixel API); kitty graphics animation shows the current frame only.
+- Ligatures are intentionally off (each glyph is placed in its own cell).
+- Sixel isn't supported (libghostty has no sixel API); kitty graphics animation shows the current
+  frame only.
 - Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own
   line break (e.g. to fit a fixed width) is cut there.
+- Default terminal mode needs Windows Terminal installed (its console host does the other half).
+- Shell integration doesn't reach a bash in WSL whose startup files replace `PROMPT_COMMAND` (a
+  bash started directly, like Git Bash, is fine), elvish inside WSL, YSH or xonsh; cmd reports no
+  exit codes.
+- Git Bash and MSYS2 programs write to a console a few bytes at a time, so very large colorful
+  output from them is slow in any Windows terminal (native programs and WSL are fine).
+- No ARM64 build yet.
 
 ## Open-source software
 
 Zinc ships Ghostty's terminal core (libghostty-vt, with simdutf, Highway, uucode and the Zig
-standard library compiled in), z2d (in the built-in glyphs), Cascadia Mono NF, iTerm2-Color-Schemes,
-the Windows App SDK, Win2D, ConPTY/OpenConsole, .NET, Tomlyn and a Heroicons shape. Settings > About
+standard library compiled in), z2d (in the built-in glyphs), glslang and SPIRV-Cross (custom shaders),
+Cascadia Mono NF, iTerm2-Color-Schemes, the Windows App SDK, Win2D, Vortice.Windows, ConPTY/OpenConsole,
+.NET, Tomlyn, Velopack and a Heroicons shape. Settings > About
 lists them with their licenses; the texts are in `Licenses\` next to `zinc.exe`.
