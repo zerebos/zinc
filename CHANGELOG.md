@@ -14,6 +14,10 @@ is the version it builds, and hands it to the installer as the release notes).
 - Fallback fonts: pick the fonts for characters yours lacks (Japanese, symbols, icons), tried in order before
   Windows chooses (Appearance > Font).
 
+### Fixed
+- Developer PowerShell for Visual Studio (and any PowerShell profile that runs a command and stays open) gets shell
+  integration now: command marks, failed-command bars, the command center's folder.
+
 ### Changed
 - Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set
   Terminal > Mouse > Right-click to "Copy or paste" (or "Paste").

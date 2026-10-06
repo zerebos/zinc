@@ -39,18 +39,23 @@ public static class ShellIntegration
         var exe = Path.GetFileNameWithoutExtension(args[0]).ToLowerInvariant();
         if (exe is "pwsh" or "powershell")
         {
-            var (runs, noExit) = PowerShellArguments(args.Skip(1));
-            if (runs)
-            {
-                return none;
-            }
+            var (runs, noExit, command) = PowerShellArguments(args.Skip(1));
 
             // A script block rather than a script file: execution policies (Windows PowerShell's
             // default refuses .ps1 files) apply to files only.
             var file = Path.Combine(scripts, "pwsh", "zinc.ps1").Replace("'", "''");
+            var load = $". ([scriptblock]::Create([IO.File]::ReadAllText('{file}')))";
+            if (runs)
+            {
+                // A -Command that stays open afterwards (Developer PowerShell for VS: -NoExit -Command "&{Enter-VsDevShell
+                // ...}") runs ours after it: PowerShell joins every argument after -Command into the command. Anything
+                // else that runs something (no -NoExit, -File, a script) is left alone.
+                return noExit && command ? none with { CommandLine = $"{commandLine} \"; {load}\"" } : none;
+            }
+
             return none with
             {
-                CommandLine = $"{commandLine}{(noExit ? "" : " -NoExit")} -Command \". ([scriptblock]::Create([IO.File]::ReadAllText('{file}')))\"",
+                CommandLine = $"{commandLine}{(noExit ? "" : " -NoExit")} -Command \"{load}\"",
             };
         }
 
@@ -83,8 +88,11 @@ public static class ShellIntegration
         return none with { Environment = env };
     }
 
-    /// <summary>Whether PowerShell's arguments already run something (then it's left alone), and whether they include -NoExit.</summary>
-    internal static (bool Runs, bool NoExit) PowerShellArguments(IEnumerable<string> args)
+    /// <summary>
+    /// Whether PowerShell's arguments already run something, whether they include -NoExit (before what runs), and
+    /// whether what runs is a -Command (the rest of the arguments).
+    /// </summary>
+    internal static (bool Runs, bool NoExit, bool Command) PowerShellArguments(IEnumerable<string> args)
     {
         // Parameters that take a value (any unambiguous prefix works, as in PowerShell itself).
         string[] withValue = ["workingdirectory", "wd", "executionpolicy", "ep", "ex", "windowstyle", "w", "configurationname",
@@ -102,14 +110,18 @@ public static class ShellIntegration
 
             if (arg.Length < 2 || arg[0] is not ('-' or '/'))
             {
-                return (true, noExit); // a script or command, positionally (or "-": read stdin)
+                return (true, noExit, false); // a script or command, positionally (or "-": read stdin)
             }
 
             var name = arg.TrimStart('-', '/').Split(':')[0].ToLowerInvariant();
-            if (Prefix(name, "command") || Prefix(name, "commandwithargs") || name is "cwa" or "ec" ||
-                Prefix(name, "file") || Prefix(name, "encodedcommand"))
+            if (Prefix(name, "command"))
             {
-                return (true, noExit);
+                return (true, noExit, true);
+            }
+
+            if (Prefix(name, "commandwithargs") || name is "cwa" or "ec" || Prefix(name, "file") || Prefix(name, "encodedcommand"))
+            {
+                return (true, noExit, false);
             }
 
             if (name.Length >= 3 && Prefix(name, "noexit"))
@@ -122,7 +134,7 @@ public static class ShellIntegration
             }
         }
 
-        return (false, noExit);
+        return (false, noExit, false);
 
         static bool Prefix(string name, string full) => name.Length > 0 && full.StartsWith(name, StringComparison.Ordinal);
     }

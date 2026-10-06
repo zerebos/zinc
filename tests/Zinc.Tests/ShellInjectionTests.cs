@@ -30,13 +30,24 @@ public class ShellInjectionTests
     [InlineData("pwsh.exe -c ls")]
     [InlineData("pwsh -File build.ps1")]
     [InlineData("pwsh build.ps1")]
-    [InlineData("pwsh.exe -NoExit -Command \"&{Import-Module x}\"")] // Developer PowerShell for VS
+    [InlineData("pwsh.exe -NoExit -File profile.ps1")] // -File: what follows are the script's arguments
+    [InlineData("powershell -NoExit -EncodedCommand ZQBjAGgAbwA=")]
     [InlineData("powershell -EncodedCommand ZQBjAGgAbwA=")]
     [InlineData("powershell -ec ZQBjAGgAbwA=")]
     public void PowerShellToldToRunSomethingIsLeftAlone(string command)
     {
         var launch = Prepare(command);
         Assert.Equal(command, launch.CommandLine);
+        Assert.Empty(launch.Environment);
+    }
+
+    [Theory]
+    [InlineData("powershell.exe -NoExit -Command \"&{Import-Module x; Enter-VsDevShell abc -SkipAutomaticLocation}\"")] // Developer PowerShell for VS
+    [InlineData(@"pwsh -noe -c Set-Location C:\src")]
+    public void ACommandThatStaysOpenGetsTheScriptAfterIt(string command)
+    {
+        var launch = Prepare(command);
+        Assert.Equal(command + @" ""; . ([scriptblock]::Create([IO.File]::ReadAllText('C:\Zinc\ShellIntegration\pwsh\zinc.ps1')))""", launch.CommandLine);
         Assert.Empty(launch.Environment);
     }
 
@@ -98,8 +109,11 @@ public class ShellInjectionTests
     [InlineData("-NoLogo -", true, false)]
     [InlineData("-ExecutionPolicy:Bypass -Nologo", false, false)]
     [InlineData("/c dir", true, false)]
-    public void ReadsPowerShellsArguments(string args, bool runs, bool noExit) =>
-        Assert.Equal((runs, noExit), ShellIntegration.PowerShellArguments(ShellIntegration.Split(args)));
+    public void ReadsPowerShellsArguments(string args, bool runs, bool noExit)
+    {
+        var (readRuns, readNoExit, _) = ShellIntegration.PowerShellArguments(ShellIntegration.Split(args));
+        Assert.Equal((runs, noExit), (readRuns, readNoExit));
+    }
 
     [Fact]
     public void SplitsLikeWindows() =>
@@ -191,6 +205,16 @@ public class ShellInjectionTests
         // Its default execution policy refuses script files: the script is loaded as text.
         using var session = StartShell("powershell.exe -NoLogo -NoProfile");
         ChecksMarks(session, "cmd /c exit 4", 4, "cd C:\\Windows", "Windows");
+    }
+
+    [Fact]
+    public void WindowsPowerShellAfterACommandThatStaysOpen()
+    {
+        // Started as Developer PowerShell for VS is (its quoting included): the command runs first, then the marks.
+        using var session = StartShell("powershell.exe -NoLogo -NoProfile -NoExit -Command \"&{Set-Variable -Name zincDev -Value \"\"\"entered\"\"\" -Scope Global}\"");
+        ChecksMarks(session, "cmd /c exit 5", 5, "cd C:\\Windows", "Windows");
+        session.SendInput("Write-Output \"dev=$zincDev\"\r");
+        WaitFor(session, () => session.ReadScreenText().Contains("dev=entered"), "the first command's variable");
     }
 
     [Fact]
