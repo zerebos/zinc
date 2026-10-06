@@ -17,6 +17,8 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Fixed
 - Developer PowerShell for Visual Studio (and any PowerShell profile that runs a command and stays open) gets shell
   integration now: command marks, failed-command bars, the command center's folder.
+- Git Bash and MSYS2's bash keep their shell integration even when your `.bashrc` sets `PROMPT_COMMAND` outright
+  (`PROMPT_COMMAND='history -a'` used to switch the marks off).
 
 ### Changed
 - Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set

@@ -107,5 +107,6 @@ else
     PROMPT_COMMAND="__zinc_si_status${PROMPT_COMMAND:+; $PROMPT_COMMAND}; __zinc_si_prompt"
 fi
 
-# This first time bash is still running PROMPT_COMMAND as it was: mark this prompt now.
-__zinc_si_prompt
+# This first time bash is still running PROMPT_COMMAND as it was: mark this prompt now. (Not when startup.bash
+# loads this before the first prompt: PROMPT_COMMAND, as just set, marks it.)
+[[ -n "${__zinc_si_startup-}" ]] || __zinc_si_prompt

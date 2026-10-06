@@ -59,7 +59,8 @@ public class ShellInjectionTests
     }
 
     [Theory]
-    [InlineData(@"""C:\Program Files\Git\bin\bash.exe"" --login -i")]
+    [InlineData(@"""C:\Program Files\Git\bin\bash.exe"" -c ""ls; bash""")] // runs something: not interactive
+    [InlineData(@"bash.exe build.sh")]
     [InlineData(@"C:\Windows\system32\wsl.exe --distribution-id {1234} --cd ~")]
     [InlineData(@"C:\msys64\msys2_shell.cmd -defterm -here -no-start -ucrt64")]
     public void OtherShellsGetVariablesAndKeepTheirCommand(string command)
@@ -71,6 +72,29 @@ public class ShellInjectionTests
         Assert.Equal(ShellIntegration.BashBootstrap, launch.Environment["PROMPT_COMMAND"]);
         Assert.Equal("ZINC_SHELL_INTEGRATION_DIR/p:PROMPT_COMMAND:ZDOTDIR/p", launch.Environment["WSLENV"]);
         Assert.False(launch.Environment.ContainsKey("ZINC_ZDOTDIR"));
+    }
+
+    [Theory]
+    [InlineData(@"""C:\Program Files\Git\bin\bash.exe"" --login -i", @"""C:\Program Files\Git\bin\bash.exe"" --posix --login -i", "1 histfile", null)]
+    [InlineData("bash.exe", "bash.exe --posix", "1 histfile", null)]
+    [InlineData(@"C:\msys64\usr\bin\bash.exe --norc -i", @"C:\msys64\usr\bin\bash.exe --posix -i", "1 --norc histfile", null)]
+    [InlineData("bash --rcfile \"C:/my rc\" -o vi -i", "bash --posix -o vi -i", "1 histfile", "C:/my rc")]
+    public void BashStartedDirectlyReadsItsStartupThroughOurs(string command, string expected, string flags, string? rcfile)
+    {
+        var launch = Prepare(command);
+        Assert.Equal(expected, launch.CommandLine);
+        Assert.Equal("C:/Zinc/ShellIntegration/bash/startup.bash", launch.Environment["ENV"]);
+        Assert.Equal(flags, launch.Environment["ZINC_BASH_INJECT"]);
+        Assert.Equal(rcfile, launch.Environment.GetValueOrDefault("ZINC_BASH_RCFILE"));
+        Assert.False(launch.Environment.ContainsKey("PROMPT_COMMAND"));
+    }
+
+    [Fact]
+    public void BashKeepsTheUsersEnvAndHistfile()
+    {
+        var launch = Prepare("bash.exe -i", new() { ["ENV"] = "~/.shrc", ["HISTFILE"] = "~/.hist" });
+        Assert.Equal("~/.shrc", launch.Environment["ZINC_BASH_ENV"]);
+        Assert.Equal("1", launch.Environment["ZINC_BASH_INJECT"]);
     }
 
     [Theory]
@@ -238,6 +262,27 @@ public class ShellInjectionTests
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
         session.SendInput("echo \"[$PROMPT_COMMAND]\"\r");
         WaitFor(session, () => session.ReadScreenText().Contains("[__zinc_si_status; echo -n; __zinc_si_prompt]"), "PROMPT_COMMAND");
+    }
+
+    [Theory]
+    [InlineData("--noprofile -i")]
+    [InlineData("--login -i")] // Git Bash's own profile: ~/.bash_profile, which sources ~/.bashrc
+    public void BashWhoseStartupReplacesPromptCommand(string args)
+    {
+        const string bash = @"C:\Program Files\Git\bin\bash.exe";
+        Assert.SkipUnless(File.Exists(bash), "no Git Bash");
+        var home = Directory.CreateTempSubdirectory("zinc-bash-").FullName;
+        File.WriteAllText(Path.Combine(home, ".bashrc"), "PROMPT_COMMAND='history -a'\nzinc_rc=read\n");
+        File.WriteAllText(Path.Combine(home, ".bash_profile"), "zinc_profile=read\n. ~/.bashrc\n");
+        using var session = StartShell($"\"{bash}\" {args}", new() { ["HOME"] = home });
+        ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
+
+        // Its startup files were read as bash reads them, and its own prompt command still runs (after ours).
+        var login = args.Contains("--login");
+        // And it's bash's own mode again, with bash's own history file.
+        session.SendInput("echo \"[$zinc_profile|$zinc_rc|$(shopt -q login_shell && echo login)|$PROMPT_COMMAND|${HISTFILE##*/}|$(shopt -oq posix && echo posix)]\"\r");
+        var expected = $"[{(login ? "read" : "")}|read|{(login ? "login" : "")}|__zinc_si_status; history -a; __zinc_si_prompt|.bash_history|]";
+        WaitFor(session, () => session.ReadScreenText().Contains(expected), expected);
     }
 
     // The README's hand-written snippets from before automatic integration (same function names

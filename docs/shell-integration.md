@@ -9,7 +9,7 @@ not as a to-do list.
 
 | Shell | Zinc | Ghostty |
 |---|---|---|
-| bash | script, loaded through `PROMPT_COMMAND` | script, loaded by starting `bash --posix` with `ENV` pointing at it (then leaving POSIX mode; HISTFILE fixed up) |
+| bash | bash.exe started directly (Git Bash, MSYS2): **since 2026-10-05** the same idea as Ghostty's, our own code: `bash --posix` with `ENV` = `bash/startup.bash`, which leaves POSIX mode, reads the startup files as bash would (login: /etc/profile + the first of ~/.bash_profile, ~/.bash_login, ~/.profile; else /etc/bash.bashrc + ~/.bashrc, or the --rcfile), fixes HISTFILE, then loads `zinc.bash` last, so a startup file that assigns `PROMPT_COMMAND` can't drop it. Anything else (WSL, launcher scripts): `zinc.bash` through a `PROMPT_COMMAND` bootstrap, which such a startup file still drops | script, loaded by starting `bash --posix` with `ENV` pointing at it (then leaving POSIX mode; HISTFILE fixed up) |
 | zsh | `ZDOTDIR` → our `.zshenv`, which restores the user's | same mechanism |
 | PowerShell (pwsh, Windows PowerShell) | `-NoExit -Command` running our script as text | none: Ghostty doesn't run on Windows |
 | fish | **nothing to load**: fish 4.x sends its own marks (see below) | `vendor_conf.d` script through an `XDG_DATA_DIRS` prepend |

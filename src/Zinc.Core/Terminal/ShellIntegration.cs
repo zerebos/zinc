@@ -68,9 +68,40 @@ public static class ShellIntegration
             return none;
         }
 
-        // The rest (bash, zsh, and wsl.exe, cmd.exe or a launcher script starting one): variables.
         // Forward slashes: MSYS programs read C:/x as a path, and WSLENV's /p translates it (/mnt/c/x).
         var dir = scripts.Replace('\\', '/').TrimEnd('/');
+
+        // bash started directly (Git Bash, MSYS2's bash.exe): in POSIX mode with ENV pointing at our startup file, which
+        // reads the user's startup files as bash would and loads the integration after them, so a startup file that
+        // assigns PROMPT_COMMAND outright can't drop it (the PROMPT_COMMAND bootstrap below, which bash started by
+        // anything else gets, runs only if the startup files keep it).
+        if (exe == "bash" && BashArguments(args.Skip(1)) is { } bash)
+        {
+            var bashEnv = new Dictionary<string, string?>
+            {
+                ["ENV"] = dir + "/bash/startup.bash",
+                ["ZINC_BASH_INJECT"] = string.Join(' ', ["1", .. bash.Flags]),
+                ["ZINC_SHELL_INTEGRATION_DIR"] = dir,
+            };
+            if (environment("ENV") is { Length: > 0 } userEnv)
+            {
+                bashEnv["ZINC_BASH_ENV"] = userEnv; // put back by startup.bash
+            }
+
+            if (bash.RcFile is { } rc)
+            {
+                bashEnv["ZINC_BASH_RCFILE"] = rc;
+            }
+
+            if (environment("HISTFILE") is not { Length: > 0 })
+            {
+                bashEnv["ZINC_BASH_INJECT"] += " histfile"; // POSIX mode's default is ~/.sh_history
+            }
+
+            return new ShellLaunch(string.Join(' ', [ShellResolver.Quote(args[0]), "--posix", .. bash.Args.Select(ShellResolver.Quote)]), bashEnv);
+        }
+
+        // The rest (zsh, bash that runs a script, and wsl.exe, cmd.exe or a launcher script starting one): variables.
         var env = new Dictionary<string, string?>
         {
             ["ZINC_SHELL_INTEGRATION_DIR"] = dir,
@@ -86,6 +117,66 @@ public static class ShellIntegration
         var existing = environment("WSLENV") is { Length: > 0 } w ? w.Split(':', StringSplitOptions.RemoveEmptyEntries).ToList() : [];
         env["WSLENV"] = string.Join(':', existing.Concat(wsl.Where(v => !existing.Contains(v))));
         return none with { Environment = env };
+    }
+
+    /// <summary>
+    /// bash's arguments for a start in POSIX mode: what's kept, the startup flags startup.bash goes by (--login stays,
+    /// --norc and --noprofile become flags) and an --rcfile. Null where bash won't be interactive or POSIX mode doesn't
+    /// fit: -c, a script, --posix (already), -s or anything after - and -- (they'd be read differently), restricted.
+    /// </summary>
+    internal static (List<string> Args, List<string> Flags, string? RcFile)? BashArguments(IEnumerable<string> args)
+    {
+        List<string> kept = [];
+        List<string> flags = [];
+        string? rcfile = null;
+        using var each = args.GetEnumerator();
+        while (each.MoveNext())
+        {
+            var arg = each.Current;
+            switch (arg)
+            {
+                case "--norc" or "--noprofile":
+                    flags.Add(arg);
+                    break;
+                case "--rcfile" or "--init-file":
+                    if (!each.MoveNext())
+                    {
+                        return null;
+                    }
+
+                    rcfile = each.Current;
+                    break;
+                case "--posix" or "--restricted" or "-" or "--":
+                    return null;
+                case "-o" or "+o" or "-O" or "+O":
+                    // An option that takes a name.
+                    if (!each.MoveNext())
+                    {
+                        return null;
+                    }
+
+                    kept.Add(arg);
+                    kept.Add(each.Current);
+                    break;
+                default:
+                    if (arg.StartsWith("--", StringComparison.Ordinal))
+                    {
+                        kept.Add(arg); // --login, --noediting, ...
+                    }
+                    else if (arg.Length > 1 && arg[0] is '-' or '+' && !arg.AsSpan(1).ContainsAny("csrO"))
+                    {
+                        kept.Add(arg); // -i, -l, -il, ...
+                    }
+                    else
+                    {
+                        return null; // -c, -s, -r, a script
+                    }
+
+                    break;
+            }
+        }
+
+        return (kept, flags, rcfile);
     }
 
     /// <summary>

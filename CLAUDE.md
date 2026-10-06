@@ -325,7 +325,9 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
   pwsh/powershell: `-NoExit -Command ". ([scriptblock]::Create(ReadAllText(...)))"` (text, not a
   file: WinPS's Restricted policy); skipped when the args already run something, except `-NoExit -Command ...` (Developer
   PowerShell for VS), where it's appended as one more argument (`"; . (...)"`: the command joins them). Everything else
-  gets env: `PROMPT_COMMAND` bootstrap (bash; the script removes it), `ZDOTDIR` (zsh; `.zshenv`
+  gets env: bash.exe run directly (Git Bash, MSYS2) = `--posix` + `ENV`=`bash/startup.bash` (reads the startup files as bash
+  would, then `zinc.bash` last: a .bashrc assigning PROMPT_COMMAND can't drop it; `BashArguments`; -c/scripts/--posix left
+  to the next way), other bash `PROMPT_COMMAND` bootstrap (the script removes it), `ZDOTDIR` (zsh; `.zshenv`
   restores + sources the user's), `ZINC_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
   C:/x, WSLENV `/p` translates it), `WSLENV`. Each script stands down where marks/OSC 7 already
   exist (p10k's `POWERLEVEL9K_TERM_SHELL_INTEGRATION`, `133;`/`]7;` in prompt/hook text).
