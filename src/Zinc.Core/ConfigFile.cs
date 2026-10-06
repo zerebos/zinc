@@ -662,6 +662,7 @@ public sealed class ConfigFile
             ["font.family"] = ("font-family", v => v as string),
             ["font.size"] = ("font-size", v => Number(v)),
             ["font.weight"] = ("font-weight", v => v as string ?? Number(v)),
+            ["font.ligatures"] = ("font-ligatures", v => Bool(v)),
             ["font.bold-weight"] = ("font-bold-weight", v => v as string ?? Number(v)),
             ["font.fallback"] = ("font-fallback", v => v is List<object> l && l.All(x => x is string) ? string.Join(", ", l) : v as string),
             ["font.builtin-glyphs"] = ("builtin-glyphs", v => Bool(v)),

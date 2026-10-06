@@ -215,6 +215,12 @@ public sealed record Config
     /// <summary>Primary font family; glyphs it lacks fall back through DirectWrite.</summary>
     public string FontFamily { get; init; } = "Cascadia Mono NF"; // ships with Zinc (Fonts)
 
+    /// <summary>
+    /// The font's ligatures and contextual alternates (=> != -> in fonts that have them), each still one cell. Broken
+    /// under the cursor and at a selection's edges. Config: <c>[font] ligatures = true</c>.
+    /// </summary>
+    public bool FontLigatures { get; init; }
+
     /// <summary>The weight of normal text (100-900, 400 = normal). Config: <c>[font] weight = "light"</c> (or a number).</summary>
     public int FontWeight { get; init; } = 400;
 
@@ -663,6 +669,7 @@ public sealed record Config
         {
             "font-family" when value.Length > 0 => this with { FontFamily = value },
             "font-weight" when TryWeight(value, out var weight) => this with { FontWeight = weight },
+            "font-ligatures" when bool.TryParse(value, out var ligatures) => this with { FontLigatures = ligatures },
             "font-bold-weight" when TryWeight(value, out var boldWeight) => this with { BoldWeight = boldWeight },
             "font-fallback" => this with { FontFallback = string.Join(", ", value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) },
             "builtin-glyphs" when bool.TryParse(value, out var builtin) => this with { BuiltinGlyphs = builtin },

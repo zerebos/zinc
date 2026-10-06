@@ -24,7 +24,7 @@ public readonly record struct CursorPresentation(bool Focused, bool BlinkOn);
 /// sits on the grid), DirectWrite layout for glyphs the font lacks, decorations
 /// and the cursor.
 /// </summary>
-public sealed unsafe class TerminalRenderer : IDisposable
+public sealed unsafe partial class TerminalRenderer : IDisposable
 {
     private Config _config;
 
@@ -304,6 +304,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
         _glyphCache.Clear();
         Array.Clear(_glyphFast);
+        _shapeCache.Clear(); // glyph indices of the old faces
         _bundledGlyphCache.Clear();
         ClearSprites(); // drawn for the old cell size
         if (_bundledFaces[0] != null)
@@ -434,6 +435,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         Native.RenderStateGet(_renderState, RenderStateData.Colors, &colors);
         var cursor = new GhosttyRenderStateCursor { Size = (nuint)sizeof(GhosttyRenderStateCursor) };
         Native.RenderStateGet(_renderState, RenderStateData.Cursor, &cursor);
+        _frameCursor = cursor.Visible != 0 && cursor.ViewportHasValue != 0 ? ((int)cursor.ViewportX, (int)cursor.ViewportY) : (-1, -1);
 
         var defaultFg = ToColor(colors.Foreground);
         var defaultBg = ToColor(colors.Background);
@@ -494,6 +496,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         // (a device lost), which would fail every frame after.
         _frameSprites.Clear();
         _rowSprites.Clear();
+        _ligatureGlyphs.Clear();
         if (_batching)
         {
             // To 1/64 of a pixel: the padding in points (1pt = 1.333... DIPs) plus whole pixels came out 0.33333206 at one
@@ -556,6 +559,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         if (_batching)
         {
             DrawFrameSprites(ds);
+            DrawLigatureGlyphs(ds);
             _batching = false; // the cursor redraws its cell's glyph directly
             if (perf != null) t = perf.Mark(2, t);
             for (var y = 0; y < read; y++)
@@ -615,6 +619,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         Wide = 64,
         SpacerTail = 128,
         Placeholder = 256, // kitty graphics Unicode placeholder: an image slice, not text
+        Selected = 512, // in the selection (ligatures break at its edges)
     }
 
     private struct Cell
@@ -735,6 +740,11 @@ public sealed unsafe class TerminalRenderer : IDisposable
             // Selection: the scheme's (or config's) selection colors, else inverse video, which
             // works with any theme.
             var selected = hasSelection && x >= sel.StartX && x <= sel.EndX;
+            if (selected)
+            {
+                cell.Flags |= CellFlags.Selected;
+            }
+
             if (selected && selectionBg is { } selBg)
             {
                 inverse = false;
@@ -871,6 +881,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
         var runLen = 0;
         var runVariant = 0;
         Color runColor = default;
+        var shaped = ShapeRow(count, row); // ligatures: the glyphs shaping picked, where they differ
 
         for (var x = 0; x < count; x++)
         {
@@ -900,7 +911,7 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
             var variant = cell.FontVariant;
             var glyph = cell.CpLen == 1 && (cell.Flags & CellFlags.Wide) == 0
-                ? GlyphIndex(_codepoints[cell.CpStart], variant)
+                ? shaped && _shaped[x] != 0 ? _shaped[x] : GlyphIndex(_codepoints[cell.CpStart], variant)
                 : 0;
 
             if (glyph == 0)
@@ -917,6 +928,14 @@ public sealed unsafe class TerminalRenderer : IDisposable
 
             if (_batching)
             {
+                if (shaped && _shaped[x] != 0)
+                {
+                    // A ligature's glyph can reach several cells to its left or right, past an atlas tile: drawn
+                    // directly, after the batch (TerminalRenderer.Ligatures.cs).
+                    _ligatureGlyphs.Add((x, row, glyph, variant, cell.Fg));
+                    continue;
+                }
+
                 AddGlyph(ds, glyph, variant, cell.Fg, x, row);
                 continue;
             }

@@ -675,6 +675,16 @@ Test a press with `.scratch/tools/quick-toggle.ps1` and lifetime with `lifetime.
 to the logged hwnd; need ZINC_LOG). Don't launch `powershell.exe` consoles
 mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 - `TerminalRenderer.cs` — fonts, `CellMetrics`, render state → Win2D (glyph runs, fallback, cursor).
+  Ligatures (`[font] ligatures`, off by default; 2026-10-05): `TerminalRenderer.Ligatures.cs` shapes each run of
+  adjacent ASCII symbols per row (`=>`, `!==`, `<!--`; letters, blanks, sprites, the cursor's cell, a selection edge and a
+  style change end a run) with Win2D's `CanvasTextAnalyzer` (GetScript + GetGlyphs with the cluster map; `null` number
+  substitution and typography = the font's default features; **never Dispose the analyzer**: the projection offers it
+  but the object throws). Only one-glyph-per-character results are taken (coding fonts ligate with contextual
+  alternates). Cached by (hash of the run, length, variant: the variant once sat XORed in the hash and italic `>=`
+  collided with regular `<=`); cleared in SetFont. Shaped glyphs are drawn directly after the batch
+  (`DrawLigatureGlyphs`): a ligature's glyph reaches several cells left or right, past its atlas tile. Shaping only
+  symbol runs keeps it cheap: shaping whole segments cost the benchmark's Colors workload 144 -> 91 fps. Check with
+  `.scratch/tools/lig-shot.ps1 -Font 'ligatures = true'` (JetBrains Mono; the default Cascadia Mono has no ligatures).
   A frame reads every row first (`_frameCells`, one codepoint buffer per frame), draws all backgrounds as one
   cols x rows bitmap (`DrawBackgrounds`, nearest-neighbor, default bg transparent), then each row's matches,
   text, decorations, cursor. Measure drawing changes A/B with `.scratch/tools/ab-bench.ps1`-style runs, each

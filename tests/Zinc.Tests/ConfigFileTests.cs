@@ -30,6 +30,8 @@ public class ConfigFileTests : IDisposable
         Assert.Equal(300, config.FontWeight);
         Assert.Equal(600, config.BoldWeight);
         Assert.Equal(["Symbols Nerd Font", "Noto Sans JP"], config.FontFallbacks);
+        Assert.False(config.FontLigatures);
+        Assert.True(Parse("[font]\nligatures = true").Global.FontLigatures);
 
         var one = Parse("[font]\nfallback = \"MS Mincho, Segoe UI Symbol\"\nweight = \"semi-bold\"").Global;
         Assert.Equal(["MS Mincho", "Segoe UI Symbol"], one.FontFallbacks);

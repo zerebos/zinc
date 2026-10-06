@@ -167,6 +167,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   (default for `weight`), `"medium"`, `"semibold"`, `"bold"` (default for `bold-weight`), `"extra-bold"`, `"black"`,
   or a number from 100 to 900. A font without that weight shows its nearest one (the bundled Cascadia Mono NF has
   them all).
+- `ligatures`: `false` (default) or `true`: fonts that have ligatures (Cascadia Code, JetBrains Mono, Fira Code;
+  not the default Cascadia Mono) draw `=>` `!=` `->` `===` and the like as one shape. Each character keeps its
+  cell, and the one under the cursor, or at the edge of a selection, shows as itself. Only runs of symbols are
+  joined: a font's letter-based alternates (Fira Code's `0x`) aren't used.
 - `fallback`: fonts for characters your font lacks, tried in order before Windows picks one:
   `fallback = ["Symbols Nerd Font", "Noto Sans JP"]` (or one string with commas). Empty (default): Windows' choice.
 - `builtin-glyphs`: `true` (default) draws box drawing, block elements, Symbols for Legacy

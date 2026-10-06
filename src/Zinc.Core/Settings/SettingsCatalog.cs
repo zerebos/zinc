@@ -125,6 +125,9 @@ public static class SettingsCatalog
                     new("Medium", "medium"), new("Semibold", "semibold"), new("Bold", "bold"), new("Extra bold", "extra-bold"),
                     new("Black", "black"),
                 ] },
+        new("appearance", "Font", "font.ligatures", "Ligatures",
+            "Fonts that have them (Cascadia Code, JetBrains Mono, Fira Code) join => != -> and the like into one shape. Each character keeps its cell; the one under the cursor shows as itself.",
+            SettingKind.Toggle, false),
         new("appearance", "Font", "font.fallback", "Fallback fonts",
             "For characters your font lacks, tried in order before Windows picks one. Separate them with commas.",
             SettingKind.Text, null)
