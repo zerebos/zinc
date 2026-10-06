@@ -630,6 +630,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Bottom });
         }
 
+        NoteEnter(data);
         _pty?.Write(data);
     }
 

@@ -145,6 +145,22 @@ public sealed unsafe partial class TerminalSession
         {
             var end = _markScanner.Next(data, out var mark);
             var chunk = end < 0 ? data : data[..end];
+
+            // Enter was pressed at a prompt of a shell that sends no C (cmd): the command's output starts on the line
+            // after the one the shell echoes, so that's where Zinc puts its C.
+            if (_enterPending && chunk.IndexOf((byte)'\n') is var newline and >= 0)
+            {
+                VtWrite(chunk[..(newline + 1)]);
+                _enterPending = false;
+                StartCommandOnEnter();
+                if (end >= 0)
+                {
+                    end -= newline + 1;
+                }
+
+                data = data[(newline + 1)..];
+                chunk = chunk[(newline + 1)..];
+            }
             if (end >= 0 && mark.Kind is 'A' or 'N')
             {
                 WritePromptStart(chunk);
@@ -223,6 +239,7 @@ public sealed unsafe partial class TerminalSession
         {
             case 'A':
                 var signature = mark.Options ?? "";
+                _cOnEnter = signature.Split(';').Contains(COnEnter);
                 _outerSignature ??= signature;
                 if (signature != Signature(_nested.Count) && OuterLevel(signature) is { } outer)
                 {
@@ -256,9 +273,7 @@ public sealed unsafe partial class TerminalSession
                 last.Input = TrackCursor(atLineStart: false) ?? 0;
                 break;
             case 'C' when last is { Started: null }:
-                last.Output = TrackCursor(atLineStart: false) ?? 0;
-                last.Started = Clock();
-                last.Text = string.IsNullOrWhiteSpace(mark.CommandLine) ? ReadCommandLine(last) : mark.CommandLine.Trim();
+                StartCommand(last, mark.CommandLine);
                 break;
             case 'D' when last != null:
                 last.End = TrackCursor(atLineStart: false) ?? 0;
@@ -274,6 +289,54 @@ public sealed unsafe partial class TerminalSession
                 return;
         }
 
+        _commandsChanged = true;
+        _commandSnapshot = null;
+    }
+
+    /// <summary>
+    /// The prompt-mark option of a shell that can't send C (cmd: its PROMPT has no hook for Enter; Zinc's PROMPT says
+    /// so): Zinc marks the command's start itself when Enter is pressed at its prompt.
+    /// </summary>
+    public const string COnEnter = "zinc_c=enter";
+
+    /// <summary>The last prompt was a <see cref="COnEnter"/> shell's.</summary>
+    private bool _cOnEnter;
+
+    /// <summary>Enter went to a <see cref="COnEnter"/> shell typing a command: its C goes after the next line break of output.</summary>
+    private bool _enterPending;
+
+    /// <summary>A command starts (C): where its output begins, when, and its text (the mark's, else read back).</summary>
+    private void StartCommand(CommandRefs command, string? commandLine)
+    {
+        command.Output = TrackCursor(atLineStart: false) ?? 0;
+        command.Started = Clock();
+        command.Text = string.IsNullOrWhiteSpace(commandLine) ? ReadCommandLine(command) : commandLine.Trim();
+    }
+
+    /// <summary>Notes Enter on its way to the shell (input holding a CR): a <see cref="COnEnter"/> shell's command starts there.</summary>
+    private void NoteEnter(ReadOnlySpan<byte> input)
+    {
+        if (!_cOnEnter || input.IndexOf((byte)'\r') < 0)
+        {
+            return;
+        }
+
+        lock (Lock)
+        {
+            _enterPending = _commands.Count > 0 && _commands[^1] is { Closed: false, Started: null, Input: not 0 };
+        }
+    }
+
+    /// <summary>The C a <see cref="COnEnter"/> shell couldn't send, at the start of the line after its command. Hold the lock.</summary>
+    private void StartCommandOnEnter()
+    {
+        if (_commands.Count == 0 || _commands[^1] is not { Closed: false, Started: null, Input: not 0 } command)
+        {
+            return;
+        }
+
+        NotePromptState(new ShellMark('C', null, null));
+        StartCommand(command, null);
         _commandsChanged = true;
         _commandSnapshot = null;
     }

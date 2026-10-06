@@ -242,6 +242,32 @@ public class ShellInjectionTests
     }
 
     [Fact]
+    public void Cmd()
+    {
+        // cmd's PROMPT carries A, B, D (no exit code) and the folder; Zinc marks C itself when Enter is pressed.
+        using var session = StartShell("cmd.exe");
+        WaitFor(session, () => session.Commands().Count >= 1, "the first prompt mark");
+        session.SendInput("echo zinc-hello\r");
+        WaitFor(session, () => session.Commands().Any(c => c.Ran && c.Text == "echo zinc-hello" && !c.Running), "the command");
+        var ran = session.Commands().First(c => c.Ran);
+        Assert.Null(ran.ExitCode);
+        Assert.True(session.SelectOutput(ran));
+        Assert.Equal("zinc-hello", session.GetSelectionText()?.Trim());
+
+        session.SendInput("cd C:\\Windows\r");
+        WaitFor(session, () => ShellDirectory.Parse(session.ReportedDirectory)?.TrimEnd('\\') == "C:\\Windows", "the folder report");
+    }
+
+    [Fact]
+    public void CmdKeepsTheUsersPrompt()
+    {
+        Assert.Equal("$e]133;D$e\\$e]133;A;zinc_c=enter$e\\$e]9;9;$P$e\\$T $P$G$e]133;B$e\\", ShellIntegration.CmdPrompt("$T $P$G"));
+        Assert.EndsWith("$P$G$e]133;B$e\\", ShellIntegration.CmdPrompt(null));
+        Assert.Null(ShellIntegration.CmdPrompt("$e]133;A$e\\$P$G")); // marks of its own
+        Assert.Equal(ShellIntegration.CmdPrompt(null), Prepare("cmd.exe /k echo hi").Environment["PROMPT"]);
+    }
+
+    [Fact]
     public void GitBash()
     {
         const string bash = @"C:\Program Files\Git\bin\bash.exe";

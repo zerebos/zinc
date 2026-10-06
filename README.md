@@ -590,15 +590,21 @@ output starts, and how it ended. With those marks, Zinc can:
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
   quitting, asks first while a command is running there (never at an idle prompt).
 
-The marks are invisible, and **PowerShell (7 and Windows PowerShell), bash and zsh get them
+The marks are invisible, and **PowerShell (7 and Windows PowerShell), bash, zsh and cmd get them
 automatically**, in WSL, Git Bash and MSYS2 too, along with folder reports for
 [reopening tabs](#reopening-where-you-left-off). Your startup files run as usual; Zinc's
 script (in `ShellIntegration\` next to zinc.exe) runs after them and changes nothing you see:
 
 - **PowerShell** is started with `-NoExit -Command` running it after your profile. A profile
   started with `-Command` or `-File` of its own is left alone.
-- **bash** finds it in `PROMPT_COMMAND`, which runs it once at the first prompt (then puts
-  `PROMPT_COMMAND` back as your startup files left it).
+- **PowerShell started with `-NoExit -Command`** (Developer PowerShell for Visual Studio) runs it after
+  that command.
+- **bash** started directly (Git Bash, MSYS2's `bash.exe`) is started in POSIX mode, where it reads
+  only Zinc's startup file: that file leaves POSIX mode, reads your startup files as bash would
+  (login or not, `--norc`, `--rcfile`), and adds the marks last, so a `.bashrc` that sets
+  `PROMPT_COMMAND` outright keeps them. Other bash (in WSL) finds the script in `PROMPT_COMMAND`, which
+  runs it once at the first prompt, as long as your startup files keep it there (add to
+  `PROMPT_COMMAND` rather than replace it).
 - **zsh** finds it through `ZDOTDIR`: Zinc's `.zshenv` puts your `ZDOTDIR` back, loads your
   `.zshenv` as zsh would have, and sets the rest up at the first prompt.
 - **WSL** gets the same variables through `WSLENV`, so it works with whichever of these is your
@@ -619,8 +625,11 @@ shells are told apart by how their prompts mark themselves (Zinc's scripts add t
 id); two that mark alike, like zsh inside zsh with powerlevel10k, look like one shell, and the
 command that started the inner one ends at its first prompt.
 
-**cmd** can mark prompts (for jumping), but not commands or exit codes:
-`setx PROMPT "$e]133;D$e\$e]133;A$e\$P$G$e]133;B$e\"`.
+**cmd** gets them through its `PROMPT` (yours, if you set one, inside them): prompts and the folder
+it's in. cmd can't say when a command starts or how it ended, so Zinc marks the start itself when you
+press Enter at the prompt: jumping, selecting and copying output and the command list work, but
+there are no exit codes (no red bars). A prompt that sends marks of its own is left alone. Clink, or an
+`AutoRun` that sets the prompt, can replace it.
 
 **fish** (recent versions: 4.3 checked) and **nushell** send the marks and folder reports on their own, so
 Zinc loads nothing into them: jumping, selecting output and the command list work as they

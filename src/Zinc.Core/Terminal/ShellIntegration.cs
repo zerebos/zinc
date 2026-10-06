@@ -116,7 +116,31 @@ public static class ShellIntegration
 
         var existing = environment("WSLENV") is { Length: > 0 } w ? w.Split(':', StringSplitOptions.RemoveEmptyEntries).ToList() : [];
         env["WSLENV"] = string.Join(':', existing.Concat(wsl.Where(v => !existing.Contains(v))));
+
+        // cmd: its PROMPT carries the marks (the variables above still reach a bash or zsh it starts).
+        if (exe == "cmd" && CmdPrompt(environment("PROMPT")) is { } prompt)
+        {
+            env["PROMPT"] = prompt;
+        }
+
         return none with { Environment = env };
+    }
+
+    /// <summary>
+    /// cmd's prompt with the marks around <paramref name="prompt"/> (its PROMPT, else cmd's default $P$G): the last
+    /// command finished (D: cmd has no exit code to give), a prompt starts (A, saying Zinc marks the command's start on
+    /// Enter: cmd has no hook for it), the folder (OSC 9;9), and typing starts (B). $e is ESC; ESC \ ends each. Null when
+    /// the prompt already sends marks of its own.
+    /// </summary>
+    internal static string? CmdPrompt(string? prompt)
+    {
+        prompt = string.IsNullOrEmpty(prompt) ? "$P$G" : prompt;
+        if (prompt.Contains("133;", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        return $"$e]133;D$e\\$e]133;A;{TerminalSession.COnEnter}$e\\$e]9;9;$P$e\\{prompt}$e]133;B$e\\";
     }
 
     /// <summary>
