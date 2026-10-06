@@ -6,6 +6,8 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.318 (2026-10-05)
+
 ### New
 - A menu on right-click in a terminal: copy, paste and find; open or copy the link you clicked; copy the command you
   clicked, or select or copy its output (with shell integration); split, new tab, close. Each item shows its key.
@@ -18,15 +20,15 @@ is the version it builds, and hands it to the installer as the release notes).
 - Fallback fonts: pick the fonts for characters yours lacks (Japanese, symbols, icons), tried in order before
   Windows chooses (Appearance > Font).
 
+### Changed
+- Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set
+  Terminal > Mouse > Right-click to "Copy or paste" (or "Paste").
+
 ### Fixed
 - Developer PowerShell for Visual Studio (and any PowerShell profile that runs a command and stays open) gets shell
   integration now: command marks, failed-command bars, the command center's folder.
 - Git Bash and MSYS2's bash keep their shell integration even when your `.bashrc` sets `PROMPT_COMMAND` outright
   (`PROMPT_COMMAND='history -a'` used to switch the marks off).
-
-### Changed
-- Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set
-  Terminal > Mouse > Right-click to "Copy or paste" (or "Paste").
 
 ## 0.1.0-dev.306 (2026-10-05)
 
