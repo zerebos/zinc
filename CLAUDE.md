@@ -323,7 +323,8 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
   (Core, tested: `Prepare` → command line + per-launch env; ConPty builds an environment block)
   and `assets/shell-integration/` (LF-only via .gitattributes; copied to `ShellIntegration\`).
   pwsh/powershell: `-NoExit -Command ". ([scriptblock]::Create(ReadAllText(...)))"` (text, not a
-  file: WinPS's Restricted policy); skipped when the args already run something. Everything else
+  file: WinPS's Restricted policy); skipped when the args already run something, except `-NoExit -Command ...` (Developer
+  PowerShell for VS), where it's appended as one more argument (`"; . (...)"`: the command joins them). Everything else
   gets env: `PROMPT_COMMAND` bootstrap (bash; the script removes it), `ZDOTDIR` (zsh; `.zshenv`
   restores + sources the user's), `ZINC_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
   C:/x, WSLENV `/p` translates it), `WSLENV`. Each script stands down where marks/OSC 7 already
