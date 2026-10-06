@@ -59,6 +59,9 @@ internal sealed partial class SettingsWindow
     private List<KeyChord> ChordsOf(ActionInvocation action) =>
         [.. _config.Keybindings.All.Where(b => b.Action == action).Select(b => b.Chord)];
 
+    /// <summary>Tabs inside panes: without them a new tab is a new workspace, and its keys are titled so.</summary>
+    private bool PaneTabs => _config.Global.TabGroups;
+
     private List<KeySequence> SequencesOf(ActionInvocation action) =>
         [.. _config.Keybindings.Sequences.Where(s => s.Action == action).Select(s => s.Keys)];
 
@@ -79,8 +82,8 @@ internal sealed partial class SettingsWindow
             {
                 var actions = family.ToList();
                 var text = string.Join(' ', actions.Select(a =>
-                    $"{Actions.Title(a)} {Actions.Format(a)} {Actions.VariantLabel(a, profiles)} {string.Join(' ', ChordsOf(a))} {string.Join(' ', SequencesOf(a))}"));
-                if (!Matches($"{group.Key} {Actions.FamilyTitle(family.Key)} {text}"))
+                    $"{Actions.Title(a, PaneTabs)} {Actions.Format(a)} {Actions.VariantLabel(a, profiles)} {string.Join(' ', ChordsOf(a))} {string.Join(' ', SequencesOf(a))}"));
+                if (!Matches($"{group.Key} {Actions.FamilyTitle(family.Key, PaneTabs)} {text}"))
                 {
                     continue;
                 }
@@ -91,7 +94,7 @@ internal sealed partial class SettingsWindow
                 }
                 else
                 {
-                    rows.AddRange(actions.Select(a => KeyRow(a, Actions.Title(a), ChordsOf(a), SequencesOf(a), lines)));
+                    rows.AddRange(actions.Select(a => KeyRow(a, Actions.Title(a, PaneTabs), ChordsOf(a), SequencesOf(a), lines)));
                 }
             }
 
@@ -170,7 +173,7 @@ internal sealed partial class SettingsWindow
     private Border FamilyCard(string family, List<ActionInvocation> actions, IReadOnlyDictionary<string, string> lines,
         List<(string Id, string Name)> profiles)
     {
-        var title = Actions.FamilyTitle(family);
+        var title = Actions.FamilyTitle(family, PaneTabs);
         var argument = Actions.ArgumentName(family);
         var variants = Actions.Variants(family, profiles);
 
@@ -192,7 +195,7 @@ internal sealed partial class SettingsWindow
                 Margin = new Thickness(indent, 0, 0, 0),
                 Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
             };
-            body.Children.Add(NameAndKeys(label, KeysPanel(action, Actions.Title(action), ChordsOf(action), SequencesOf(action), lines)));
+            body.Children.Add(NameAndKeys(label, KeysPanel(action, Actions.Title(action, PaneTabs), ChordsOf(action), SequencesOf(action), lines)));
         }
 
         // Any other variant: pick it in the capture flyout (the first one without keys to start).
@@ -345,7 +348,7 @@ internal sealed partial class SettingsWindow
                 chord.ToConfig() == null ? ("config.toml has no name for that key, so it can't be saved here.", false, "Add")
                 : keys.StartsSequence(chord) ? ($"{chord} starts key sequences; change those in config.toml.", false, "Add")
                 : keys.TryGet(chord, out var other) && other == current ? ("Already one of its keys.", false, "Add")
-                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other)}. Replace moves it here.", true, "Replace")
+                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other, PaneTabs)}. Replace moves it here.", true, "Replace")
                 : ("", true, (object)"Add");
         }
 

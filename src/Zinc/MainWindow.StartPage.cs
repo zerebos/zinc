@@ -8,7 +8,7 @@ namespace Zinc;
 
 // The new-workspace page (StartPage): a tab item of its own (not a WorkspaceTab: AllTabs skips it)
 // until it starts, when a workspace takes its place. A workspace started in a folder keeps it
-// (WorkspaceTab.Folder): its new tabs and splits start there (StartIn).
+// (WorkspaceTab.Folder): its new tabs start there, splits where you are (StartFor).
 public sealed partial class MainWindow
 {
     /// <summary>A new workspace: the page, unless it's turned off (or this is the quick terminal).</summary>
@@ -175,6 +175,26 @@ public sealed partial class MainWindow
         Log.Write($"reopen: {closed.Name} ({closed.Summary})");
     }
 
+    /// <summary>
+    /// A copy of the whole workspace beside it, as reopening would bring it back: its splits and tabs (each where its
+    /// shell is now), folder, icon, color, and its name with " 2".
+    /// </summary>
+    private void DuplicateWorkspace(WorkspaceTab tab)
+    {
+        if (SessionLayout.Restore(SessionLayout.Capture(tab.Workspace, DescribeTab), OpenSaved) is not { } workspace)
+        {
+            Log.Write($"duplicate: nothing of {tab.Header.Title} could start");
+            return;
+        }
+
+        var index = Tabs.TabItems.IndexOf(tab.Item);
+        var copy = AddWorkspace(workspace, tab.CustomTitle is { } title ? $"{title} 2" : null, tab.Color,
+            index < 0 ? null : index + 1, tab.Folder, tab.Icon);
+        RefreshWorkspaceList();
+        FocusActive(copy);
+        Log.Write($"duplicate: {tab.Header.Title}");
+    }
+
     /// <summary>A workspace you closed goes on the Reopen list, as a session would save it.</summary>
     private void RememberClosed(WorkspaceTab tab)
     {
@@ -248,6 +268,52 @@ public sealed partial class MainWindow
         Log.Write($"workspace folder {folder.Path} isn't reachable from {profile.Name}: its usual folder");
         return (command, usual);
     }
+
+    /// <summary>
+    /// How <paramref name="profile"/> (running <paramref name="command"/>, else its own) starts as a new terminal of
+    /// <paramref name="kind"/> in <paramref name="tab"/>, beside <paramref name="origin"/> (the focused or duplicated
+    /// terminal): the first folder in <see cref="NewTerminalStart.Order"/> its shell can reach.
+    /// </summary>
+    private (string Command, string Directory) StartFor(StartKind kind, WorkspaceTab tab, TerminalTab? origin, Profile profile,
+        string? command = null)
+    {
+        command ??= ShellResolver.ForProfile(profile.Config);
+        var usual = profile.Config.ResolveWorkingDirectory();
+        foreach (var source in NewTerminalStart.Order(kind, tab.Folder != null, _config.Global.StartIn))
+        {
+            var start = source switch
+            {
+                StartSource.Current when origin != null => Reach(CurrentFolder(origin), command, usual),
+                StartSource.Workspace => Reach(tab.Folder, command, usual),
+                StartSource.Original when origin != null => (command, origin.WorkingDirectory),
+                StartSource.Usual => (command, usual),
+                _ => null,
+            };
+            if (start is { } found)
+            {
+                Log.Write($"start: {kind} of {profile.Name} in the {source.ToString().ToLowerInvariant()} folder: {found.Command} in {found.Directory}");
+                return found;
+            }
+        }
+
+        return (command, usual);
+    }
+
+    /// <summary>Where <paramref name="terminal"/>'s shell is now, as a folder any shell can be started in; null if it never said.</summary>
+    private static WorkspaceFolder? CurrentFolder(TerminalTab terminal)
+    {
+        var distro = ShellDirectory.IsWsl(terminal.Command) ? ShellEnvironment.WslDistroOf(terminal.Command) : null;
+        var folder = NewTerminalStart.Current(terminal.Control.ReportedDirectory, distro);
+        // A Linux path from a distro we can't name would pass for an MSYS one.
+        return folder is { WslDistro: null } && folder.Path.StartsWith('/') && ShellDirectory.IsWsl(terminal.Command) ? null : folder;
+    }
+
+    /// <summary>How <paramref name="command"/> starts in <paramref name="folder"/>; null when its shell can't reach it.</summary>
+    private static (string Command, string Directory)? Reach(WorkspaceFolder? folder, string command, string usual) =>
+        folder?.LaunchFor(command, ShellEnvironment.WslDistroOf(command)) is { } launch &&
+        (launch.WorkingDirectory is not { } windows || Directory.Exists(windows))
+            ? (launch.Command, launch.WorkingDirectory ?? usual)
+            : null;
 
     /// <summary>
     /// The automatic color for a new workspace (<c>workspace-colors</c>): its folder's, or the next

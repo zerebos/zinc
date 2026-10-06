@@ -352,9 +352,10 @@ shaders written for Ghostty work unchanged
   when it moved: cursor trails), the live palette and colors, and `iMouse` (Shadertoy's: while the left button
   is down). Positions are in pixels with y going down, as in Ghostty on macOS.
 
-**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`,
-`unfocused-split-fill`, `save-state` and `quit-after-last-window-closed`, described with the
-features they control below; `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
+**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-tab-strip`, `start-in`,
+`unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
+features they control below (the old names `tab-groups`, `group-tab-strip` and `unfocused-split-*` still work, and
+Settings writes the new ones); `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
 how far a resize key moves it); `explorer-menu = true` (off by default) adds Open in Zinc to File Explorer's
 right-click menu for folders, a folder's background and drives (a new workspace in that folder; on Windows 11
 under Show more options; uninstalling takes it back); `confirm-close` and `confirm-quit` (`true` by default: closing a tab, pane or
@@ -747,12 +748,12 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `new-window` | A new window with the default profile. |
 | `reopen-workspace` | Bring back the workspace closed last: its tabs, splits and folders. |
 | `reopen-window` | Bring back the window closed last, where it was: its workspaces, tabs, splits and folders. |
-| `duplicate-tab` | The focused tab's command again, next to it. |
+| `duplicate-tab` | The focused tab's command again, next to it, where it is now. |
 | `close-tab` | Close the focused tab (its pane goes with its last tab). |
 | `next-tab`, `previous-tab` | The pane's next or previous tab; with one tab there, the next or previous workspace. |
 | `go-to-workspace <n>` | Show workspace n (from 1), or `go-to-workspace last`. |
 | `split <direction>` | Split the focused pane: `right`, `down`, `left` or `up`. |
-| `duplicate-pane` | Split, running the focused tab's command again. |
+| `duplicate-pane` | Split, running the focused tab's command again, where it is now. |
 | `focus <direction>` | Focus the neighboring pane. |
 | `resize <direction>` | Move the focused pane's divider. |
 | `profile-menu` | Open the ▾ menu of profiles. |
@@ -824,9 +825,9 @@ Enter starts the default profile in its usual folder, as before. Esc leaves the 
 only tab, it starts the default). While it's shown, the window's own shortcuts work (switching tabs,
 closing it, new windows, settings…), and so does the command palette, with the window's commands
 and *New workspace: …* for each profile, which starts it in the page's place; with the sidebar, it has an entry at the end of the list. A workspace started in a folder is named after it (or what you
-type) and keeps it: its new tabs and splits start there, in each shell's own terms (a WSL folder
+type) and keeps it: its new tabs start there, in each shell's own terms (a WSL folder
 opens in PowerShell as `\\wsl.localhost\…`, a Windows one in WSL under `/mnt/c/…`); shells can still
-go anywhere, and Duplicate and "New tab in folder…" keep their own folder. "Show this page for new
+go anywhere, splits start where the pane you split is, and Duplicate and "New tab in folder…" keep their own folder. "Show this page for new
 workspaces" at the bottom (`new-workspace-page` in `[window]`) turns the page off: + then starts the
 default at once. The ▾ menu and Zinc's own start (with nothing to reopen) start at once, as before.
 
@@ -840,14 +841,21 @@ yourself: `"off"` (default), `"folder"` (a workspace started in a folder gets th
 same one every time, and setting or clearing a folder later changes it too, unless you chose the
 color yourself) or `"cycle"` (each new workspace takes the next color).
 
-- `tab-groups = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
-  open as workspaces.
+- New tabs and splits start where you are: in the folder the focused terminal's shell last reported (it needs
+  shell integration, or a shell that reports its folder), in each shell's own terms; else in the profile's folder.
+  In a workspace with its own folder, new tabs start there instead (splits still start where you are).
+  `start-in = "profile"` (in `[window]`; Settings > Layout > Panes) starts them in the profile's folder (or the
+  workspace's), as before. **Duplicate tab** and **Duplicate pane** start where the original is now, and
+  **Duplicate workspace** (the workspace's menu) copies all of it: its splits, tabs (each where its shell is now),
+  folder, icon, color, and its name with " 2".
+- `pane-tabs = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
+  open as workspaces (and "New tab" is called "New workspace" in menus, the palette and Settings).
 - In a split workspace the focused pane is marked by an accent line along its top (on the shown
-  tab when the pane has a strip), and the others are dimmed. `unfocused-split-opacity` (in `[window]`,
-  0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-split-fill`
+  tab when the pane has a strip), and the others are dimmed. `unfocused-pane-opacity` (in `[window]`,
+  0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-pane-fill`
   what they fade toward (default: each pane's background).
   `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes.
-- `group-tab-strip = "always"` (in `[window]`) shows the strip on every pane, even with one tab
+- `pane-tab-strip = "always"` (in `[window]`) shows the strip on every pane, even with one tab
   (default `"auto"`: only with two or more).
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
@@ -914,7 +922,8 @@ Commands are `zn <thing> <verb>`:
 | `pane` | `list`, `split right\|left\|down\|up`, `focus`, `close` |
 | `terminal` | `list`, `new`, `send`, `read`, `title`, `focus`, `move --to-pane N`, `close` |
 
-Run in a Zinc terminal, a command acts on that terminal (its pane, workspace, window); `--terminal`, `--pane`,
+A `terminal` is what shows as a tab: in a pane's tab strip, or the pane itself when it has one tab (or with
+`pane-tabs = false`). Run in a Zinc terminal, a command acts on that terminal (its pane, workspace, window); `--terminal`, `--pane`,
 `--workspace`, `--window` (ids from `zn list`; they last while Zinc runs) aim elsewhere; outside Zinc it acts on the
 window used last and says which on stderr. `--profile`, `--cwd`, and `-- program args` (run instead of the shell; for
 a WSL profile, inside that distro) shape what opens; commands that open a terminal print its id. `close` asks first

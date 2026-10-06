@@ -1805,7 +1805,7 @@ internal sealed partial class SettingsWindow : Window
     private (FrameworkElement, Action<object?>) ColorControl(SettingDef setting, Action<object?> commit, string? profile)
     {
         // What "none" means for this setting, and its color under the scheme in force.
-        var nullLabel = setting.NullLabel ?? (setting.Key == "window.unfocused-split-fill" ? "Use each pane's background" : "Use the scheme's color");
+        var nullLabel = setting.NullLabel ?? (setting.Key == "window.unfocused-pane-fill" ? "Use each pane's background" : "Use the scheme's color");
         Color NullColor()
         {
             // The tab dots default to the brand's colors, not the scheme's.

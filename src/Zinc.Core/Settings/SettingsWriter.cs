@@ -58,6 +58,16 @@ public sealed class SettingsWriter
     {
         var text = Current();
         var updated = value is null ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
+
+        // A renamed key's old spelling goes: the file keeps one name for it (ConfigFile.RenamedKeys).
+        foreach (var (old, renamed) in ConfigFile.RenamedKeys)
+        {
+            if (path.Count >= 2 && renamed == $"{path[^2]}.{path[^1]}")
+            {
+                updated = ConfigEditor.Remove(updated, [.. path.Take(path.Count - 2), .. old.Split('.')]);
+            }
+        }
+
         if (updated != text)
         {
             Write(updated);

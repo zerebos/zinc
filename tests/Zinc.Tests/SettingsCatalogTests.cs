@@ -84,8 +84,8 @@ public class SettingsCatalogTests
     [InlineData("notify.command-finished-after", "30", 30L)]
     [InlineData("notify.command-finished-after", "2m", "2m")]
     [InlineData("quick-terminal.size", "50%", "50%")]
-    [InlineData("window.unfocused-split-opacity", "1", 1L)]
-    [InlineData("window.unfocused-split-opacity", "0.5", 0.5)]
+    [InlineData("window.unfocused-pane-opacity", "1", 1L)]
+    [InlineData("window.unfocused-pane-opacity", "0.5", 0.5)]
     public void TypedTextBecomesTheRightValue(string key, string text, object? expected) =>
         Assert.Equal(expected, SettingsCatalog.FromText(SettingsCatalog.Find(key)!, text));
 
@@ -135,6 +135,29 @@ public class SettingsWriterTests
         Assert.Contains("family = \"Iosevka\"  # just right", text);
         Assert.Contains("size = 12", text);
         Assert.True(writer.Changed);
+    }
+
+    [Fact]
+    public void RenamedKeysStillReadAndAreWrittenUnderTheirNewName()
+    {
+        // Written before the 2026-10-06 renames: still read, and shown in Settings under the new key.
+        var old = "[window]\ngroup-tab-strip = \"always\"\nunfocused-split-opacity = 0.5\ntab-groups = false\n";
+        var file = ConfigFile.Parse(old, "config.toml", "", _ => []);
+        Assert.Equal(GroupTabStrip.Always, file.Global.GroupTabStrip);
+        Assert.Equal(0.5, file.Global.UnfocusedSplitOpacity);
+        Assert.False(file.Global.TabGroups);
+        Assert.Equal("always", file.ValueOf("window.pane-tab-strip"));
+        Assert.Empty(file.Warnings);
+
+        // Changing one in Settings writes the new name and takes the old one out.
+        var path = TempConfig(old);
+        new SettingsWriter(path).Set(SettingsCatalog.Find("window.pane-tab-strip")!, "auto");
+        new SettingsWriter(path).Set(SettingsCatalog.Find("window.unfocused-pane-opacity")!, 0.8);
+        var text = File.ReadAllText(path);
+        Assert.DoesNotContain("group-tab-strip", text);
+        Assert.DoesNotContain("unfocused-split-opacity", text);
+        Assert.Contains("unfocused-pane-opacity = 0.8", text);
+        Assert.Contains("tab-groups = false", text); // untouched keys keep their old names until changed
     }
 
     [Fact]

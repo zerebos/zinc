@@ -543,6 +543,12 @@ public sealed record Config
     /// <summary>Colors for new workspaces you don't color yourself. Config: <c>[window] workspace-colors = off | folder | cycle</c>.</summary>
     public Zinc.Panes.WorkspaceColorMode WorkspaceColors { get; init; }
 
+    /// <summary>
+    /// Where new tabs and splits start in a workspace without a folder of its own (splits: always where you are).
+    /// Config: <c>[window] start-in = current | profile</c>.
+    /// </summary>
+    public Zinc.Terminal.NewTerminalFolder StartIn { get; init; }
+
     /// <summary>Starting Zinc when you sign in to Windows. Config: <c>[window] launch-at-login = off | tray | windows</c>.</summary>
     public LaunchAtLogin LaunchAtLogin { get; init; }
 
@@ -706,6 +712,7 @@ public sealed record Config
                     System.Globalization.CultureInfo.InvariantCulture, out var opacity) =>
                 this with { UnfocusedSplitOpacity = Math.Clamp(opacity, 0.15, 1.0) },
             "workspace-colors" when TryMode<Zinc.Panes.WorkspaceColorMode>(value, out var colors) => this with { WorkspaceColors = colors },
+            "start-in" when TryMode<Zinc.Terminal.NewTerminalFolder>(value, out var startIn) => this with { StartIn = startIn },
             "new-workspace-page" when bool.TryParse(value, out var page) => this with { NewWorkspacePage = page },
             "launch-at-login" when TryMode<LaunchAtLogin>(value, out var login) => this with { LaunchAtLogin = login },
             "explorer-menu" when bool.TryParse(value, out var explorer) => this with { ExplorerMenu = explorer },

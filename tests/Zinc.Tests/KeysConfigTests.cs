@@ -87,6 +87,19 @@ public class KeysConfigTests
     }
 
     [Fact]
+    public void WithoutPaneTabsANewTabIsCalledANewWorkspace()
+    {
+        var newTab = new ActionInvocation(TerminalAction.NewTab);
+        var fromProfile = Actions.Parse("new-tab wsl:Fedora", out _)!.Value;
+        Assert.Equal("New tab", Actions.Title(newTab));
+        Assert.Equal("New workspace", Actions.Title(newTab, paneTabs: false));
+        Assert.Equal("New tab: wsl:Fedora", Actions.Title(fromProfile));
+        Assert.Equal("New workspace: wsl:Fedora", Actions.Title(fromProfile, paneTabs: false));
+        Assert.Equal("New workspace", Actions.FamilyTitle("new-tab", paneTabs: false));
+        Assert.Equal("Split", Actions.FamilyTitle("split", paneTabs: false));
+    }
+
+    [Fact]
     public void ReadmeListsEveryAction()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

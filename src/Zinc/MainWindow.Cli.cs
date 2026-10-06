@@ -218,7 +218,7 @@ public sealed partial class MainWindow
     {
         if (!_config.Global.TabGroups)
         {
-            return CliReply.Fail(CliCodes.Failed, "Tab groups are off ([window] tab-groups), so a pane holds one terminal.");
+            return CliReply.Fail(CliCodes.Failed, "Tab groups are off ([window] pane-tabs), so a pane holds one terminal.");
         }
 
         if (App.Instance.FindCliPane(request.ToPane!.Value) is not { Workspace: { } toTab, Pane: { } toGroup } to)

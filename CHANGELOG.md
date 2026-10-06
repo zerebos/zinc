@@ -9,6 +9,19 @@ is the version it builds, and hands it to the installer as the release notes).
 ### New
 - Ligatures, for fonts that have them (Cascadia Code, JetBrains Mono, Fira Code): `=>` `!=` `->` `===` and the like
   drawn as one shape, each character still in its own cell. Turn them on in Appearance > Font > Ligatures.
+- Duplicate workspace (the workspace's menu) copies the whole workspace now: its splits and tabs, each where its shell
+  is, with its folder, icon, color and name.
+
+### Changed
+- New tabs and splits start in the folder you're in (the focused terminal's, with shell integration), instead of the
+  profile's. In a workspace with its own folder, new tabs still start there, and splits start where you are. To get
+  the old behavior back, set Layout > Panes > New tabs and splits start to "In the profile's folder".
+- Duplicate tab and Duplicate pane start where the original is now, not where it started.
+- With Tabs inside panes off, "New tab" is called "New workspace" in menus, the command palette and Settings, since
+  that's what it opens.
+- Some settings have clearer names in config.toml: `[window] pane-tabs`, `pane-tab-strip`, `unfocused-pane-opacity`
+  and `unfocused-pane-fill` (were `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`, `unfocused-split-fill`).
+  The old names still work.
 
 ## 0.1.0-dev.318 (2026-10-05)
 

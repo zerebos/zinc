@@ -46,13 +46,15 @@ public sealed partial class MainWindow
         menu.Items.Add(folder);
         menu.Opening += (_, _) =>
         {
-            current.Text = tab.Folder is { } f ? f.Path : "No folder set: tabs start in their profile's folder";
+            current.Text = tab.Folder is { } f ? f.Path
+                : _config.Global.StartIn == NewTerminalFolder.Current ? "No folder set: new tabs start where you are"
+                : "No folder set: new tabs start in their profile's folder";
             clear.IsEnabled = tab.Folder != null;
         };
 
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Duplicate workspace", "", null, () =>
-            OpenTab(tab.Active.Profile, tab.Active.Command, tab.Active.WorkingDirectory)));
+            DuplicateWorkspace(tab)));
 
         var split = new MenuFlyoutSubItem { Text = "Split pane", Icon = Glyph("") };
         split.Items.Add(Item("Split right", null, Shortcut(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)), () => SplitFocused(tab, PaneDirection.Right)));
@@ -97,6 +99,13 @@ public sealed partial class MainWindow
     private static FontIcon Glyph(string glyph) => new() { Glyph = glyph };
 
     private static RelayCommand Run(Action action) => new(action);
+
+    /// <summary>Splits the focused pane with <paramref name="profile"/>, starting where that pane is (see <see cref="StartFor"/>).</summary>
+    private void SplitWith(WorkspaceTab tab, PaneDirection direction, Profile profile)
+    {
+        var (command, directory) = StartFor(StartKind.Split, tab, tab.Active, profile);
+        SplitPane(tab, tab.Active, direction, profile, command, directory);
+    }
 
     private void SplitFocused(WorkspaceTab tab, PaneDirection direction) =>
         HandleAction(new ActionInvocation(TerminalAction.SplitPane, Direction: direction), tab, tab.Active);

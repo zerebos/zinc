@@ -244,6 +244,14 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
   the terminal) and send the committed text. The box must be `IsTabStop = true` or `Focus()` refuses
   it. Logs `ime: …`. Real keystrokes can't be automated here (TSF; no SendInput): the user tests.
 - **All the workspace rules in one place (name, icon, color, folder, page, reopen): `.scratch/workspaces.md`.**
+- Where new terminals start (2026-10-06 decisions): Core `Terminal/NewTerminalStart.cs` (`Order(kind, workspaceFolder,
+  `[window] start-in`)`: new tabs -> workspace folder, else where you are; splits -> where you are first; duplicates ->
+  where the original is now; tested) -> `MainWindow.StartFor` (StartPage.cs; the focused terminal's reported folder as a
+  `WorkspaceFolder`, so `LaunchFor` translates it per shell; logs `start: …`). `StartIn` remains for new workspaces
+  (page, CLI, launch). Duplicate workspace = `DuplicateWorkspace` (Capture/Restore + OpenSaved, like reopen). Config keys
+  renamed at read time (`ConfigFile.RenamedKeys`/`CurrentName`: old names still read; `SettingsWriter.Set` drops the old
+  alias); Config.Apply keeps the old internal names. Without pane tabs, `Actions.Title/FamilyTitle(.., paneTabs)` call
+  new-tab "New workspace". Test: `.scratch/tools/start-test.ps1` (START_CMD / START_CD env, `-Extra 'start-in = "profile"'`).
 - Workspace look: Core `Panes/WorkspaceLook.cs` (`WorkspaceIcons`: curated Segoe Fluent glyphs, saved by
   name; `WorkspaceColors`: the 8 colors + `ForFolder` hash; `WorkspaceColorMode` = `workspace-colors`;
   tested). `WorkspaceTab.Icon` → `TabHeader.SetIcon` (hides the profile icon; the sidebar shares the

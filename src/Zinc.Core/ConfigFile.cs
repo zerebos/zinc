@@ -108,6 +108,25 @@ public sealed class ConfigFile
     /// <summary>The value written for <paramref name="key"/> ("font.size"), if any.</summary>
     public object? ValueOf(string key) => GlobalValues.TryGetValue(key, out var value) ? value : null;
 
+    /// <summary>
+    /// Keys renamed before 1.0, old to new (2026-10-06: "pane" for the thing, "split" only as the verb; the pane-tab keys
+    /// named as Settings names them). Files with the old names still read (entries are renamed as they're read); the
+    /// settings window writes the new name and removes the old one (SettingsWriter).
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> RenamedKeys { get; } = new Dictionary<string, string>
+    {
+        ["window.tab-groups"] = "window.pane-tabs",
+        ["window.group-tab-strip"] = "window.pane-tab-strip",
+        ["window.unfocused-split-opacity"] = "window.unfocused-pane-opacity",
+        ["window.unfocused-split-fill"] = "window.unfocused-pane-fill",
+    };
+
+    /// <summary><paramref name="path"/> under its current name: a renamed key's last two parts replaced.</summary>
+    internal static IReadOnlyList<string> CurrentName(IReadOnlyList<string> path) =>
+        path.Count >= 2 && RenamedKeys.TryGetValue($"{path[^2]}.{path[^1]}", out var renamed)
+            ? [.. path.Take(path.Count - 2), .. renamed.Split('.')]
+            : path;
+
     /// <summary>Every <c>[group] key</c> setting the reader knows, as "group.key" (plus colors.theme and colors.palette).</summary>
     public static IReadOnlyCollection<string> SettingKeys => [.. Reader.Mappings.Keys, "colors.theme", "colors.palette"];
 
@@ -370,7 +389,7 @@ public sealed class ConfigFile
 
             if (ToValue(value) is { } v)
             {
-                into.Add(new Entry(path, v, file, line));
+                into.Add(new Entry(CurrentName(path), v, file, line));
             }
             else
             {
@@ -703,7 +722,7 @@ public sealed class ConfigFile
             ["window.workspace-tabs"] = ("workspace-tabs", v => v as string),
             ["window.title-bar"] = ("title-bar", v => v as string),
             ["window.sidebar"] = ("sidebar", v => v as string),
-            ["window.tab-groups"] = ("tab-groups", v => Bool(v)),
+            ["window.pane-tabs"] = ("tab-groups", v => Bool(v)),
             ["window.software-rendering"] = ("software-rendering", v => Bool(v)),
             ["window.low-latency-drawing"] = ("low-latency-drawing", v => Bool(v)),
             ["window.free-hidden-memory"] = ("free-hidden-memory", v => Bool(v)),
@@ -718,9 +737,9 @@ public sealed class ConfigFile
             ["terminal.paste-warning"] = ("paste-warning", v => v as string),
             ["terminal.large-paste-warning"] = ("large-paste-warning", v => Bool(v)),
             ["terminal.word-boundaries"] = ("word-boundaries", v => v as string),
-            ["window.group-tab-strip"] = ("group-tab-strip", v => v as string),
-            ["window.unfocused-split-opacity"] = ("unfocused-split-opacity", v => Number(v)),
-            ["window.unfocused-split-fill"] = ("unfocused-split-fill", v => v as string),
+            ["window.pane-tab-strip"] = ("group-tab-strip", v => v as string),
+            ["window.unfocused-pane-opacity"] = ("unfocused-split-opacity", v => Number(v)),
+            ["window.unfocused-pane-fill"] = ("unfocused-split-fill", v => v as string),
             ["window.divider-color"] = ("split-divider-color", v => v as string),
             ["colors.minimum-contrast"] = ("minimum-contrast", v => Number(v)),
             ["colors.bold"] = ("bold-color", v => v as string),
@@ -745,6 +764,7 @@ public sealed class ConfigFile
             ["window.quit-after-last-window-closed"] = ("quit-after-last-window-closed", v => Bool(v)),
             ["window.new-workspace-page"] = ("new-workspace-page", v => Bool(v)),
             ["window.workspace-colors"] = ("workspace-colors", v => v as string),
+            ["window.start-in"] = ("start-in", v => v as string),
             ["window.launch-at-login"] = ("launch-at-login", v => v is bool b ? (b ? "windows" : "off") : v as string),
             ["notify.command-finished"] = ("notify-command-finished", v => v as string),
             ["notify.programs"] = ("notify-programs", v => v as string),

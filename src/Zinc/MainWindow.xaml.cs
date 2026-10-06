@@ -732,10 +732,10 @@ public sealed partial class MainWindow : Window
     private void NewTabInGroup(WorkspaceTab tab, TabGroup<TerminalTab> group, Profile profile,
         string? command = null, string? workingDirectory = null)
     {
-        // Given a command, it runs where asked; otherwise the profile starts in the workspace's folder.
+        // Given a command, it runs where asked; otherwise in the workspace's folder, else where you are.
         var (start, directory) = command != null
             ? (command, workingDirectory ?? profile.Config.ResolveWorkingDirectory())
-            : StartIn(tab.Folder, profile);
+            : StartFor(StartKind.NewTab, tab, group.Active, profile);
         var pane = CreatePane(profile, start, directory);
         Wire(pane, tab);
         group.Add(pane);
@@ -1132,7 +1132,7 @@ public sealed partial class MainWindow : Window
         {
             var pane = tab.Active;
             var where = PaneDirections.Auto(pane.Control.ActualWidth, pane.Control.ActualHeight);
-            var (command, directory) = StartIn(tab.Folder, profile);
+            var (command, directory) = StartFor(StartKind.Split, tab, pane, profile);
             SplitPane(tab, pane, where, profile, command, directory);
         }
         else if (keys.Shift)
@@ -1504,11 +1504,18 @@ public sealed partial class MainWindow : Window
                 }
 
                 return true;
-            case TerminalAction.DuplicateTab when tabGroup != null:
-                NewTabInGroup(tab, tabGroup, origin.Profile, origin.Command, origin.WorkingDirectory);
-                return true;
             case TerminalAction.DuplicateTab:
-                OpenTab(origin.Profile, origin.Command, origin.WorkingDirectory);
+                // Where the original is now (its shell's reported folder), else where it started.
+                var (copyCommand, copyDirectory) = StartFor(StartKind.Duplicate, tab, origin, origin.Profile, origin.Command);
+                if (tabGroup != null)
+                {
+                    NewTabInGroup(tab, tabGroup, origin.Profile, copyCommand, copyDirectory);
+                }
+                else
+                {
+                    OpenTab(origin.Profile, copyCommand, copyDirectory);
+                }
+
                 return true;
             // Ctrl+Tab flips through the focused pane's tabs when it has several, else workspaces.
             case TerminalAction.NextTab when tabGroup is { Tabs.Count: > 1 }:
@@ -1561,13 +1568,14 @@ public sealed partial class MainWindow : Window
                 return true;
             case TerminalAction.SplitPane:
                 // A new pane opens with the focused tab's profile (splitting a Fedora pane gives Fedora),
-                // in the workspace's folder if it has one.
-                var (splitCommand, splitDirectory) = StartIn(tab.Folder, origin.Profile);
+                // where that tab is now (see NewTerminalStart).
+                var (splitCommand, splitDirectory) = StartFor(StartKind.Split, tab, origin, origin.Profile);
                 SplitPane(tab, origin, invocation.Direction, origin.Profile, splitCommand, splitDirectory);
                 return true;
             case TerminalAction.DuplicatePane:
                 var where = PaneDirections.Auto(origin.Control.ActualWidth, origin.Control.ActualHeight);
-                SplitPane(tab, origin, where, origin.Profile, origin.Command, origin.WorkingDirectory);
+                var (paneCommand, paneDirectory) = StartFor(StartKind.Duplicate, tab, origin, origin.Profile, origin.Command);
+                SplitPane(tab, origin, where, origin.Profile, paneCommand, paneDirectory);
                 return true;
             case TerminalAction.MoveFocus:
                 if (tab.Workspace.GroupOf(origin) is { } from && tab.Workspace.Neighbor(from, invocation.Direction) is { } to)

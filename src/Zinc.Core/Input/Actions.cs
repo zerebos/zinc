@@ -105,8 +105,14 @@ public static class Actions
     /// <summary>The registry name an invocation belongs to: "split" for "split right", "new-tab" for "new-tab wsl:Fedora".</summary>
     public static string Family(ActionInvocation invocation) => Definitions[Math.Max(0, Order(invocation))].Name;
 
-    /// <summary>A family's title ("Split", "Go to workspace").</summary>
-    public static string FamilyTitle(string family) => DefinitionOf(family).Title;
+    /// <summary>
+    /// A family's title ("Split", "Go to workspace"). Without tabs inside panes (<paramref name="paneTabs"/> false)
+    /// a new tab is a new workspace, and new-tab is titled so.
+    /// </summary>
+    public static string FamilyTitle(string family, bool paneTabs = true) =>
+        !paneTabs && family == "new-tab" ? WorkspaceTitle : DefinitionOf(family).Title;
+
+    private const string WorkspaceTitle = "New workspace";
 
     /// <summary>Whether a family takes an argument (a direction, a workspace, a profile…).</summary>
     public static bool TakesArgument(string family) => DefinitionOf(family).Arg != Arg.None;
@@ -303,11 +309,16 @@ public static class Actions
         },
     };
 
-    /// <summary>The command palette's title for an invocation (e.g. "Split right", "Focus pane left").</summary>
-    public static string Title(ActionInvocation invocation) => invocation.Action switch
+    /// <summary>
+    /// The command palette's title for an invocation (e.g. "Split right", "Focus pane left"). Without tabs inside panes
+    /// (<paramref name="paneTabs"/> false), new-tab says what it does: "New workspace".
+    /// </summary>
+    public static string Title(ActionInvocation invocation, bool paneTabs = true) => invocation.Action switch
     {
         TerminalAction.CopyIfSelection => "Copy",
-        TerminalAction.NewTabFromProfile => $"New tab: {invocation.Profile ?? $"profile {invocation.Index + 1}"}",
+        TerminalAction.NewTab when !paneTabs => WorkspaceTitle,
+        TerminalAction.NewTabFromProfile =>
+            $"{(paneTabs ? "New tab" : WorkspaceTitle)}: {invocation.Profile ?? $"profile {invocation.Index + 1}"}",
         _ => Definitions.First(d => d.Action == invocation.Action) switch
         {
             { Arg: Arg.Direction } d => $"{d.Title} {invocation.Direction.ToString().ToLowerInvariant()}",

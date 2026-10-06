@@ -86,7 +86,7 @@ internal sealed partial class SettingsWindow
         // Key bindings.
         var lines = KeyBindingEditor.Lines(_config);
         var keyHits = KeyActions()
-            .Select(a => (Action: a, Title: Actions.Title(a),
+            .Select(a => (Action: a, Title: Actions.Title(a, PaneTabs),
                 Chords: _config.Keybindings.All.Where(b => b.Action == a).Select(b => b.Chord).ToList(),
                 Sequences: _config.Keybindings.Sequences.Where(s => s.Action == a).Select(s => s.Keys).ToList()))
             .Where(k => All($"{k.Title} {Actions.Format(k.Action)} {Actions.Category(k.Action)} {string.Join(' ', k.Chords)}", words))

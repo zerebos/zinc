@@ -44,7 +44,7 @@ public static class FirstRun
 
         if (global == null || global.TabGroups != workspaces)
         {
-            text = ConfigEditor.Set(text, ["window", "tab-groups"], workspaces);
+            text = ConfigEditor.Set(text, ["window", "pane-tabs"], workspaces);
         }
 
         if (current == null || current.SchemeName != choices.Scheme)

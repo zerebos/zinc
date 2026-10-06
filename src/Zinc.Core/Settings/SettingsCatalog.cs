@@ -271,16 +271,25 @@ public static class SettingsCatalog
                     new("One after another", "cycle", "Each new workspace takes the next color."),
                 ],
             },
-        new("layout", "Panes", "window.tab-groups", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
-        new("layout", "Panes", "window.group-tab-strip", "Pane tab strip", "The row of tabs above a pane.", SettingKind.Choice, "auto")
+        new("layout", "Panes", "window.start-in", "New tabs and splits start", "New tabs in a workspace with its own folder start there.",
+            SettingKind.Choice, "current")
+            {
+                Choices =
+                [
+                    new("Where you are", "current", "In the focused terminal's current folder."),
+                    new("In the profile's folder", "profile", "Or in the workspace's folder, when it has one."),
+                ],
+            },
+        new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
+        new("layout", "Panes", "window.pane-tab-strip", "Pane tab strip", "The row of tabs above a pane.", SettingKind.Choice, "auto")
             { Choices = [new("Automatic", "auto", "Shown when a pane has two or more tabs."), new("Always", "always")] },
         new("layout", "Panes", "window.pane-resize-step", "Resize step",
             "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number, 5L)
             { Unit = "%", Minimum = 1, Maximum = 50, Step = 1 },
-        new("layout", "Panes", "window.unfocused-split-opacity", "Unfocused panes",
+        new("layout", "Panes", "window.unfocused-pane-opacity", "Unfocused panes",
             "How bright unfocused panes stay (1: not dimmed).", SettingKind.Number, 0.7)
             { Minimum = 0.15, Maximum = 1, Step = 0.05 },
-        new("layout", "Panes", "window.unfocused-split-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color, null)
+        new("layout", "Panes", "window.unfocused-pane-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color, null)
             { Placeholder = "The pane's background" },
         new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes.", SettingKind.Color, null)
             { Placeholder = "Zinc's grey" },
@@ -520,8 +529,8 @@ public static class SettingsCatalog
         new("Background, text, cursor and selection", "The scheme's, unless you pick your own.", null,
             ["colors.background", "colors.foreground", "colors.cursor", "colors.cursor-text", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
-        new(null, null, "window.tab-groups", ["window.group-tab-strip"]),
-        new(null, null, "window.unfocused-split-opacity", ["window.unfocused-split-fill"]),
+        new(null, null, "window.pane-tabs", ["window.pane-tab-strip"]),
+        new(null, null, "window.unfocused-pane-opacity", ["window.unfocused-pane-fill"]),
         new(null, null, "terminal.paste-warning", ["terminal.large-paste-warning"]),
         new(null, null, "colors.palette-generate", ["colors.palette-harmonious"]),
         new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim and remote shells do.", null,

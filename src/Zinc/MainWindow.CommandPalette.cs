@@ -426,7 +426,7 @@ public sealed partial class MainWindow
         {
             if (!(_quick && NotInQuickTerminal(action.Action)))
             {
-                commands.Add(new PaletteCommand(Actions.Title(action), Keys(action), () => pane.Invoke(action),
+                commands.Add(new PaletteCommand(Actions.Title(action, _config.Global.TabGroups), Keys(action), () => pane.Invoke(action),
                     SearchWords: Actions.SearchWords(action)));
             }
         }
@@ -435,7 +435,11 @@ public sealed partial class MainWindow
             commands.Add(new PaletteCommand(title, keys, run));
 
         // Tabs (terminals), workspaces (title-bar tabs) and windows.
-        Action(TerminalAction.NewTab);
+        if (_config.Global.TabGroups)
+        {
+            Action(TerminalAction.NewTab); // (without tabs inside panes it would be a second "New workspace")
+        }
+
         Action(TerminalAction.NewWorkspace);
         if (App.Instance.ClosedWorkspaces.All.Count > 0)
         {
@@ -546,14 +550,14 @@ public sealed partial class MainWindow
             var dir = profile.Config.ResolveWorkingDirectory();
             if (group != null)
             {
-                ForProfile($"New tab: {profile.Name}", () => NewTabInGroup(tab, group, profile, command, dir),
+                ForProfile($"New tab: {profile.Name}", () => NewTabInGroup(tab, group, profile),
                     ShortcutForProfile(profile, i));
             }
 
             ForProfile($"New workspace: {profile.Name}", () => OpenTab(profile, command, dir),
                 group == null ? ShortcutForProfile(profile, i) : null);
-            ForProfile($"Split right: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Right, profile, command, dir));
-            ForProfile($"Split down: {profile.Name}", () => SplitPane(tab, tab.Active, PaneDirection.Down, profile, command, dir));
+            ForProfile($"Split right: {profile.Name}", () => SplitWith(tab, PaneDirection.Right, profile));
+            ForProfile($"Split down: {profile.Name}", () => SplitWith(tab, PaneDirection.Down, profile));
             ForProfile($"New window: {profile.Name}", () => App.Instance.OpenWindow(profile));
         }
 
