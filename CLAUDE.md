@@ -327,7 +327,8 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
   PowerShell for VS), where it's appended as one more argument (`"; . (...)"`: the command joins them). Everything else
   gets env: bash.exe run directly (Git Bash, MSYS2) = `--posix` + `ENV`=`bash/startup.bash` (reads the startup files as bash
   would, then `zinc.bash` last: a .bashrc assigning PROMPT_COMMAND can't drop it; `BashArguments`; -c/scripts/--posix left
-  to the next way), other bash `PROMPT_COMMAND` bootstrap (the script removes it), cmd = `PROMPT` env (`CmdPrompt`: D, A;zinc_c=enter, 9;9, B;
+  to the next way), other bash `PROMPT_COMMAND` bootstrap (the script removes it), elvish = `-rc <ours>` (`ElvishArguments`; `elvish/zinc.elv` evals the user's rc, `edit:add-vars`), OSH = the bash script
+  (A carries `zinc_c=enter`), cmd = `PROMPT` env (`CmdPrompt`: D, A;zinc_c=enter, 9;9, B;
   no C/exit codes: `TerminalSession.COnEnter` makes the session mark C after the first line break following an Enter), `ZDOTDIR` (zsh; `.zshenv`
   restores + sources the user's), `ZINC_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
   C:/x, WSLENV `/p` translates it), `WSLENV`. Each script stands down where marks/OSC 7 already

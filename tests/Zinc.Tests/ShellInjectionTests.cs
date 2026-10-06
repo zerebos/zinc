@@ -258,6 +258,54 @@ public class ShellInjectionTests
         WaitFor(session, () => ShellDirectory.Parse(session.ReportedDirectory)?.TrimEnd('\\') == "C:\\Windows", "the folder report");
     }
 
+    [Theory]
+    [InlineData("elvish", "elvish -rc C:\\Zinc\\ShellIntegration\\elvish\\zinc.elv", null)]
+    [InlineData("C:\\Tools\\elvish.exe -sock x -rc C:\\my.elv", "C:\\Tools\\elvish.exe -rc C:\\Zinc\\ShellIntegration\\elvish\\zinc.elv -sock x", "C:\\my.elv")]
+    [InlineData("elvish --rc=C:\\my.elv", "elvish -rc C:\\Zinc\\ShellIntegration\\elvish\\zinc.elv", "C:\\my.elv")]
+    public void ElvishReadsItsRcThroughOurs(string command, string expected, string? rc)
+    {
+        var launch = Prepare(command);
+        Assert.Equal(expected, launch.CommandLine);
+        Assert.Equal(rc, launch.Environment.GetValueOrDefault("ZINC_ELVISH_RC"));
+    }
+
+    [Theory]
+    [InlineData("elvish -c ls")]
+    [InlineData("elvish script.elv")]
+    [InlineData("elvish -norc")]
+    public void ElvishThatRunsSomethingKeepsItsCommand(string command) => Assert.Equal(command, Prepare(command).CommandLine);
+
+    [Fact]
+    public void Elvish()
+    {
+        var elvish = Environment.GetEnvironmentVariable("PATH")!.Split(';').Select(d => Path.Combine(d, "elvish.exe")).FirstOrDefault(File.Exists);
+        Assert.SkipWhen(elvish == null, "no elvish");
+        // Its rc (here given with -rc, which ours takes over) runs first, and what it defines is there at the prompt.
+        var rc = Path.Combine(Directory.CreateTempSubdirectory("zinc-elvish-").FullName, "rc.elv");
+        File.WriteAllText(rc, "var zinc-greeting = rc-read\nfn zinc-hello { echo hello-from-rc }\n");
+        using var session = StartShell($"\"{elvish}\" -rc \"{rc}\"");
+        ChecksMarks(session, "cmd /c exit 4", 4, "cd C:\\Windows", "Windows");
+        session.SendInput("echo $zinc-greeting; zinc-hello\r");
+        WaitFor(session, () => session.ReadScreenText() is var s && s.Contains("rc-read") && s.Contains("hello-from-rc"), "rc.elv's definitions");
+        WaitFor(session, () => session.Commands().Any(c => c.Text == "echo $zinc-greeting; zinc-hello" && c.ExitCode == 0), "the command's text");
+    }
+
+    [Fact]
+    public void OshInWsl()
+    {
+        // OSH (Oils) runs the bash script from PROMPT_COMMAND but never shows PS0: its prompt asks for C on Enter.
+        using (var probe = Process.Start(new ProcessStartInfo("wsl.exe", "-d Fedora --exec sh -c \"command -v osh\"")
+               { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false }))
+        {
+            var found = probe?.WaitForExit(15000) == true && probe.ExitCode == 0;
+            Assert.SkipUnless(found, "no OSH in WSL Fedora");
+        }
+
+        using var session = StartShell("wsl.exe -d Fedora --exec osh -i");
+        ChecksMarks(session, "false", 1, "cd /tmp", "/tmp");
+        Assert.DoesNotContain("declare", session.ReadScreenText()); // no complaint about bash-only declare -f
+    }
+
     [Fact]
     public void CmdKeepsTheUsersPrompt()
     {

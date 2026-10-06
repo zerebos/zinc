@@ -590,8 +590,8 @@ output starts, and how it ended. With those marks, Zinc can:
 - **ask before closing a running command**: closing a tab, pane, workspace or window, or
   quitting, asks first while a command is running there (never at an idle prompt).
 
-The marks are invisible, and **PowerShell (7 and Windows PowerShell), bash, zsh and cmd get them
-automatically**, in WSL, Git Bash and MSYS2 too, along with folder reports for
+The marks are invisible, and **PowerShell (7 and Windows PowerShell), bash, zsh, cmd, elvish and OSH
+(Oils) get them automatically**, in WSL, Git Bash and MSYS2 too, along with folder reports for
 [reopening tabs](#reopening-where-you-left-off). Your startup files run as usual; Zinc's
 script (in `ShellIntegration\` next to zinc.exe) runs after them and changes nothing you see:
 
@@ -624,6 +624,10 @@ command that started it runs until you leave it, and the commands you run inside
 shells are told apart by how their prompts mark themselves (Zinc's scripts add their process
 id); two that mark alike, like zsh inside zsh with powerlevel10k, look like one shell, and the
 command that started the inner one ends at its first prompt.
+
+**elvish** (Windows' own) is started with `-rc` pointing at Zinc's script, which runs your `rc.elv` (or
+the `-rc` you gave) first and adds what it defines to the prompt, then the marks. **OSH** runs the bash
+script.
 
 **cmd** gets them through its `PROMPT` (yours, if you set one, inside them): prompts and the folder
 it's in. cmd can't say when a command starts or how it ended, so Zinc marks the start itself when you

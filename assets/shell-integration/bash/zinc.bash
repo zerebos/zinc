@@ -41,7 +41,7 @@ if [[ -n "${ZINC_ZN-}" ]] && ! builtin type -P zn >/dev/null 2>&1 && ! builtin d
 fi
 
 # Already there: marks or folder reports your prompt sends itself.
-__zinc_si_theirs="$PS0$PS1${PROMPT_COMMAND[*]-}$(builtin declare -f)"
+__zinc_si_theirs="$PS0$PS1${PROMPT_COMMAND[*]-}$(builtin declare -f 2>/dev/null)"   # (OSH: declare -f needs names)
 __zinc_si_marks=1
 __zinc_si_folder=1
 [[ "$__zinc_si_theirs" != *'133;'* ]] || __zinc_si_marks=
@@ -70,6 +70,11 @@ __zinc_si_folder_report() {
 # (It returns the same status, so what runs after it in PROMPT_COMMAND still sees it in $?.)
 __zinc_si_status() { __zinc_si_last=$?; return "$__zinc_si_last"; }
 
+# OSH (Oils) runs this script too, but never shows PS0: its prompt mark asks Zinc to mark each command's start
+# itself, when Enter is pressed (as cmd's does).
+__zinc_si_aopts="aid=$$"
+[[ -z "${OILS_VERSION-}" ]] || __zinc_si_aopts+=";zinc_c=enter"
+
 __zinc_si_b='\[\e]133;B\a\]'
 __zinc_si_ps2='\[\e]133;P;k=s\a\]'
 __zinc_si_c=$'\e]133;C\a'
@@ -89,7 +94,7 @@ __zinc_si_prompt() {
     if [[ -n "$__zinc_si_marks" ]]; then
         [[ -z "${__zinc_si_prompted-}" ]] || builtin printf '\e]133;D;%s\a' "${__zinc_si_last-0}"
         __zinc_si_prompted=1
-        builtin printf '\e]133;A;aid=%s\a' "$$"
+        builtin printf '\e]133;A;%s\a' "$__zinc_si_aopts"
         [[ "${PS0-}" == *"$__zinc_si_c"* ]] || PS0+=$__zinc_si_c
         # The continuation prompt ("> " after a trailing \) is prompt, and typing goes on after it.
         [[ "${PS2-}" == "$__zinc_si_ps2"* ]] || PS2=$__zinc_si_ps2${PS2-}$__zinc_si_b

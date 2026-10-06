@@ -68,6 +68,20 @@ public static class ShellIntegration
             return none;
         }
 
+        // elvish (Windows' own): started with -rc pointing at ours, which runs the user's rc.elv first (or the -rc they gave,
+        // passed in ZINC_ELVISH_RC). Left alone when it runs something (-c, a script) or reads no rc (-norc).
+        if (exe == "elvish" && ElvishArguments(args.Skip(1)) is var (elvishArgs, userRc))
+        {
+            var rcEnv = new Dictionary<string, string?>();
+            if (userRc != null)
+            {
+                rcEnv["ZINC_ELVISH_RC"] = userRc;
+            }
+
+            var ours = Path.Combine(scripts, "elvish", "zinc.elv");
+            return new ShellLaunch(string.Join(' ', [ShellResolver.Quote(args[0]), "-rc", ShellResolver.Quote(ours), .. elvishArgs.Select(ShellResolver.Quote)]), rcEnv);
+        }
+
         // Forward slashes: MSYS programs read C:/x as a path, and WSLENV's /p translates it (/mnt/c/x).
         var dir = scripts.Replace('\\', '/').TrimEnd('/');
 
@@ -141,6 +155,52 @@ public static class ShellIntegration
         }
 
         return $"$e]133;D$e\\$e]133;A;{TerminalSession.COnEnter}$e\\$e]9;9;$P$e\\{prompt}$e]133;B$e\\";
+    }
+
+    /// <summary>
+    /// elvish's arguments for a start with our -rc: the rest kept, and the user's own -rc (read by ours). Null when it
+    /// won't read an rc interactively: -c, a script, -norc, or a mode that isn't the shell (-compileonly, -lsp, ...).
+    /// </summary>
+    internal static (List<string> Args, string? Rc)? ElvishArguments(IEnumerable<string> args)
+    {
+        List<string> kept = [];
+        string? rc = null;
+        using var each = args.GetEnumerator();
+        while (each.MoveNext())
+        {
+            var arg = each.Current;
+            var name = arg.TrimStart('-').Split('=')[0];
+            if (!arg.StartsWith('-') || name is "c" or "norc" or "compileonly" or "lsp" or "daemon" or "help" or "version" or "buildinfo" or "json")
+            {
+                return null;
+            }
+
+            if (name == "rc")
+            {
+                if (arg.Contains('='))
+                {
+                    rc = arg[(arg.IndexOf('=') + 1)..];
+                }
+                else if (each.MoveNext())
+                {
+                    rc = each.Current;
+                }
+                else
+                {
+                    return null;
+                }
+
+                continue;
+            }
+
+            kept.Add(arg);
+            if (name is "sock" or "db" or "log" or "deprecation-level" && !arg.Contains('=') && each.MoveNext())
+            {
+                kept.Add(each.Current); // a flag that takes a value
+            }
+        }
+
+        return (kept, rc);
     }
 
     /// <summary>
