@@ -7,6 +7,8 @@ is the version it builds, and hands it to the installer as the release notes).
 ## Unreleased
 
 ### New
+- With Clink, cmd tabs now get exit codes and the exact command text from shell integration: failed commands get
+  their red bar, as in other shells. It keeps working with prompt themes like oh-my-posh or starship.
 - Settings backup (Settings > About): Export settings saves your settings, color schemes, shaders and open windows
   in one zip file; Import settings brings them back, on this PC or another. Your current settings are saved first,
   so an import can be undone.

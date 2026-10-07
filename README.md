@@ -647,8 +647,10 @@ script.
 **cmd** gets them through its `PROMPT` (yours, if you set one, inside them): prompts and the folder
 it's in. cmd can't say when a command starts or how it ended, so Zinc marks the start itself when you
 press Enter at the prompt: jumping, selecting and copying output and the command list work, but
-there are no exit codes (no red bars). A prompt that sends marks of its own is left alone. Clink, or an
-`AutoRun` that sets the prompt, can replace it.
+there are no exit codes (no red bars). A prompt that sends marks of its own is left alone. With
+**Clink**, Zinc also loads a small Lua script (through `CLINK_PATH`, next to your own scripts) that sends the marks
+itself, with what `PROMPT` can't give: exit codes (red bars for failed commands) and the exact command text. It keeps
+working with prompt themes that replace the whole prompt (oh-my-posh, starship, flexprompt).
 
 **fish** (recent versions: 4.3 checked) and **nushell** send the marks and folder reports on their own, so
 Zinc loads nothing into them: jumping, selecting output and the command list work as they

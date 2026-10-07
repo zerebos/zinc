@@ -282,7 +282,9 @@ code wins: fix the entry.
   would, then `zinc.bash` last: a .bashrc assigning PROMPT_COMMAND can't drop it; `BashArguments`; -c/scripts/--posix left
   to the next way), other bash `PROMPT_COMMAND` bootstrap (the script removes it), elvish = `-rc <ours>` (`ElvishArguments`; `elvish/zinc.elv` evals the user's rc, `edit:add-vars`), OSH = the bash script
   (A carries `zinc_c=enter`), cmd = `PROMPT` env (`CmdPrompt`: D, A;zinc_c=enter, 9;9, B;
-  no C/exit codes: `TerminalSession.COnEnter` makes the session mark C after the first line break following an Enter), `ZDOTDIR` (zsh; `.zshenv`
+  no C/exit codes: `TerminalSession.COnEnter` makes the session mark C after the first line break following an Enter;
+  under Clink, `clink/zinc.lua` on `CLINK_PATH` sends D with exit codes and C with the text: docs/shell-integration.md's
+  cmd row; tested with a throwaway Clink profile in `ShellInjectionTests.CmdUnderClink`), `ZDOTDIR` (zsh; `.zshenv`
   restores + sources the user's), `ZINC_SHELL_INTEGRATION_DIR` (forward slashes: MSYS reads
   C:/x, WSLENV `/p` translates it), `WSLENV`. Each script stands down where marks/OSC 7 already
   exist (p10k's `POWERLEVEL9K_TERM_SHELL_INTEGRATION`, `133;`/`]7;` in prompt/hook text).
