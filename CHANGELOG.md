@@ -6,6 +6,8 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.330 (2026-10-07)
+
 ### New
 - Ligatures, for fonts that have them (Cascadia Code, JetBrains Mono, Fira Code): `=>` `!=` `->` `===` and the like
   drawn as one shape, each character still in its own cell. Turn them on in Appearance > Font > Ligatures.

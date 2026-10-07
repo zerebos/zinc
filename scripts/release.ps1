@@ -130,14 +130,20 @@ if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 Write-Host "Publishing $Version ..."
 # One publish at a time with install.ps1 (they share obj\), and a full rebuild: an
 # incremental publish after a framework-dependent one reused a zinc.deps.json naming no runtime.
+$inheritedPath = $env:PATH
 $lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
 try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
 try {
     $state = Join-Path $repo 'src\Zinc\obj\x64\Release'
     if (Test-Path $state) { Remove-Item $state -Recurse -Force }
+    # The publish gets PATH as a fresh terminal has it (from the registry): under Claude Code's Git Bash, VS's
+    # vcvarsall.bat failed on the inherited PATH ("\NVIDIA was unexpected at this time"), so zn's Native AOT link
+    # found no MSVC link.exe, or Git's coreutils `link` (2026-10-07). The rest keeps the inherited PATH (curl).
+    $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
     $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateUrl" 2>&1
     $failed = $LASTEXITCODE -ne 0
 } finally {
+    $env:PATH = $inheritedPath
     $lock.ReleaseMutex()
 }
 

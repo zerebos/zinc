@@ -27,6 +27,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# PATH as a fresh terminal gets it (Windows' own, from the registry), not whatever started us: run from the git hook
+# under Claude Code's Git Bash, VS's vcvarsall.bat failed on the inherited PATH ("\NVIDIA was unexpected at this
+# time"), so zn's Native AOT link found no MSVC link.exe, or Git's coreutils `link` (2026-10-07).
+$env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
 $repo = Split-Path -Parent $PSScriptRoot
 $installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Zinc'
 $versions = Join-Path $installRoot 'versions'
