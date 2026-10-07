@@ -407,6 +407,12 @@ Command line has both.
 overrides it: always on, into that file. About also has a drawing benchmark: four 5-second tests
 in a window of their own (optionally again with software rendering), with results you can copy.
 
+**Settings backup** (Settings > About): Export settings writes one zip with `config.toml` (and any other
+`.toml` files in its folder, for `include`), your color schemes (`themes\`), your shaders (`shaders\`) and the
+session (your open windows). Import settings asks first, saves what's there into `backups\` next to `config.toml`,
+then replaces your settings and adds the backup's schemes and shaders (yours with the same names are replaced, the
+others stay). Its windows open the next time Zinc starts.
+
 **`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
 relative to this one. Settings in the including file win.
 

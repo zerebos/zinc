@@ -219,6 +219,31 @@ public static class SessionStore
         }
     }
 
+    /// <summary>
+    /// A session imported from a settings backup (<see cref="Settings.SettingsBackup"/>) waits next to
+    /// <paramref name="path"/> until Zinc starts: it replaces the session then, before anything reads it. True if it did.
+    /// </summary>
+    public static bool TakeImported(string path)
+    {
+        var imported = Settings.SettingsBackup.TakenAtStart(path);
+        if (!File.Exists(imported))
+        {
+            return false;
+        }
+
+        try
+        {
+            File.Move(imported, path, overwrite: true);
+            Log.Write("session: took the one imported from a settings backup");
+            return true;
+        }
+        catch (IOException ex)
+        {
+            Log.Write($"session: can't take the imported one: {ex.Message}");
+            return false;
+        }
+    }
+
     /// <summary>Writes atomically (a temp file moved over the old one), so a crash mid-write can't lose the session.</summary>
     public static void Save(string path, string json)
     {

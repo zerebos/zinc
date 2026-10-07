@@ -726,6 +726,16 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
   `SettingsWindow.About.cs`. `OpenSourceNoticesTests` require every shipped NuGet package, every
   license file and the pinned Ghostty commit to match — a new dependency needs an entry + text, in alphabetical order (tested).
 
+- Settings backup (2026-10-07): Core `Settings/SettingsBackup` (tested: `Gather`/`Write` = every `.toml` under the
+  config folder except backups/logs/cache, `themes/**`, `shaders/**`, `session.json`, plus `zinc-backup.json` written
+  with Utf8JsonWriter (reflection JSON is off in trimmed publishes); `Read` refuses non-backups and entries outside
+  those places (`IsSafe`: no `..`, absolute, drive or backslash paths); `Import` writes `backups/before-import-<time>.zip`
+  first, then each file through a temp file (the config watcher), the session to `session.json.import`). App:
+  `SettingsWindow.Backup.cs` (About row, pickers, confirmation, status kept across renders); `App.SessionPath`,
+  `SaveSessionNow` (export takes the windows as they are); `OwnSession` → `SessionStore.TakeImported` swaps an imported
+  session in at start, before anything reads it (the running app keeps saving its own, so it can't be applied live).
+  The real file dialogs can't be automated: the user tests the round trip.
+
 ## System integration: default terminal, jump list, zn
 
 - Default terminal (Settings > Layout, a switch on Windows' state, not config.toml): Windows hands a new

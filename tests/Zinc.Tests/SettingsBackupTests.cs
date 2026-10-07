@@ -1,0 +1,166 @@
+using System.IO.Compression;
+using Zinc.Session;
+using Zinc.Settings;
+
+namespace Zinc.Tests;
+
+public sealed class SettingsBackupTests : IDisposable
+{
+    private static readonly DateTimeOffset Now = new(2026, 10, 7, 15, 30, 0, TimeSpan.Zero);
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "zinc-backup-" + Guid.NewGuid().ToString("N"));
+
+    public SettingsBackupTests() => Directory.CreateDirectory(_root);
+
+    public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    private string Folder(string name)
+    {
+        var path = Path.Combine(_root, name);
+        Directory.CreateDirectory(path);
+        return path;
+    }
+
+    private static void Put(string folder, string relative, string text)
+    {
+        var path = Path.Combine(folder, relative.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
+
+    private static MemoryStream Zip(params (string Entry, string Text)[] entries)
+    {
+        var zip = new MemoryStream();
+        using (var archive = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (entry, text) in entries)
+            {
+                using var writer = new StreamWriter(archive.CreateEntry(entry).Open());
+                writer.Write(text);
+            }
+        }
+
+        zip.Position = 0;
+        return zip;
+    }
+
+    [Fact]
+    public void ABackupHoldsTheConfigSchemesShadersAndSessionAndNothingElse()
+    {
+        var config = Folder("config");
+        Put(config, "config.toml", "[font]\nsize = 12\n");
+        Put(config, "work.toml", "[colors]\n");
+        Put(config, "profiles/ssh.toml", "[profile.x]\n");
+        Put(config, "logs/old.toml", "not this");
+        Put(config, "themes/Mine", "background = #000000\n");
+        Put(config, "shaders/glow.glsl", "void mainImage() {}\n");
+        Put(config, "shaders/more/crt.glsl", "// crt\n");
+        Put(config, "logs/zinc.log", "not this");
+        Put(config, "crash.log", "nor this");
+        Put(config, "backups/before-import-x.zip", "nor this");
+        Put(config, "session.json", "{}");
+
+        var zip = new MemoryStream();
+        var count = SettingsBackup.Write(zip, config, Path.Combine(config, "session.json"), "0.1.0-dev.1", Now);
+        zip.Position = 0;
+        var (contents, problem) = SettingsBackup.Read(zip);
+
+        Assert.Null(problem);
+        Assert.Equal(7, count);
+        Assert.Equal(["config.toml", "profiles/ssh.toml", "work.toml", "themes/Mine", "shaders/glow.glsl", "shaders/more/crt.glsl"], contents!.Files);
+        Assert.True(contents.HasSession);
+        Assert.Equal(1, contents.Count("themes"));
+        Assert.Equal(2, contents.Count("shaders"));
+        Assert.Equal("0.1.0-dev.1", contents.Version);
+        Assert.Equal(Now, contents.Made);
+    }
+
+    [Fact]
+    public void ImportSavesWhatWasThereFirstThenWritesTheBackupsFilesOverAndKeepsTheRest()
+    {
+        var from = Folder("from");
+        Put(from, "config.toml", "[font]\nsize = 14\n");
+        Put(from, "themes/Theirs", "background = #111111\n");
+        var zip = new MemoryStream();
+        SettingsBackup.Write(zip, from, null, "v", Now);
+        zip.Position = 0;
+
+        var to = Folder("to");
+        Put(to, "config.toml", "[font]\nsize = 9\n");
+        Put(to, "themes/Mine", "background = #222222\n");
+
+        var result = SettingsBackup.Import(zip, to, null, "v", Now);
+
+        Assert.Equal(2, result.Files);
+        Assert.False(result.Session);
+        Assert.Equal("[font]\nsize = 14\n", File.ReadAllText(Path.Combine(to, "config.toml")));
+        Assert.True(File.Exists(Path.Combine(to, "themes", "Theirs")));
+        Assert.True(File.Exists(Path.Combine(to, "themes", "Mine"))); // not in the backup: stays
+        Assert.Equal(Path.Combine(to, "backups", "before-import-20261007-153000.zip"), result.SafetyCopy);
+
+        // The copy made first holds the config as it was.
+        using var safety = File.OpenRead(result.SafetyCopy);
+        using var archive = new ZipArchive(safety);
+        using var reader = new StreamReader(archive.GetEntry("config.toml")!.Open());
+        Assert.Equal("[font]\nsize = 9\n", reader.ReadToEnd());
+    }
+
+    [Fact]
+    public void AnImportedSessionWaitsForTheNextStart()
+    {
+        var to = Folder("to");
+        var session = Path.Combine(to, "session.json");
+        File.WriteAllText(session, "current");
+
+        var result = SettingsBackup.Import(Zip(("config.toml", ""), ("session.json", "imported")), to, session, "v", Now);
+
+        Assert.True(result.Session);
+        Assert.Equal("current", File.ReadAllText(session)); // the running app keeps saving its own
+        Assert.True(SessionStore.TakeImported(session));
+        Assert.Equal("imported", File.ReadAllText(session));
+        Assert.False(File.Exists(SettingsBackup.TakenAtStart(session)));
+        Assert.False(SessionStore.TakeImported(session));
+    }
+
+    [Fact]
+    public void ARunWithoutASessionImportsEverythingButTheSession()
+    {
+        var to = Folder("to");
+        var result = SettingsBackup.Import(Zip(("config.toml", "x"), ("session.json", "s")), to, null, "v", Now);
+        Assert.Equal(1, result.Files);
+        Assert.False(result.Session);
+        Assert.Empty(Directory.GetFiles(to, "session.json*"));
+    }
+
+    [Theory]
+    [InlineData("config.toml", true)]
+    [InlineData("work.TOML", true)]
+    [InlineData("session.json", true)]
+    [InlineData("themes/Mine", true)]
+    [InlineData("shaders/a/b.glsl", true)]
+    [InlineData("../config.toml", false)]
+    [InlineData("themes/../../evil", false)]
+    [InlineData("/config.toml", false)]
+    [InlineData("C:/Windows/evil.toml", false)]
+    [InlineData("themes\\Mine", false)]
+    [InlineData("logs/zinc.log", false)]
+    [InlineData("zinc.exe", false)]
+    [InlineData("profiles/ssh.toml", true)]
+    [InlineData("backups/x.toml", false)]
+    [InlineData("logs/x.toml", false)]
+    [InlineData("profiles/x.exe", false)]
+    [InlineData("themes//x", false)]
+    public void OnlyFilesInsideTheConfigFolderComeBack(string entry, bool safe) =>
+        Assert.Equal(safe, SettingsBackup.IsSafe(entry));
+
+    [Fact]
+    public void ZipsThatArentBackupsAreRefusedBeforeAnythingChanges()
+    {
+        Assert.Equal("It isn't a Zinc settings backup.", SettingsBackup.Read(Zip(("readme.txt", "hi"))).Problem);
+        Assert.StartsWith("It has a file Zinc doesn't restore", SettingsBackup.Read(Zip(("config.toml", ""), ("../x.toml", ""))).Problem);
+        Assert.Equal("It isn't a zip file, or it's damaged.", SettingsBackup.Read(new MemoryStream([1, 2, 3])).Problem);
+
+        var to = Folder("to");
+        Assert.Throws<InvalidDataException>(() => SettingsBackup.Import(Zip(("../x.toml", "")), to, null, "v", Now));
+        Assert.Empty(Directory.GetFileSystemEntries(to)); // no safety copy, nothing written
+    }
+}

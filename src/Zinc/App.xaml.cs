@@ -770,6 +770,12 @@ public partial class App : Application
 
     private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
 
+    /// <summary>The session file this run keeps (null: a test run, or another process owns it), for settings backups.</summary>
+    internal string? SessionPath => _sessionPath;
+
+    /// <summary>Writes the session now if it changed (a settings backup takes the file as it is).</summary>
+    internal void SaveSessionNow() => SaveSession();
+
     // The settings window's place (saved with the session) and, for this run, its section.
     private WindowBounds? _settingsBounds;
 
@@ -881,6 +887,7 @@ public partial class App : Application
             return null;
         }
 
+        SessionStore.TakeImported(path); // a settings backup's session, imported last run
         return path;
     }
 

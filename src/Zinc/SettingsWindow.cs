@@ -497,6 +497,7 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open in editor", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
         _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
             ButtonRow(("Open welcome page", () => App.Instance.ShowWelcome(firstRun: false)))));
+        BackupRow();
         UpdatesGroup();
         AddGroup("Troubleshooting", SettingsCatalog.All.Where(s => s.Section == "about" && s.Group == "Troubleshooting"));
         if (Log.FromEnvironment)

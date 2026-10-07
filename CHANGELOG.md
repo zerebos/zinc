@@ -6,6 +6,11 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### New
+- Settings backup (Settings > About): Export settings saves your settings, color schemes, shaders and open windows
+  in one zip file; Import settings brings them back, on this PC or another. Your current settings are saved first,
+  so an import can be undone.
+
 ## 0.1.0-dev.330 (2026-10-07)
 
 ### New
