@@ -567,7 +567,9 @@ A tab reopens in the folder its shell last *reported* (OSC 7, or OSC 9;9 / OSC 1
 PowerShell, bash and zsh report it through Zinc's [shell integration](#shell-integration),
 with nothing to set up; other shells need to send it themselves, e.g. from their prompt:
 `printf '\e]7;file://%s%s\e\\' "$HOSTNAME" "$PWD"`. Without it, tabs reopen where they first
-started. WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive.
+started. WSL tabs reopen through `wsl.exe --cd`, Git Bash paths (`/c/...`) map to their drive. An OSC 7
+report from another machine (a shell over ssh: its host isn't this PC's name, `localhost` or a WSL distro's
+own `hostname` from wsl.conf) is ignored.
 
 ### Shell integration
 

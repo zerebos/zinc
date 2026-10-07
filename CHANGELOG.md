@@ -23,6 +23,10 @@ is the version it builds, and hands it to the installer as the release notes).
   and `unfocused-pane-fill` (were `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`, `unfocused-split-fill`).
   The old names still work.
 
+### Fixed
+- A shell on another machine (over ssh) that reports its folder no longer sends new tabs, the title or reopened tabs
+  to a folder of the same name on this PC.
+
 ## 0.1.0-dev.318 (2026-10-05)
 
 ### New
