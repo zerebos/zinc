@@ -25,7 +25,7 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ### Fixed
 - A shell on another machine (over ssh) that reports its folder no longer sends new tabs, the title or reopened tabs
-  to a folder of the same name on this PC.
+  to a folder of the same name on this PC. They keep the folder you ran ssh from.
 
 ## 0.1.0-dev.318 (2026-10-05)
 

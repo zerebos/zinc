@@ -349,9 +349,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             if (_pwdDirty)
             {
                 _pwdDirty = false;
-                var reported = ReadString(TerminalData.Pwd);
-                directoryChanged = reported != ReportedDirectory;
-                ReportedDirectory = reported;
+                directoryChanged = TakeReportedDirectory(ReadString(TerminalData.Pwd));
             }
 
             bell = _bell || flashBell;
@@ -557,11 +555,64 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// The working directory the shell last reported (OSC 7's file:// URI, or OSC 9;9 / 1337's
+    /// The working directory the shell last reported on this PC (OSC 7's file:// URI, or OSC 9;9 / 1337's
     /// bare path), as sent; null until it reports one or after it clears it. Decode with
-    /// <see cref="Zinc.Terminal.ShellDirectory.Parse"/>.
+    /// <see cref="Zinc.Terminal.ShellDirectory.Parse"/>. A report from another machine (ssh) leaves it as it
+    /// was, so new tabs still start where you ran ssh from; that machine is <see cref="RemoteHost"/>.
     /// </summary>
     public string? ReportedDirectory { get; private set; }
+
+    /// <summary>The machine the last folder report came from when it wasn't this PC (a shell over ssh); else null.</summary>
+    public string? RemoteHost { get; private set; }
+
+    /// <summary>That report, as sent: <see cref="RecheckReportedDirectory"/> takes it once its host is known to be local.</summary>
+    private string? _remoteReport;
+
+    /// <summary>Notes a folder report (under the lock); true when <see cref="ReportedDirectory"/> changed.</summary>
+    private bool TakeReportedDirectory(string? reported)
+    {
+        if (ShellDirectory.RemoteHost(reported) is { } host)
+        {
+            if (host != RemoteHost)
+            {
+                Log.Write($"folder: reports from {host} ignored (not this PC)");
+            }
+
+            RemoteHost = host;
+            _remoteReport = reported;
+            return false;
+        }
+
+        RemoteHost = null;
+        _remoteReport = null;
+        var changed = reported != ReportedDirectory;
+        ReportedDirectory = reported;
+        return changed;
+    }
+
+    /// <summary>
+    /// Takes the last folder report ignored as remote if its host now counts as this PC (a WSL distro's own host
+    /// name, learned from its wsl.conf after the shell's first prompt). Raises <see cref="DirectoryChanged"/> then.
+    /// </summary>
+    public void RecheckReportedDirectory()
+    {
+        bool changed;
+        lock (Lock)
+        {
+            if (_remoteReport is not { } reported || ShellDirectory.RemoteHost(reported) != null)
+            {
+                return;
+            }
+
+            Log.Write($"folder: reports from {RemoteHost} are local after all");
+            changed = TakeReportedDirectory(reported);
+        }
+
+        if (changed)
+        {
+            DirectoryChanged?.Invoke();
+        }
+    }
 
     /// <summary>The title's bytes as last taken (<see cref="TakeTitle"/>).</summary>
     private byte[] _titleBytes = [];

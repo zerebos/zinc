@@ -22,7 +22,7 @@ public static class ShellDirectory
             // file://host/path: the path starts at the first slash after the host. A shell on another
             // machine (ssh) names its own host, and its /c/x isn't C:\x here.
             var slash = s.IndexOf('/', "file://".Length);
-            if (slash < 0 || !LocalHosts.Is(Uri.UnescapeDataString(s["file://".Length..slash])))
+            if (slash < 0 || RemoteHost(s) != null)
             {
                 return null;
             }
@@ -42,6 +42,24 @@ public static class ShellDirectory
         }
 
         return s.StartsWith('/') || s.StartsWith(@"\\") ? s : null;
+    }
+
+    /// <summary>
+    /// The host a <c>file://host/path</c> report names when that isn't this PC (<see cref="LocalHosts"/>): a shell
+    /// on another machine. Null for a local one and for reports without a host (OSC 9;9, OSC 1337 CurrentDir:
+    /// those can't be told apart, so they're taken as local).
+    /// </summary>
+    public static string? RemoteHost(string? reported)
+    {
+        var s = reported?.Trim().Trim('"');
+        if (s == null || !s.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var slash = s.IndexOf('/', "file://".Length);
+        var host = Uri.UnescapeDataString(slash < 0 ? s["file://".Length..] : s["file://".Length..slash]);
+        return LocalHosts.Is(host) ? null : host;
     }
 
     /// <summary>

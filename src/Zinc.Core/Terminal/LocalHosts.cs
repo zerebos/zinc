@@ -27,9 +27,6 @@ public static class LocalHosts
         }
     }
 
-    /// <summary>How many names count (it grows when one is <see cref="Add"/>ed).</summary>
-    public static int Count => Names.Count;
-
     /// <summary>Counts <paramref name="name"/> as this PC from now on (a WSL distro's own host name).</summary>
     public static void Add(string? name)
     {
@@ -40,22 +37,12 @@ public static class LocalHosts
     }
 
     /// <summary>
-    /// Whether <paramref name="host"/> (a URI's host part, possibly empty) is this PC. A domain after the name
-    /// (<c>pc.localdomain</c>, <c>pc.lan</c>) doesn't change that; a loopback address is local too.
+    /// Whether <paramref name="host"/> (a URI's host part, possibly empty) is this PC: one of the names exactly
+    /// (case aside) or a loopback address. No domain is stripped: fresh RHEL/Rocky/CentOS servers are named
+    /// <c>localhost.localdomain</c>, and our scripts send the bare name. A remote machine named plain
+    /// <c>localhost</c> (some containers and cloud images) still passes; only knowing a tab is in ssh could tell.
     /// </summary>
-    public static bool Is(string host)
-    {
-        if (host.Length == 0 || Names.ContainsKey(host))
-        {
-            return true;
-        }
-
-        if (IPAddress.TryParse(host.Trim('[', ']'), out var address))
-        {
-            return IPAddress.IsLoopback(address);
-        }
-
-        var dot = host.IndexOf('.');
-        return dot > 0 && Names.ContainsKey(host[..dot]);
-    }
+    public static bool Is(string host) =>
+        host.Length == 0 || Names.ContainsKey(host) ||
+        IPAddress.TryParse(host.Trim('[', ']'), out var address) && IPAddress.IsLoopback(address);
 }

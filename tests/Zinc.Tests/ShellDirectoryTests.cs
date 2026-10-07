@@ -6,7 +6,6 @@ public class ShellDirectoryTests
 {
     [Theory]
     [InlineData("file://localhost/home/zack/my%20dir", "/home/zack/my dir")]     // percent-encoded
-    [InlineData("file://localhost.localdomain/srv", "/srv")]
     [InlineData("file://127.0.0.1/srv", "/srv")]
     [InlineData("file:///C:/Users/Zack", @"C:\Users\Zack")]                       // OSC 7, Windows path
     [InlineData("file://localhost/c:/Users/Zack/", @"c:\Users\Zack\")]
@@ -33,19 +32,31 @@ public class ShellDirectoryTests
         // OSC 7 from zsh in WSL or Git Bash: the computer name, as the shell spells it.
         Assert.Equal("/home/zack/src", ShellDirectory.Parse($"file://{Environment.MachineName.ToLowerInvariant()}/home/zack/src"));
         Assert.Equal(@"C:\Users", ShellDirectory.Parse($"file://{System.Net.Dns.GetHostName()}/C:/Users"));
-        Assert.Equal("/x", ShellDirectory.Parse($"file://{Environment.MachineName}.lan/x"));
     }
 
     [Theory]
     [InlineData("file://build-server/c/x")]           // ssh: its /c/x isn't C:\x
     [InlineData("file://build-server/home/zack")]
     [InlineData("file://build-server.example.com/C:/x")]
+    [InlineData("file://localhost.localdomain/srv")]  // a fresh RHEL/Rocky server's name
     [InlineData("file://10.0.0.5/srv")]
-    public void IgnoresOtherMachines(string reported) => Assert.Null(ShellDirectory.Parse(reported));
+    public void IgnoresOtherMachines(string reported)
+    {
+        Assert.Null(ShellDirectory.Parse(reported));
+        Assert.NotNull(ShellDirectory.RemoteHost(reported));
+    }
+
+    [Theory]
+    [InlineData("file://localhost/x")]
+    [InlineData("file:///x")]
+    [InlineData(@"C:\x")]   // OSC 9;9 names no host: taken as local
+    [InlineData(null)]
+    public void LocalReportsHaveNoRemoteHost(string? reported) => Assert.Null(ShellDirectory.RemoteHost(reported));
 
     [Fact]
     public void ADistrosOwnHostNameIsLocalOnceKnown()
     {
+        // LocalHosts is process-wide: a random name no other test (or real host) uses keeps this one to itself.
         var name = "zinc-test-distro-" + Guid.NewGuid().ToString("N")[..8];
         Assert.Null(ShellDirectory.Parse($"file://{name}/home/zack"));
         LocalHosts.Add(WslConf.Hostname($"[network]\nhostname = {name}\n"));
@@ -90,8 +101,8 @@ public class ShellDirectoryTests
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         Assert.Null(session.ReportedDirectory);
 
-        session.WriteToScreen("\x1b]7;file://box/home/zack\x07");
-        Assert.Equal("file://box/home/zack", session.ReportedDirectory);
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack\x07");
+        Assert.Equal("file://localhost/home/zack", session.ReportedDirectory);
 
         session.WriteToScreen("\x1b]9;9;C:\\Users\\Zack\x1b\\");
         Assert.Equal(@"C:\Users\Zack", ShellDirectory.Parse(session.ReportedDirectory));
@@ -104,11 +115,49 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen("\x1b]7;file://box/home/zack\x07");
-        session.WriteToScreen("\x1b]7;file://box/home/zack\x07"); // every prompt re-reports it
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack\x07");
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack\x07"); // every prompt re-reports it
         Assert.Equal(1, changes);
 
-        session.WriteToScreen("\x1b]7;file://box/tmp\x07");
+        session.WriteToScreen("\x1b]7;file://localhost/tmp\x07");
         Assert.Equal(2, changes);
+    }
+
+    [Fact]
+    public void ARemoteReportKeepsTheLastLocalFolder()
+    {
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var changes = 0;
+        session.DirectoryChanged += () => changes++;
+
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07");
+        session.WriteToScreen("\x1b]7;file://build-server/c/x\x07"); // ssh build-server
+        Assert.Equal("file://localhost/home/zack/src", session.ReportedDirectory);
+        Assert.Equal("build-server", session.RemoteHost);
+        Assert.Equal(1, changes);
+
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07"); // back: same folder, no change
+        Assert.Null(session.RemoteHost);
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void AReportIgnoredTooEarlyIsTakenOnceItsHostIsKnown()
+    {
+        // LocalHosts is process-wide: a random name no other test (or real host) uses keeps this one to itself.
+        var name = "zinc-test-distro-" + Guid.NewGuid().ToString("N")[..8];
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var changes = 0;
+        session.DirectoryChanged += () => changes++;
+
+        session.WriteToScreen($"\x1b]7;file://{name}/home/zack\x07");
+        session.RecheckReportedDirectory(); // still unknown: nothing
+        Assert.Null(session.ReportedDirectory);
+
+        LocalHosts.Add(name);
+        session.RecheckReportedDirectory();
+        Assert.Equal($"file://{name}/home/zack", session.ReportedDirectory);
+        Assert.Null(session.RemoteHost);
+        Assert.Equal(1, changes);
     }
 }
