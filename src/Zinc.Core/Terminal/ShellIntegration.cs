@@ -131,10 +131,14 @@ public static class ShellIntegration
         var existing = environment("WSLENV") is { Length: > 0 } w ? w.Split(':', StringSplitOptions.RemoveEmptyEntries).ToList() : [];
         env["WSLENV"] = string.Join(':', existing.Concat(wsl.Where(v => !existing.Contains(v))));
 
-        // cmd: its PROMPT carries the marks (the variables above still reach a bash or zsh it starts).
+        // cmd: its PROMPT carries the marks (the variables above still reach a bash or zsh it starts). Under Clink,
+        // clink/zinc.lua (on CLINK_PATH) puts the original PROMPT back and sends the marks itself, with exit codes.
         if (exe == "cmd" && CmdPrompt(environment("PROMPT")) is { } prompt)
         {
             env["PROMPT"] = prompt;
+            env["ZINC_CMD_PROMPT"] = string.IsNullOrEmpty(environment("PROMPT")) ? "$P$G" : environment("PROMPT");
+            var clink = scripts.TrimEnd('\\', '/') + @"\clink";
+            env["CLINK_PATH"] = environment("CLINK_PATH") is { Length: > 0 } paths ? paths + ";" + clink : clink;
         }
 
         return none with { Environment = env };

@@ -245,7 +245,8 @@ public class ShellInjectionTests
     public void Cmd()
     {
         // cmd's PROMPT carries A, B, D (no exit code) and the folder; Zinc marks C itself when Enter is pressed.
-        using var session = StartShell("cmd.exe");
+        // (/d: no AutoRun, so no Clink even where it's installed: CmdUnderClink covers that.)
+        using var session = StartShell("cmd.exe /d");
         WaitFor(session, () => session.Commands().Count >= 1, "the first prompt mark");
         session.SendInput("echo zinc-hello\r");
         WaitFor(session, () => session.Commands().Any(c => c.Ran && c.Text == "echo zinc-hello" && !c.Running), "the command");
@@ -313,6 +314,40 @@ public class ShellInjectionTests
         Assert.EndsWith("$P$G$e]133;B$e\\", ShellIntegration.CmdPrompt(null));
         Assert.Null(ShellIntegration.CmdPrompt("$e]133;A$e\\$P$G")); // marks of its own
         Assert.Equal(ShellIntegration.CmdPrompt(null), Prepare("cmd.exe /k echo hi").Environment["PROMPT"]);
+    }
+
+    [Fact]
+    public void CmdUnderClinkGetsOurScriptOnClinkPathAndTheOriginalPrompt()
+    {
+        var clink = Scripts.TrimEnd('\\', '/') + @"\clink";
+        var plain = Prepare("cmd.exe").Environment;
+        Assert.Equal("$P$G", plain["ZINC_CMD_PROMPT"]);
+        Assert.Equal(clink, plain["CLINK_PATH"]);
+
+        var theirs = Prepare("cmd.exe", new() { ["PROMPT"] = "$T $P$G", ["CLINK_PATH"] = @"C:\mine" }).Environment;
+        Assert.Equal("$T $P$G", theirs["ZINC_CMD_PROMPT"]);
+        Assert.Equal(@"C:\mine;" + clink, theirs["CLINK_PATH"]); // theirs still load
+    }
+
+    [Fact]
+    public void CmdUnderClink()
+    {
+        // Clink injected by hand with a throwaway profile (not the user's AutoRun: its history and settings stay
+        // untouched); clink/zinc.lua sends the marks with exit codes and the command's text.
+        var clink = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "clink", "clink.bat");
+        Assert.SkipUnless(File.Exists(clink), "no Clink");
+        var profile = Path.Combine(Path.GetTempPath(), "zinc-clink-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(profile);
+        try
+        {
+            using var session = StartShell($"cmd.exe /d /k \"\"{clink}\" inject --profile \"{profile}\"\"");
+            ChecksMarks(session, "dir zinc-no-such-file", 1, "cd C:\\Windows", "Windows");
+            Assert.Equal("dir zinc-no-such-file", session.Commands().First(c => c.Ran).Text);
+        }
+        finally
+        {
+            try { Directory.Delete(profile, recursive: true); } catch (IOException) { } // Clink may still hold its log
+        }
     }
 
     [Fact]
