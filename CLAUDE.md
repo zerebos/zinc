@@ -3,9 +3,9 @@
 WinUI 3 (C#, .NET 10, Windows App SDK 2.5.x, unpackaged + self-contained) terminal
 emulator on **libghostty-vt** (Ghostty's VT core, C API via P/Invoke), ConPTY, and
 Win2D. See README.md for user-facing docs. Session history, open issues and the
-test harness live in `.scratch/` (gitignored). Read the ROADMAP section at the top of `.scratch/NOTES.md` first
-if it exists: it's the current list of what's next, kept up to date with the user. The rest of that file (150 KB) is
-history, measurements and harness notes: search it when you need something, don't read it whole.
+test harness live in `.scratch/` (gitignored). Read `.scratch/ROADMAP.md` first if it exists: it's the current
+list of what's next, kept up to date with the user. `.scratch/NOTES.md` is the long working log (history,
+measurements, harness notes): search it when you need something, don't read it whole.
 
 **How each area works, and why, is in `docs/internals.md`: read the section for the area you're about to change
 before changing it**, and keep it current (new mechanisms, footguns found, decisions with their date). This file
