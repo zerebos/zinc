@@ -5,8 +5,9 @@ namespace Zinc.Tests;
 public class ShellDirectoryTests
 {
     [Theory]
-    [InlineData("file://Aetherion/home/zack/src", "/home/zack/src")]           // OSC 7 from zsh (WSL)
-    [InlineData("file://host/home/zack/my%20dir", "/home/zack/my dir")]          // percent-encoded
+    [InlineData("file://localhost/home/zack/my%20dir", "/home/zack/my dir")]     // percent-encoded
+    [InlineData("file://localhost.localdomain/srv", "/srv")]
+    [InlineData("file://127.0.0.1/srv", "/srv")]
     [InlineData("file:///C:/Users/Zack", @"C:\Users\Zack")]                       // OSC 7, Windows path
     [InlineData("file://localhost/c:/Users/Zack/", @"c:\Users\Zack\")]
     [InlineData(@"C:\Users\Zack", @"C:\Users\Zack")]                              // OSC 9;9 from PowerShell
@@ -25,6 +26,32 @@ public class ShellDirectoryTests
     [InlineData("relative/path")]
     [InlineData("~")]
     public void IgnoresWhatIsNotAPath(string? reported) => Assert.Null(ShellDirectory.Parse(reported));
+
+    [Fact]
+    public void ThisPcByNameIsLocal()
+    {
+        // OSC 7 from zsh in WSL or Git Bash: the computer name, as the shell spells it.
+        Assert.Equal("/home/zack/src", ShellDirectory.Parse($"file://{Environment.MachineName.ToLowerInvariant()}/home/zack/src"));
+        Assert.Equal(@"C:\Users", ShellDirectory.Parse($"file://{System.Net.Dns.GetHostName()}/C:/Users"));
+        Assert.Equal("/x", ShellDirectory.Parse($"file://{Environment.MachineName}.lan/x"));
+    }
+
+    [Theory]
+    [InlineData("file://build-server/c/x")]           // ssh: its /c/x isn't C:\x
+    [InlineData("file://build-server/home/zack")]
+    [InlineData("file://build-server.example.com/C:/x")]
+    [InlineData("file://10.0.0.5/srv")]
+    public void IgnoresOtherMachines(string reported) => Assert.Null(ShellDirectory.Parse(reported));
+
+    [Fact]
+    public void ADistrosOwnHostNameIsLocalOnceKnown()
+    {
+        var name = "zinc-test-distro-" + Guid.NewGuid().ToString("N")[..8];
+        Assert.Null(ShellDirectory.Parse($"file://{name}/home/zack"));
+        LocalHosts.Add(WslConf.Hostname($"[network]\nhostname = {name}\n"));
+        Assert.Equal("/home/zack", ShellDirectory.Parse($"file://{name.ToUpperInvariant()}/home/zack"));
+        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify($"file://{name}/home/zack/a.txt", new LinkContext("PC", WslDistro: "Ubuntu"), out _));
+    }
 
     private const string Wsl = "wsl.exe -d Fedora";
     private const string Pwsh = "pwsh.exe";

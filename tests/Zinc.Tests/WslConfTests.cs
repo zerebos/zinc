@@ -17,6 +17,16 @@ public class WslConfTests
         Assert.Equal(expected, WslConf.MountRoot(conf));
 
     [Theory]
+    [InlineData(null, null)]
+    [InlineData("[automount]\nroot = /\n", null)]
+    [InlineData("[network]\nhostname = fedora-box\n", "fedora-box")]
+    [InlineData("[Network]\r\nHostname=\"devbox\" # mine\r\n", "devbox")]
+    [InlineData("[boot]\nhostname = nope\n", null)] // another section's key
+    [InlineData("[network]\nhostname =\n", null)]
+    public void HostnameFollowsNetwork(string? conf, string? expected) =>
+        Assert.Equal(expected, WslConf.Hostname(conf));
+
+    [Theory]
     [InlineData("/mnt/c/Users/Zack", "/mnt/", @"C:\Users\Zack")]
     [InlineData("/mnt/d", "/mnt/", @"D:\")]
     [InlineData("/c/Users", "/", @"C:\Users")]
