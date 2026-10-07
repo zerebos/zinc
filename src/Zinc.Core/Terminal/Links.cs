@@ -129,8 +129,7 @@ public static partial class LinkTarget
         }
 
         var host = parsed.Host;
-        if (!parsed.IsFile || !(host.Length == 0 || host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
-                                host.Equals(context.MachineName, StringComparison.OrdinalIgnoreCase)))
+        if (!parsed.IsFile || !(host.Equals(context.MachineName, StringComparison.OrdinalIgnoreCase) || LocalHosts.Is(host)))
         {
             return LinkAction.Reject;
         }

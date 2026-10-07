@@ -51,15 +51,23 @@ internal static class ShellEnvironment
 
     /// <summary>
     /// Where <paramref name="distro"/> mounts Windows drives, from its /etc/wsl.conf (read through
-    /// its share; the pane asking is running it). Unreadable: the default.
+    /// its share; the pane asking is running it). Unreadable: the default. A host name of its own
+    /// joins <see cref="LocalHosts"/>, so its shells' folder reports count.
     /// </summary>
     private static string? MountRoot(string distro)
     {
         var conf = $@"\\wsl.localhost\{distro}\etc\wsl.conf";
         try
         {
-            var root = WslConf.MountRoot(File.Exists(conf) ? File.ReadAllText(conf) : null);
+            var text = File.Exists(conf) ? File.ReadAllText(conf) : null;
+            var root = WslConf.MountRoot(text);
             Log.Write($"wsl: {distro} mounts drives at {root ?? "(nowhere)"}");
+            if (WslConf.Hostname(text) is { } host)
+            {
+                LocalHosts.Add(host);
+                Log.Write($"wsl: {distro} is named {host}");
+            }
+
             return root;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

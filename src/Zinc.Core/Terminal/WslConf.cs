@@ -2,7 +2,7 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// Where a WSL distro mounts Windows drives: its /etc/wsl.conf's <c>[automount] root</c>,
-/// <c>/mnt/</c> by default. File drops and file links translate drive paths with it.
+/// <c>/mnt/</c> by default. File drops and file links translate drive paths with it. Also its own host name.
 /// </summary>
 public static class WslConf
 {
@@ -16,6 +16,36 @@ public static class WslConf
     {
         string? root = null;
         var enabled = true;
+        foreach (var (section, key, value) in Entries(conf))
+        {
+            if (section != "automount")
+            {
+                continue;
+            }
+
+            if (key == "root" && value.StartsWith('/'))
+            {
+                root = value.EndsWith('/') ? value : value + "/";
+            }
+            else if (key == "enabled")
+            {
+                enabled = !value.Equals("false", StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        return enabled ? root ?? DefaultMountRoot : null;
+    }
+
+    /// <summary>
+    /// The distro's own host name, <c>[network] hostname</c>; null without one (it then has the PC's name).
+    /// Its shells name it in their folder reports (OSC 7), so it counts as this PC (<see cref="LocalHosts"/>).
+    /// </summary>
+    public static string? Hostname(string? conf) =>
+        Entries(conf).LastOrDefault(e => e.Section == "network" && e.Key == "hostname").Value is { Length: > 0 } name ? name : null;
+
+    /// <summary>Each <c>key = value</c> of a wsl.conf with its section (both lowercase; comments and quotes gone).</summary>
+    private static IEnumerable<(string Section, string Key, string Value)> Entries(string? conf)
+    {
         var section = "";
         foreach (var raw in (conf ?? "").Split('\n'))
         {
@@ -32,24 +62,11 @@ public static class WslConf
             }
 
             var eq = line.IndexOf('=');
-            if (section != "automount" || eq < 1)
+            if (eq >= 1)
             {
-                continue;
-            }
-
-            var key = line[..eq].Trim().ToLowerInvariant();
-            var value = StripComment(line[(eq + 1)..]).Trim().Trim('"', '\'');
-            if (key == "root" && value.StartsWith('/'))
-            {
-                root = value.EndsWith('/') ? value : value + "/";
-            }
-            else if (key == "enabled")
-            {
-                enabled = !value.Equals("false", StringComparison.OrdinalIgnoreCase);
+                yield return (section, line[..eq].Trim().ToLowerInvariant(), StripComment(line[(eq + 1)..]).Trim().Trim('"', '\''));
             }
         }
-
-        return enabled ? root ?? DefaultMountRoot : null;
     }
 
     /// <summary><c>C:\a</c> as the distro sees it under <paramref name="root"/> (<c>/mnt/c/a</c>); null if it isn't on a drive.</summary>

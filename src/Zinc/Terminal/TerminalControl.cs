@@ -482,6 +482,27 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
+        if (ShellDirectory.IsWsl(_commandLine))
+        {
+            // The distro's wsl.conf, read now rather than at the first link: a host name of its own makes its
+            // folder reports count (LocalHosts). One that came in before it was known is announced again.
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                var hosts = LocalHosts.Count;
+                var context = ShellEnvironment.LinkContextFor(_commandLine);
+                var named = LocalHosts.Count != hosts;
+                dq.SafeEnqueue(() =>
+                {
+                    _linkContext ??= context;
+                    if (named && _session == session && ShellDirectory.Parse(session.ReportedDirectory) != null)
+                    {
+                        NoteTitle();
+                        DirectoryChanged?.Invoke();
+                    }
+                });
+            });
+        }
+
         if (HandedOver is { } handedOver)
         {
             HandedOver = null;

@@ -4,6 +4,7 @@ namespace Zinc.Terminal;
 /// Decodes the working directory a shell reports: OSC 7 sends a <c>file://host/path</c> URI
 /// (percent-encoded), OSC 9;9 and OSC 1337 CurrentDir a bare path. Windows paths come back
 /// with backslashes (<c>file:///C:/x</c> → <c>C:\x</c>); POSIX paths (WSL, MSYS) stay as sent.
+/// A URI naming another machine (not one of the <see cref="LocalHosts"/>) reports nothing.
 /// </summary>
 public static class ShellDirectory
 {
@@ -18,9 +19,10 @@ public static class ShellDirectory
 
         if (s.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
         {
-            // file://host/path: the path starts at the first slash after the host.
+            // file://host/path: the path starts at the first slash after the host. A shell on another
+            // machine (ssh) names its own host, and its /c/x isn't C:\x here.
             var slash = s.IndexOf('/', "file://".Length);
-            if (slash < 0)
+            if (slash < 0 || !LocalHosts.Is(Uri.UnescapeDataString(s["file://".Length..slash])))
             {
                 return null;
             }
