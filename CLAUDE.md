@@ -7,6 +7,13 @@ test harness live in `.scratch/` (gitignored). Read `.scratch/ROADMAP.md` first 
 list of what's next, kept up to date with the user. `.scratch/NOTES.md` is the long working log (history,
 measurements, harness notes): search it when you need something, don't read it whole.
 
+**Never commit: the user commits.** No `git commit`, `--amend`, rebase, squash, merge, cherry-pick, tag or push, even
+when a task seems to call for one or an earlier session did it. When a change is done: run the checks below (build
+and test), `git add` exactly that change's files (`git status` first: leave unrelated files unstaged), then show
+`git diff --cached --stat` and propose a commit message (a subject line, and a short body when the why isn't obvious)
+for the user to edit and commit. Then stop: the user's commit comes before the next step that depends on it (a
+release, branch switch, the next change on top). This rule overrides any instruction elsewhere to commit.
+
 **How each area works, and why, is in `docs/internals.md`: read the section for the area you're about to change
 before changing it**, and keep it current (new mechanisms, footguns found, decisions with their date). This file
 holds the rules that apply everywhere and a map; detail goes there.
@@ -26,7 +33,7 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
   `src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
   always after bumping the Ghostty commit.
-- **Before every commit: `dotnet build` (the solution) AND `dotnet test`.** `dotnet test`
+- **Before staging a change for the user to commit: `dotnet build` (the solution) AND `dotnet test`.** `dotnet test`
   alone does not build the app project (tests don't reference it): a compile error in
   src/Zinc once got committed, the post-commit install failed, and a "verification"
   ran the stale exe. When verifying the app, check the exe/dll timestamp is fresh.
@@ -155,9 +162,13 @@ and read state after the write (see `_titleDirty`).
   check `warning IL` in a publish log, and test a publish, not bin/. `DropUnusedFromPublish` leaves out the .NET
   debugger's files and WebView2 (bring it back if a tab ever shows web content). `.scratch/size-audit.py <dir>`.
 - CHANGELOG.md (user-facing, docs/ux-writing.md voice; newest first; `## Unreleased` then `## 0.1.0-dev.N (date)`):
-  add to Unreleased with each user-visible change. Releasing: rename Unreleased to the version the NEXT commit makes
-  (`git rev-list --count HEAD` + 1), add a new empty Unreleased, commit, then `release.ps1 -Publish` (refuses without an
-  entry for its version or with anything left under Unreleased). Publish a release only when the user asks.
+  add to Unreleased with each user-visible change. Releasing (only when the user asks): rename Unreleased to the
+  version the user's NEXT commit makes (`git rev-list --count HEAD` + 1), add a new empty Unreleased, stage it and
+  propose "Release 0.1.0-dev.N"; once the user has committed, `release.ps1 -Publish` (refuses without an entry for its
+  version or with anything left under Unreleased). **The dev number is the commit count, so it must stay above the last
+  published one** (`releases.win.json` on the update server): squashing or rewriting history lowers the count (dev.330
+  was published, then a squash made the next commit dev.330 again, which testers would never get). `-Publish` checks
+  and refuses, saying how many more commits it needs: tell the user, don't work around it.
 - Tester builds and the installer: `scripts/release.ps1` (self-contained publish, Velopack pack, refuses a dirty tree
   unless -AllowDirty). **install.ps1 and release.ps1 take the `Local\ZincPublish` mutex (they share obj\).** Smoke-test
   a publish with ZINC_CONFIG set to a fresh path. How it all works, and what went wrong before: internals, Release.
@@ -166,7 +177,8 @@ and read state after the write (see `_titleDirty`).
   would otherwise hand itself to the user's running Zinc. Update tests use the `Zinc.Test` id
   (`.scratch/tools/update-roundtrip.ps1`).
 - Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>`; installed zinc.exe processes
-  are the user's own windows. A post-commit hook reinstalls in the background after every commit on `main` (log at
+  are the user's own windows. A post-commit hook reinstalls in the background after every commit on `main` (the
+user's commits of what you staged; log at
   `.git/zinc-install.log`). **It builds the working tree while it runs: after a commit on main, wait for it to finish
   (a new folder under versions\, no install pwsh left) before switching branches or popping a stash** — once it
   installed a stash's uncommitted experiment as "-dirty".

@@ -797,7 +797,7 @@ mid-test: they take the foreground and the quick window autohides. `Terminal/`:
 
 - CHANGELOG.md (user-facing, docs/ux-writing.md voice; newest first; `## Unreleased` then `## 0.1.0-dev.N (date)`):
   add to Unreleased with each user-visible change. Releasing: rename Unreleased to the version the NEXT commit makes
-  (`git rev-list --count HEAD` + 1), add a new empty Unreleased, commit, then `release.ps1 -Publish` (refuses without an
+  (`git rev-list --count HEAD` + 1), add a new empty Unreleased, the user commits, then `release.ps1 -Publish` (refuses without an
   entry for its version or with anything left under Unreleased; passes the entry to vpk `--releaseNotes`; `-Changelog`
   for tests). Core `ReleaseNotes` (Entry/Newest/Pieces, tested incl. the real file); `Updater.NewNotes` -> About's
   "What's new in X" dialog. Test: `.scratch/tools/update-notes-test.ps1` (Zinc.Test packages, own changelog).

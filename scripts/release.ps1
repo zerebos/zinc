@@ -86,6 +86,19 @@ if (-not $Version) {
     $Version = if ($LASTEXITCODE -eq 0) { "$base+$rev" } else { "$base-dev.$commits+$rev" }
 }
 
+# ---- a release testers would never get: not above the one already published ----
+# dev.N is the commit count, and squashing or rewriting history lowers it (2026-10-07: dev.330 was published, then a
+# squash made the next commit dev.330 again). Velopack only updates to a higher version.
+if ($Publish -and $Version -match '^(.+)-dev\.(\d+)') {
+    $base, $number = $Matches[1], [int]$Matches[2]
+    $published = (Invoke-RestMethod "$($UpdateUrl.TrimEnd('/'))/releases.win.json").Assets |
+        ForEach-Object { if ($_.Version -match "^$([regex]::Escape($base))-dev\.(\d+)") { [int]$Matches[1] } } |
+        Measure-Object -Maximum
+    if ($published.Count -gt 0 -and $number -le $published.Maximum) {
+        throw "This would be dev.$number, but dev.$($published.Maximum) is already published: testers only update to a higher number. It needs $($published.Maximum - $number + 1) more commit(s)."
+    }
+}
+
 # ---- release notes: the changelog's entry for this version ----
 $notesArgs = @()
 if (-not $Changelog) { $Changelog = Join-Path $repo 'CHANGELOG.md' }
