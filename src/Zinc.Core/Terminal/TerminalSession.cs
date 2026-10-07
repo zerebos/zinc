@@ -38,7 +38,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>The OSC 0/2 title changed. Raised on the reader thread.</summary>
     public event Action? TitleChanged;
 
-    /// <summary>The shell reported a different working directory (<see cref="ReportedDirectory"/>); raised after the write.</summary>
+    /// <summary>
+    /// The shell reported a different working directory (<see cref="ReportedDirectory"/>), or reports started or
+    /// stopped coming from another machine (<see cref="RemoteHost"/>); raised after the write.
+    /// </summary>
     public event Action? DirectoryChanged;
 
     /// <summary>BEL received. Raised on the reader thread.</summary>
@@ -568,26 +571,31 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>That report, as sent: <see cref="RecheckReportedDirectory"/> takes it once its host is known to be local.</summary>
     private string? _remoteReport;
 
-    /// <summary>Notes a folder report (under the lock); true when <see cref="ReportedDirectory"/> changed.</summary>
+    /// <summary>
+    /// Notes a folder report (under the lock); true when <see cref="ReportedDirectory"/> or <see cref="RemoteHost"/>
+    /// changed (going into ssh changes no local folder, but what the tab shows).
+    /// </summary>
     private bool TakeReportedDirectory(string? reported)
     {
         if (ShellDirectory.RemoteHost(reported) is { } host)
         {
-            if (host != RemoteHost)
+            var arrived = host != RemoteHost;
+            if (arrived)
             {
                 Log.Write($"folder: reports from {host} ignored (not this PC)");
             }
 
             RemoteHost = host;
             _remoteReport = reported;
-            return false;
+            return arrived;
         }
 
+        var left = RemoteHost != null;
         RemoteHost = null;
         _remoteReport = null;
         var changed = reported != ReportedDirectory;
         ReportedDirectory = reported;
-        return changed;
+        return changed || left;
     }
 
     /// <summary>

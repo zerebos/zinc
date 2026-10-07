@@ -20,7 +20,8 @@ public static class ShellDirectory
         if (s.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
         {
             // file://host/path: the path starts at the first slash after the host. A shell on another
-            // machine (ssh) names its own host, and its /c/x isn't C:\x here.
+            // machine (ssh) names its own host, and its /c/x isn't C:\x here. (A session never keeps one as its
+            // ReportedDirectory, but callers like NewTerminalStart.Current take any text: keep this check.)
             var slash = s.IndexOf('/', "file://".Length);
             if (slash < 0 || RemoteHost(s) != null)
             {

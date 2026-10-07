@@ -134,11 +134,14 @@ public class ShellDirectoryTests
         session.WriteToScreen("\x1b]7;file://build-server/c/x\x07"); // ssh build-server
         Assert.Equal("file://localhost/home/zack/src", session.ReportedDirectory);
         Assert.Equal("build-server", session.RemoteHost);
-        Assert.Equal(1, changes);
+        Assert.Equal(2, changes); // what the tab shows changes
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07"); // back: same folder, no change
+        session.WriteToScreen("\x1b]7;file://build-server/c/y\x07"); // moving around over there: nothing new here
+        Assert.Equal(2, changes);
+
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07"); // back
         Assert.Null(session.RemoteHost);
-        Assert.Equal(1, changes);
+        Assert.Equal(3, changes);
     }
 
     [Fact]
@@ -151,13 +154,15 @@ public class ShellDirectoryTests
         session.DirectoryChanged += () => changes++;
 
         session.WriteToScreen($"\x1b]7;file://{name}/home/zack\x07");
+        Assert.Equal(1, changes); // taken as another machine for now
         session.RecheckReportedDirectory(); // still unknown: nothing
         Assert.Null(session.ReportedDirectory);
+        Assert.Equal(1, changes);
 
         LocalHosts.Add(name);
         session.RecheckReportedDirectory();
         Assert.Equal($"file://{name}/home/zack", session.ReportedDirectory);
         Assert.Null(session.RemoteHost);
-        Assert.Equal(1, changes);
+        Assert.Equal(2, changes);
     }
 }

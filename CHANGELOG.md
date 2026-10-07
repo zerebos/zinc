@@ -24,8 +24,9 @@ is the version it builds, and hands it to the installer as the release notes).
   The old names still work.
 
 ### Fixed
-- A shell on another machine (over ssh) that reports its folder no longer sends new tabs, the title or reopened tabs
-  to a folder of the same name on this PC. They keep the folder you ran ssh from.
+- A shell on another machine (over ssh) that reports its folder is no longer taken for a folder of the same name on
+  this PC. New tabs, splits and reopened tabs start in the folder you ran ssh from, and the tab shows the title the
+  remote shell sets.
 
 ## 0.1.0-dev.318 (2026-10-05)
 

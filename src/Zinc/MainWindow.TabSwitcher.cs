@@ -34,7 +34,7 @@ public sealed partial class MainWindow
         {
             parts.Add($"running {running}");
         }
-        else if (ShellDirectory.Parse(tab.Control.ReportedDirectory) is { } folder &&
+        else if (tab.Control.CurrentFolder is { } folder &&
                  !title.Contains(folder, StringComparison.OrdinalIgnoreCase))
         {
             parts.Add(folder);

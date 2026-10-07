@@ -75,7 +75,7 @@ public sealed partial class TerminalControl : UserControl
     /// while one runs; else the title the program set; "" for the profile's name.
     /// </summary>
     public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt,
-        ShellDirectory.Parse(ReportedDirectory), RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
+        CurrentFolder, RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
 
     private static readonly string UserHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
@@ -109,6 +109,13 @@ public sealed partial class TerminalControl : UserControl
 
     /// <summary>The working directory the shell last reported, as sent (see <see cref="TerminalSession.ReportedDirectory"/>).</summary>
     public string? ReportedDirectory => _session?.ReportedDirectory;
+
+    /// <summary>
+    /// Where the shell is, for showing (title, tab switcher, command center, zn): the reported folder, but none while
+    /// the shell is on another machine (ssh). What decides where new terminals start uses
+    /// <see cref="ReportedDirectory"/>, which keeps the folder you ran ssh from.
+    /// </summary>
+    public string? CurrentFolder => _session is { RemoteHost: null } session ? ShellDirectory.Parse(session.ReportedDirectory) : null;
 
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;

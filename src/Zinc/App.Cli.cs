@@ -256,7 +256,7 @@ public partial class App
                                 {
                                     Id = terminal.Id,
                                     Title = GroupView.TitleOf(terminal),
-                                    Folder = ShellDirectory.Parse(terminal.Control.ReportedDirectory),
+                                    Folder = terminal.Control.CurrentFolder,
                                     Profile = terminal.Profile.Id,
                                     Active = terminal == group.Active,
                                     Focused = focused && activePane && terminal == group.Active,
