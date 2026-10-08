@@ -251,6 +251,10 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
   like Ghostty). It's always an arrow over the scrollbar and while an app uses the mouse.
 - `copy-on-select`: `false` (default) or `true`: selecting text with the mouse copies it (the
   selection stays).
+- `copy-formatting`: `false` (default) or `true`: copying also puts the selection's colors and styles on the
+  clipboard, as HTML in the terminal's background, text color and font, for pasting into a document or an email.
+  Apps that take plain text still get plain text. Without it, Copy with formatting (the right-click menu, the
+  palette, `copy-formatted`) does it once.
 - `link-click`: what opens a link (a web address, or an OSC 8 hyperlink): `"ctrl"` (default, Ctrl+click;
   holding Ctrl underlines them), `"alt"` (Alt+click), or `"click"` (a plain click; dragging across a link
   still selects it, and a program using the mouse still gets the click).
@@ -749,6 +753,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | Action | What it does |
 | --- | --- |
 | `copy` | Copy the selection. `copy if-selection` lets the key through to the app when nothing is selected (the default `Ctrl+C`). |
+| `copy-formatted` | Copy the selection with its colors and styles (HTML next to the text), for a document or an email. |
 | `paste` | Paste the clipboard. |
 | `find` | Open the find box. |
 | `zoom-in`, `zoom-out`, `reset-zoom` | Zoom this pane in or out by 10% of the configured font size, or back to it. |

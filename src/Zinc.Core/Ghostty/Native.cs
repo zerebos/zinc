@@ -610,6 +610,8 @@ public enum TerminalData : int
     Title = 12,
     Pwd = 13,
     ScrollbackRows = 15,
+    ColorForeground = 18,
+    ColorBackground = 19,
     ColorPaletteDefault = 25,
     Selection = 31,
     ViewportActive = 32,

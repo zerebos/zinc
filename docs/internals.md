@@ -215,6 +215,15 @@ code wins: fix the entry.
   `TerminalSession.CommandAt(viewportRow)`, tested). `test:menu:col:row` opens it; `.scratch/tools/context-menu-test.ps1
   [-Cell c:r] [-Invoke "Split right"]` lists the items over UIA (popups don't show in PrintWindow) and can run one.
 
+- Copy with formatting (2026-10-07): `[terminal] copy-formatting` (every copy, copy-on-select too) and the
+  `copy-formatted` action (palette; right-click "Copy with formatting" while the setting is off). Core
+  `TerminalSession.GetSelectionHtml(font, points)` = libghostty's selection formatter with emit HTML (2) →
+  `ClipboardHtml.Make` (tested): libghostty writes for a browser (a `<style>` of 256 `--vt-palette-N` variables, `var()`
+  colors, `filter: invert(100%)` for reverse, inline divs, no default colors), which Word/Outlook ignore; Make writes
+  the palette out as hex, swaps colors for reverse, makes spans and `<br>`, and wraps it in the terminal's effective
+  background/foreground (`TerminalData.ColorForeground/Background`, OSC 10/11 included), font and zoomed size in points.
+  App: `ClipboardText.Set(text, html)` adds `HtmlFormatHelper.CreateHtmlFormat` next to the text. Live copies touch the
+  real clipboard, so the paste into Word is the user's to check.
 - File drops: Core `Terminal/DroppedPaths.cs` (Windows path → the pane's shell path via its
   `LinkContext`, the reverse of `LinkTarget.Classify`; `PathQuoting` Posix/PowerShell/Windows;
   tested) ← `TerminalControl.Drop.cs` (DragOver/Drop for StorageItems only, marked Handled, so tab

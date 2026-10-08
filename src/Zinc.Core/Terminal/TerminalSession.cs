@@ -1145,14 +1145,42 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>Returns the selected text, or null when nothing is selected.</summary>
-    public string? GetSelectionText()
+    public string? GetSelectionText() => FormatSelection(0);
+
+    /// <summary>
+    /// The selection as HTML for the clipboard (copy with formatting): its colors and styles, in the terminal's
+    /// background, text color and font (see <see cref="ClipboardHtml"/>). Null when nothing is selected.
+    /// </summary>
+    public string? GetSelectionHtml(string fontFamily, double fontPoints)
+    {
+        if (FormatSelection(2) is not { } html)
+        {
+            return null;
+        }
+
+        GhosttyColorRgb fg = TerminalTheme.Default.Foreground, bg = TerminalTheme.Default.Background;
+        lock (Lock)
+        {
+            if (!_disposed)
+            {
+                // The effective colors: a program's OSC 10/11 change included. (Kept as they are when it has none.)
+                Native.TerminalGet(_terminal, TerminalData.ColorForeground, &fg);
+                Native.TerminalGet(_terminal, TerminalData.ColorBackground, &bg);
+            }
+        }
+
+        return ClipboardHtml.Make(html, fg, bg, fontFamily, fontPoints);
+    }
+
+    /// <summary>The selection in a GhosttyFormatterFormat: 0 plain, 1 VT sequences, 2 HTML.</summary>
+    private string? FormatSelection(int emit)
     {
         lock (Lock)
         {
             var opts = new GhosttyTerminalSelectionFormatOptions
             {
                 Size = (nuint)sizeof(GhosttyTerminalSelectionFormatOptions),
-                Emit = 0,
+                Emit = emit,
                 Unwrap = 1,
                 Trim = 1,
                 Selection = 0,

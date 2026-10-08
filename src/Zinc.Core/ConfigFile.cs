@@ -733,6 +733,7 @@ public sealed class ConfigFile
             ["window.pane-resize-step"] = ("pane-resize-step", v => Number(v)),
             ["window.confirm-quit"] = ("confirm-quit", v => Bool(v)),
             ["terminal.copy-on-select"] = ("copy-on-select", v => Bool(v)),
+            ["terminal.copy-formatting"] = ("copy-formatting", v => Bool(v)),
             ["terminal.click-to-move"] = ("cursor-click-to-move", v => Bool(v)),
             ["terminal.paste-warning"] = ("paste-warning", v => v as string),
             ["terminal.large-paste-warning"] = ("large-paste-warning", v => Bool(v)),

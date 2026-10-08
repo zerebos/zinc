@@ -9,6 +9,9 @@ public enum TerminalAction
 
     /// <summary>Copy when there is a selection; otherwise the key goes to the app (Ctrl+C).</summary>
     CopyIfSelection,
+
+    /// <summary>Copy the selection with its colors and styles (HTML next to the text).</summary>
+    CopyFormatted,
     Paste,
     ZoomIn,
     ZoomOut,

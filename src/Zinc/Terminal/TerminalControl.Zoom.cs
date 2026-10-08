@@ -25,6 +25,9 @@ public sealed partial class TerminalControl
     /// <summary>The configured font size (DIPs), as the pane's size is clamped.</summary>
     private float ConfiguredFontSize => Math.Clamp(_config.FontSizeDip, MinFontSize, MaxFontSize);
 
+    /// <summary>The text's size as shown (zoom included), in points: what a document pasted into uses.</summary>
+    private double FontPoints => ZoomSteps.Size(ConfiguredFontSize, _zoomLevel) * 0.75;
+
     /// <summary>The font size for the current zoom level (after a config change too: the zoom stays, the base moves).</summary>
     private float ZoomedFontSize()
     {

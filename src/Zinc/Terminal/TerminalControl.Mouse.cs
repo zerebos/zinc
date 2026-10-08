@@ -159,7 +159,7 @@ public sealed partial class TerminalControl
             var selected = session.GetSelectionText();
             if (_config.CopyOnSelect && selected != null)
             {
-                ClipboardText.Set(selected);
+                ClipboardText.Set(selected, _config.CopyFormatting ? SelectionHtml() : null);
             }
 
             // A link clicked (link-click = click), not dragged across: it opens, and that's all the click does.

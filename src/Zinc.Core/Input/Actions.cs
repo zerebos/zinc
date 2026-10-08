@@ -40,6 +40,8 @@ public static class Actions
     [
         new("copy", TerminalAction.Copy, Arg.CopyMode, "Copy",
             "Copy the selection. \"copy if-selection\" lets the key through to the app when nothing is selected."),
+        new("copy-formatted", TerminalAction.CopyFormatted, Arg.None, "Copy with formatting",
+            "Copy the selection with its colors and styles, for pasting into a document or an email."),
         new("paste", TerminalAction.Paste, Arg.None, "Paste", "Paste the clipboard."),
         new("find", TerminalAction.Find, Arg.None, "Find", "Open the find box."),
         new("zoom-in", TerminalAction.ZoomIn, Arg.None, "Zoom in", "Make the text 10% bigger."),
@@ -175,7 +177,7 @@ public static class Actions
 
     private static readonly Dictionary<string, string> CategoryOf = new()
     {
-        ["copy"] = "Clipboard", ["paste"] = "Clipboard", ["copy-output"] = "Clipboard",
+        ["copy"] = "Clipboard", ["copy-formatted"] = "Clipboard", ["paste"] = "Clipboard", ["copy-output"] = "Clipboard",
         ["find"] = "Find and scroll", ["scroll-page-up"] = "Find and scroll", ["scroll-page-down"] = "Find and scroll",
         ["scroll-to-top"] = "Find and scroll", ["scroll-to-bottom"] = "Find and scroll", ["jump-to-prompt"] = "Find and scroll",
         ["select-output"] = "Find and scroll",

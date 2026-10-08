@@ -385,6 +385,8 @@ public static class SettingsCatalog
             "Moving the pointer into a pane focuses it.", SettingKind.Toggle, false),
         new("terminal", "Clipboard", "terminal.copy-on-select", "Copy on select",
             "Copies text as soon as you select it; the selection stays.", SettingKind.Toggle, false),
+        new("terminal", "Clipboard", "terminal.copy-formatting", "Copy with formatting",
+            "Copies colors and styles too, for documents and email. Apps that take plain text still get plain text.", SettingKind.Toggle, false),
         new("terminal", "Clipboard", "terminal.paste-warning", "Paste warning", "Ask before pasting text with more than one line.",
             SettingKind.Choice, "auto")
             {

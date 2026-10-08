@@ -24,6 +24,11 @@ public sealed partial class TerminalControl
         var menu = new MenuFlyout();
         var selection = HasSelection();
         Add(menu, "Copy", "", TerminalAction.Copy, enabled: selection);
+        if (selection && !_config.CopyFormatting)
+        {
+            Add(menu, "Copy with formatting", "", TerminalAction.CopyFormatted); // (Copy already does, when it's on)
+        }
+
         Add(menu, "Paste", "", TerminalAction.Paste);
         Add(menu, "Find", "", TerminalAction.Find);
 

@@ -328,6 +328,9 @@ public sealed partial class TerminalControl
             case TerminalAction.Copy:
                 CopySelection();
                 return true;
+            case TerminalAction.CopyFormatted:
+                CopySelection(formatted: true);
+                return true;
             case TerminalAction.CopyIfSelection:
                 if (!HasSelection())
                 {
@@ -375,7 +378,10 @@ public sealed partial class TerminalControl
 
     private bool HasSelection() => _session?.GetSelectionText() != null;
 
-    private void CopySelection()
+    /// <summary>The selection as HTML in this pane's colors and font, at its zoomed size (copy with formatting).</summary>
+    private string? SelectionHtml() => _session?.GetSelectionHtml(_config.FontFamily, FontPoints);
+
+    private void CopySelection(bool formatted = false)
     {
         var text = _session?.GetSelectionText();
         if (text == null)
@@ -383,7 +389,7 @@ public sealed partial class TerminalControl
             return;
         }
 
-        ClipboardText.Set(text);
+        ClipboardText.Set(text, formatted || _config.CopyFormatting ? SelectionHtml() : null);
         _session!.ClearSelection();
         Redraw();
     }

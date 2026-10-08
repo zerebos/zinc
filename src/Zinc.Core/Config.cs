@@ -329,6 +329,12 @@ public sealed record Config
     /// <summary>A selection is copied as soon as it's made (and stays selected). Config: <c>copy-on-select = true</c>.</summary>
     public bool CopyOnSelect { get; init; }
 
+    /// <summary>
+    /// Copying also puts the selection's colors and styles on the clipboard (HTML next to the text), for documents and
+    /// email. Config: <c>[terminal] copy-formatting = true</c>.
+    /// </summary>
+    public bool CopyFormatting { get; init; }
+
     /// <summary>What opens a link. Config: <c>link-click</c>.</summary>
     public LinkClick LinkClick { get; init; }
 
@@ -757,6 +763,7 @@ public sealed record Config
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
             "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
             "copy-on-select" when bool.TryParse(value, out var copyOnSelect) => this with { CopyOnSelect = copyOnSelect },
+            "copy-formatting" when bool.TryParse(value, out var copyFormatting) => this with { CopyFormatting = copyFormatting },
             "cursor-click-to-move" when bool.TryParse(value, out var clickToMove) => this with { ClickToMove = clickToMove },
             "paste-warning" when Enum.TryParse<Zinc.Terminal.PasteWarning>(value, true, out var paste) && !int.TryParse(value, out _) =>
                 this with { PasteWarning = paste },

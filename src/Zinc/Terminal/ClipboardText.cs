@@ -15,12 +15,18 @@ public enum ClipboardReadAnswer
 /// <summary>Clipboard helpers, kept out of the unsafe control class so they can await.</summary>
 public static partial class ClipboardText
 {
-    public static void Set(string text)
+    public static void Set(string text, string? html = null)
     {
         try
         {
             var package = new DataPackage();
             package.SetText(text);
+            if (html != null)
+            {
+                // Next to the text: each app pastes what it understands (Word and Outlook the colors, editors the text).
+                package.SetHtmlFormat(HtmlFormatHelper.CreateHtmlFormat(html));
+            }
+
             Clipboard.SetContent(package);
         }
         catch (Exception ex)
