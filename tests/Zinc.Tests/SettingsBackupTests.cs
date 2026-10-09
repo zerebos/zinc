@@ -167,6 +167,11 @@ public sealed class SettingsBackupTests : IDisposable
     [InlineData("logs/x.toml", false)]
     [InlineData("profiles/x.exe", false)]
     [InlineData("themes//x", false)]
+    [InlineData("themes/CON", false)] // names Windows can't make: an import would stop halfway
+    [InlineData("themes/nul.txt", false)]
+    [InlineData("themes/a<b", false)]
+    [InlineData("themes/trailing.", false)]
+    [InlineData("themes/CONSOLE", true)]
     public void OnlyFilesInsideTheConfigFolderComeBack(string entry, bool safe) =>
         Assert.Equal(safe, SettingsBackup.IsSafe(entry));
 
@@ -174,11 +179,45 @@ public sealed class SettingsBackupTests : IDisposable
     public void ZipsThatArentBackupsAreRefusedBeforeAnythingChanges()
     {
         Assert.Equal("It isn't a Zinc settings backup.", SettingsBackup.Read(Zip(("readme.txt", "hi"))).Problem);
-        Assert.StartsWith("It has a file Zinc doesn't restore", SettingsBackup.Read(Zip(("config.toml", ""), ("../x.toml", ""))).Problem);
         Assert.Equal("It isn't a zip file, or it's damaged.", SettingsBackup.Read(new MemoryStream([1, 2, 3])).Problem);
 
         var to = Folder("to");
         Assert.Throws<InvalidDataException>(() => SettingsBackup.Import(Zip(("../x.toml", "")), to, null, "v", Now));
         Assert.Empty(Directory.GetFileSystemEntries(to)); // no safety copy, nothing written
+    }
+
+    [Fact]
+    public void FilesZincDoesntRestoreAreLeftOut()
+    {
+        // A newer Zinc's backup, a README someone added, a path out of the folder: the rest still comes back.
+        var backup = Zip(("zinc-backup.json", "{}"), ("config.toml", "a"), ("README.txt", "hi"), ("keys/x.json", "k"), ("../evil.toml", "e"));
+        Assert.Equal(["config.toml"], SettingsBackup.Read(backup).Contents!.Files);
+
+        var to = Folder("to");
+        Assert.Equal(1, SettingsBackup.Import(backup, Path.Combine(to, "config"), null, "v", Now).Files);
+        Assert.Equal("a", File.ReadAllText(Path.Combine(to, "config", "config.toml")));
+        Assert.False(File.Exists(Path.Combine(to, "evil.toml")));
+        Assert.False(Directory.Exists(Path.Combine(to, "config", "keys")));
+    }
+
+    [Fact]
+    public void AnExportNamesTheFilesItLeavesOut()
+    {
+        var config = Folder("config");
+        var dotfiles = Folder("dotfiles");
+        Put(config, "profiles/work.toml", "");
+        Put(config, "shaders/mine.glsl", "");
+        Put(config, "loose.glsl", "");
+        Put(dotfiles, "keys.toml", "");
+        Put(dotfiles, "crt.glsl", "");
+        var text = $"include = [\"profiles/*.toml\", '{dotfiles}\\keys.toml']\n" +
+            $"[shaders]\nfiles = [\"shaders/mine.glsl\", \"loose.glsl\", '{dotfiles}\\crt.glsl']\nfolders = [\"shaders\", '{dotfiles}']\n";
+        File.WriteAllText(Path.Combine(config, "config.toml"), text);
+
+        var parsed = ConfigFile.Parse(text, Path.Combine(config, "config.toml"));
+        Assert.Empty(parsed.Warnings);
+        Assert.Equal(
+            [Path.Combine(config, "loose.glsl"), dotfiles, Path.Combine(dotfiles, "crt.glsl"), Path.Combine(dotfiles, "keys.toml")],
+            SettingsBackup.LeftOut(parsed));
     }
 }

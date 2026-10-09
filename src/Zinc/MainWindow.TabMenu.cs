@@ -46,9 +46,11 @@ public sealed partial class MainWindow
         menu.Items.Add(folder);
         menu.Opening += (_, _) =>
         {
+            // Without pane tabs, a new tab is a new workspace (the page or its profile's folder): only splits follow.
+            var what = _config.Global.TabGroups ? "new tabs and splits" : "splits";
             current.Text = tab.Folder is { } f ? f.Path
-                : _config.Global.StartIn == NewTerminalFolder.Current ? "No folder set: new tabs start where you are"
-                : "No folder set: new tabs start in their profile's folder";
+                : _config.Global.StartIn == NewTerminalFolder.Current ? $"No folder set: {what} start where you are"
+                : $"No folder set: {what} start in their profile's folder";
             clear.IsEnabled = tab.Folder != null;
         };
 

@@ -67,8 +67,12 @@ internal sealed partial class SettingsWindow
                 count = SettingsBackup.Write(stream, ConfigFolder, App.Instance.SessionPath, BackupVersion, DateTimeOffset.Now);
             }
 
-            Log.Write($"backup: exported {count} files to {file.Path}");
-            ShowBackupStatus($"Exported {count} files to {file.Path}.", file.Path);
+            // Includes, shaders and shader folders the config names elsewhere: copy them yourself.
+            var leftOut = SettingsBackup.LeftOut(_config);
+            Log.Write($"backup: exported {count} files to {file.Path}; left out {leftOut.Count}: {string.Join(", ", leftOut)}");
+            ShowBackupStatus($"Exported {count} files to {file.Path}." + (leftOut.Count == 0 ? "" :
+                $" Your settings also use files outside Zinc's settings folder, which aren't in it: {string.Join(", ", leftOut)}. " +
+                "Copy them yourself to take them to another PC."), file.Path);
         }
         catch (Exception ex)
         {

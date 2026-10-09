@@ -473,11 +473,20 @@ public sealed partial class TerminalControl : UserControl
             NoteTitle();
         });
         session.Bell += () => dq.SafeEnqueue(OnBell);
-        session.DirectoryChanged += () => dq.SafeEnqueue(() =>
+        session.DirectoryChanged += () =>
         {
-            NoteTitle();
-            DirectoryChanged?.Invoke();
-        });
+            // Another machine, or a WSL distro with a name of its own that this pane didn't start with wsl.exe.
+            if (session.RemoteHost is { } host)
+            {
+                ShellEnvironment.WhenWslHost(host, session.RecheckReportedDirectory);
+            }
+
+            dq.SafeEnqueue(() =>
+            {
+                NoteTitle();
+                DirectoryChanged?.Invoke();
+            });
+        };
         session.CommandsChanged += () => dq.SafeEnqueue(OnCommandsChanged);
         ForwardProgramNotifications(session);
         session.ProcessExited += code => dq.SafeEnqueue(() => OnProcessExited(code));

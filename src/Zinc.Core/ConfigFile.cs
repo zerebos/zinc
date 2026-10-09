@@ -91,6 +91,9 @@ public sealed class ConfigFile
     /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
     public ThemeLibrary Themes { get; }
 
+    /// <summary>The files read: this one and every file it includes (full paths).</summary>
+    public IReadOnlyCollection<string> Files { get; private init; } = [];
+
     /// <summary>
     /// The global settings as written (last one wins, includes counted), by key ("font.size"):
     /// TOML values (string, bool, long, double, lists). For the settings window.
@@ -616,6 +619,7 @@ public sealed class ConfigFile
             var keybindings = Keybindings.Configure(keys, _warnings);
             return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes)
             {
+                Files = [.. _files],
                 SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
                 Appearance = appearance,
                 FollowsAppearance = _followsAppearance,

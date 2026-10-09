@@ -19,7 +19,7 @@ public sealed record ImportResult(int Files, bool Session, string SafetyCopy);
 /// backup's files over (files it doesn't have stay); its session waits next to session.json for the next start
 /// (<see cref="Zinc.Session.SessionStore.TakeImported"/>), since the running app keeps saving its own.
 /// </summary>
-public static class SettingsBackup
+public static partial class SettingsBackup
 {
     public const string Manifest = "zinc-backup.json";
     public const string SessionEntry = "session.json";
@@ -107,7 +107,6 @@ public static class SettingsBackup
             string? version = null;
             DateTimeOffset? made = null;
             var manifest = false;
-            string? unsafeEntry = null;
             foreach (var entry in archive.Entries)
             {
                 if (entry.FullName.EndsWith('/'))
@@ -122,18 +121,16 @@ public static class SettingsBackup
                     continue;
                 }
 
-                unsafeEntry ??= IsSafe(entry.FullName) ? null : entry.FullName;
-                files.Add(entry.FullName);
+                // Anything else is left out, not refused: a newer Zinc's backup may hold more, or a README was added.
+                if (IsSafe(entry.FullName))
+                {
+                    files.Add(entry.FullName);
+                }
             }
 
             if (!manifest && !files.Contains("config.toml"))
             {
                 return (null, "It isn't a Zinc settings backup.");
-            }
-
-            if (unsafeEntry != null)
-            {
-                return (null, $"It has a file Zinc doesn't restore: {unsafeEntry}");
             }
 
             return (new BackupContents(files.Where(f => f != SessionEntry).ToList(), files.Contains(SessionEntry), version, made), null);
@@ -216,8 +213,10 @@ public static class SettingsBackup
             return false;
         }
 
+        // Nor names Windows can't make (CON, a trailing dot, <>|?*), which would stop an import halfway.
         var parts = entry.Split('/');
-        if (parts.Any(p => p is "" or "." or ".."))
+        if (parts.Any(p => p is "" or "." or ".." || p.EndsWith('.') || p.EndsWith(' ') || p.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            ReservedName().IsMatch(p)))
         {
             return false;
         }
@@ -247,5 +246,34 @@ public static class SettingsBackup
         {
             return (null, null);
         }
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])(\..*)?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex ReservedName();
+
+    /// <summary>
+    /// Files and folders <paramref name="config"/> uses that a backup of its folder leaves out (full paths): includes,
+    /// shaders and shader folders elsewhere (<c>~/dotfiles/keys.toml</c>), for the export to name. Zinc's own shaders
+    /// aren't settings.
+    /// </summary>
+    public static IReadOnlyList<string> LeftOut(ConfigFile config)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(config.Path))!;
+        var configs = new[] { config.Global }.Concat(config.Profiles.Select(p => p.Config)).ToList();
+        var files = config.Files.Concat(configs.SelectMany(c => c.ShaderFiles).Where(s => !Zinc.Shaders.ShaderPaths.IsBundled(s)));
+        var folders = configs.SelectMany(c => c.ShaderFolders.Split('\n', StringSplitOptions.RemoveEmptyEntries));
+
+        // In the backup: what Gather takes (a folder: what's in it, as "<folder>/x" would be).
+        bool Kept(string path, string suffix)
+        {
+            var entry = Path.GetRelativePath(folder, Path.GetFullPath(path)).Replace('\\', '/');
+            return !Path.IsPathFullyQualified(entry) && IsSafe(entry + suffix);
+        }
+
+        return files.Where(f => !Kept(f, "")).Concat(folders.Where(f => !Kept(f, "/x")))
+            .Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

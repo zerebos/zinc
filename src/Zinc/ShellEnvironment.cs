@@ -77,6 +77,66 @@ internal static class ShellEnvironment
         }
     }
 
+    /// <summary>Per host name not known to be this PC: whether a running distro turned out to be named that.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<bool>> Learning = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Runs <paramref name="then"/> (in the background) if <paramref name="host"/>, a folder report's host not known to
+    /// be this PC, is a running WSL distro's own name (wsl.conf <c>[network] hostname</c>): its panes may run it
+    /// without wsl.exe (ubuntu.exe, or wsl from another shell), so their wsl.conf wasn't read. Only running distros are
+    /// read (the share would start a stopped one, and a distro sending reports is running); once per host name.
+    /// </summary>
+    public static void WhenWslHost(string host, Action then) =>
+        Learning.GetOrAdd(host, name => Task.Run(() => LearnWslHost(name)))
+            .ContinueWith(learned =>
+            {
+                if (learned.Result)
+                {
+                    then();
+                }
+            }, TaskScheduler.Default);
+
+    private static bool LearnWslHost(string host)
+    {
+        try
+        {
+            using var lxss = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
+            var installed = lxss?.GetSubKeyNames()
+                .Select(id => { using var key = lxss.OpenSubKey(id); return key?.GetValue("DistributionName") as string; })
+                .OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
+            if (installed.Count == 0)
+            {
+                return false;
+            }
+
+            var list = new System.Diagnostics.ProcessStartInfo("wsl.exe", "--list --running --quiet")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = System.Text.Encoding.Unicode, // wsl.exe writes UTF-16
+            };
+            using var process = System.Diagnostics.Process.Start(list)!;
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(5000);
+
+            // Names it lists that are installed distros (with none running it prints a sentence instead).
+            foreach (var distro in output.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Where(installed.Contains))
+            {
+                MountRoot(distro); // adds its host name to LocalHosts
+            }
+
+            var local = LocalHosts.Is(host);
+            Log.Write($"wsl: {host} is {(local ? "a running distro" : "no running distro's name")}");
+            return local;
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"wsl: couldn't learn whether {host} is a distro: {ex.Message}");
+            return false;
+        }
+    }
+
     /// <summary>The distro a WSL command line runs (its -d/--distribution-id, else the default); null if it isn't WSL.</summary>
     public static string? WslDistroOf(string commandLine)
     {

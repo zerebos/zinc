@@ -415,7 +415,8 @@ in a window of their own (optionally again with software rendering), with result
 `.toml` files in its folder, for `include`), your color schemes (`themes\`), your shaders (`shaders\`) and the
 session (your open windows). Import settings asks first, saves what's there into `backups\` next to `config.toml`,
 then replaces your settings and adds the backup's schemes and shaders (yours with the same names are replaced, the
-others stay). Its windows open the next time Zinc starts.
+others stay). Its windows open the next time Zinc starts. Files your settings use from elsewhere (an `include` or a
+shader outside Zinc's settings folder) aren't in the zip: the export names them, for you to copy yourself.
 
 **`include`** (at the top): other files to read first, e.g. `include = ["profiles/*.toml"]`,
 relative to this one. Settings in the including file win.
@@ -654,7 +655,9 @@ press Enter at the prompt: jumping, selecting and copying output and the command
 there are no exit codes (no red bars). A prompt that sends marks of its own is left alone. With
 **Clink**, Zinc also loads a small Lua script (through `CLINK_PATH`, next to your own scripts) that sends the marks
 itself, with what `PROMPT` can't give: exit codes (red bars for failed commands) and the exact command text. It keeps
-working with prompt themes that replace the whole prompt (oh-my-posh, starship, flexprompt).
+working with prompt themes that replace the whole prompt (oh-my-posh, starship, flexprompt). The exit code is cmd's
+`%ERRORLEVEL%`, which some built-in commands (`echo`, `title`, `rem`) leave as it was: right after a failed command,
+they show as failed too.
 
 **fish** (recent versions: 4.3 checked) and **nushell** send the marks and folder reports on their own, so
 Zinc loads nothing into them: jumping, selecting output and the command list work as they
