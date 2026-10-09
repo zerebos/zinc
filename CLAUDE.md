@@ -15,7 +15,7 @@ for the user to edit and commit. The user usually splits a change into a code co
 README, docs/, CLAUDE.md): propose both messages, code first, each with its files. Then stop: the user's commit comes before the next step that depends on it (a
 release, branch switch, the next change on top). This rule overrides any instruction elsewhere to commit.
 
-**How each area works, and why, is in `docs/internals.md`: read the section for the area you're about to change
+**How each area works, and why, is in `.scratch/internals.md`: read the section for the area you're about to change
 before changing it**, and keep it current (new mechanisms, footguns found, decisions with their date). This file
 holds the rules that apply everywhere and a map; detail goes there.
 
@@ -60,7 +60,7 @@ UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/br
 
 ## Where to look
 
-Section names in brackets are `docs/internals.md`'s.
+Section names in brackets are `.scratch/internals.md`'s.
 
 `src/Zinc.Core` (no WinUI; what the tests load):
 - `Ghostty/` — bindings (`Native.cs`; `GhosttyKey.g.cs` from `scripts/gen-keys.py`), Ghostty's sprites (`Sprites.cs`).
