@@ -338,11 +338,17 @@ public class ShellInjectionTests
         Assert.SkipUnless(File.Exists(clink), "no Clink");
         var profile = Path.Combine(Path.GetTempPath(), "zinc-clink-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(profile);
+        // A right prompt, as themes draw: the command's text comes from Clink, not read off the screen with it.
+        File.WriteAllText(Path.Combine(profile, "rprompt.lua"),
+            "local p = clink.promptfilter(50)\nfunction p:filter() end\nfunction p:rightfilter() return \"zinc-rprompt\" end\n");
         try
         {
             using var session = StartShell($"cmd.exe /d /k \"\"{clink}\" inject --profile \"{profile}\"\"");
             ChecksMarks(session, "dir zinc-no-such-file", 1, "cd C:\\Windows", "Windows");
             Assert.Equal("dir zinc-no-such-file", session.Commands().First(c => c.Ran).Text);
+            // Read off the screen, a wide gap would end the command (it looks like the gap before a right prompt).
+            session.SendInput("echo zinc-a        zinc-b\r");
+            WaitFor(session, () => session.Commands().Any(c => c.Text == "echo zinc-a        zinc-b" && !c.Running), "the command's text from Clink");
         }
         finally
         {

@@ -144,6 +144,36 @@ public class ShellDirectoryTests
         Assert.Equal(3, changes);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void BackAtTheLocalShellsPromptSshHasEnded(bool remoteMarks)
+    {
+        // zsh reports its folder only when it changes: after ssh, the same folder isn't reported again.
+        using var session = new TerminalSession(80, 24, TerminalTheme.Default);
+        var changes = 0;
+        session.DirectoryChanged += () => changes++;
+        const string local = "\x1b]133;A;aid=1\x07$ \x1b]133;B\x07";
+
+        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07" + local + "ssh box\r\n\x1b]133;C\x07");
+        session.WriteToScreen("\x1b]7;file://box/home/zack\x07");
+        if (remoteMarks)
+        {
+            // Its prompt isn't the local shell's: still over there.
+            session.WriteToScreen("\x1b]133;A;aid=77\x07box$ \x1b]133;B\x07");
+            Assert.Equal("box", session.RemoteHost);
+            session.WriteToScreen("exit\r\n\x1b]133;C\x07\x1b]133;D;0\x07");
+        }
+
+        Assert.Equal("box", session.RemoteHost);
+        Assert.Equal(2, changes);
+
+        session.WriteToScreen("logout\r\n\x1b]133;D;0\x07" + local);
+        Assert.Null(session.RemoteHost);
+        Assert.Equal("file://localhost/home/zack/src", session.ReportedDirectory);
+        Assert.Equal(3, changes);
+    }
+
     [Fact]
     public void AReportIgnoredTooEarlyIsTakenOnceItsHostIsKnown()
     {

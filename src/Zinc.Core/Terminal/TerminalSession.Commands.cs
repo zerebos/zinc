@@ -241,6 +241,7 @@ public sealed unsafe partial class TerminalSession
                 var signature = mark.Options ?? "";
                 _cOnEnter = signature.Split(';').Contains(COnEnter);
                 _outerSignature ??= signature;
+                var entered = false;
                 if (signature != Signature(_nested.Count) && OuterLevel(signature) is { } outer)
                 {
                     // Back at a shell further out: the nested one has ended.
@@ -253,7 +254,10 @@ public sealed unsafe partial class TerminalSession
                     // (fish from zsh). It runs until that shell ends; the new shell's commands are its own.
                     _nested.Add((signature, last));
                     last = null;
+                    entered = true;
                 }
+
+                NoteLocalPrompt(signature, entered);
 
                 if (last != null)
                 {

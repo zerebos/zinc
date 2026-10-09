@@ -355,6 +355,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 directoryChanged = TakeReportedDirectory(ReadString(TerminalData.Pwd));
             }
 
+            directoryChanged |= _leftRemote;
+            _leftRemote = false;
+
             bell = _bell || flashBell;
             _bell = false;
             hold = _holdChanged;
@@ -596,6 +599,39 @@ public sealed unsafe partial class TerminalSession : IDisposable
         var changed = reported != ReportedDirectory;
         ReportedDirectory = reported;
         return changed || left;
+    }
+
+    /// <summary>
+    /// The prompt-mark options of the shell last prompting while folder reports were local (see
+    /// <see cref="NoteLocalPrompt"/>); null until one has.
+    /// </summary>
+    private string? _localPromptSignature;
+
+    /// <summary>Set when a prompt ended the ssh session (<see cref="NoteLocalPrompt"/>): raises <see cref="DirectoryChanged"/> after the write.</summary>
+    private bool _leftRemote;
+
+    /// <summary>
+    /// A prompt (under the lock; <paramref name="entered"/>: of a shell just started from a command). Back at the
+    /// prompt of the shell that prompted while folders were local, ssh has ended: a shell that reports its folder
+    /// only when it changes (zsh's) wouldn't say so. Two shells with the same mark options (no aid) look alike, as
+    /// they do to command tracking: the remote one's prompt then ends it early.
+    /// </summary>
+    private void NoteLocalPrompt(string signature, bool entered)
+    {
+        if (RemoteHost == null)
+        {
+            if (!entered)
+            {
+                _localPromptSignature = signature;
+            }
+        }
+        else if (signature == _localPromptSignature)
+        {
+            Log.Write($"folder: back from {RemoteHost} (a local prompt)");
+            RemoteHost = null;
+            _remoteReport = null;
+            _leftRemote = true;
+        }
     }
 
     /// <summary>

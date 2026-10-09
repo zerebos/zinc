@@ -122,6 +122,24 @@ public sealed class SettingsBackupTests : IDisposable
     }
 
     [Fact]
+    public void AnImportedSessionThatCantBeTakenDoesntStopTheStart()
+    {
+        var session = Path.Combine(Folder("locked"), "session.json");
+        File.WriteAllText(session, "current");
+        File.WriteAllText(SettingsBackup.TakenAtStart(session), "imported");
+        File.SetAttributes(session, FileAttributes.ReadOnly); // File.Move over it: UnauthorizedAccessException
+        try
+        {
+            Assert.False(SessionStore.TakeImported(session));
+            Assert.Equal("current", File.ReadAllText(session));
+        }
+        finally
+        {
+            File.SetAttributes(session, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
     public void ARunWithoutASessionImportsEverythingButTheSession()
     {
         var to = Folder("to");

@@ -29,7 +29,7 @@ end
 
 clink.onbeginedit(function()
     io.write(esc .. "]133;D;" .. os.geterrorlevel() .. st ..
-        esc .. "]133;A;zinc_c=enter" .. st ..
+        esc .. "]133;A" .. st .. -- (not zinc_c=enter: the C below would come after Zinc's own and be dropped)
         esc .. "]9;9;" .. os.getcwd() .. st)
     io.flush()
 end)

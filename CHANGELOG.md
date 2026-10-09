@@ -14,6 +14,7 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Fixed
 - A `cmd` tab or split opened from a WSL tab accidentally started in `C:\Windows` because `cmd` can't use the distro's network-style folder. In a Windows folder (`/mnt/c/...`) it now starts in that folder (`C:\...`). in a folder only Linux has (`/home/...`), it starts in its profile's folder.
 - Duplicating a tab whose shell never reported its folder, after its start folder was deleted, opened a pane that failed to start. It starts in the profile's folder now.
+- In zsh, after leaving an `ssh` session, the tab showed no folder until you changed folders. It shows the folder you're in again as soon as the prompt is back.
 
 ## 0.1.0-dev.330 (2026-10-07)
 

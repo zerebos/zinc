@@ -237,8 +237,9 @@ public static class SessionStore
             Log.Write("session: took the one imported from a settings backup");
             return true;
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            // Runs while App is built: anything thrown here would stop every start.
             Log.Write($"session: can't take the imported one: {ex.Message}");
             return false;
         }
