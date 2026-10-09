@@ -185,6 +185,10 @@ public static class ShellDirectory
     public static bool IsWsl(string command) =>
         Path.GetFileNameWithoutExtension(FirstToken(command).Trim('"')).Equals("wsl", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Whether <paramref name="command"/> starts cmd, which can't start in a share (<c>\\server\…</c>) folder.</summary>
+    public static bool IsCmd(string command) =>
+        Path.GetFileNameWithoutExtension(FirstToken(command).Trim('"')).Equals("cmd", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>The executable part of a command line (quoted or not), as written.</summary>
     private static string FirstToken(string command)
     {

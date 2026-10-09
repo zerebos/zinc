@@ -35,14 +35,20 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
     public (string Command, string? WorkingDirectory)? LaunchFor(string command, string? commandDistro)
     {
         var windows = IsWindowsPath(Path);
+        if (ShellDirectory.IsWsl(command) && WslDistro != null && !windows &&
+            (commandDistro == null || commandDistro.Equals(WslDistro, StringComparison.OrdinalIgnoreCase)))
+        {
+            return ShellDirectory.LaunchIn(command, Path);
+        }
+
+        // A distro's view of a Windows drive (/mnt/c/dev) is that Windows folder to every other shell.
+        if (WslDistro != null && OnWindowsDrive(Path) is { } drive)
+        {
+            return new WorkspaceFolder(drive).LaunchFor(command, commandDistro);
+        }
+
         if (ShellDirectory.IsWsl(command))
         {
-            if (WslDistro != null && !windows &&
-                (commandDistro == null || commandDistro.Equals(WslDistro, StringComparison.OrdinalIgnoreCase)))
-            {
-                return ShellDirectory.LaunchIn(command, Path);
-            }
-
             // A Windows folder: the distro sees its drives under /mnt.
             return windows && ShellDirectory.ResolveTyped(Path, command, "") is { } mounted
                 ? ShellDirectory.LaunchIn(command, mounted)
@@ -56,12 +62,24 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
 
         if (WslDistro != null)
         {
-            // A distro's folder from Windows: through its share (not "~": its home isn't known here).
-            return Path.StartsWith('/') ? (command, $@"\\wsl.localhost\{WslDistro}{Path.Replace('/', '\\')}") : null;
+            // A distro's folder from Windows: through its share (not "~": its home isn't known here), which cmd can't
+            // start in (it says so and starts in C:\Windows).
+            return Path.StartsWith('/') && !ShellDirectory.IsCmd(command)
+                ? (command, $@"\\wsl.localhost\{WslDistro}{Path.Replace('/', '\\')}")
+                : null;
         }
 
         // "~" (home) or an MSYS path.
         return ShellDirectory.ResolveTyped(Path, command, "") is { } resolved ? ShellDirectory.LaunchIn(command, resolved) : null;
+    }
+
+    /// <summary>The Windows folder a distro path under the default mount root is (<c>/mnt/c/dev</c> → <c>C:\dev</c>), else null.</summary>
+    private static string? OnWindowsDrive(string path)
+    {
+        var drive = System.Text.RegularExpressions.Regex.Match(path, $"^{WslConf.DefaultMountRoot}([a-zA-Z])(/.*)?$");
+        return drive.Success
+            ? $"{char.ToUpperInvariant(drive.Groups[1].Value[0])}:{(drive.Groups[2].Value is { Length: > 0 } rest ? rest : "/")}".Replace('/', '\\')
+            : null;
     }
 
     /// <summary>

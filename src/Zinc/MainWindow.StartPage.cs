@@ -285,7 +285,7 @@ public sealed partial class MainWindow
             {
                 StartSource.Current when origin != null => Reach(CurrentFolder(origin), command, usual),
                 StartSource.Workspace => Reach(tab.Folder, command, usual),
-                StartSource.Original when origin != null => (command, origin.WorkingDirectory),
+                StartSource.Original when origin != null && Directory.Exists(origin.WorkingDirectory) => (command, origin.WorkingDirectory),
                 StartSource.Usual => (command, usual),
                 _ => null,
             };

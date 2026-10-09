@@ -23,6 +23,19 @@ public class WorkspaceFolderTests
         Assert.Equal(("wsl.exe --cd \"/home/zack/src\" --distribution-id {abc}", (string?)null), folder.LaunchFor(Fedora, "Fedora"));
         Assert.Equal((Pwsh, @"\\wsl.localhost\Fedora\home\zack\src"), folder.LaunchFor(Pwsh, null));
         Assert.Null(folder.LaunchFor("wsl.exe -d Ubuntu", "Ubuntu")); // another distro's: its usual folder
+        Assert.Null(folder.LaunchFor("cmd.exe", null)); // cmd can't start in a share
+    }
+
+    [Fact]
+    public void ADistrosViewOfAWindowsDriveIsThatWindowsFolderElsewhere()
+    {
+        var folder = new WorkspaceFolder("/mnt/c/Users/Zack/dev", "Ubuntu");
+        Assert.Equal(("cmd.exe", @"C:\Users\Zack\dev"), folder.LaunchFor("cmd.exe", null));
+        Assert.Equal((Pwsh, @"C:\Users\Zack\dev"), folder.LaunchFor(Pwsh, null));
+        Assert.Equal((GitBash, @"C:\"), new WorkspaceFolder("/mnt/c", "Ubuntu").LaunchFor(GitBash, null));
+        Assert.Equal(("wsl.exe --cd \"/mnt/c/Users/Zack/dev\" --distribution-id {abc}", (string?)null), folder.LaunchFor(Fedora, "Fedora"));
+        // The distro's own shells keep its path (a custom mount root would make /mnt/c an ordinary folder).
+        Assert.Equal(("wsl.exe --cd \"/mnt/c/Users/Zack/dev\" -d Ubuntu", (string?)null), folder.LaunchFor("wsl.exe -d Ubuntu", "Ubuntu"));
     }
 
     [Fact]

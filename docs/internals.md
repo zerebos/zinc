@@ -327,7 +327,9 @@ code wins: fix the entry.
   (page, CLI, launch). Duplicate workspace = `DuplicateWorkspace` (Capture/Restore + OpenSaved, like reopen). Config keys
   renamed at read time (`ConfigFile.RenamedKeys`/`CurrentName`: old names still read; `SettingsWriter.Set` drops the old
   alias); Config.Apply keeps the old internal names. Without pane tabs, `Actions.Title/FamilyTitle(.., paneTabs)` call
-  new-tab "New workspace". Test: `.scratch/tools/start-test.ps1` (START_CMD / START_CD env, `-Extra 'start-in = "profile"'`).
+  new-tab "New workspace". `LaunchFor` gives a distro's `/mnt/<drive>/…` folder to other shells as the Windows folder
+  (default mount root only), and never gives cmd a `\\wsl.localhost` folder: cmd can't start in a share, it falls back
+  to C:\Windows (2026-10-08 review). Test: `.scratch/tools/start-test.ps1` (START_CMD / START_CD env, `-Extra 'start-in = "profile"'`).
 
 - New-workspace page (design: claude.ai/artifact/Vw21Hh3F1zEYbUTshQ4E9d, option E; all 4 steps built):
   `StartPage.cs` (code-only: filter, Profile/Folder/Layout lists, name, "Show this page" = `new-workspace-page`;
