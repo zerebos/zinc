@@ -16,25 +16,32 @@ public static partial class ClipboardHtml
 {
     public static string Make(string ghosttyHtml, GhosttyColorRgb foreground, GhosttyColorRgb background, string fontFamily, double fontPoints)
     {
+        // The palette from the style block only: the copied text can contain "--vt-palette-1: #000000" too in theory
+        var block = StyleBlock().Match(ghosttyHtml);
         var palette = new Dictionary<string, string>();
-        foreach (Match m in PaletteEntry().Matches(ghosttyHtml))
-        {
+        foreach (Match m in PaletteEntry().Matches(block.Value)) {
             palette[m.Groups[1].Value] = m.Groups[2].Value;
         }
 
-        var html = StyleBlock().Replace(ghosttyHtml, "");
-        html = PaletteVar().Replace(html, m => palette.TryGetValue(m.Groups[1].Value, out var hex) ? hex : Hex(foreground));
+        var html = block.Success ? ghosttyHtml.Remove(block.Index, block.Length) : ghosttyHtml;
 
-        var fg = Hex(foreground);
-        var bg = Hex(background);
-        html = StyleAttribute().Replace(html, m => "style=\"" + Restyle(m.Groups[1].Value, fg, bg) + "\"");
-
-        // The wrapper libghostty writes first; the rest are inline runs.
-        var body = OuterOpen().Replace(html, "", 1);
-        if (body.EndsWith("</div>", StringComparison.Ordinal))
-        {
+        // The wrapper libghostty writes around each page of the terminal's memory (the rest are inline runs)
+        // Between two pages it closes one and opens the next with no line break, the closing div being one in a browser
+        var wrapper = OuterOpen().Match(html).Value;
+        var body = wrapper.Length > 0 ? html[wrapper.Length..].Replace("</div>" + wrapper, "\n", StringComparison.Ordinal) : html;
+        if (body.EndsWith("</div>", StringComparison.Ordinal)) {
             body = body[..^"</div>".Length];
         }
+
+        // Colors only inside style attributes so var(--vt-palette-1) in the text stays text
+        var fg = Hex(foreground);
+        var bg = Hex(background);
+        body = StyleAttribute().Replace(body,
+            m => {
+                var style = PaletteVar().Replace(m.Groups[1].Value, v => palette.TryGetValue(v.Groups[1].Value, out var hex) ? hex : fg);
+                return "style=\"" + Restyle(style, fg, bg) + "\"";
+            }
+        );
 
         body = body.Replace("<div ", "<span ", StringComparison.Ordinal).Replace("</div>", "</span>", StringComparison.Ordinal);
         body = body.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", "<br>", StringComparison.Ordinal);

@@ -56,6 +56,28 @@ public class ClipboardHtmlTests
     }
 
     [Fact]
+    public void APageBoundaryIsALineBreak()
+    {
+        // As libghostty writes a selection over two pages of its memory (checked against the DLL: 3000 lines of scrollback).
+        const string page = "<div style=\"font-family: monospace; white-space: pre;\">";
+        var html = ClipboardHtml.Make(
+            "<style>:root{--vt-palette-1: #ff0000;}</style>" + page + "<div style=\"display: inline;color: var(--vt-palette-1);\">line 1</div></div>" +
+            page + "<div style=\"display: inline;color: var(--vt-palette-1);\">line 2</div></div>", default, default, "x", 10);
+
+        Assert.Contains("line 1</span><br><span style=\"color: #ff0000;\">line 2", html);
+        Assert.DoesNotContain("font-family: monospace", html);
+        Assert.EndsWith("line 2</span></div>", html);
+    }
+
+    [Fact]
+    public void PaletteNamesInTheTextStayText()
+    {
+        var html = CopyAsHtml("\u001b[31mvar(--vt-palette-1)\u001b[0m\r\n--vt-palette-1: #000000", 30, 1)!;
+
+        Assert.Contains("<span style=\"color: #ff6b6b;\">var(--vt-palette-1)</span><br>--vt-palette-1: #000000", html);
+    }
+
+    [Fact]
     public void QuotesInTheFontNameCantBreakTheStyle() =>
         Assert.Contains("font-family: 'My Font', Consolas",
             ClipboardHtml.Make("<div style=\"font-family: monospace; white-space: pre;\">x</div>", default, default, "My 'Font\"", 10)); // quotes dropped
