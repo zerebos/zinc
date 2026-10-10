@@ -237,6 +237,13 @@ public sealed class SettingsBackupTests : IDisposable
     }
 
     [Fact]
+    public void ZincCoreDoesntNeedTheZipFileAssembly()
+    {
+        // A trimmed publish leaves it out of zinc.deps.json, so it can't load there
+        Assert.DoesNotContain(typeof(SettingsBackup).Assembly.GetReferencedAssemblies(), a => a.Name == "System.IO.Compression.ZipFile");
+    }
+
+    [Fact]
     public void AnExportNamesTheFilesItLeavesOut()
     {
         var config = Folder("config");

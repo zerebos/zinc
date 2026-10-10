@@ -212,7 +212,14 @@ public static partial class SettingsBackup
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                entry.ExtractToFile(temp, overwrite: true);
+                // entry.ExtractToFile is part ofSystem.IO.Compression.ZipFile, which a trimmed publish leaves out
+                // So we use entry.Open() and manually copy the contents to the temp file
+                using (var from = entry.Open())
+                using (var to = new FileStream(temp, FileMode.Create, FileAccess.Write))
+                {
+                    from.CopyTo(to);
+                }
+
                 File.Move(temp, target, overwrite: true);
                 written += entry.FullName == SessionEntry ? 0 : 1;
             }
