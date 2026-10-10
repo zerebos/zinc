@@ -6,6 +6,7 @@ namespace Zinc.Tests;
 
 public sealed class SettingsBackupTests : IDisposable
 {
+    // TODO: should probably use a better eye-catcher style date
     private static readonly DateTimeOffset Now = new(2026, 10, 7, 15, 30, 0, TimeSpan.Zero);
     private readonly string _root = Path.Combine(Path.GetTempPath(), "zinc-backup-" + Guid.NewGuid().ToString("N"));
 
@@ -194,10 +195,45 @@ public sealed class SettingsBackupTests : IDisposable
         Assert.Equal(["config.toml"], SettingsBackup.Read(backup).Contents!.Files);
 
         var to = Folder("to");
-        Assert.Equal(1, SettingsBackup.Import(backup, Path.Combine(to, "config"), null, "v", Now).Files);
+        var result = SettingsBackup.Import(backup, Path.Combine(to, "config"), null, "v", Now);
+        Assert.Equal((1, 3), (result.Files, result.Skipped));
         Assert.Equal("a", File.ReadAllText(Path.Combine(to, "config", "config.toml")));
         Assert.False(File.Exists(Path.Combine(to, "evil.toml")));
         Assert.False(Directory.Exists(Path.Combine(to, "config", "keys")));
+    }
+
+    [Fact]
+    public void TwoImportsInTheSameSecondKeepBothSafetyCopies()
+    {
+        var config = Folder("config");
+        Put(config, "config.toml", "mine");
+        var first = SettingsBackup.Import(Zip(("config.toml", "one")), config, null, "v", Now).SafetyCopy;
+        var second = SettingsBackup.Import(Zip(("config.toml", "two")), config, null, "v", Now).SafetyCopy;
+
+        Assert.NotEqual(first, second);
+        Assert.EndsWith("before-import-20261007-153000-2.zip", second);
+        using var original = new ZipArchive(File.OpenRead(first));
+        using var reader = new StreamReader(original.GetEntry("config.toml")!.Open());
+        Assert.Equal("mine", reader.ReadToEnd()); // the first copy, still the original settings
+    }
+
+    [Fact]
+    public void AnImportThatStopsPartwaySaysWhereTheOldSettingsAre()
+    {
+        var config = Folder("config");
+        Put(config, "config.toml", "mine");
+        Put(config, "themes/Locked", "old");
+        // Open in another app that lets it be read (the safety copy) but not replaced
+        using (new FileStream(Path.Combine(config, "themes", "Locked"), FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            var failed = Assert.Throws<ImportFailedException>(() =>
+                SettingsBackup.Import(Zip(("config.toml", "new"), ("themes/Locked", "x")), config, null, "v", Now));
+            Assert.Equal(("themes/Locked", 1), (failed.Entry, failed.Written));
+            Assert.True(File.Exists(failed.SafetyCopy));
+        }
+
+        Assert.Equal("new", File.ReadAllText(Path.Combine(config, "config.toml"))); // written before it stopped
+        Assert.Empty(Directory.GetFiles(config, "*.tmp", SearchOption.AllDirectories));
     }
 
     [Fact]

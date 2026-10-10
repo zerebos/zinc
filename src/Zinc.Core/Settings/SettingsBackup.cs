@@ -9,8 +9,20 @@ public sealed record BackupContents(IReadOnlyList<string> Files, bool HasSession
     public int Count(string folder) => Files.Count(f => f.StartsWith(folder + "/", StringComparison.OrdinalIgnoreCase));
 }
 
-/// <summary>What an import did: files written, the session kept for the next start, and the backup made first.</summary>
-public sealed record ImportResult(int Files, bool Session, string SafetyCopy);
+/// <summary>
+/// What an import did: files written, the session kept for the next start, the backup made first, and files in the
+/// backup it doesn't restore (a newer Zinc's, or not settings).
+/// </summary>
+public sealed record ImportResult(int Files, bool Session, string SafetyCopy, int Skipped = 0);
+
+/// <summary>An import that stopped after replacing <see cref="Written"/> files: the settings from before are in <see cref="SafetyCopy"/>.</summary>
+public sealed class ImportFailedException(string entry, int written, string safetyCopy, Exception inner)
+    : IOException($"couldn't write {entry} ({inner.Message.TrimEnd('.', ' ')})", inner)
+{
+    public string Entry { get; } = entry;
+    public int Written { get; } = written;
+    public string SafetyCopy { get; } = safetyCopy;
+}
 
 /// <summary>
 /// Settings backup (Settings > About): one zip with config.toml (and other .toml files under its folder, for includes), the
@@ -155,8 +167,8 @@ public static partial class SettingsBackup
         }
 
         Directory.CreateDirectory(Path.Combine(configFolder, BackupsFolder));
-        var safety = Path.Combine(configFolder, BackupsFolder, $"before-import-{now:yyyyMMdd-HHmmss}.zip");
-        using (var copy = new FileStream(safety, FileMode.Create, FileAccess.Write))
+        var safety = SafetyCopyPath(configFolder, now);
+        using (var copy = new FileStream(safety, FileMode.CreateNew, FileAccess.Write))
         {
             Write(copy, configFolder, sessionPath, version, now);
         }
@@ -164,11 +176,18 @@ public static partial class SettingsBackup
         zip.Position = 0;
         using var archive = new ZipArchive(zip, ZipArchiveMode.Read, leaveOpen: true);
         var written = 0;
+        var skipped = 0;
         var session = false;
         foreach (var entry in archive.Entries)
         {
-            if (entry.FullName.EndsWith('/') || entry.FullName == Manifest || !IsSafe(entry.FullName))
+            if (entry.FullName.EndsWith('/') || entry.FullName == Manifest)
             {
+                continue;
+            }
+
+            if (!IsSafe(entry.FullName))
+            {
+                skipped++;
                 continue;
             }
 
@@ -186,17 +205,39 @@ public static partial class SettingsBackup
             else
             {
                 target = Path.Combine(configFolder, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
-                written++;
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
             // Through a temp file: the config watcher may read config.toml the moment it changes.
             var temp = target + ".tmp";
-            entry.ExtractToFile(temp, overwrite: true);
-            File.Move(temp, target, overwrite: true);
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                entry.ExtractToFile(temp, overwrite: true);
+                File.Move(temp, target, overwrite: true);
+                written += entry.FullName == SessionEntry ? 0 : 1;
+            }
+            catch (Exception ex)
+            {
+                // Some files may be replaced already (a locked file, a damaged entry), what was there before is in the safety copy.
+                try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+                throw new ImportFailedException(entry.FullName, written, safety, ex);
+            }
         }
 
-        return new ImportResult(written, session, safety);
+        return new ImportResult(written, session, safety, skipped);
+    }
+
+    /// <summary>backups\before-import-&lt;time&gt;.zip, numbered if one from the same second is there (it must never be replaced).</summary>
+    private static string SafetyCopyPath(string configFolder, DateTimeOffset now)
+    {
+        var name = Path.Combine(configFolder, BackupsFolder, $"before-import-{now:yyyyMMdd-HHmmss}");
+        var path = name + ".zip";
+        for (var n = 2; File.Exists(path); n++)
+        {
+            path = $"{name}-{n}.zip";
+        }
+
+        return path;
     }
 
     /// <summary>Where an imported session waits for the next start.</summary>

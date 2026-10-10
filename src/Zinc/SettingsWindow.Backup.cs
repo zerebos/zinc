@@ -70,14 +70,14 @@ internal sealed partial class SettingsWindow
             // Includes, shaders and shader folders the config names elsewhere: copy them yourself.
             var leftOut = SettingsBackup.LeftOut(_config);
             Log.Write($"backup: exported {count} files to {file.Path}; left out {leftOut.Count}: {string.Join(", ", leftOut)}");
-            ShowBackupStatus($"Exported {count} files to {file.Path}." + (leftOut.Count == 0 ? "" :
+            ShowBackupStatus($"Exported {Files(count)} to {file.Path}." + (leftOut.Count == 0 ? "" :
                 $" Your settings also use files outside Zinc's settings folder, which aren't in it: {string.Join(", ", leftOut)}. " +
                 "Copy them yourself to take them to another PC."), file.Path);
         }
         catch (Exception ex)
         {
             Log.Write($"backup: export failed: {ex}");
-            ShowBackupStatus($"Couldn't export your settings: {ex.Message}");
+            ShowBackupStatus($"Couldn't export your settings ({ex.Message.TrimEnd('.', ' ')}). Try saving to another folder.");
         }
     }
 
@@ -123,15 +123,35 @@ internal sealed partial class SettingsWindow
 
             stream.Position = 0;
             var result = SettingsBackup.Import(stream, ConfigFolder, App.Instance.SessionPath, BackupVersion, DateTimeOffset.Now);
-            Log.Write($"backup: imported {result.Files} files from {file.Path}{(result.Session ? " and a session for the next start" : "")}; before: {result.SafetyCopy}");
-            ShowBackupStatus($"Imported {result.Files} files{(result.Session ? "; the windows from the backup open the next time Zinc starts" : "")}. " +
-                $"Your settings from before are in {Path.GetFileName(result.SafetyCopy)}.", result.SafetyCopy);
+            Log.Write($"backup: imported {result.Files} files from {file.Path}{(result.Session ? " and a session for the next start" : "")}, " + $"skipped {result.Skipped}; before: {result.SafetyCopy}");
+            ShowBackupStatus(ImportDone(result), result.SafetyCopy);
+        }
+        catch (ImportFailedException ex)
+        {
+            // Stopped partway... some files are the backup's, the rest are not imported
+            Log.Write($"backup: import failed after {ex.Written} files: {ex}");
+            ShowBackupStatus($"The import stopped partway: {ex.Message}. Your settings from before are in " + $"{Path.GetFileName(ex.SafetyCopy)}: import that file to go back.", ex.SafetyCopy);
         }
         catch (Exception ex)
         {
             Log.Write($"backup: import failed: {ex}");
-            ShowBackupStatus($"Couldn't import the settings: {ex.Message}");
+            ShowBackupStatus($"Couldn't import the settings ({ex.Message.TrimEnd('.', ' ')}). Nothing was changed: check the file can be opened, and try again.");
         }
+    }
+
+    private static string Files(int count) => count == 1 ? "1 file" : $"{count} files";
+
+    /// <summary>What an import did, for the row's status.</summary>
+    private static string ImportDone(ImportResult result)
+    {
+        // TODO: we should do proper i18n with pluralization at some point...
+        var done = result.Files > 0
+            ? $"Imported {Files(result.Files)}." + (result.Session ? " The windows from the backup open the next time Zinc starts." : "")
+            : result.Session ? "Imported the windows from the backup: they open the next time Zinc starts." : "Imported nothing: the backup has no settings.";
+        var skipped = result.Skipped > 0
+            ? $" {Files(result.Skipped)} in it {(result.Skipped == 1 ? "wasn't" : "weren't")} restored, as Zinc doesn't use {(result.Skipped == 1 ? "it" : "them")} (from a newer version, or not settings)."
+            : "";
+        return $"{done}{skipped} Your settings from before are in {Path.GetFileName(result.SafetyCopy)}.";
     }
 
     /// <summary>What an import will do, for the question before it.</summary>
