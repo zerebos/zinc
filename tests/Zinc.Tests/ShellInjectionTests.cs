@@ -317,15 +317,14 @@ public class ShellInjectionTests
     }
 
     [Fact]
-    public void CmdUnderClinkGetsOurScriptOnClinkPathAndTheOriginalPrompt()
+    public void CmdUnderClinkGetsOurScriptOnClinkPath()
     {
         var clink = Scripts.TrimEnd('\\', '/') + @"\clink";
         var plain = Prepare("cmd.exe").Environment;
-        Assert.Equal("$P$G", plain["ZINC_CMD_PROMPT"]);
+        Assert.Equal("1", plain["ZINC_CMD_PROMPT"]); // only says Zinc set this cmd up: zinc.lua runs
         Assert.Equal(clink, plain["CLINK_PATH"]);
 
         var theirs = Prepare("cmd.exe", new() { ["PROMPT"] = "$T $P$G", ["CLINK_PATH"] = @"C:\mine" }).Environment;
-        Assert.Equal("$T $P$G", theirs["ZINC_CMD_PROMPT"]);
         Assert.Equal(@"C:\mine;" + clink, theirs["CLINK_PATH"]); // theirs still load
     }
 
@@ -349,6 +348,15 @@ public class ShellInjectionTests
             // Read off the screen, a wide gap would end the command (it looks like the gap before a right prompt).
             session.SendInput("echo zinc-a        zinc-b\r");
             WaitFor(session, () => session.Commands().Any(c => c.Text == "echo zinc-a        zinc-b" && !c.Running), "the command's text from Clink");
+
+            // echo keeps the errorlevel of the failure before it: it gets no exit code, rather than the failure's.
+            session.SendInput("dir zinc-no-such-file\r");
+            WaitFor(session, () => session.Commands().Count(c => c.Failed) == 2, "the second failure");
+            session.SendInput("echo zinc-after\r");
+            WaitFor(session, () => session.Commands().Any(c => c.Text == "echo zinc-after" && !c.Running), "echo after a failure");
+            var echo = session.Commands().Single(c => c.Text == "echo zinc-after");
+            Assert.Null(echo.ExitCode);
+            Assert.False(echo.Failed);
         }
         finally
         {

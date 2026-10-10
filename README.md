@@ -656,8 +656,9 @@ there are no exit codes (no red bars). A prompt that sends marks of its own is l
 **Clink**, Zinc also loads a small Lua script (through `CLINK_PATH`, next to your own scripts) that sends the marks
 itself, with what `PROMPT` can't give: exit codes (red bars for failed commands) and the exact command text. It keeps
 working with prompt themes that replace the whole prompt (oh-my-posh, starship, flexprompt). The exit code is cmd's
-`%ERRORLEVEL%`, which some built-in commands (`echo`, `title`, `rem`) leave as it was: right after a failed command,
-they show as failed too.
+`%ERRORLEVEL%`, which some built-in commands leave as it was. A line that's only `echo`, `title`, `rem` or `cls` gets
+no exit code, so it isn't marked failed after a command that failed. Others (`if`, `color`, or one of those after
+`&`) can still show the failure before them.
 
 **fish** (recent versions: 4.3 checked) and **nushell** send the marks and folder reports on their own, so
 Zinc loads nothing into them: jumping, selecting output and the command list work as they
