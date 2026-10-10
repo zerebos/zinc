@@ -143,6 +143,15 @@ if ($publishFailed) {
     throw 'dotnet publish failed.'
 }
 
+# A build whose zinc.deps.json leaves out an assembly it needs fails only when that's used (check-publish.ps1):
+# keep the previous version installed.
+$missing = & (Join-Path $PSScriptRoot 'check-publish.ps1') $target
+if ($missing) {
+    Remove-Item $target -Recurse -Force
+    Notify "Zinc install failed ($rev)" "zinc.deps.json doesn't list $($missing -join ', '), so the previous version is still installed."
+    throw "zinc.deps.json doesn't list assemblies these need: $($missing -join ', ')."
+}
+
 # ---- shortcut ----
 New-Item -ItemType Directory -Force (Split-Path $shortcut) | Out-Null
 $shell = New-Object -ComObject WScript.Shell

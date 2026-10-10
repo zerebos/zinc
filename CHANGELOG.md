@@ -6,10 +6,15 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.344 (2026-10-10)
+
 ### New
 - Copy with formatting: the selection's colors and styles go on the clipboard too, for pasting into a document (e.g. Word) or an email, in your terminal's colors and font. From the right-click menu or the command palette, or for every copy with `Terminal > Clipboard > Copy with formatting`.
 - With Clink, `cmd` tabs now get exit codes and the exact command text from shell integration. i.e. failed commands get their red bar, as in other shells. It keeps working with prompt themes like `oh-my-posh` or `starship`.
 - Settings backup (`Settings > About`): Export settings saves your settings, color schemes, shaders and open windows in one zip file. Import settings brings them back, on this PC or another. Your current settings are saved first, so an import can be undone.
+
+### Changed
+- With `Tabs inside panes` off, `Settings > Keyboard` no longer shows two "New workspace" cards. The one for `Ctrl+Shift+T` (and keys for a specific profile) is now "New workspace with a profile". The workspace's folder menu and the setting for where new tabs and splits start now say they apply to splits only.
 
 ### Fixed
 - A `cmd` tab or split opened from a WSL tab accidentally started in `C:\Windows` because `cmd` can't use the distro's network-style folder. In a Windows folder (`/mnt/c/...`) it now starts in that folder (`C:\...`). in a folder only Linux has (`/home/...`), it starts in its profile's folder.

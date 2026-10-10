@@ -174,6 +174,12 @@ if ($deps -notmatch 'runtimepack\.Microsoft\.NETCore\.App\.Runtime' -or $deps -n
     throw 'zinc.deps.json lists no .NET runtime, so zinc.exe would not start: not releasing it.'
 }
 
+# Every assembly something here references must be in zinc.deps.json (trimming can leave one out: check-publish.ps1).
+$missing = & (Join-Path $PSScriptRoot 'check-publish.ps1') $publishDir
+if ($missing) {
+    throw "zinc.deps.json doesn't list assemblies these need, so they'd fail to load when used: $($missing -join ', '). Not releasing it."
+}
+
 # The tester notes, for the portable zip (and beside the installed files).
 (Get-Content (Join-Path $PSScriptRoot 'package-readme.txt') -Raw).Replace('{version}', $Version) |
     Set-Content -Encoding utf8 (Join-Path $publishDir 'README.txt')
