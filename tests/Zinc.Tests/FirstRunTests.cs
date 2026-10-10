@@ -30,6 +30,16 @@ public class FirstRunTests
     }
 
     [Fact]
+    public void TheOldNameForPaneTabsGoes()
+    {
+        // The file keeps one name for it, as when the settings window writes it (SettingsWriter).
+        const string existing = "[window]\ntab-groups = true\n";
+        var text = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null), Read(existing));
+        Assert.DoesNotContain("tab-groups", text);
+        Assert.False(Read(text).Global.TabGroups);
+    }
+
+    [Fact]
     public void KnowsTheSchemeTheConfigNames()
     {
         // So the page, reopened, starts on it (and saving doesn't drop it).

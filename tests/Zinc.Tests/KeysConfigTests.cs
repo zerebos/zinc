@@ -95,7 +95,9 @@ public class KeysConfigTests
         Assert.Equal("New workspace", Actions.Title(newTab, paneTabs: false));
         Assert.Equal("New tab: wsl:Fedora", Actions.Title(fromProfile));
         Assert.Equal("New workspace: wsl:Fedora", Actions.Title(fromProfile, paneTabs: false));
-        Assert.Equal("New workspace", Actions.FamilyTitle("new-tab", paneTabs: false));
+        // Its card, apart from new-workspace's ("New workspace" twice in Settings > Keyboard).
+        Assert.Equal("New workspace with a profile", Actions.FamilyTitle("new-tab", paneTabs: false));
+        Assert.Equal("New workspace", Actions.FamilyTitle("new-workspace", paneTabs: false));
         Assert.Equal("Split", Actions.FamilyTitle("split", paneTabs: false));
     }
 

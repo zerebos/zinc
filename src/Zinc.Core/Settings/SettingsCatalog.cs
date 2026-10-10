@@ -271,7 +271,8 @@ public static class SettingsCatalog
                     new("One after another", "cycle", "Each new workspace takes the next color."),
                 ],
             },
-        new("layout", "Panes", "window.start-in", "New tabs and splits start", "New tabs in a workspace with its own folder start there.",
+        new("layout", "Panes", "window.start-in", "New tabs and splits start",
+            "New tabs in a workspace with its own folder start there. Without tabs inside panes, this is for splits only: a new tab is a new workspace.",
             SettingKind.Choice, "current")
             {
                 Choices =

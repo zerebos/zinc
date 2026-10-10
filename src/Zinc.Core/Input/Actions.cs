@@ -109,10 +109,11 @@ public static class Actions
 
     /// <summary>
     /// A family's title ("Split", "Go to workspace"). Without tabs inside panes (<paramref name="paneTabs"/> false)
-    /// a new tab is a new workspace, and new-tab is titled so.
+    /// a new tab is a new workspace, and new-tab is titled so, apart from new-workspace's own card: it's the one with
+    /// a profile.
     /// </summary>
     public static string FamilyTitle(string family, bool paneTabs = true) =>
-        !paneTabs && family == "new-tab" ? WorkspaceTitle : DefinitionOf(family).Title;
+        !paneTabs && family == "new-tab" ? $"{WorkspaceTitle} with a profile" : DefinitionOf(family).Title;
 
     private const string WorkspaceTitle = "New workspace";
 

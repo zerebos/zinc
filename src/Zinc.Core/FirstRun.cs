@@ -45,6 +45,7 @@ public static class FirstRun
         if (global == null || global.TabGroups != workspaces)
         {
             text = ConfigEditor.Set(text, ["window", "pane-tabs"], workspaces);
+            text = ConfigEditor.Remove(text, ["window", "tab-groups"]); // its old name (ConfigFile.RenamedKeys) would be read too
         }
 
         if (current == null || current.SchemeName != choices.Scheme)
