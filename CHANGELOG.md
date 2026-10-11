@@ -13,6 +13,9 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Changed
 - `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` shows the row of tabs on every pane once a workspace is split, and `Never` hides it. The old setting (`pane-tab-strip`) still works and keeps its original meaning.
 
+### Fixed
+- Closing a workspace's last tab or pane (the tab's ×, `close-tab` or `close-pane`) closed the workspace for good: Reopen closed workspace couldn't bring it back as it does after Close workspace. Now it can.
+
 ## 0.1.0-dev.344 (2026-10-10)
 
 ### New

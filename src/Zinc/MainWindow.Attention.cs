@@ -310,11 +310,15 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Closes a terminal tab when you ask to (not when its shell has exited).</summary>
-    private async void AskClosePane(WorkspaceTab tab, TerminalTab pane)
+    private void AskClosePane(WorkspaceTab tab, TerminalTab pane) => AskClosePanes(tab, [pane]);
+
+    /// <summary>Closes several terminal tabs, asking once for all of them; <paramref name="what"/> names them for the button ("pane").</summary>
+    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
     {
-        if (await ConfirmClose([pane], "tab"))
+        // FIXME: this is gonna be fun with i18n later...
+        if (await ConfirmClose(panes, what ?? (panes.Count == 1 ? "tab" : "tabs")))
         {
-            Ui.Guard("closing a tab", () => ClosePane(tab, pane));
+            Ui.Guard(panes.Count == 1 ? "closing a tab" : "closing tabs", () => CloseAsked(tab, panes));
         }
         else
         {
@@ -322,22 +326,21 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Closes several terminal tabs, asking once for all of them; <paramref name="what"/> names them for the button ("pane").</summary>
-    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
+    /// <summary>
+    /// Closes tabs you asked to close. When they're all of the workspace's tabs, it closes as "Close workspace" does, so
+    /// Reopen closed workspace brings it back (decision 30, 2026-10-11: closing the last tab or pane used to lose it).
+    /// </summary>
+    private void CloseAsked(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes)
     {
-        if (await ConfirmClose(panes, what ?? (panes.Count == 1 ? "tab" : "tabs")))
+        if (!_quick && tab.Workspace.Tabs.All(panes.Contains)) // (the quick terminal's isn't a workspace you'd reopen)
         {
-            Ui.Guard("closing tabs", () =>
-            {
-                foreach (var pane in panes)
-                {
-                    ClosePane(tab, pane);
-                }
-            });
+            CloseTabNow(tab);
+            return;
         }
-        else
+
+        foreach (var pane in panes)
         {
-            FocusActive(tab);
+            ClosePane(tab, pane);
         }
     }
 
