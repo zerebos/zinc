@@ -288,7 +288,7 @@ public static class SettingsCatalog
                 ],
             },
         new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
-        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row of tabs above a pane.", SettingKind.Choice, "with-tabs")
+        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row above a pane. Its tabs, or its title when it has one tab.", SettingKind.Choice, "with-tabs")
             {
                 Choices =
                 [

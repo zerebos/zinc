@@ -873,14 +873,16 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
 - `pane-tabs = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces (and "New tab" is called "New workspace" in menus, the palette and Settings).
 - In a split workspace the focused pane is marked by an accent line along its top (on the shown
-  tab when the pane has a strip), and the others are dimmed. `unfocused-pane-opacity` (in `[window]`,
+  tab when the pane shows its tabs, across its header when it shows its title), and the others are dimmed.
+  A pane's shown tab keeps its line whenever the pane has focus, split or not. `unfocused-pane-opacity` (in `[window]`,
   0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-pane-fill`
   what they fade toward (default: each pane's background).
   `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes.
-- `pane-headers` (in `[window]`) says which panes show their row of tabs: `"with-tabs"` (default: panes with two
-  or more tabs), `"auto"` (every pane once the workspace is split, and any pane with two or more tabs),
-  `"always"` (every pane, even with one tab) or `"never"`. It was called `pane-tab-strip`, whose `"auto"` is
-  `"with-tabs"`; when a file has both, `pane-headers` wins.
+- `pane-headers` (in `[window]`) says which panes show a header: a row of their tabs, or with one tab its title
+  (icon, title, dot) and the + for a new tab. `"with-tabs"` (default: panes with two or more tabs), `"auto"`
+  (every pane once the workspace is split, and any pane with two or more tabs), `"always"` (every pane) or
+  `"never"`. With `pane-tabs = false`, `"auto"` and `"always"` still show each pane's title (without the +).
+  It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
   close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows

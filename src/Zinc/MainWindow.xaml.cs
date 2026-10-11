@@ -552,17 +552,11 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Whether a group shows its own strip of tabs (pane-tabs, pane-headers), in a workspace that's split
-    /// (<paramref name="split"/>) or not.
+    /// A group's header (pane-headers, pane-tabs), in a workspace that's split (<paramref name="split"/>, a maximized
+    /// pane included: decision 31) or not. The quick terminal has none.
     /// </summary>
-    private bool ShowsStrip(TabGroup<TerminalTab> group, bool split) =>
-        !_quick && _config.Global.TabGroups && _config.Global.PaneHeaders switch
-        {
-            PaneHeaders.Always => true,
-            PaneHeaders.Never => false,
-            PaneHeaders.Auto => split || group.Tabs.Count > 1,
-            _ => group.Tabs.Count > 1,
-        };
+    private PaneHeaderKind HeaderOf(TabGroup<TerminalTab> group, bool split) => _quick ? PaneHeaderKind.None
+        : PaneHeader.For(_config.Global.PaneHeaders, _config.Global.TabGroups, split, group.Tabs.Count);
 
     private static void Dismantle(Panel panel)
     {
@@ -574,12 +568,13 @@ public sealed partial class MainWindow : Window
         panel.Children.Clear();
     }
 
-    /// <summary>Brings each group's pane up to date: focus marks, tab strip, shown terminal.</summary>
+    /// <summary>Brings each group's pane up to date: focus marks, header, shown terminal.</summary>
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
         ClearSeenAttention(tab);
-        // Focus is only marked once a workspace is split (and no pane is maximized): an accent line along the focused
-        // pane's top (its shown tab's, when it has a strip), and optionally dimmed others.
+        // A shown tab carries the accent line whenever its pane has focus; otherwise focus is only marked once a
+        // workspace is split (and no pane is maximized): the line across the focused pane's title header or along its
+        // top, and optionally dimmed others (PaneHeader.AccentLine).
         var split = tab.Workspace.Layout.Count > 1;
         var several = split && tab.Workspace.Maximized == null;
         var dim = 1 - _config.Global.UnfocusedSplitOpacity;
@@ -588,7 +583,8 @@ public sealed partial class MainWindow : Window
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
             var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
-            ((GroupView)host.Child).Update(group, ShowsStrip(group, split), focused, _focusBrush, several, dim, fill);
+            ((GroupView)host.Child).Update(group, HeaderOf(group, split), focused, _focusBrush, _config.Global.PaneFocus,
+                several, dim, fill, _config.Global.TabGroups);
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
 

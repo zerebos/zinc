@@ -10,9 +10,9 @@ using Windows.UI;
 namespace Zinc;
 
 /// <summary>
-/// One pane: a tab group's strip of tabs (when shown) over its shown tab's terminal. Each tab's
-/// strip element is built once and updated in place, like <see cref="TabHeader"/>: rebuilding
-/// headers re-decodes icons and makes them blink.
+/// One pane: its header (when shown: the pane's tabs, or with one tab its title) over its shown tab's terminal. Each
+/// tab's element is built once and updated in place, like <see cref="TabHeader"/>: rebuilding headers re-decodes icons
+/// and makes them blink.
 /// </summary>
 internal sealed partial class GroupView : Grid
 {
@@ -20,10 +20,13 @@ internal sealed partial class GroupView : Grid
     private const double AddWidth = 30;
 
     private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal };
+    private readonly ScrollViewer _scroll;
     private readonly Grid _strip = new() { Height = StripHeight };
+    private readonly TitleHeader _title = new() { Visibility = Visibility.Collapsed };
     private readonly Border _content = new();
     private readonly Dictionary<MainWindow.TerminalTab, TabItem> _items = new();
     private readonly Button _add;
+    private PaneHeaderKind _header;
 
     public GroupView()
     {
@@ -45,10 +48,10 @@ internal sealed partial class GroupView : Grid
         _add = add;
         add.Click += (_, _) => NewTabClicked?.Invoke();
 
-        // Tabs scroll when they don't fit; the + stays pinned after them.
+        // Tabs scroll when they don't fit; the + stays pinned after them. A one-tab title takes the tabs' place.
         _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        var scroll = new ScrollViewer
+        var scroll = _scroll = new ScrollViewer
         {
             Content = _tabs,
             HorizontalScrollMode = ScrollMode.Auto,
@@ -60,13 +63,30 @@ internal sealed partial class GroupView : Grid
         SetColumn(add, 1);
         add.HorizontalAlignment = HorizontalAlignment.Left;
         _strip.Children.Add(scroll);
+        _strip.Children.Add(_title);
         _strip.Children.Add(add);
-        // The tabs take what they need, up to the width left beside the +.
+        // The tabs (or the title) take what they need, up to the width left beside the +.
         _strip.SizeChanged += (_, e) =>
         {
-            scroll.MaxWidth = Math.Max(0, e.NewSize.Width - AddWidth - 2);
+            scroll.MaxWidth = _title.MaxWidth = Math.Max(0, e.NewSize.Width - AddWidth - 2);
             BringShownIntoView(); // a narrower pane (e.g. after a split) can hide it
         };
+        _title.Selecting = () => WithShown(t => TabClicked?.Invoke(t));
+        _title.Tapped += (_, e) =>
+        {
+            e.Handled = true;
+            _title.SelectItem();
+        };
+        _title.RightTapped += (_, e) =>
+        {
+            e.Handled = true;
+            WithShown(t => TabMenuRequested?.Invoke(t, _title));
+        };
+        // Dragging the title drags its tab, as a one-tab strip did.
+        _title.CanDrag = true;
+        _title.DragStarting += (_, e) => WithShown(t => TabDragStarting?.Invoke(t, e));
+        _title.DropCompleted += (_, e) => WithShown(t => TabDragCompleted?.Invoke(t, e.DropResult));
+
         SetRow(_content, 1);
         SetRow(_dim, 1);
         SetRow(_focusLine, 1);
@@ -157,11 +177,11 @@ internal sealed partial class GroupView : Grid
     /// <summary>The drop position under the pointer: how many tabs lie left of it.</summary>
     private int IndexAt(DragEventArgs e)
     {
-        var x = e.GetPosition(_tabs).X;
+        var x = e.GetPosition(_strip).X;
         var index = 0;
-        foreach (var child in _tabs.Children.OfType<FrameworkElement>())
+        foreach (var child in HeaderItems())
         {
-            var left = child.TransformToVisual(_tabs).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
+            var left = child.TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
             if (x < left + child.ActualWidth / 2)
             {
                 break;
@@ -173,9 +193,13 @@ internal sealed partial class GroupView : Grid
         return index;
     }
 
+    /// <summary>The header's tabs, left to right: the title counts as the one tab.</summary>
+    private List<FrameworkElement> HeaderItems() =>
+        _header == PaneHeaderKind.Title ? [_title] : _tabs.Children.OfType<FrameworkElement>().ToList();
+
     private void ShowMarker(int index)
     {
-        var items = _tabs.Children.OfType<FrameworkElement>().ToList();
+        var items = HeaderItems();
         double x;
         if (items.Count == 0)
         {
@@ -196,21 +220,32 @@ internal sealed partial class GroupView : Grid
     }
 
     /// <summary>
-    /// Shows the group's current state: its tabs in order, the active one highlighted (with an
-    /// accent line when the pane has focus), and the active tab's terminal below. When the
-    /// workspace is split (<paramref name="split"/>), focus shows as an accent line on top (the
-    /// shown tab's, or the pane's own without a strip), and unfocused panes can be dimmed toward
-    /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all).
+    /// Shows the group's current state: its header (<paramref name="header"/>: its tabs in order, the active one
+    /// highlighted, or its one tab's title), and the active tab's terminal below. The focused pane gets the accent line
+    /// (<see cref="PaneHeader.AccentLine"/>): on its shown tab, else across its title header or along its top when
+    /// there are other panes (<paramref name="several"/>), where unfocused panes can also be dimmed toward
+    /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
+    /// only with <paramref name="paneTabs"/>.
     /// </summary>
-    public void Update(TabGroup<MainWindow.TerminalTab> group, bool showStrip, bool focused, Brush accent,
-        bool split = false, double dim = 0, Color dimFill = default)
+    public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, bool focused, Brush accent,
+        PaneFocus focus = PaneFocus.TabAccent, bool several = false, double dim = 0, Color dimFill = default, bool paneTabs = true)
     {
+        _header = header;
+        _add.Visibility = paneTabs ? Visibility.Visible : Visibility.Collapsed; // with pane tabs off a title has no +
+        var showStrip = header != PaneHeaderKind.None;
         _strip.Visibility = showStrip ? Visibility.Visible : Visibility.Collapsed;
-        var line = split && focused && !showStrip;
+        var titled = header == PaneHeaderKind.Title;
+        _title.Visibility = titled ? Visibility.Visible : Visibility.Collapsed;
+        _scroll.Visibility = titled ? Visibility.Collapsed : Visibility.Visible;
+
+        var accentLine = PaneHeader.AccentLine(focus, header, focused, several);
+        // A tab carries its own line; otherwise it runs across the title header, or over the terminal's top edge.
+        var line = accentLine && header != PaneHeaderKind.Tabs;
         _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
+        SetRow(_focusLine, titled ? 0 : 1);
         if (line && group.Active is { } shown)
         {
-            // Over the terminal's top edge: kept visible on its background.
+            // Kept visible on the terminal's background (the title header sits on the window, near enough).
             var lineBrush = Contrast.AccentOn(TerminalRenderer.ToColor(shown.Profile.Config.Theme.Background), accent);
             if (_focusLine.Background != lineBrush)
             {
@@ -218,7 +253,7 @@ internal sealed partial class GroupView : Grid
             }
         }
 
-        var dimmed = split && !focused && dim > 0;
+        var dimmed = several && !focused && dim > 0;
         _dim.Visibility = dimmed ? Visibility.Visible : Visibility.Collapsed;
         if (dimmed)
         {
@@ -245,6 +280,14 @@ internal sealed partial class GroupView : Grid
             _items.Remove(gone);
         }
 
+        if (titled)
+        {
+            _title.Show(group.Active, TitleOf(group.Active), focused);
+            _shown = group.Active;
+            _shownScrolled = null; // tabs shown again scroll to it
+            return;
+        }
+
         if (!showStrip)
         {
             return;
@@ -263,17 +306,30 @@ internal sealed partial class GroupView : Grid
 
         foreach (var tab in group.Tabs)
         {
-            _items[tab].Show(TitleOf(tab), tab == group.Active, focused, accent, tab.Attention, tab.Control.Progress);
+            _items[tab].Show(TitleOf(tab), tab == group.Active, accentLine, accent, tab.Attention, tab.Control.Progress);
         }
 
-        if (_shown != group.Active)
+        _shown = group.Active;
+        if (_shownScrolled != group.Active)
         {
-            _shown = group.Active;
+            _shownScrolled = group.Active;
             BringShownIntoView();
         }
     }
 
+    /// <summary>The shown tab (the title header's, and the one menus and drags from it act on).</summary>
     private MainWindow.TerminalTab? _shown;
+
+    /// <summary>The tab the strip last scrolled into view (the title header shows a tab without scrolling).</summary>
+    private MainWindow.TerminalTab? _shownScrolled;
+
+    private void WithShown(Action<MainWindow.TerminalTab> action)
+    {
+        if (_shown is { } tab)
+        {
+            action(tab);
+        }
+    }
 
     /// <summary>Scrolls the strip so the shown tab is visible (after layout, when sizes are known).</summary>
     private void BringShownIntoView()
@@ -324,6 +380,78 @@ internal sealed partial class GroupView : Grid
         }
 
         return item;
+    }
+
+    /// <summary>
+    /// A one-tab pane's header: the tab's icon, title and attention dot, on the window behind it. It is the tab, so it
+    /// selects, opens the tab menu and drags as one.
+    /// </summary>
+    private sealed partial class TitleHeader : Grid, ISelectableItem
+    {
+        private readonly IconSourceElement _icon = new();
+        private readonly TextBlock _text = new()
+        {
+            FontSize = 12,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
+        private readonly AttentionDot _dot = new() { Corner = false, Margin = new Thickness(8, 0, 0, 0) };
+        private Profile? _profile;
+        private string? _name;
+
+        public TitleHeader()
+        {
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); // hit-testable: menu and drag
+            var icon = new Grid
+            {
+                Width = 14,
+                Height = 14,
+                Margin = new Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { _icon },
+            };
+            // The padding a tab's content has, so the icon sits where a tab's would.
+            Children.Add(new StackPanel
+            {
+                Padding = new Thickness(10, 0, 4, 0),
+                Orientation = Orientation.Horizontal,
+                Children = { icon, _text, _dot },
+            });
+        }
+
+        /// <summary>What a click does (set by the view), for screen readers selecting it.</summary>
+        public Action? Selecting { get; set; }
+
+        public bool IsSelectedItem => true;
+
+        public void SelectItem() => Selecting?.Invoke();
+
+        protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
+            new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.TabItem);
+
+        public void Show(MainWindow.TerminalTab tab, string title, bool focused)
+        {
+            if (_profile != tab.Profile)
+            {
+                _profile = tab.Profile; // only on a change: setting an icon re-decodes it
+                _icon.IconSource = ProfileIcons.For(tab.Profile);
+            }
+
+            _dot.Show(tab.Attention);
+            _dot.ShowProgress(tab.Control.Progress);
+            var words = AttentionWords.For(tab.Attention, tab.FailedExit);
+            var name = AttentionWords.Name(title, words);
+            if (name != _name)
+            {
+                _name = name;
+                _text.Text = title;
+                AutomationProperties.SetName(this, name);
+                ToolTipService.SetToolTip(this, AttentionWords.ToolTip(title, words));
+            }
+
+            _text.Opacity = focused ? 1 : 0.7; // as a shown tab's title against the others
+        }
     }
 
     /// <summary>One tab in the strip: icon, title, close button.</summary>

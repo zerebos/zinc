@@ -11,7 +11,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - Added "Close pane". It closes the focused pane and every tab in it, asking once first if a command is still running in any of them. From the command palette, or bind `close-pane` to a key.
 
 ### Changed
-- `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` shows the row of tabs on every pane once a workspace is split, and `Never` hides it. The old setting (`pane-tab-strip`) still works and keeps its original meaning.
+- `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` gives every pane a header once a workspace is split, and `Never` hides them. A pane with one tab shows its title there instead of a single tab, also with `Always`, and with `Tabs inside panes` off. The old setting (`pane-tab-strip`) still works and keeps its original meaning.
 - Closing two or more tabs at once (a pane, a workspace, a window, or Close other tabs and Close other workspaces) now asks first, even when no command is running. Turn it off with `Settings > Layout > Closing > Ask before closing`, which also stops the question about running commands.
 
 ### Fixed
