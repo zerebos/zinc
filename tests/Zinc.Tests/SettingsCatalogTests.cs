@@ -143,21 +143,120 @@ public class SettingsWriterTests
         // Written before the 2026-10-06 renames: still read, and shown in Settings under the new key.
         var old = "[window]\ngroup-tab-strip = \"always\"\nunfocused-split-opacity = 0.5\ntab-groups = false\n";
         var file = ConfigFile.Parse(old, "config.toml", "", _ => []);
-        Assert.Equal(GroupTabStrip.Always, file.Global.GroupTabStrip);
+        Assert.Equal(PaneHeaders.Always, file.Global.PaneHeaders);
         Assert.Equal(0.5, file.Global.UnfocusedSplitOpacity);
         Assert.False(file.Global.TabGroups);
-        Assert.Equal("always", file.ValueOf("window.pane-tab-strip"));
+        Assert.Equal("always", file.ValueOf("window.pane-headers"));
         Assert.Empty(file.Warnings);
 
         // Changing one in Settings writes the new name and takes the old one out.
         var path = TempConfig(old);
-        new SettingsWriter(path).Set(SettingsCatalog.Find("window.pane-tab-strip")!, "auto");
+        new SettingsWriter(path).Set(SettingsCatalog.Find("window.pane-headers")!, "never");
         new SettingsWriter(path).Set(SettingsCatalog.Find("window.unfocused-pane-opacity")!, 0.8);
         var text = File.ReadAllText(path);
         Assert.DoesNotContain("group-tab-strip", text);
         Assert.DoesNotContain("unfocused-split-opacity", text);
         Assert.Contains("unfocused-pane-opacity = 0.8", text);
         Assert.Contains("tab-groups = false", text); // untouched keys keep their old names until changed
+        Assert.Contains("pane-headers = \"never\"", text);
+    }
+
+    [Theory]
+    [InlineData("auto", "with-tabs")] // the default: written as nothing, and the old key goes too
+    [InlineData("always", "never")]
+    [InlineData("always", "auto")]
+    public void SettingsWritesPaneHeadersAndRemovesTheOldKey(string old, string chosen)
+    {
+        var path = TempConfig($"[window]\npane-tab-strip = \"{old}\"\npane-tabs = true\n");
+        new SettingsWriter(path).Set(SettingsCatalog.Find("window.pane-headers")!, chosen);
+        var text = File.ReadAllText(path);
+        Assert.DoesNotContain("pane-tab-strip", text);
+        Assert.Contains("pane-tabs = true", text);
+        var file = ConfigFile.Parse(text, "config.toml", "", _ => []);
+        Assert.Equal(chosen, Assert.IsType<string>(file.ValueOf("window.pane-headers") ?? "with-tabs"));
+    }
+
+    [Fact]
+    public void ResettingPaneHeadersRemovesTheOldKeyToo()
+    {
+        // Otherwise the old "always" would come back the moment the new key went.
+        var path = TempConfig("[window]\npane-tab-strip = \"always\"\n");
+        new SettingsWriter(path).Set(SettingsCatalog.Find("window.pane-headers")!, null);
+        Assert.DoesNotContain("pane-tab-strip", File.ReadAllText(path));
+    }
+
+    [Fact]
+    public void OldNamesFollowRenamesAndReplacements()
+    {
+        Assert.Equal(["window.pane-tab-strip", "window.group-tab-strip"], ConfigFile.OldNames("window.pane-headers").ToArray());
+        Assert.Equal(["window.tab-groups"], ConfigFile.OldNames("window.pane-tabs").ToArray());
+        Assert.Empty(ConfigFile.OldNames("font.size"));
+    }
+
+    [Fact]
+    public void PaneStylesSetAllFiveSettings()
+    {
+        var keys = SettingsCatalog.All.Where(s => s.Key.StartsWith("window.pane-") && s.Key is not "window.pane-tabs" and not "window.pane-resize-step")
+            .Select(s => s.Key);
+        Assert.Equal(keys, PaneStyle.Keys);
+        Assert.Equal(PaneStyle.Keys, PaneStyle.Fold.Children);
+        foreach (var style in new[] { PaneStyleKind.Compact, PaneStyleKind.Cards })
+        {
+            Assert.Equal(PaneStyle.Keys.Order(), PaneStyle.Values(style).Keys.Order());
+            foreach (var (key, value) in PaneStyle.Values(style))
+            {
+                Assert.Null(SettingsCatalog.Problem(SettingsCatalog.Find(key)!, value)); // each value reads back
+            }
+        }
+    }
+
+    [Fact]
+    public void CompactIsTheDefaults()
+    {
+        foreach (var (key, value) in PaneStyle.Values(PaneStyleKind.Compact))
+        {
+            Assert.True(SettingsCatalog.Same(SettingsCatalog.Find(key)!.Default, value), key);
+        }
+
+        Assert.Equal(PaneStyleKind.Compact, PaneStyle.Of(_ => null));
+    }
+
+    [Fact]
+    public void ChoosingAStyleWritesItAndReadsBackAsIt()
+    {
+        var path = TempConfig("# mine\n[window]\npane-tab-strip = \"always\"\n");
+        var writer = new SettingsWriter(path);
+        writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Cards)[k])));
+        var file = ConfigFile.Parse(File.ReadAllText(path), "config.toml", "", _ => []);
+        Assert.Equal(PaneStyleKind.Cards, PaneStyle.Of(file.ValueOf));
+        Assert.Equal((PaneHeaders.Always, PaneHeaderButtons.Show, 6, true, PaneFocus.Ring),
+            (file.Global.PaneHeaders, file.Global.PaneHeaderButtons, file.Global.PaneGap, file.Global.PaneGapEdges, file.Global.PaneFocus));
+        Assert.DoesNotContain("pane-tab-strip", File.ReadAllText(path));
+        Assert.Equal(4, writer.ChangeCount()); // pane-tab-strip = "always" already read as pane-headers = "always"
+
+        // Compact is the defaults: choosing it takes every pane key out of the file.
+        writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Compact)[k])));
+        Assert.Equal("# mine\n[window]\n", File.ReadAllText(path));
+    }
+
+    [Theory]
+    [InlineData("window.pane-headers", "never")]
+    [InlineData("window.pane-header-buttons", "hover")]
+    [InlineData("window.pane-gap", 4L)]
+    [InlineData("window.pane-gap-edges", false)]
+    [InlineData("window.pane-focus", "none")]
+    public void AnyChangeFromAStyleReadsCustom(string key, object value)
+    {
+        foreach (var style in new[] { PaneStyleKind.Compact, PaneStyleKind.Cards })
+        {
+            var values = PaneStyle.Values(style);
+            if (SettingsCatalog.Same(values[key], value))
+            {
+                continue; // (Compact already has gap edges off)
+            }
+
+            Assert.Equal(PaneStyleKind.Custom, PaneStyle.Of(k => k == key ? value : values[k]));
+        }
     }
 
     [Fact]

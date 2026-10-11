@@ -15,4 +15,7 @@ internal static class TestHooks
 
     /// <summary>ZINC_TEST_STILL=1: attention dots don't pulse, so a capture shows them at full strength (Mica stays).</summary>
     public static readonly bool Still = Deterministic || Environment.GetEnvironmentVariable("ZINC_TEST_STILL") == "1";
+
+    /// <summary>ZINC_TEST_UNFINISHED_SETTINGS=1: Settings shows the settings the app doesn't honor yet (<c>SettingDef.Unfinished</c>).</summary>
+    public static readonly bool UnfinishedSettings = Environment.GetEnvironmentVariable("ZINC_TEST_UNFINISHED_SETTINGS") == "1";
 }

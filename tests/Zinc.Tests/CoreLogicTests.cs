@@ -55,14 +55,87 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void TabGroupsOnWithAutomaticStripsByDefault()
+    public void PaneTabsOnWithHeadersOnPanesWithSeveralTabsByDefault()
     {
         Assert.True(Load("").TabGroups);
-        Assert.Equal(GroupTabStrip.Auto, Load("").GroupTabStrip);
+        Assert.Equal(PaneHeaders.WithTabs, Load("").PaneHeaders);
         Assert.False(Load("[window]\ntab-groups = false").TabGroups);
-        Assert.Equal(GroupTabStrip.Always, Load("[window]\ngroup-tab-strip = \"always\"").GroupTabStrip);
-        Assert.Equal(GroupTabStrip.Auto, Load("[window]\ngroup-tab-strip = \"1\"").GroupTabStrip); // not an enum index
-        Assert.Equal(GroupTabStrip.Auto, Load("[window]\ngroup-tab-strip = \"sometimes\"").GroupTabStrip);
+    }
+
+    [Theory]
+    [InlineData("auto", PaneHeaders.Auto)]
+    [InlineData("with-tabs", PaneHeaders.WithTabs)]
+    [InlineData("always", PaneHeaders.Always)]
+    [InlineData("never", PaneHeaders.Never)]
+    [InlineData("1", PaneHeaders.WithTabs)] // not an enum index
+    [InlineData("sometimes", PaneHeaders.WithTabs)]
+    public void ReadsPaneHeaders(string value, PaneHeaders expected) =>
+        Assert.Equal(expected, Load($"[window]\npane-headers = \"{value}\"").PaneHeaders);
+
+    [Theory]
+    [InlineData("auto", PaneHeaders.WithTabs)] // the old Auto: never the new one
+    [InlineData("always", PaneHeaders.Always)]
+    [InlineData("AUTO", PaneHeaders.WithTabs)]
+    public void ReadsTheOldPaneTabStripAsPaneHeaders(string value, PaneHeaders expected)
+    {
+        Assert.Equal(expected, Load($"[window]\npane-tab-strip = \"{value}\"").PaneHeaders);
+        Assert.Equal(expected, Load($"[window]\ngroup-tab-strip = \"{value}\"").PaneHeaders); // its name before that
+    }
+
+    [Theory]
+    [InlineData("pane-headers = \"never\"\npane-tab-strip = \"always\"")]
+    [InlineData("pane-tab-strip = \"always\"\npane-headers = \"never\"")]
+    [InlineData("group-tab-strip = \"always\"\npane-headers = \"never\"")]
+    public void PaneHeadersWinsOverTheOldKeyWhereverItIs(string window)
+    {
+        var file = ConfigFile.Parse($"[window]\n{window}\n", "config.toml", "", _ => []);
+        Assert.Equal(PaneHeaders.Never, file.Global.PaneHeaders);
+        Assert.Equal("never", file.ValueOf("window.pane-headers"));
+        Assert.Empty(file.Warnings);
+    }
+
+    [Fact]
+    public void ThePaneLookSettingsDefaultToCompact()
+    {
+        var config = Load("");
+        Assert.Equal(PaneHeaderButtons.Hide, config.PaneHeaderButtons);
+        Assert.Equal(0, config.PaneGap);
+        Assert.False(config.PaneGapEdges);
+        Assert.Equal(PaneFocus.TabAccent, config.PaneFocus);
+    }
+
+    [Theory]
+    [InlineData("show", PaneHeaderButtons.Show)]
+    [InlineData("hover", PaneHeaderButtons.Hover)]
+    [InlineData("hide", PaneHeaderButtons.Hide)]
+    [InlineData("always", PaneHeaderButtons.Hide)]
+    public void ReadsPaneHeaderButtons(string value, PaneHeaderButtons expected) =>
+        Assert.Equal(expected, Load($"[window]\npane-header-buttons = \"{value}\"").PaneHeaderButtons);
+
+    [Theory]
+    [InlineData("ring", PaneFocus.Ring)]
+    [InlineData("tab-accent", PaneFocus.TabAccent)]
+    [InlineData("none", PaneFocus.None)]
+    [InlineData("glow", PaneFocus.TabAccent)]
+    public void ReadsPaneFocus(string value, PaneFocus expected) =>
+        Assert.Equal(expected, Load($"[window]\npane-focus = \"{value}\"").PaneFocus);
+
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData("6", 6)]
+    [InlineData("32", 32)]
+    [InlineData("33", 0)] // too wide: ignored
+    [InlineData("-2", 0)]
+    [InlineData("6.5", 0)]
+    [InlineData("\"6\"", 0)]
+    public void ReadsPaneGap(string value, int expected) =>
+        Assert.Equal(expected, Load($"[window]\npane-gap = {value}").PaneGap);
+
+    [Fact]
+    public void ReadsPaneGapEdges()
+    {
+        Assert.True(Load("[window]\npane-gap-edges = true").PaneGapEdges);
+        Assert.False(Load("[window]\npane-gap-edges = \"yes\"").PaneGapEdges);
     }
 
     [Fact]
