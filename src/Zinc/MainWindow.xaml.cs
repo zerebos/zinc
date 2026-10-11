@@ -1573,6 +1573,13 @@ public sealed partial class MainWindow : Window
             case TerminalAction.ClosePane:
                 AskClosePane(tab, origin);
                 return true;
+            case TerminalAction.CloseGroup:
+                if (tab.Workspace.GroupOf(origin) is { } closing)
+                {
+                    AskClosePanes(tab, [.. closing.Tabs], "pane");
+                }
+
+                return true;
             case TerminalAction.NextTab:
                 Tabs.SelectedIndex = (Tabs.SelectedIndex + 1) % count;
                 return true;

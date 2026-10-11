@@ -776,6 +776,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `focus <direction>` | Focus the neighboring pane. |
 | `resize <direction>` | Move the focused pane's divider. |
 | `maximize-pane` | Fill the workspace with the focused pane, hiding the others; again to show them. Focusing another pane (`focus <direction>`) shows them too. |
+| `close-pane` | Close the focused pane and every tab in it (`close-tab` closes one tab), asking once if a command is running in any of them. |
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
 | `tab-switcher` | Open the palette searching this window's tabs (its `@`). |

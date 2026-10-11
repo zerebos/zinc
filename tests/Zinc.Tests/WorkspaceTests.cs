@@ -228,4 +228,35 @@ public class WorkspaceTests
         ws.Merge(ws.ActiveGroup, PaneDirection.Down, new Workspace<T>(c));
         Assert.Null(ws.Maximized);
     }
+
+    [Fact]
+    public void ClosingEveryTabOfAPaneRemovesItAndFocusesItsNeighbor()
+    {
+        // close-pane: each of the pane's tabs closes, in order (after one question for all of them).
+        T a = new("a"), b = new("b"), c = new("c"), d = new("d");
+        var ws = new Workspace<T>(a);
+        var right = ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        right.Add(c);
+        right.Add(d);
+        ws.ToggleMaximize();
+
+        foreach (var tab in right.Tabs.ToList())
+        {
+            Assert.True(ws.Close(tab));
+        }
+
+        Assert.Equal([a], ws.Tabs);
+        Assert.Same(a, ws.Active);
+        Assert.Null(ws.Maximized);
+    }
+
+    [Fact]
+    public void ClosingEveryTabOfTheOnlyPaneEmptiesTheWorkspace()
+    {
+        T a = new("a"), b = new("b");
+        var ws = new Workspace<T>(a);
+        ws.ActiveGroup.Add(b);
+        Assert.True(ws.Close(a));
+        Assert.False(ws.Close(b)); // the workspace closes with it
+    }
 }

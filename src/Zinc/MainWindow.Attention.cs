@@ -322,9 +322,10 @@ public sealed partial class MainWindow
         }
     }
 
-    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes)
+    /// <summary>Closes several terminal tabs, asking once for all of them; <paramref name="what"/> names them for the button ("pane").</summary>
+    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
     {
-        if (await ConfirmClose(panes, panes.Count == 1 ? "tab" : "tabs"))
+        if (await ConfirmClose(panes, what ?? (panes.Count == 1 ? "tab" : "tabs")))
         {
             Ui.Guard("closing tabs", () =>
             {
