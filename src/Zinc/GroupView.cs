@@ -68,7 +68,8 @@ internal sealed partial class GroupView : Grid
         // The tabs (or the title) take what they need, up to the width left beside the +.
         _strip.SizeChanged += (_, e) =>
         {
-            scroll.MaxWidth = _title.MaxWidth = Math.Max(0, e.NewSize.Width - AddWidth - 2);
+            scroll.MaxWidth = Math.Max(0, e.NewSize.Width - AddWidth - 2);
+            _title.SetAvailable(scroll.MaxWidth);
             BringShownIntoView(); // a narrower pane (e.g. after a split) can hide it
         };
         _title.Selecting = () => WithShown(t => TabClicked?.Invoke(t));
@@ -281,7 +282,7 @@ internal sealed partial class GroupView : Grid
 
         if (titled)
         {
-            _title.Show(group.Active, TitleOf(group.Active), accentLine, accent);
+            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent);
             _shown = group.Active;
             _shownScrolled = null; // tabs shown again scroll to it
             return;
@@ -347,6 +348,10 @@ internal sealed partial class GroupView : Grid
 
     public static string TitleOf(MainWindow.TerminalTab tab) => tab.Title;
 
+    /// <summary>A one-tab header's title: a name given to the tab wins, else the folder, command or program (decision 19).</summary>
+    private static HeaderTitle HeaderTitleOf(MainWindow.TerminalTab tab) =>
+        tab.CustomTitle is { } custom ? new HeaderTitle(custom, null) : tab.Control.HeaderTitle(tab.Profile.Name);
+
     private TabItem Item(MainWindow.TerminalTab tab)
     {
         if (!_items.TryGetValue(tab, out var item))
@@ -396,6 +401,16 @@ internal sealed partial class GroupView : Grid
             VerticalAlignment = VerticalAlignment.Center,
         };
 
+        /// <summary>The quieter text after the title (the profile at the prompt, the folder while a command runs).</summary>
+        private readonly TextBlock _detail = new()
+        {
+            FontSize = 12,
+            Opacity = 0.6,
+            Margin = new Thickness(8, 0, 0, 0),
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+
         private readonly AttentionDot _dot = new() { Corner = false, Margin = new Thickness(6, 0, 0, 0) };
         private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
@@ -414,14 +429,30 @@ internal sealed partial class GroupView : Grid
                 VerticalAlignment = VerticalAlignment.Center,
                 Children = { _icon },
             };
-            // A tab's left padding, so the icon sits where a tab's would.
-            Children.Add(new StackPanel
+            // A tab's left padding, so the icon sits where a tab's would. The detail's column gives way first when
+            // narrow; the title's is capped (SetAvailable), since an Auto column never trims.
+            var row = new Grid { Padding = new Thickness(10, 0, 10, 0) };
+            foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             {
-                Padding = new Thickness(10, 0, 10, 0),
-                Orientation = Orientation.Horizontal,
-                Children = { icon, _text, _dot },
-            });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+            }
+
+            SetColumn(_text, 1);
+            SetColumn(_detail, 2);
+            SetColumn(_dot, 3);
+            row.Children.Add(icon);
+            row.Children.Add(_text);
+            row.Children.Add(_detail);
+            row.Children.Add(_dot);
+            Children.Add(row);
             Children.Add(_accent);
+        }
+
+        /// <summary>The width the header may take: the title keeps room for the icon, padding and dot beside it.</summary>
+        public void SetAvailable(double width)
+        {
+            MaxWidth = width;
+            _text.MaxWidth = Math.Max(40, width - 70);
         }
 
         /// <summary>What a click does (set by the view), for screen readers selecting it.</summary>
@@ -434,7 +465,7 @@ internal sealed partial class GroupView : Grid
         protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
             new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.TabItem);
 
-        public void Show(MainWindow.TerminalTab tab, string title, bool accentLine, Brush accent)
+        public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent)
         {
             if (_profile != tab.Profile)
             {
@@ -445,13 +476,16 @@ internal sealed partial class GroupView : Grid
             _dot.Show(tab.Attention);
             _dot.ShowProgress(tab.Control.Progress);
             var words = AttentionWords.For(tab.Attention, tab.FailedExit);
-            var name = AttentionWords.Name(title, words);
+            var name = AttentionWords.Name(title.Detail == null ? title.Lead : $"{title.Lead}, {title.Detail}", words);
             if (name != _name)
             {
                 _name = name;
-                _text.Text = title;
+                _text.Text = title.Lead;
+                _detail.Text = title.Detail ?? "";
+                _detail.Visibility = title.Detail == null ? Visibility.Collapsed : Visibility.Visible;
                 AutomationProperties.SetName(this, name);
-                ToolTipService.SetToolTip(this, AttentionWords.ToolTip(title, words));
+                var tip = title.Detail == null ? title.Lead : $"{title.Lead}  ·  {title.Detail}";
+                ToolTipService.SetToolTip(this, AttentionWords.ToolTip(tip, words));
             }
 
             // The terminal's background (it can change: a config reload), and dark text on a light one.
@@ -460,13 +494,17 @@ internal sealed partial class GroupView : Grid
             {
                 _background = new SolidColorBrush(background);
                 Background = _background;
-                if (Contrast.TextOn(background) is { } text)
+                var dark = Contrast.TextOn(background);
+                foreach (var block in new[] { _text, _detail })
                 {
-                    _text.Foreground = text;
-                }
-                else
-                {
-                    _text.ClearValue(TextBlock.ForegroundProperty);
+                    if (dark is { } text)
+                    {
+                        block.Foreground = text;
+                    }
+                    else
+                    {
+                        block.ClearValue(TextBlock.ForegroundProperty);
+                    }
                 }
             }
 

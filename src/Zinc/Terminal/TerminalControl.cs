@@ -77,6 +77,18 @@ public sealed partial class TerminalControl : UserControl
     public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt,
         CurrentFolder, RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
 
+    /// <summary>A one-tab pane header's title (<see cref="ShellTitle.Header"/>): what leads, and the quieter text after it.</summary>
+    public HeaderTitle HeaderTitle(string profileName) => ShellTitle.Header(_config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
+        RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand, UserHome, profileName);
+
+    /// <summary><see cref="HeaderTitle"/> changed (an input, or a running command reaching the time it leads).</summary>
+    public event Action? HeaderTitleChanged;
+
+    private HeaderTitle? _shownHeaderTitle;
+
+    // Held in a field: a timer only a local references is collected and stops firing.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _headerTimer;
+
     private static readonly string UserHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     private string _programTitle = "";
@@ -104,6 +116,36 @@ public sealed partial class TerminalControl : UserControl
         {
             _shownTitle = title;
             TitleChanged?.Invoke(title);
+        }
+
+        NoteHeaderTitle(running);
+    }
+
+    /// <summary>
+    /// Tells the app when <see cref="HeaderTitle"/> changed, and checks again once a running command has run long enough
+    /// to lead it (compared without the profile's name, which only a config reload changes).
+    /// </summary>
+    private void NoteHeaderTitle(DateTime? running)
+    {
+        _headerTimer?.Stop();
+        if (ShellTitle.UntilCommandLeads(running, DateTime.UtcNow) is { } left && left > TimeSpan.Zero)
+        {
+            if (_headerTimer == null)
+            {
+                _headerTimer = DispatcherQueue.CreateTimer();
+                _headerTimer.IsRepeating = false;
+                _headerTimer.OnTick(_ => NoteTitle());
+            }
+
+            _headerTimer.Interval = left + TimeSpan.FromMilliseconds(20); // past the mark, not just short of it
+            _headerTimer.Start();
+        }
+
+        var header = HeaderTitle("");
+        if (header != _shownHeaderTitle)
+        {
+            _shownHeaderTitle = header;
+            HeaderTitleChanged?.Invoke();
         }
     }
 

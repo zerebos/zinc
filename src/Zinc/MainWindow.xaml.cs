@@ -359,6 +359,7 @@ public sealed partial class MainWindow : Window
             UpdateTitle(tab, fromShell: true);
             UpdateFocusBorders(tab); // group strips show titles too
         };
+        Action header = () => UpdateFocusBorders(tab); // a one-tab pane's header title
         Action close = () => ClosePane(tab, pane);
         Action directory = () =>
         {
@@ -379,6 +380,7 @@ public sealed partial class MainWindow : Window
 
         control.ActionHandler = invocation => HandleAction(invocation, tab, pane);
         control.TitleChanged += title;
+        control.HeaderTitleChanged += header;
         control.DirectoryChanged += directory;
         control.CommandsChanged += directory; // and the running command
         control.CommandFinished += finished;
@@ -392,6 +394,7 @@ public sealed partial class MainWindow : Window
         {
             control.ActionHandler = null;
             control.TitleChanged -= title;
+            control.HeaderTitleChanged -= header;
             control.DirectoryChanged -= directory;
             control.CommandsChanged -= directory;
             control.CommandFinished -= finished;

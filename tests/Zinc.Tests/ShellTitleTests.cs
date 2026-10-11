@@ -60,4 +60,50 @@ public class ShellTitleTests
         Assert.Equal(80, Title(false, command: long_).Length);
         Assert.EndsWith("…", Title(false, command: long_));
     }
+
+    private static readonly DateTime Now = new(2026, 10, 11, 12, 0, 0, DateTimeKind.Utc);
+
+    private static HeaderTitle Header(bool? atPrompt, string? folder = null, string? command = null, double ranSeconds = 5,
+        string program = "", bool programSinceCommand = false, bool programTitles = true) =>
+        ShellTitle.Header(programTitles, atPrompt, folder, command, atPrompt == false ? Now.AddSeconds(-ranSeconds) : null, Now,
+            program, programSinceCommand, Home, "PowerShell");
+
+    [Fact]
+    public void HeaderLeadsWithTheFolderAtThePromptAndTheCommandWhileItRuns()
+    {
+        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell"), Header(true, @"C:\Users\Zack\dev\zinc"));
+        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc"), Header(false, @"C:\Users\Zack\dev\zinc", "npm test"));
+    }
+
+    [Fact]
+    public void HeaderKeepsTheFolderUntilACommandHasRunEightyMilliseconds()
+    {
+        // git status, ls: never in the header.
+        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell"), Header(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: 0.07));
+        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc"), Header(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: 0.1));
+        Assert.Equal(TimeSpan.FromMilliseconds(30), ShellTitle.UntilCommandLeads(Now.AddMilliseconds(-50), Now));
+        Assert.Equal(TimeSpan.Zero, ShellTitle.UntilCommandLeads(Now.AddSeconds(-3), Now));
+        Assert.Null(ShellTitle.UntilCommandLeads(null, Now));
+    }
+
+    [Fact]
+    public void HeaderLetsAProgramsOwnTitleLeadAtOnce()
+    {
+        Assert.Equal(new HeaderTitle("vim: notes.md", @"~\dev"),
+            Header(false, @"C:\Users\Zack\dev", "vim notes.md", ranSeconds: 0.01, program: "vim: notes.md", programSinceCommand: true));
+        // A title the shell set before the command doesn't count; with program-titles off no program names it.
+        Assert.Equal(new HeaderTitle("vim notes.md", null), Header(false, null, "vim notes.md", program: "zack@fedora:~"));
+        Assert.Equal(new HeaderTitle("vim notes.md", null),
+            Header(false, null, "vim notes.md", program: "vim: x", programSinceCommand: true, programTitles: false));
+    }
+
+    [Fact]
+    public void HeaderFallsBackToTheProgramsTitleAndTheProfile()
+    {
+        // No marks (cmd without Clink): the program's title, then the profile.
+        Assert.Equal(new HeaderTitle(@"C:\WINDOWS\SYSTEM32\cmd.exe", "PowerShell"), Header(null, @"C:\x", program: @"C:\WINDOWS\SYSTEM32\cmd.exe"));
+        Assert.Equal(new HeaderTitle("PowerShell", null), Header(null)); // nothing at all: the profile once
+        Assert.Equal(new HeaderTitle("pwsh", "PowerShell"), Header(true, program: "pwsh")); // no folder reported yet
+        Assert.Equal(new HeaderTitle("PowerShell", null), Header(false, command: null)); // a command with no text
+    }
 }
