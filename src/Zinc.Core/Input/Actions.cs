@@ -74,6 +74,10 @@ public static class Actions
         new("duplicate-pane", TerminalAction.DuplicatePane, Arg.None, "Duplicate pane", "Split, running the focused tab's command again."),
         new("focus", TerminalAction.MoveFocus, Arg.Direction, "Focus pane", "Focus the neighboring pane: left, right, up or down."),
         new("resize", TerminalAction.ResizePane, Arg.Direction, "Resize pane", "Move the focused pane's divider: left, right, up or down."),
+        new("maximize-pane", TerminalAction.MaximizePane, Arg.None, "Maximize pane",
+            "Fill the workspace with the focused pane, hiding the others. Trigger again to show them. Focusing another pane shows them too."),
+        new("close-pane", TerminalAction.CloseGroup, Arg.None, "Close pane",
+            "Close the focused pane and every tab in it, asking first if a command is running in any of them."),
         new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Profile menu", "The ▾ menu of profiles."),
         new("command-palette", TerminalAction.OpenCommandPalette, Arg.None, "Command palette", "Search every command."),
         new("tab-switcher", TerminalAction.TabSwitcher, Arg.None, "Go to tab…",
@@ -185,7 +189,7 @@ public static class Actions
         ["zoom-in"] = "Zoom", ["zoom-out"] = "Zoom", ["reset-zoom"] = "Zoom",
         ["new-tab"] = "Tabs", ["duplicate-tab"] = "Tabs", ["close-tab"] = "Tabs", ["next-tab"] = "Tabs", ["previous-tab"] = "Tabs",
         ["tab-switcher"] = "Tabs", ["next-attention"] = "Tabs", ["profile-menu"] = "Tabs",
-        ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes",
+        ["split"] = "Panes", ["duplicate-pane"] = "Panes", ["focus"] = "Panes", ["resize"] = "Panes", ["maximize-pane"] = "Panes", ["close-pane"] = "Panes",
         ["new-workspace"] = "Workspaces and windows", ["go-to-workspace"] = "Workspaces and windows", ["new-window"] = "Workspaces and windows", ["reopen-workspace"] = "Workspaces and windows", ["reopen-window"] = "Workspaces and windows",
         ["toggle-sidebar"] = "Sidebar and title bar", ["toggle-title-bar"] = "Sidebar and title bar", ["focus-mode"] = "Sidebar and title bar",
         ["command-palette"] = "Zinc", ["reload-config"] = "Zinc", ["open-settings"] = "Zinc", ["quit"] = "Zinc", ["quit-fresh"] = "Zinc",
@@ -193,6 +197,7 @@ public static class Actions
 
     private static readonly Dictionary<string, string> SearchWordsOf = new()
     {
+        ["maximize-pane"] = "zoom restore fullscreen full screen",
         ["zoom-in"] = "font size bigger larger text",
         ["zoom-out"] = "font size smaller text",
         ["reset-zoom"] = "font size",

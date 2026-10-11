@@ -130,6 +130,28 @@ public sealed class ConfigFile
             ? [.. path.Take(path.Count - 2), .. renamed.Split('.')]
             : path;
 
+    /// <summary>
+    /// Keys replaced by one whose values mean something else, old to new, with how an old value reads as a new one.
+    /// Read as the new key; when a file has both, the new one wins wherever it is. The settings window writes the new
+    /// key and removes the old one (SettingsWriter). 2026-10-11: <c>pane-tab-strip = "auto"</c> showed the strip on
+    /// panes with two or more tabs, which <c>pane-headers</c> calls <c>with-tabs</c> (its <c>auto</c> is new and
+    /// shows more), so the old key never gives the new Auto.
+    /// </summary>
+    public static IReadOnlyDictionary<string, (string Key, Func<object, object> Value)> ReplacedKeys { get; } =
+        new Dictionary<string, (string, Func<object, object>)>
+        {
+            ["window.pane-tab-strip"] = ("window.pane-headers",
+                v => v is string s && s.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase) ? "with-tabs" : v),
+        };
+
+    /// <summary>Every older spelling of <paramref name="key"/> ("window.pane-headers"): renamed and replaced keys, and theirs.</summary>
+    public static IEnumerable<string> OldNames(string key)
+    {
+        var older = RenamedKeys.Where(r => r.Value == key).Select(r => r.Key)
+            .Concat(ReplacedKeys.Where(r => r.Value.Key == key).Select(r => r.Key)).ToList();
+        return older.Concat(older.SelectMany(OldNames));
+    }
+
     /// <summary>Every <c>[group] key</c> setting the reader knows, as "group.key" (plus colors.theme and colors.palette).</summary>
     public static IReadOnlyCollection<string> SettingKeys => [.. Reader.Mappings.Keys, "colors.theme", "colors.palette"];
 
@@ -241,6 +263,9 @@ public sealed class ConfigFile
     /// <summary>One setting as written: its full key path, its value, and where it is.</summary>
     private sealed record Entry(IReadOnlyList<string> Path, object Value, string File, int Line)
     {
+        /// <summary>Read from a replaced key (<see cref="ReplacedKeys"/>): the new key written anywhere wins over it.</summary>
+        public bool Replaced { get; init; }
+
         public string Where => $"{System.IO.Path.GetFileName(File)}:{Line}";
         public string Key => string.Join('.', Path);
     }
@@ -392,7 +417,10 @@ public sealed class ConfigFile
 
             if (ToValue(value) is { } v)
             {
-                into.Add(new Entry(CurrentName(path), v, file, line));
+                var current = CurrentName(path);
+                into.Add(current.Count >= 2 && ReplacedKeys.TryGetValue($"{current[^2]}.{current[^1]}", out var replaced)
+                    ? new Entry([.. current.Take(current.Count - 2), .. replaced.Key.Split('.')], replaced.Value(v), file, line) { Replaced = true }
+                    : new Entry(current, v, file, line));
             }
             else
             {
@@ -423,6 +451,9 @@ public sealed class ConfigFile
             var profileOrder = new List<string>();
             var keys = new List<(string Chord, string Action, string Where)>();
             var discovery = new DiscoverySettings();
+
+            var written = _entries.Where(e => !e.Replaced).Select(e => e.Key).ToHashSet();
+            _entries.RemoveAll(e => e.Replaced && written.Contains(e.Key));
 
             foreach (var e in _entries)
             {
@@ -742,7 +773,11 @@ public sealed class ConfigFile
             ["terminal.paste-warning"] = ("paste-warning", v => v as string),
             ["terminal.large-paste-warning"] = ("large-paste-warning", v => Bool(v)),
             ["terminal.word-boundaries"] = ("word-boundaries", v => v as string),
-            ["window.pane-tab-strip"] = ("group-tab-strip", v => v as string),
+            ["window.pane-headers"] = ("pane-headers", v => v as string),
+            ["window.pane-header-buttons"] = ("pane-header-buttons", v => v as string),
+            ["window.pane-gap"] = ("pane-gap", v => Number(v)),
+            ["window.pane-gap-edges"] = ("pane-gap-edges", v => Bool(v)),
+            ["window.pane-focus"] = ("pane-focus", v => v as string),
             ["window.unfocused-pane-opacity"] = ("unfocused-split-opacity", v => Number(v)),
             ["window.unfocused-pane-fill"] = ("unfocused-split-fill", v => v as string),
             ["window.divider-color"] = ("split-divider-color", v => v as string),

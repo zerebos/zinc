@@ -512,6 +512,16 @@ public sealed partial class MainWindow
         Action(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         Action(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
         Action(TerminalAction.DuplicatePane);
+        if (tab.Workspace.Layout.Count > 1)
+        {
+            Action(TerminalAction.MaximizePane);
+        }
+
+        if (tab.Workspace.Layout.Count > 1 || tab.Workspace.ActiveGroup.Tabs.Count > 1)
+        {
+            Action(TerminalAction.CloseGroup); // (otherwise it's "Close tab")
+        }
+
         foreach (var (name, direction) in new[]
                  {
                      ("left", PaneDirection.Left), ("right", PaneDirection.Right),

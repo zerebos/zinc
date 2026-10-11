@@ -29,8 +29,11 @@ public enum TerminalAction
     DuplicateTab,
     OpenNewTabMenu,
 
-    /// <summary>Close the focused pane (and its tab, if it was the last one).</summary>
+    /// <summary>Close the focused tab (close-tab; the name is older than tabs inside panes). Its pane goes with its last tab.</summary>
     ClosePane,
+
+    /// <summary>Close the focused pane and every tab in it (close-pane), asking once.</summary>
+    CloseGroup,
     NextTab,
     PreviousTab,
 
@@ -47,6 +50,9 @@ public enum TerminalAction
     DuplicatePane,
     MoveFocus,
     ResizePane,
+
+    /// <summary>Fill the workspace with the focused pane, hiding the others. Trigger again to show them.</summary>
+    MaximizePane,
     OpenCommandPalette,
 
     /// <summary>Open the pane's find box.</summary>

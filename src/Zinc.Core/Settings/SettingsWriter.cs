@@ -51,27 +51,45 @@ public sealed class SettingsWriter
     }
 
     /// <summary>Sets <paramref name="setting"/> to <paramref name="value"/>; null or its default removes the key.</summary>
-    public void Set(SettingDef setting, object? value) => Set(setting.Path, value is null || SettingsCatalog.Same(value, setting.Default) ? null : value);
+    public void Set(SettingDef setting, object? value) => Set([(setting, value)]);
+
+    /// <summary>Sets several settings in one write (a preset), each as <see cref="Set(SettingDef, object?)"/> would.</summary>
+    public void Set(IEnumerable<(SettingDef Setting, object? Value)> values)
+    {
+        var text = Current();
+        var updated = values.Aggregate(text, (t, v) =>
+            Apply(t, v.Setting.Path, v.Value is null || SettingsCatalog.Same(v.Value, v.Setting.Default) ? null : v.Value));
+        if (updated != text)
+        {
+            Write(updated);
+        }
+    }
 
     /// <summary>Sets the key at <paramref name="path"/> (null removes it).</summary>
     public void Set(IReadOnlyList<string> path, object? value)
     {
         var text = Current();
+        var updated = Apply(text, path, value);
+        if (updated != text)
+        {
+            Write(updated);
+        }
+    }
+
+    private static string Apply(string text, IReadOnlyList<string> path, object? value)
+    {
         var updated = value is null ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
 
-        // A renamed key's old spelling goes: the file keeps one name for it (ConfigFile.RenamedKeys).
-        foreach (var (old, renamed) in ConfigFile.RenamedKeys)
+        // A renamed or replaced key's old spellings go: the file keeps one name for it (ConfigFile.RenamedKeys, ReplacedKeys).
+        if (path.Count >= 2)
         {
-            if (path.Count >= 2 && renamed == $"{path[^2]}.{path[^1]}")
+            foreach (var old in ConfigFile.OldNames($"{path[^2]}.{path[^1]}"))
             {
                 updated = ConfigEditor.Remove(updated, [.. path.Take(path.Count - 2), .. old.Split('.')]);
             }
         }
 
-        if (updated != text)
-        {
-            Write(updated);
-        }
+        return updated;
     }
 
     /// <summary>Removes a whole table (a profile: <c>["profile", id]</c>) and its sub-tables.</summary>

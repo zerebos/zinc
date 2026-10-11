@@ -66,6 +66,12 @@ public sealed record SettingDef(string Section, string Group, string Key, string
     /// <summary>For Text: "10" is written as the number 10, "30s" as a string.</summary>
     public bool NumbersAsNumbers { get; init; }
 
+    /// <summary>
+    /// Read and tested, but kept out of the settings window (and the README) until the app does what it says
+    /// ZINC_TEST_UNFINISHED_SETTINGS=1 shows them.
+    /// </summary>
+    public bool Unfinished { get; init; }
+
     /// <summary>The key's path in config.toml.</summary>
     public IReadOnlyList<string> Path => Key.Split('.');
 
@@ -282,8 +288,45 @@ public static class SettingsCatalog
                 ],
             },
         new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
-        new("layout", "Panes", "window.pane-tab-strip", "Pane tab strip", "The row of tabs above a pane.", SettingKind.Choice, "auto")
-            { Choices = [new("Automatic", "auto", "Shown when a pane has two or more tabs."), new("Always", "always")] },
+        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row of tabs above a pane.", SettingKind.Choice, "with-tabs")
+            {
+                Choices =
+                [
+                    new("Automatic", "auto", "On every pane once a workspace is split, and on any pane with two or more tabs."),
+                    new("With several tabs", "with-tabs", "On panes with two or more tabs."),
+                    new("Always", "always"),
+                    new("Never", "never"),
+                ],
+            },
+        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more, on the right of a pane's header.",
+            SettingKind.Choice, "hide")
+            {
+                Unfinished = true,
+                Choices =
+                [
+                    new("Show", "show", "On the focused pane, and on the others while the pointer is over them."),
+                    new("On hover", "hover",
+                        "On a pane while the pointer is over it. Touch and pen have no hover: the command palette and a pane's right-click menu have every action."),
+                    new("Hide", "hide"),
+                ],
+            },
+        new("layout", "Panes", "window.pane-gap", "Gap between panes", "0 puts panes edge to edge, with a thin divider.", SettingKind.Number, 0L)
+            { Unfinished = true, Unit = "px", Minimum = 0, Maximum = 32, Step = 1 },
+        new("layout", "Panes", "window.pane-gap-edges", "Gap at the workspace edges",
+            "The same gap around the outside, split or not, so splitting never moves a pane's outer edges.", SettingKind.Toggle, false)
+            { Unfinished = true },
+        new("layout", "Panes", "window.pane-focus", "Show focus with", "How the focused pane stands out from the others.",
+            SettingKind.Choice, "tab-accent")
+            {
+                Unfinished = true,
+                Choices =
+                [
+                    new("Ring", "ring", "An accent-colored outline around the focused pane."),
+                    new("Tab accent", "tab-accent", "An accent-colored line along the top of the focused pane."),
+                    new("None", "none",
+                        "Nothing marks the focused pane except dimming the others (\"Unfocused panes\"); with that at 1, nothing does."),
+                ],
+            },
         new("layout", "Panes", "window.pane-resize-step", "Resize step",
             "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number, 5L)
             { Unit = "%", Minimum = 1, Maximum = 50, Step = 1 },
@@ -319,8 +362,9 @@ public static class SettingsCatalog
         new("layout", "When you come back", "window.explorer-menu", "Open in Zinc from File Explorer",
             "Adds \"Open in Zinc\" to the right-click menu of folders and drives. On Windows 11 it's under \"Show more options\".",
             SettingKind.Toggle, false),
-        new("layout", "Closing", "window.confirm-close", "Ask before closing a running command",
-            "When you close a tab, pane or window while a command still runs. Needs shell integration to know.", SettingKind.Toggle, true),
+        new("layout", "Closing", "window.confirm-close", "Ask before closing",
+            "When a tab, pane, workspace or window you close still runs a command (shell integration tells Zinc), or holds two or more tabs.",
+            SettingKind.Toggle, true),
         new("layout", "Closing", "window.confirm-quit", "Ask before quitting with a running command",
             "When you quit Zinc (or restart it for an update) while a command still runs.", SettingKind.Toggle, true),
 
@@ -532,7 +576,7 @@ public static class SettingsCatalog
         new("Background, text, cursor and selection", "The scheme's, unless you pick your own.", null,
             ["colors.background", "colors.foreground", "colors.cursor", "colors.cursor-text", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
-        new(null, null, "window.pane-tabs", ["window.pane-tab-strip"]),
+        PaneStyle.Fold,
         new(null, null, "window.unfocused-pane-opacity", ["window.unfocused-pane-fill"]),
         new(null, null, "terminal.paste-warning", ["terminal.large-paste-warning"]),
         new(null, null, "colors.palette-generate", ["colors.palette-harmonious"]),

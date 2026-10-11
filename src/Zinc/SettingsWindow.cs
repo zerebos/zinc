@@ -374,7 +374,7 @@ internal sealed partial class SettingsWindow : Window
         }
         else
         {
-            foreach (var group in SettingsCatalog.All.Where(s => s.Section == _section).GroupBy(s => s.Group))
+            foreach (var group in ShownSettings.Where(s => s.Section == _section).GroupBy(s => s.Group))
             {
                 AddGroup(group.Key, group);
                 if (_section == "terminal" && group.Key == "Shell")
@@ -439,7 +439,7 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(GroupTitle(title));
         foreach (var setting in settings)
         {
-            if (SettingsCatalog.FoldOf(setting.Key) is { } fold)
+            if (FoldFor(setting.Key) is { } fold)
             {
                 // The fold goes where its first setting is; the rest are in it.
                 if (setting.Key == (fold.Lead ?? fold.Children[0]))
@@ -499,7 +499,7 @@ internal sealed partial class SettingsWindow : Window
             ButtonRow(("Open welcome page", () => App.Instance.ShowWelcome(firstRun: false)))));
         BackupRow();
         UpdatesGroup();
-        AddGroup("Troubleshooting", SettingsCatalog.All.Where(s => s.Section == "about" && s.Group == "Troubleshooting"));
+        AddGroup("Troubleshooting", ShownSettings.Where(s => s.Section == "about" && s.Group == "Troubleshooting"));
         if (Log.FromEnvironment)
         {
             _page.Children.Add(Note("ZINC_LOG is set, so the log is always on, in the file it names."));
@@ -521,7 +521,7 @@ internal sealed partial class SettingsWindow : Window
     private void UpdatesGroup()
     {
         var at = _page.Children.Count;
-        AddGroup("Updates", SettingsCatalog.All.Where(s => s.Section == "about" && s.Group == "Updates"));
+        AddGroup("Updates", ShownSettings.Where(s => s.Section == "about" && s.Group == "Updates"));
 
         _updateStatus = new TextBlock
         {
@@ -1084,7 +1084,7 @@ internal sealed partial class SettingsWindow : Window
         _page.Children.Add(EnvironmentCard(id));
 
         _page.Children.Add(Note("The settings below come from the defaults until you change them here; the reset arrow gives one back."));
-        foreach (var group in SettingsCatalog.All.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))
+        foreach (var group in ShownSettings.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))
         {
             var rows = new List<FrameworkElement>();
             foreach (var setting in group)

@@ -259,19 +259,22 @@ public sealed partial class MainWindow
     // ------------------------------------------------------------ closing
 
     /// <summary>
-    /// Asks before closing terminals the shell says are running a command. True to go ahead
-    /// (nothing running, or the user agreed).
+    /// Asks before closing terminals the shell says are running a command, or (<paramref name="severalTabs"/>) two or
+    /// more tabs at once even with nothing running (decision 29, 2026-10-11: a close-pane key takes every tab of a pane
+    /// and shows no count). True to go ahead (nothing to ask, or the user agreed).
     /// </summary>
-    /// <param name="what">What closes, for the button: "tab", "workspace", "window".</param>
-    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string what) =>
-        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", $"Close {what}") : Task.FromResult(true);
+    /// <param name="what">What closes, for the button: "tab", "pane", "workspace", "window".</param>
+    /// <param name="severalTabs">False for zn: a script gets no question unless a command is running.</param>
+    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string what, bool severalTabs = true) =>
+        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", $"Close {what}", severalTabs) : Task.FromResult(true);
 
     /// <param name="doing">What the answer does, as the reason ("Closing", "Quitting").</param>
     /// <param name="button">The primary button's label, a verb and its object ("Close tab", "Quit Zinc").</param>
-    private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button)
+    private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button, bool severalTabs = false)
     {
-        var running = panes.Select(p => p.Control.RunningCommand).OfType<ShellCommand>().ToList();
-        if (running.Count == 0)
+        var all = panes.ToList();
+        var running = all.Select(p => p.Control.RunningCommand).OfType<ShellCommand>().ToList();
+        if (running.Count == 0 && !(severalTabs && all.Count > 1))
         {
             return true;
         }
@@ -288,12 +291,20 @@ public sealed partial class MainWindow
             var dialog = new ContentDialog
             {
                 XamlRoot = root,
-                Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running",
-                Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "it" : "them")}.",
                 PrimaryButtonText = button,
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
             };
+            if (running.Count > 0)
+            {
+                dialog.Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running";
+                dialog.Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "it" : "them")}.";
+            }
+            else
+            {
+                dialog.Title = $"Close {all.Count} tabs?";
+            }
+
             return await dialog.ShowAsync() == ContentDialogResult.Primary;
         }
         catch (Exception ex)
@@ -310,11 +321,15 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Closes a terminal tab when you ask to (not when its shell has exited).</summary>
-    private async void AskClosePane(WorkspaceTab tab, TerminalTab pane)
+    private void AskClosePane(WorkspaceTab tab, TerminalTab pane) => AskClosePanes(tab, [pane]);
+
+    /// <summary>Closes several terminal tabs, asking once for all of them; <paramref name="what"/> names them for the button ("pane").</summary>
+    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
     {
-        if (await ConfirmClose([pane], "tab"))
+        // FIXME: this is gonna be fun with i18n later...
+        if (await ConfirmClose(panes, what ?? (panes.Count == 1 ? "tab" : "tabs")))
         {
-            Ui.Guard("closing a tab", () => ClosePane(tab, pane));
+            Ui.Guard(panes.Count == 1 ? "closing a tab" : "closing tabs", () => CloseAsked(tab, panes));
         }
         else
         {
@@ -322,21 +337,21 @@ public sealed partial class MainWindow
         }
     }
 
-    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes)
+    /// <summary>
+    /// Closes tabs you asked to close. When they're all of the workspace's tabs, it closes as "Close workspace" does, so
+    /// Reopen closed workspace brings it back (decision 30, 2026-10-11: closing the last tab or pane used to lose it).
+    /// </summary>
+    private void CloseAsked(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes)
     {
-        if (await ConfirmClose(panes, panes.Count == 1 ? "tab" : "tabs"))
+        if (!_quick && tab.Workspace.Tabs.All(panes.Contains)) // (the quick terminal's isn't a workspace you'd reopen)
         {
-            Ui.Guard("closing tabs", () =>
-            {
-                foreach (var pane in panes)
-                {
-                    ClosePane(tab, pane);
-                }
-            });
+            CloseTabNow(tab);
+            return;
         }
-        else
+
+        foreach (var pane in panes)
         {
-            FocusActive(tab);
+            ClosePane(tab, pane);
         }
     }
 
@@ -351,7 +366,7 @@ public sealed partial class MainWindow
             }
 
             var panes = AllTabs().SelectMany(t => t.Workspace.Tabs).ToList();
-            if (!_config.Global.ConfirmClose || panes.All(p => p.Control.RunningCommand == null))
+            if (!_config.Global.ConfirmClose || (panes.Count < 2 && panes.All(p => p.Control.RunningCommand == null)))
             {
                 return;
             }

@@ -4,13 +4,46 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-public enum GroupTabStrip
+/// <summary>Which panes show a header (for now, their strip of tabs). Config: <c>[window] pane-headers</c>.</summary>
+public enum PaneHeaders
 {
-    /// <summary>Only on panes holding two or more tabs.</summary>
+    /// <summary>On panes holding two or more tabs (the old <c>pane-tab-strip = "auto"</c>).</summary>
+    WithTabs,
+
+    /// <summary>On every pane of a split workspace, and on any pane with two or more tabs.</summary>
     Auto,
 
     /// <summary>On every pane.</summary>
     Always,
+
+    /// <summary>On no pane.</summary>
+    Never,
+}
+
+/// <summary>Which panes show their header's buttons. Config: <c>[window] pane-header-buttons</c>.</summary>
+public enum PaneHeaderButtons
+{
+    /// <summary>None.</summary>
+    Hide,
+
+    /// <summary>The focused pane's; the others' while the pointer is over them.</summary>
+    Show,
+
+    /// <summary>A pane's while the pointer is over it.</summary>
+    Hover,
+}
+
+/// <summary>How the focused pane is marked. Config: <c>[window] pane-focus</c>.</summary>
+public enum PaneFocus
+{
+    /// <summary>An accent line on the shown tab, or along the top of a pane without a header.</summary>
+    TabAccent,
+
+    /// <summary>An accent ring around the pane.</summary>
+    Ring,
+
+    /// <summary>No mark (dimming the other panes still shows which is focused, when it's on).</summary>
+    None,
 }
 
 public enum WorkspaceTabs
@@ -446,7 +479,10 @@ public sealed record Config
     /// <summary>How far the resize-pane action moves a divider, as a fraction of the split. Config: <c>[window] pane-resize-step</c> (percent).</summary>
     public double PaneResizeStep { get; init; } = 0.05;
 
-    /// <summary>Closing a tab, pane or window asks first when a command is still running. Config: <c>[window] confirm-close</c>.</summary>
+    /// <summary>
+    /// Closing a tab, pane, workspace or window asks first when a command is still running in it, or when it takes two or
+    /// more tabs. Config: <c>[window] confirm-close</c>.
+    /// </summary>
     public bool ConfirmClose { get; init; } = true;
 
     /// <summary>Quitting (or restarting for an update) asks first when a command is still running. Config: <c>[window] confirm-quit</c>.</summary>
@@ -500,8 +536,23 @@ public sealed record Config
     /// <summary>When time-based shaders redraw on their own. Config: <c>[shaders] animation</c>.</summary>
     public ShaderAnimation ShaderAnimation { get; init; }
 
-    /// <summary>When a pane shows its own tab strip. Config: <c>group-tab-strip = auto | always</c> (global).</summary>
-    public GroupTabStrip GroupTabStrip { get; init; }
+    /// <summary>
+    /// Which panes show a header. Config: <c>[window] pane-headers = auto | with-tabs | always | never</c>; the old
+    /// <c>pane-tab-strip</c> is read as this key (<c>ConfigFile.ReplacedKeys</c>).
+    /// </summary>
+    public PaneHeaders PaneHeaders { get; init; }
+
+    /// <summary>Which panes show their header's buttons. Config: <c>[window] pane-header-buttons = show | hover | hide</c>.</summary>
+    public PaneHeaderButtons PaneHeaderButtons { get; init; }
+
+    /// <summary>Pixels between panes; 0 is the divider (a 5 px band with a 1 px line). Config: <c>[window] pane-gap</c>.</summary>
+    public int PaneGap { get; init; }
+
+    /// <summary>The gap at the workspace's outer edges too, split or not. Config: <c>[window] pane-gap-edges</c>.</summary>
+    public bool PaneGapEdges { get; init; }
+
+    /// <summary>How the focused pane is marked. Config: <c>[window] pane-focus = ring | tab-accent | none</c>.</summary>
+    public PaneFocus PaneFocus { get; init; }
 
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
@@ -709,8 +760,12 @@ public sealed record Config
                 this with { ShaderAnimation = animate ? ShaderAnimation.Focused : ShaderAnimation.Never },
             "custom-shader-animation" when value.Equals("always", StringComparison.OrdinalIgnoreCase) =>
                 this with { ShaderAnimation = ShaderAnimation.Always },
-            "group-tab-strip" when Enum.TryParse<GroupTabStrip>(value, true, out var strip) && !int.TryParse(value, out _) =>
-                this with { GroupTabStrip = strip },
+            "pane-headers" when TryMode<PaneHeaders>(value, out var headers) => this with { PaneHeaders = headers },
+            "pane-header-buttons" when TryMode<PaneHeaderButtons>(value, out var buttons) => this with { PaneHeaderButtons = buttons },
+            "pane-gap" when int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var gap) && gap <= 32 =>
+                this with { PaneGap = gap },
+            "pane-gap-edges" when bool.TryParse(value, out var gapEdges) => this with { PaneGapEdges = gapEdges },
+            "pane-focus" when TryMode<PaneFocus>(value, out var focus) => this with { PaneFocus = focus },
             "pane-resize-step" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var step) && step is >= 1 and <= 50 =>
                 this with { PaneResizeStep = step / 100 },

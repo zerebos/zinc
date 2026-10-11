@@ -551,9 +551,18 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Whether a group shows its own strip of tabs (see tab-groups, group-tab-strip).</summary>
-    private bool ShowsStrip(TabGroup<TerminalTab> group) =>
-        !_quick && _config.Global.TabGroups && (group.Tabs.Count > 1 || _config.Global.GroupTabStrip == GroupTabStrip.Always);
+    /// <summary>
+    /// Whether a group shows its own strip of tabs (pane-tabs, pane-headers), in a workspace that's split
+    /// (<paramref name="split"/>) or not.
+    /// </summary>
+    private bool ShowsStrip(TabGroup<TerminalTab> group, bool split) =>
+        !_quick && _config.Global.TabGroups && _config.Global.PaneHeaders switch
+        {
+            PaneHeaders.Always => true,
+            PaneHeaders.Never => false,
+            PaneHeaders.Auto => split || group.Tabs.Count > 1,
+            _ => group.Tabs.Count > 1,
+        };
 
     private static void Dismantle(Panel panel)
     {
@@ -569,17 +578,21 @@ public sealed partial class MainWindow : Window
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
         ClearSeenAttention(tab);
-        // Focus is only marked once a workspace is split: an accent line along the focused
+        // Focus is only marked once a workspace is split (and no pane is maximized): an accent line along the focused
         // pane's top (its shown tab's, when it has a strip), and optionally dimmed others.
-        var several = tab.Workspace.Layout.Count > 1;
+        var split = tab.Workspace.Layout.Count > 1;
+        var several = split && tab.Workspace.Maximized == null;
         var dim = 1 - _config.Global.UnfocusedSplitOpacity;
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
             var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
-            ((GroupView)host.Child).Update(group, ShowsStrip(group), focused, _focusBrush, several, dim, fill);
+            ((GroupView)host.Child).Update(group, ShowsStrip(group, split), focused, _focusBrush, several, dim, fill);
+            host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
+
+        ShowMaximized(tab);
 
         ShowWorkspaceAttention(tab);
         UpdateTaskbarProgress(); // the shown workspace's progress wins; closed panes drop theirs
@@ -595,6 +608,27 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Finds the Grid built for a split in a tab's current content.</summary>
+    /// <summary>
+    /// Shows the workspace's maximized pane alone (maximize-pane), or every pane: along the path from the maximized
+    /// pane's host up to the root, each split shows only the side holding it. Nothing leaves the tree (PaneDivider.ShowOnly).
+    /// </summary>
+    private static void ShowMaximized(WorkspaceTab tab)
+    {
+        var path = new HashSet<PaneNode>();
+        for (PaneNode? node = tab.Workspace.Maximized is { } group ? tab.Workspace.Layout.Find(group) : null; node != null; node = node.Parent)
+        {
+            path.Add(node);
+        }
+
+        foreach (var grid in Descendants(tab.Container).OfType<Grid>())
+        {
+            if (grid.Tag is PaneSplit split)
+            {
+                PaneDivider.ShowOnly(grid, split, path.Contains(split) ? path.Contains(split.First) : null);
+            }
+        }
+    }
+
     private static Grid? GridFor(WorkspaceTab tab, PaneSplit split) =>
         Descendants(tab.Container).OfType<Grid>().FirstOrDefault(g => g.Tag == split);
 
@@ -1539,6 +1573,13 @@ public sealed partial class MainWindow : Window
             case TerminalAction.ClosePane:
                 AskClosePane(tab, origin);
                 return true;
+            case TerminalAction.CloseGroup:
+                if (tab.Workspace.GroupOf(origin) is { } closing)
+                {
+                    AskClosePanes(tab, [.. closing.Tabs], "pane");
+                }
+
+                return true;
             case TerminalAction.NextTab:
                 Tabs.SelectedIndex = (Tabs.SelectedIndex + 1) % count;
                 return true;
@@ -1581,6 +1622,7 @@ public sealed partial class MainWindow : Window
                 if (tab.Workspace.GroupOf(origin) is { } from && tab.Workspace.Neighbor(from, invocation.Direction) is { } to)
                 {
                     tab.Workspace.Activate(to.Active);
+                    UpdateFocusBorders(tab); // a pane hidden by a maximized one is shown first (i.e. a collapsed one can't take focus)
                     FocusActive(tab);
                 }
 
@@ -1599,7 +1641,22 @@ public sealed partial class MainWindow : Window
             case TerminalAction.QuitFresh:
                 App.Instance.AskQuit(fresh: true);
                 return true;
+            case TerminalAction.MaximizePane:
+                if (tab.Workspace.GroupOf(origin) is { } maximize)
+                {
+                    tab.Workspace.Activate(maximize.Active);
+                    tab.Workspace.ToggleMaximize();
+                    UpdateFocusBorders(tab);
+                    FocusActive(tab);
+                }
+
+                return true;
             case TerminalAction.ResizePane:
+                if (tab.Workspace.Maximized != null)
+                {
+                    return true; // its dividers are hidden so moving one would show the others at the new ratio
+                }
+
                 if (tab.Workspace.GroupOf(origin) is { } group &&
                     tab.Workspace.Resize(group, invocation.Direction, _config.Global.PaneResizeStep) is { } split &&
                     GridFor(tab, split) is { } grid)

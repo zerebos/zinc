@@ -6,6 +6,17 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### New
+- Added "Maximize pane". It fills the workspace with the focused pane and hides the others. Trigger it again, or move focus to another pane, to bring them back. From the command palette, or bind `maximize-pane` to a key. The other panes keep running and keep their size.
+- Added "Close pane". It closes the focused pane and every tab in it, asking once first if a command is still running in any of them. From the command palette, or bind `close-pane` to a key.
+
+### Changed
+- `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` shows the row of tabs on every pane once a workspace is split, and `Never` hides it. The old setting (`pane-tab-strip`) still works and keeps its original meaning.
+- Closing two or more tabs at once (a pane, a workspace, a window, or Close other tabs and Close other workspaces) now asks first, even when no command is running. Turn it off with `Settings > Layout > Closing > Ask before closing`, which also stops the question about running commands.
+
+### Fixed
+- Closing a workspace's last tab or pane (the tab's ×, `close-tab` or `close-pane`) closed the workspace for good: Reopen closed workspace couldn't bring it back as it does after Close workspace. Now it can.
+
 ## 0.1.0-dev.344 (2026-10-10)
 
 ### New
