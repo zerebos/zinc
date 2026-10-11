@@ -23,7 +23,7 @@ internal sealed partial class GroupView : Grid
     private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal };
     private readonly ScrollViewer _scroll;
     private readonly Grid _strip = new() { Height = StripHeight };
-    private readonly TitleHeader _title = new() { Visibility = Visibility.Collapsed };
+    private readonly TitleHeader _title = new() { Visibility = Visibility.Collapsed, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Border _content = new();
     private readonly Dictionary<MainWindow.TerminalTab, TabItem> _items = new();
     private readonly Button _add;
@@ -49,9 +49,9 @@ internal sealed partial class GroupView : Grid
         _add = add;
         add.Click += (_, _) => NewTabClicked?.Invoke();
 
-        // Columns: the tabs (or a one-tab title), the + after tabs, room, the status slot, the + on a title header,
-        // the buttons (ArrangeHeader sizes them per kind). Tabs scroll when they don't fit; the + stays pinned after them.
-        foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto })
+        // Columns: the tabs (or a one-tab title), the + after them, room, the status slot, the buttons. Tabs scroll when
+        // they don't fit; the + stays pinned after them.
+        foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto })
         {
             _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
         }
@@ -60,11 +60,10 @@ internal sealed partial class GroupView : Grid
             () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)));
         _maximize = HeaderButton("", "Maximize pane", () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.MaximizePane)), _maximizeIcon);
         _more = HeaderButton("", "More options", () => MoreRequested?.Invoke(_more!));
-        _close = HeaderButton("", "Close tab", () => WithShown(t => TabCloseClicked?.Invoke(t)));
         _status.Children.Add(_statusRing);
         _status.Children.Add(_statusText);
         SetColumn(_status, 3);
-        SetColumn(_buttons, 5);
+        SetColumn(_buttons, 4);
         _buttons.Visibility = Visibility.Collapsed;
         var scroll = _scroll = new ScrollViewer
         {
@@ -318,7 +317,7 @@ internal sealed partial class GroupView : Grid
 
         if (titled)
         {
-            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent, closeHere: !buttons,
+            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent, closeHere: true, // its own ×, as a tab's
                 _progress.Active ? TerminalProgress.None : group.Active.Control.Progress);
             _shown = group.Active;
             _shownScrolled = null; // tabs shown again scroll to it
@@ -345,7 +344,8 @@ internal sealed partial class GroupView : Grid
         {
             var shownTab = tab == group.Active;
             _items[tab].Show(TitleOf(tab), shownTab, accentLine, accent, tab.Attention,
-                shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress, closeOnHover: buttons);
+                shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress,
+                closeOnHover: false); // every tab keeps its ×: hover-only waits for the filled header (session C, decision 39)
         }
 
         ArrangeHeader(); // the tabs' width may have changed
@@ -460,7 +460,7 @@ internal sealed partial class GroupView : Grid
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        /// <summary>The tab drawn inside the header's full width (which all drags, shows the tooltip, opens the menu).</summary>
+        /// <summary>The tab itself (a Cards header may later stretch around it: session C).</summary>
         private readonly Grid _tab = new() { CornerRadius = new CornerRadius(6, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
 
         private readonly AttentionDot _dot = new() { Corner = false, HorizontalAlignment = HorizontalAlignment.Center };
@@ -474,7 +474,7 @@ internal sealed partial class GroupView : Grid
 
         public TitleHeader()
         {
-            Background = _clear; // hit-testable across the header
+            Background = _clear; // hit-testable
             var icon = new Grid
             {
                 Width = 14,
@@ -483,8 +483,7 @@ internal sealed partial class GroupView : Grid
                 VerticalAlignment = VerticalAlignment.Center,
                 Children = { _icon },
             };
-            // A tab's × when the header has no buttons (pane-header-buttons = hide), sharing its slot with the dot as a
-            // tab's does: the dot until you hover, then the ×.
+            // The tab's ×, sharing its slot with the dot as a tab's does: the dot until you hover, then the ×.
             _close = new Button
             {
                 Content = new FontIcon { Glyph = "", FontSize = 9 },
@@ -555,7 +554,7 @@ internal sealed partial class GroupView : Grid
             _close.Visibility = _closeHere && !dot ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        /// <param name="closeHere">The tab carries its own × (the header shows no buttons, so no Close there).</param>
+        /// <param name="closeHere">The tab carries its own × (until session C decides whether Cards moves it to the buttons).</param>
         /// <param name="progress">The progress its dot shows (none while the header's status slot shows it).</param>
         public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent, bool closeHere, TerminalProgress progress)
         {

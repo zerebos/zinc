@@ -888,12 +888,11 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   repeated after a title that already names it.
   It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `pane-header-buttons` (in `[window]`) puts buttons on the right of a pane's header: Split (right), Maximize pane
-  (when the workspace is split; Restore panes while maximized), ⋯ and, with one tab, Close. `"show"` (the focused
-  pane's, and others' while the pointer is over their header), `"hover"` (only under the pointer) or `"hide"`
-  (default). ⋯ holds Split right and down, Maximize, New tab in this pane, Rename tab, moving the tab, Close tab,
-  Close other tabs and "Close pane (N tabs)"; in a narrow pane Split and Maximize fold into it. With buttons, a
-  program's progress shows beside them (its percent, Working, Paused or Error), a one-tab header's + sits beside
-  them, and a pane's other tabs show their × only under the pointer.
+  (when the workspace is split; Restore panes while maximized) and ⋯. `"always"` (every pane), `"focused"` (the
+  focused pane's, and others' while the pointer is over their header), `"hover"` (only under the pointer) or
+  `"hide"` (default). ⋯ holds Split right and down, Maximize, New tab in this pane, Rename tab, moving the tab,
+  Close tab, Close other tabs and "Close pane (N tabs)"; in a narrow pane Split and Maximize fold into it. With
+  buttons, a program's progress shows beside them (its percent, Working, Paused or Error).
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
   close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows

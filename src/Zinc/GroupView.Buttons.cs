@@ -11,10 +11,11 @@ namespace Zinc;
 /// <summary>The settings a pane's header follows (<c>pane-focus</c>, <c>pane-header-buttons</c>, <c>pane-tabs</c>).</summary>
 internal readonly record struct HeaderSettings(PaneFocus Focus, PaneHeaderButtons Buttons, bool PaneTabs);
 
-// The header's right end: the status slot (the shown terminal's progress) and the buttons (Split, Maximize, ⋯, and with
-// one tab Close), per pane-header-buttons. Both only where buttons can show (decision 37); hidden buttons keep their
-// width so the tabs and title don't move under the pointer. In a narrow header Split and Maximize fold into ⋯, then the
-// status drops its words (PaneHeader.Fit).
+// The header's right end: the status slot (the shown terminal's progress) and the buttons (Split, Maximize, ⋯), per
+// pane-header-buttons. Both only where buttons can show (decision 37); hidden buttons keep their width so the tabs don't
+// move under the pointer. In a narrow header Split and Maximize fold into ⋯, then the status drops its words
+// (PaneHeader.Fit). Until the gap and the filled header exist (session C), the header otherwise stays today's tab
+// strip: every tab keeps its ×, a one-tab header's × is on its tab, the + follows the tab (decisions 35, 39, 45).
 internal sealed partial class GroupView
 {
     private const double ButtonWidth = 28;
@@ -23,7 +24,7 @@ internal sealed partial class GroupView
     private const double TitleRoom = 160;
 
     private readonly StackPanel _buttons = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button _split, _maximize, _more, _close;
+    private readonly Button _split, _maximize, _more;
     private readonly FontIcon _maximizeIcon = new() { Glyph = "", FontSize = 12 };
     private ToolTip? _maximizeTip, _restoreTip;
 
@@ -37,6 +38,8 @@ internal sealed partial class GroupView
     };
 
     private readonly AttentionDot _statusRing = new() { Corner = false, VerticalAlignment = VerticalAlignment.Center };
+
+    /// <summary>The status words; at least as wide as "100%", so a counting percent doesn't move the slot.</summary>
     private readonly TextBlock _statusText = new() { FontSize = 12, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
 
     private HeaderSettings _settings;
@@ -71,10 +74,9 @@ internal sealed partial class GroupView
     }
 
     /// <summary>The buttons' tooltips with their shortcuts (the window's, which knows the key bindings).</summary>
-    public void SetButtonToolTips(ToolTip split, ToolTip maximize, ToolTip restore, ToolTip close)
+    public void SetButtonToolTips(ToolTip split, ToolTip maximize, ToolTip restore)
     {
         ToolTipService.SetToolTip(_split, split);
-        ToolTipService.SetToolTip(_close, close);
         (_maximizeTip, _restoreTip) = (maximize, restore);
         ShowMaximizeState();
     }
@@ -93,39 +95,34 @@ internal sealed partial class GroupView
         var available = _settings.Buttons != PaneHeaderButtons.Hide && _header != PaneHeaderKind.None;
         _buttons.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
         var shown = PaneHeader.ButtonsShown(_settings.Buttons, _focused, _hovered);
-        _buttons.Opacity = shown ? 1 : 0; // hidden, not removed: the tabs and title keep their place
+        _buttons.Opacity = shown ? 1 : 0; // hidden, not removed: the tabs keep their place
         _buttons.IsHitTestVisible = shown;
-        _close.Visibility = _header == PaneHeaderKind.Title ? Visibility.Visible : Visibility.Collapsed;
-        _maximize.Visibility = _splitWorkspace ? Visibility.Visible : Visibility.Collapsed; // nothing to maximize in a lone pane
         ShowMaximizeState();
 
         var words = available ? PaneHeader.StatusWords(_progress) : null;
         _status.Visibility = words != null ? Visibility.Visible : Visibility.Collapsed;
         _statusRing.ShowProgress(words != null ? _progress : TerminalProgress.None);
         _statusText.Text = words ?? "";
+        if (_statusText.MinWidth == 0 && words != null)
+        {
+            var widest = new TextBlock { FontSize = _statusText.FontSize, Text = "100%" };
+            widest.Measure(new Windows.Foundation.Size(double.PositiveInfinity, StripHeight));
+            _statusText.MinWidth = Math.Ceiling(widest.DesiredSize.Width);
+        }
+
         AutomationProperties.SetName(_status, words ?? "");
         ToolTipService.SetToolTip(_status, words);
         ArrangeHeader();
     }
 
-    /// <summary>
-    /// Lays out the header for its width: the + after the tabs or, on a one-tab header, before the buttons (decision 35);
-    /// what folds when narrow; how much the tabs or title may take.
-    /// </summary>
+    /// <summary>Lays out the header for its width: what folds when narrow, and how much the tabs or title may take.</summary>
     private void ArrangeHeader()
     {
         var width = _strip.ActualWidth;
-        var titled = _header == PaneHeaderKind.Title;
-        // The title stretches to the buttons (its whole width drags, shows the tooltip and opens the menu); tabs take
-        // what they need and the spacer the rest.
-        _strip.ColumnDefinitions[0].Width = titled ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
-        _strip.ColumnDefinitions[2].Width = titled ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
-        SetColumn(_add, titled ? 4 : 1);
-
         var add = _add.Visibility == Visibility.Visible ? AddWidth : 0; // its 2 px margin is the room's - 2 below
         var buttons = _buttons.Visibility == Visibility.Visible;
         var foldable = buttons ? ButtonWidth + 2 + (_splitWorkspace ? ButtonWidth + 2 : 0) : 0;
-        var fixedWidth = add + (buttons ? (ButtonWidth + 2) * (titled ? 2 : 1) : 0);
+        var fixedWidth = add + (buttons ? ButtonWidth + 2 : 0); // the + and ⋯
         double words = 0;
         if (_status.Visibility == Visibility.Visible)
         {
@@ -136,7 +133,7 @@ internal sealed partial class GroupView
         }
 
         double content;
-        if (titled)
+        if (_header == PaneHeaderKind.Title)
         {
             content = TitleRoom;
         }
@@ -148,11 +145,8 @@ internal sealed partial class GroupView
 
         var fit = width > 0 ? PaneHeader.Fit(width, content, fixedWidth, foldable, words) : new HeaderFit(false, true);
         _split.Visibility = fit.Fold ? Visibility.Collapsed : Visibility.Visible;
-        if (fit.Fold)
-        {
-            _maximize.Visibility = Visibility.Collapsed;
-        }
-
+        // Nothing to maximize in a lone pane.
+        _maximize.Visibility = !fit.Fold && _splitWorkspace ? Visibility.Visible : Visibility.Collapsed;
         _statusText.Visibility = fit.Words ? Visibility.Visible : Visibility.Collapsed;
 
         // What's left for the tabs (they scroll past it) or the title (it trims).
