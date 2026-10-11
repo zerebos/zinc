@@ -106,4 +106,20 @@ public class ShellTitleTests
         Assert.Equal(new HeaderTitle("pwsh", "PowerShell"), Header(true, program: "pwsh")); // no folder reported yet
         Assert.Equal(new HeaderTitle("PowerShell", null), Header(false, command: null)); // a command with no text
     }
+
+    [Fact]
+    public void HeaderSaysTheFolderOnce()
+    {
+        // A program's title that names the folder already, as written or in full: no quieter folder after it.
+        Assert.Equal(new HeaderTitle(@"config.toml ~\dev\BetterDiscord\betterdiscord.app flow", null),
+            Header(false, @"C:\Users\Zack\dev\BetterDiscord\betterdiscord.app", "flow config.toml",
+                program: @"config.toml ~\dev\BetterDiscord\betterdiscord.app flow", programSinceCommand: true));
+        Assert.Equal(new HeaderTitle(@"vim C:\Users\Zack\dev\zinc\notes.md", null),
+            Header(false, @"C:\Users\Zack\dev\zinc", "vim notes.md", program: @"vim C:\Users\Zack\dev\zinc\notes.md", programSinceCommand: true));
+        // Only the whole folder counts: its last name alone isn't enough.
+        Assert.Equal(new HeaderTitle("zinc: build", @"~\dev\zinc"),
+            Header(false, @"C:\Users\Zack\dev\zinc", "make", program: "zinc: build", programSinceCommand: true));
+        // The profile likewise.
+        Assert.Equal(new HeaderTitle("Windows PowerShell", null), Header(null, program: "Windows PowerShell"));
+    }
 }

@@ -85,7 +85,12 @@ public static partial class ShellTitle
         // At the prompt (or a command that hasn't led yet): the folder, else the program's title, else the profile.
         return Make(atPrompt != null && place != null ? place : program.Length > 0 ? program : profileName, profileName);
 
-        static HeaderTitle Make(string lead, string? detail) => new(lead, detail == lead ? null : detail);
+        // No quieter text the title already says: a program's title often names the folder itself (as the command
+        // center skips it), as written (~/dev/x) or in full (/home/zack/dev/x).
+        HeaderTitle Make(string lead, string? detail) =>
+            new(lead, detail == null || Says(lead, detail) || (detail == place && Says(lead, folder)) ? null : detail);
+
+        static bool Says(string lead, string? text) => text is { Length: > 0 } && lead.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>A folder as a title: the home folder as ~ (Windows, MSYS's /c/Users/x, a Linux /home/x or /root).</summary>

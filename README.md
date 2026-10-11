@@ -884,7 +884,8 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   `"never"`. With `pane-tabs = false`, `"auto"` and `"always"` still show each pane's title (without the +).
   The title says where the shell is and what runs there: at the prompt the folder, then the profile in quieter
   text; once a command has run for a second, the command, then the folder (quick commands never show). A name
-  you gave the tab, or a title the running program sets (vim, ssh), comes first instead.
+  you gave the tab, or a title the running program sets (vim, ssh), comes first instead; the folder or profile isn't
+  repeated after a title that already names it.
   It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
