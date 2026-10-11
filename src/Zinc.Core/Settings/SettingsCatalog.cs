@@ -362,8 +362,9 @@ public static class SettingsCatalog
         new("layout", "When you come back", "window.explorer-menu", "Open in Zinc from File Explorer",
             "Adds \"Open in Zinc\" to the right-click menu of folders and drives. On Windows 11 it's under \"Show more options\".",
             SettingKind.Toggle, false),
-        new("layout", "Closing", "window.confirm-close", "Ask before closing a running command",
-            "When you close a tab, pane or window while a command still runs. Needs shell integration to know.", SettingKind.Toggle, true),
+        new("layout", "Closing", "window.confirm-close", "Ask before closing",
+            "When a tab, pane, workspace or window you close still runs a command (shell integration tells Zinc), or holds two or more tabs.",
+            SettingKind.Toggle, true),
         new("layout", "Closing", "window.confirm-quit", "Ask before quitting with a running command",
             "When you quit Zinc (or restart it for an update) while a command still runs.", SettingKind.Toggle, true),
 

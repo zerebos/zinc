@@ -479,7 +479,10 @@ public sealed record Config
     /// <summary>How far the resize-pane action moves a divider, as a fraction of the split. Config: <c>[window] pane-resize-step</c> (percent).</summary>
     public double PaneResizeStep { get; init; } = 0.05;
 
-    /// <summary>Closing a tab, pane or window asks first when a command is still running. Config: <c>[window] confirm-close</c>.</summary>
+    /// <summary>
+    /// Closing a tab, pane, workspace or window asks first when a command is still running in it, or when it takes two or
+    /// more tabs. Config: <c>[window] confirm-close</c>.
+    /// </summary>
     public bool ConfirmClose { get; init; } = true;
 
     /// <summary>Quitting (or restarting for an update) asks first when a command is still running. Config: <c>[window] confirm-quit</c>.</summary>

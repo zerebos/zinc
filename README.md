@@ -362,8 +362,9 @@ features they control below (the old names `tab-groups`, `pane-tab-strip`, `grou
 Settings writes the new ones); `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
 how far a resize key moves it); `explorer-menu = true` (off by default) adds Open in Zinc to File Explorer's
 right-click menu for folders, a folder's background and drives (a new workspace in that folder; on Windows 11
-under Show more options; uninstalling takes it back); `confirm-close` and `confirm-quit` (`true` by default: closing a tab, pane or
-window, or quitting, asks first while shell integration says a command is running; `false` doesn't ask); `focus-follows-mouse = true`, which focuses a pane when the pointer
+under Show more options; uninstalling takes it back); `confirm-close` and `confirm-quit` (`true` by default: closing a tab, pane,
+workspace or window, or quitting, asks first while shell integration says a command is running, and closing two or
+more tabs at once asks too; `false` doesn't ask; `zn`'s closes ask only about running commands); `focus-follows-mouse = true`, which focuses a pane when the pointer
 enters it (only while focus is in another pane, not in the palette or a find box); and `software-rendering = true`, which draws with the processor
 instead of the graphics card (for broken graphics drivers, some virtual machines and remote desktop
 glitches; slower; applies to terminals opened after it's set). `low-latency-drawing = true`

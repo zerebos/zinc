@@ -259,19 +259,22 @@ public sealed partial class MainWindow
     // ------------------------------------------------------------ closing
 
     /// <summary>
-    /// Asks before closing terminals the shell says are running a command. True to go ahead
-    /// (nothing running, or the user agreed).
+    /// Asks before closing terminals the shell says are running a command, or (<paramref name="severalTabs"/>) two or
+    /// more tabs at once even with nothing running (decision 29, 2026-10-11: a close-pane key takes every tab of a pane
+    /// and shows no count). True to go ahead (nothing to ask, or the user agreed).
     /// </summary>
-    /// <param name="what">What closes, for the button: "tab", "workspace", "window".</param>
-    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string what) =>
-        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", $"Close {what}") : Task.FromResult(true);
+    /// <param name="what">What closes, for the button: "tab", "pane", "workspace", "window".</param>
+    /// <param name="severalTabs">False for zn: a script gets no question unless a command is running.</param>
+    private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string what, bool severalTabs = true) =>
+        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", $"Close {what}", severalTabs) : Task.FromResult(true);
 
     /// <param name="doing">What the answer does, as the reason ("Closing", "Quitting").</param>
     /// <param name="button">The primary button's label, a verb and its object ("Close tab", "Quit Zinc").</param>
-    private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button)
+    private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button, bool severalTabs = false)
     {
-        var running = panes.Select(p => p.Control.RunningCommand).OfType<ShellCommand>().ToList();
-        if (running.Count == 0)
+        var all = panes.ToList();
+        var running = all.Select(p => p.Control.RunningCommand).OfType<ShellCommand>().ToList();
+        if (running.Count == 0 && !(severalTabs && all.Count > 1))
         {
             return true;
         }
@@ -288,12 +291,20 @@ public sealed partial class MainWindow
             var dialog = new ContentDialog
             {
                 XamlRoot = root,
-                Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running",
-                Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "it" : "them")}.",
                 PrimaryButtonText = button,
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,
             };
+            if (running.Count > 0)
+            {
+                dialog.Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running";
+                dialog.Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "it" : "them")}.";
+            }
+            else
+            {
+                dialog.Title = $"Close {all.Count} tabs?";
+            }
+
             return await dialog.ShowAsync() == ContentDialogResult.Primary;
         }
         catch (Exception ex)
@@ -355,7 +366,7 @@ public sealed partial class MainWindow
             }
 
             var panes = AllTabs().SelectMany(t => t.Workspace.Tabs).ToList();
-            if (!_config.Global.ConfirmClose || panes.All(p => p.Control.RunningCommand == null))
+            if (!_config.Global.ConfirmClose || (panes.Count < 2 && panes.All(p => p.Control.RunningCommand == null)))
             {
                 return;
             }
