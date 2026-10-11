@@ -294,7 +294,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `scrollback-lines`: how many lines you can scroll back through, `10000` by default (0 to
   100,000; libghostty prunes a page at a time, so it keeps about that many).
 - `close-on-exit`: `"success"` (default) closes a tab whose program ended cleanly and keeps a
-  failure on screen; `"always"` or `"never"` (any key then closes it).
+  failure on screen; `"always"` or `"never"` (any key then closes it). A failure kept where you
+  weren't looking (a dropped `ssh` session, a crashed program) puts a red dot on its tab and flashes
+  the taskbar button from the background; a pane header with buttons says "Exited (code N)".
 - `bell`: `"attention"` (default) puts a dot on the tab and flashes the taskbar button when you
   aren't looking at it; `"flash"` also flashes the pane; `"none"`. `bell-sound = true` plays
   Windows' default sound too. A burst of bells (a held key the prompt refuses) rings once; the
@@ -387,8 +389,8 @@ get a small ring on their tab and a progress bar on Zinc's taskbar button.
 Windows notifications come from Zinc's tray icon and respect Do Not Disturb.
 
 **Dot colors** (`[notify] finished-color`, `bell-color`, `failed-color`, `"#rrggbb"`): the tab dots for a
-finished command or a program's notification, the bell, and a failed command (default: Zinc's green, amber
-and red, darker in light mode).
+finished command or a program's notification, the bell, and a failed command or a program that exited with an
+error (default: Zinc's green, amber and red, darker in light mode).
 
 **Light or dark** (`[window] appearance`): `"system"` (default: as Windows' app mode is when Zinc starts),
 `"light"` or `"dark"`, for windows, menus and dialogs. The terminal keeps its color scheme (`theme = "light:X,dark:Y"`
@@ -781,7 +783,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
 | `tab-switcher` | Open the palette searching this window's tabs (its `@`). |
-| `next-attention` | Go to the next tab with a dot: failed commands first, then programs' notifications, then finished commands. |
+| `next-attention` | Go to the next tab with a dot: programs that exited with an error first, then failed commands, the bell, programs' notifications and finished commands. |
 | `jump-to-prompt previous`, `jump-to-prompt next` | Scroll the previous or next prompt to the top (needs [shell integration](#shell-integration); without it, a line). |
 | `select-output`, `copy-output` | Select or copy the output of the command at the top of the pane, or the last one ([shell integration](#shell-integration)). |
 | `toggle-sidebar` | With workspaces on the left: cycle the sidebar through full, rail and auto-hide. `toggle-sidebar rail` (or `auto-hide`) switches between that and full. |

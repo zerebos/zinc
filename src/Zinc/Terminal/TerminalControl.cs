@@ -162,6 +162,12 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;
 
+    /// <summary>The program ended and the pane stays (close-on-exit kept it), with its exit code; on the UI thread.</summary>
+    public event Action<uint>? ExitedAndKept;
+
+    /// <summary>The ended program's exit code while the pane stays; null while it runs (or if it never started).</summary>
+    public uint? ExitCode { get; private set; }
+
     public TerminalControl(Config config, string commandLine, string? workingDirectory)
         : this(config, Keybindings.Default, commandLine, workingDirectory)
     {
@@ -696,6 +702,8 @@ public sealed partial class TerminalControl : UserControl
 
         // Like Windows Terminal: keep a failed session on screen so its output can be read.
         _exited = true;
+        ExitCode = code;
+        ExitedAndKept?.Invoke(code);
         _session.WriteToScreen(code == 0
             ? "\r\n\x1b[0;2m[Process exited. Press any key to close.]\x1b[0m"
             : $"\r\n\x1b[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\x1b[0m");

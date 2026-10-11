@@ -83,7 +83,7 @@ public static class Actions
         new("tab-switcher", TerminalAction.TabSwitcher, Arg.None, "Go to tab…",
             "Search this window's tabs by title, folder or running command (the palette's \"@\"); tabs with a dot come first."),
         new("next-attention", TerminalAction.NextAttention, Arg.None, "Next tab needing attention",
-            "Go to the next tab with a dot: failed commands first, then programs' notifications, then finished commands."),
+            "Go to the next tab with a dot: programs that exited with an error first, then failed commands, the bell, programs' notifications and finished commands."),
         new("toggle-sidebar", TerminalAction.ToggleSidebar, Arg.OptionalSidebarMode, "Toggle sidebar",
             "With workspace-tabs = \"left\": cycle the workspace list through full, rail and auto-hide. \"toggle-sidebar rail\" (or auto-hide) switches between that and full."),
         new("toggle-title-bar", TerminalAction.ToggleTitleBar, Arg.None, "Toggle title bar",

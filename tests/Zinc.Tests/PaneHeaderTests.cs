@@ -80,4 +80,22 @@ public class PaneHeaderTests
         Assert.Equal("Paused", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Pause, 40)));
         Assert.Equal("Error", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Error, 40)));
     }
+
+    [Fact]
+    public void StatusSaysTheProgramExitedBeforeAnyProgress()
+    {
+        var progress = new TerminalProgress(TerminalProgressState.Set, 40);
+        Assert.Equal("Exited (code 255)", PaneHeader.StatusWords(progress, 255)); // a dropped ssh session
+        Assert.Equal("Exited", PaneHeader.StatusWords(TerminalProgress.None, 0)); // a clean exit kept by close-on-exit = never
+        Assert.Equal("Exited (code 0xC000013A)", PaneHeader.StatusWords(TerminalProgress.None, 0xC000013A));
+    }
+
+    [Theory]
+    [InlineData(1u, "1")]
+    [InlineData(255u, "255")]
+    [InlineData(0xFFFFu, "65535")]
+    [InlineData(0x10000u, "0x00010000")]
+    [InlineData(0xC000013Au, "0xC000013A")]
+    [InlineData(0xFFFFFFFFu, "0xFFFFFFFF")]
+    public void ExitCodesReadAsPeopleKnowThem(uint code, string expected) => Assert.Equal(expected, ExitCodes.Format(code));
 }

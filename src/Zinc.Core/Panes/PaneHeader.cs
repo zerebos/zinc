@@ -72,14 +72,23 @@ public static class PaneHeader
             : new HeaderFit(true, false);
     }
 
-    /// <summary>A program's progress (OSC 9;4) in words for the status slot: "40%", "Working", "Paused", "Error".</summary>
-    public static string? StatusWords(TerminalProgress progress) => progress.State switch
+    /// <summary>
+    /// The shown terminal's status in words for the status slot: its program's exit while the pane stays ("Exited
+    /// (code 1)", or "Exited" after a clean one; decision 48), else its progress (OSC 9;4): "40%", "Working", "Paused",
+    /// "Error". Null: nothing to say.
+    /// </summary>
+    public static string? StatusWords(TerminalProgress progress, uint? exitCode = null) => exitCode switch
     {
-        TerminalProgressState.Remove => null,
-        TerminalProgressState.Pause => "Paused",
-        TerminalProgressState.Error => "Error",
-        TerminalProgressState.Set when progress.Value >= 0 => $"{progress.Value}%",
-        _ => "Working",
+        0 => "Exited",
+        { } code => $"Exited (code {ExitCodes.Format(code)})",
+        null => progress.State switch
+        {
+            TerminalProgressState.Remove => null,
+            TerminalProgressState.Pause => "Paused",
+            TerminalProgressState.Error => "Error",
+            TerminalProgressState.Set when progress.Value >= 0 => $"{progress.Value}%",
+            _ => "Working",
+        },
     };
 }
 

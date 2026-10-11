@@ -517,7 +517,7 @@ public static class SettingsCatalog
             { NullLabel = "Use Zinc's green", Placeholder = "Zinc's green" },
         new("notifications", "Dot colors", "notify.bell-color", "Bell", "A program rang the bell.", SettingKind.Color, null)
             { NullLabel = "Use Zinc's amber", Placeholder = "Zinc's amber" },
-        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed.", SettingKind.Color, null)
+        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed, or a program exited with an error.", SettingKind.Color, null)
             { NullLabel = "Use Zinc's red", Placeholder = "Zinc's red" },
 
         // ---- Quick terminal

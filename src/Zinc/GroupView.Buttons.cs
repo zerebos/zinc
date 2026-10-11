@@ -37,7 +37,8 @@ internal sealed partial class GroupView
         Visibility = Visibility.Collapsed,
     };
 
-    private readonly AttentionDot _statusRing = new() { Corner = false, VerticalAlignment = VerticalAlignment.Center };
+    /// <summary>The status's icon: the progress ring, or an error exit's mark (still: it's status, not news).</summary>
+    private readonly AttentionDot _statusRing = new() { Corner = false, Steady = true, VerticalAlignment = VerticalAlignment.Center };
 
     /// <summary>The status words; at least as wide as "100%", so a counting percent doesn't move the slot.</summary>
     private readonly TextBlock _statusText = new() { FontSize = 12, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Center };
@@ -45,6 +46,7 @@ internal sealed partial class GroupView
     private HeaderSettings _settings;
     private bool _focused, _hovered, _splitWorkspace, _maximized;
     private TerminalProgress _progress = TerminalProgress.None;
+    private uint? _exitCode;
 
     /// <summary>A header button asked for an action on this pane (Split, Maximize; the window runs it as its key would).</summary>
     public event Action<ActionInvocation>? HeaderAction;
@@ -106,9 +108,12 @@ internal sealed partial class GroupView
         _buttons.IsHitTestVisible = shown;
         ShowMaximizeState();
 
-        var words = available ? PaneHeader.StatusWords(_progress) : null;
+        // An ended program's exit wins over progress (decision 48).
+        var words = available ? PaneHeader.StatusWords(_progress, _exitCode) : null;
         _status.Visibility = words != null ? Visibility.Visible : Visibility.Collapsed;
-        _statusRing.ShowProgress(words != null ? _progress : TerminalProgress.None);
+        var exited = words != null && _exitCode != null;
+        _statusRing.Show(exited && _exitCode != 0 ? Attention.Exited : Attention.None);
+        _statusRing.ShowProgress(words != null && !exited ? _progress : TerminalProgress.None);
         _statusText.Text = words ?? "";
         if (_statusText.MinWidth == 0 && words != null)
         {

@@ -272,6 +272,7 @@ internal sealed partial class GroupView : Grid
         // The status slot shows the shown terminal's progress where buttons can show; its tab's dot then doesn't (decision 44).
         var buttons = settings.Buttons != PaneHeaderButtons.Hide;
         _progress = buttons && showStrip ? group.Active.Control.Progress : TerminalProgress.None;
+        _exitCode = buttons && showStrip ? group.Active.Control.ExitCode : null;
         ApplyButtons();
 
         var accentLine = PaneHeader.AccentLine(settings.Focus, header, focused, several);

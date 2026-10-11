@@ -54,7 +54,10 @@ public sealed partial class MainWindow : Window
         /// <summary>A long command finished (or failed) here out of view; cleared once seen.</summary>
         public Attention Attention { get; set; }
 
-        /// <summary>The exit code of the command that failed here (with <see cref="Attention.Failed"/>), for its words.</summary>
+        /// <summary>
+        /// The exit code of the command that failed here (with <see cref="Attention.Failed"/>), or of its program that
+        /// exited (<see cref="Attention.Exited"/>, as a uint's bits), for its words.
+        /// </summary>
         public int? FailedExit { get; set; }
 
         /// <summary>
@@ -369,6 +372,7 @@ public sealed partial class MainWindow : Window
         Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
         Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
         Action bell = () => OnBell(tab, pane);
+        Action<uint> exited = code => OnExited(tab, pane, code);
         Action progress = () => OnProgress(tab);
         Action<IReadOnlyList<string>> shaders = problems => ShowShaderProblems(control, problems);
         RoutedEventHandler focus = (_, _) =>
@@ -386,6 +390,7 @@ public sealed partial class MainWindow : Window
         control.CommandFinished += finished;
         control.Notified += notified;
         control.BellRang += bell;
+        control.ExitedAndKept += exited;
         control.ProgressChanged += progress;
         control.ShaderProblems += shaders;
         control.CloseRequested += close;
@@ -400,6 +405,7 @@ public sealed partial class MainWindow : Window
             control.CommandFinished -= finished;
             control.Notified -= notified;
             control.BellRang -= bell;
+            control.ExitedAndKept -= exited;
             control.ProgressChanged -= progress;
             control.ShaderProblems -= shaders;
             ForgetShaderProblems(control);
