@@ -60,6 +60,42 @@ internal sealed partial class PaneDivider : Grid
         }
     }
 
+    /// <summary>
+    /// Shows one side of the split alone (<paramref name="first"/> true or false: a maximized pane is on that side), or
+    /// both at the split's ratio (null). The other side and the divider are collapsed, never taken out of the Grid:
+    /// removing panes is what froze them (Win2D's Loaded/Unloaded count), and a collapsed terminal keeps its rows and
+    /// columns (it skips a 0 size) instead of reflowing.
+    /// </summary>
+    public static void ShowOnly(Grid grid, PaneSplit split, bool? first)
+    {
+        var horizontal = split.Orientation == SplitOrientation.Horizontal;
+        var shown = first switch { true => 0, false => 2, null => -1 };
+        for (var slot = 0; slot < 3; slot++)
+        {
+            var size = shown < 0 ? new GridLength(Thickness) // (the sides get the ratio below)
+                : slot == shown ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+            if (horizontal)
+            {
+                grid.ColumnDefinitions[slot].Width = size;
+            }
+            else
+            {
+                grid.RowDefinitions[slot].Height = size;
+            }
+        }
+
+        if (shown < 0)
+        {
+            ApplyRatio(grid, split);
+        }
+
+        foreach (var child in grid.Children.OfType<FrameworkElement>())
+        {
+            var slot = horizontal ? GetColumn(child) : GetRow(child);
+            child.Visibility = shown < 0 || slot == shown ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
     private void OnPressed(object sender, PointerRoutedEventArgs e)
     {
         _dragging = CapturePointer(e.Pointer);

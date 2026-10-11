@@ -775,6 +775,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `duplicate-pane` | Split, running the focused tab's command again, where it is now. |
 | `focus <direction>` | Focus the neighboring pane. |
 | `resize <direction>` | Move the focused pane's divider. |
+| `maximize-pane` | Fill the workspace with the focused pane, hiding the others; again to show them. Focusing another pane (`focus <direction>`) shows them too. |
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
 | `tab-switcher` | Open the palette searching this window's tabs (its `@`). |

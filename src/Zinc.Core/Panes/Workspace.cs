@@ -116,7 +116,28 @@ public sealed class Workspace<T> where T : class
     public PaneTree<TabGroup<T>> Layout { get; }
 
     /// <summary>The group with focus.</summary>
-    public TabGroup<T> ActiveGroup { get; private set; }
+    public TabGroup<T> ActiveGroup
+    {
+        get;
+        private set
+        {
+            field = value;
+            if (Maximized != value)
+            {
+                Maximized = null; // focus went to a pane that was hidden so show them all again
+            }
+        }
+    }
+
+    /// <summary>
+    /// The group filling the workspace while the others are hidden (maximize-pane), or null. Always the focused group:
+    /// anything that focuses another one (moving focus, splitting, closing or moving this one out) shows every pane
+    /// again. Not saved with the layout.
+    /// </summary>
+    public TabGroup<T>? Maximized { get; private set; }
+
+    /// <summary>Maximizes the focused group, or shows every pane again if one is maximized. A lone pane should stay as it is.</summary>
+    public void ToggleMaximize() => Maximized = Maximized == null && Layout.Count > 1 ? ActiveGroup : null;
 
     /// <summary>The focused tab: the active group's shown tab.</summary>
     public T Active => ActiveGroup.Active;

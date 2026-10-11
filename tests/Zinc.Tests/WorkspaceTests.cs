@@ -150,4 +150,82 @@ public class WorkspaceTests
         Assert.NotNull(split);
         Assert.Equal(0.4, split.Ratio, 6);
     }
+
+    [Fact]
+    public void MaximizeTogglesTheFocusedGroup()
+    {
+        T a = new("a"), b = new("b");
+        var ws = new Workspace<T>(a);
+        ws.ToggleMaximize();
+        Assert.Null(ws.Maximized); // a lone pane has nothing to hide
+
+        var right = ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        ws.ToggleMaximize();
+        Assert.Same(right, ws.Maximized);
+        ws.ToggleMaximize();
+        Assert.Null(ws.Maximized);
+    }
+
+    [Fact]
+    public void MaximizeStaysWhileFocusStaysInItsGroup()
+    {
+        T a = new("a"), b = new("b"), c = new("c"), d = new("d");
+        var ws = new Workspace<T>(a);
+        ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        var group = ws.ActiveGroup;
+        group.Add(c);
+        ws.ToggleMaximize();
+
+        ws.Activate(b); // another tab of the same pane
+        Assert.Same(group, ws.Maximized);
+        group.Add(d);
+        Assert.True(ws.Close(d)); // one of its tabs closes, the pane stays
+        Assert.Same(group, ws.Maximized);
+        Assert.True(ws.Close(a)); // a hidden pane closes
+        Assert.Same(group, ws.Maximized);
+    }
+
+    [Fact]
+    public void FocusingAnotherPaneShowsThemAll()
+    {
+        T a = new("a"), b = new("b");
+        var ws = new Workspace<T>(a);
+        ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        ws.ToggleMaximize();
+        ws.Activate(a);
+        Assert.Null(ws.Maximized);
+
+        ws.Activate(b); // and coming back doesn't maximize it again
+        Assert.Null(ws.Maximized);
+    }
+
+    [Fact]
+    public void SplittingClosingOrMovingTheMaximizedPaneShowsThemAll()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        ws.ToggleMaximize();
+        ws.Split(ws.ActiveGroup, PaneDirection.Down, c); // the new pane takes focus
+        Assert.Null(ws.Maximized);
+
+        ws.ToggleMaximize();
+        Assert.True(ws.Close(c));
+        Assert.Null(ws.Maximized);
+
+        ws.ToggleMaximize();
+        Assert.True(ws.Detach(ws.ActiveGroup));
+        Assert.Null(ws.Maximized);
+    }
+
+    [Fact]
+    public void MergingAnotherLayoutShowsThemAll()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        ws.ToggleMaximize();
+        ws.Merge(ws.ActiveGroup, PaneDirection.Down, new Workspace<T>(c));
+        Assert.Null(ws.Maximized);
+    }
 }

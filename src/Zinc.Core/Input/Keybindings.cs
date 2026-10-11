@@ -47,6 +47,9 @@ public enum TerminalAction
     DuplicatePane,
     MoveFocus,
     ResizePane,
+
+    /// <summary>Fill the workspace with the focused pane, hiding the others. Trigger again to show them.</summary>
+    MaximizePane,
     OpenCommandPalette,
 
     /// <summary>Open the pane's find box.</summary>
