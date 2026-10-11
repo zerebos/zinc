@@ -26,11 +26,14 @@ public enum PaneHeaderButtons
     /// <summary>None.</summary>
     Hide,
 
-    /// <summary>The focused pane's; the others' while the pointer is over them.</summary>
-    Show,
+    /// <summary>The focused pane's; the others' while the pointer is over their header (decision 45).</summary>
+    Focused,
 
-    /// <summary>A pane's while the pointer is over it.</summary>
+    /// <summary>A pane's while the pointer is over its header.</summary>
     Hover,
+
+    /// <summary>Every pane's.</summary>
+    Always,
 }
 
 /// <summary>How the focused pane is marked. Config: <c>[window] pane-focus</c>.</summary>

@@ -526,8 +526,7 @@ public sealed partial class MainWindow : Window
             view.SetAddToolTip(ShortcutTip("New tab in this pane", new ActionInvocation(TerminalAction.NewTab)));
             view.SetButtonToolTips(ShortcutTip("Split right", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)),
                 ShortcutTip("Maximize pane", new ActionInvocation(TerminalAction.MaximizePane)),
-                ShortcutTip("Restore panes", new ActionInvocation(TerminalAction.MaximizePane)),
-                ShortcutTip("Close tab", new ActionInvocation(TerminalAction.ClosePane)));
+                ShortcutTip("Restore panes", new ActionInvocation(TerminalAction.MaximizePane)));
             // The header's buttons act on their own pane, focused or not, as its keys would there.
             view.HeaderAction += invocation => WithTabOf(group, t => HandleAction(invocation, t, group.Active));
             view.MoreRequested += anchor => WithTabOf(group, t => ShowPaneMenu(t, group, anchor));
@@ -864,7 +863,11 @@ public sealed partial class MainWindow : Window
                 () => AskClosePanes(tab, [.. group.Tabs], "pane")));
         }
 
-        menu.ShowAt(anchor);
+        // Below the button, right edges aligned, like other app menus (the default opened above when there was room).
+        menu.ShowAt(anchor, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
+        });
     }
 
     /// <summary>Takes one terminal tab out of its workspace, running, and gives it a workspace of its own.</summary>

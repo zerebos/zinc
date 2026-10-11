@@ -47,12 +47,13 @@ public static class PaneHeader
         focused && focus != PaneFocus.None && (header == PaneHeaderKind.Tabs || several);
 
     /// <summary>
-    /// Whether a header shows its buttons (<c>pane-header-buttons</c>): with Show the focused pane's and any under the
-    /// pointer, with On hover only under the pointer. The pointer counts over the header, not the terminal (decision 40).
+    /// Whether a header shows its buttons (<c>pane-header-buttons</c>): always; the focused pane's and any under the
+    /// pointer; or only under the pointer. The pointer counts over the header, not the terminal (decision 40).
     /// </summary>
     public static bool ButtonsShown(PaneHeaderButtons mode, bool focused, bool hovered) => mode switch
     {
-        PaneHeaderButtons.Show => focused || hovered,
+        PaneHeaderButtons.Always => true,
+        PaneHeaderButtons.Focused => focused || hovered,
         PaneHeaderButtons.Hover => hovered,
         _ => false,
     };

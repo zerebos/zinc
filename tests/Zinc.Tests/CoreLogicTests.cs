@@ -105,10 +105,11 @@ public class ConfigTests : IDisposable
     }
 
     [Theory]
-    [InlineData("show", PaneHeaderButtons.Show)]
+    [InlineData("always", PaneHeaderButtons.Always)]
+    [InlineData("focused", PaneHeaderButtons.Focused)]
     [InlineData("hover", PaneHeaderButtons.Hover)]
     [InlineData("hide", PaneHeaderButtons.Hide)]
-    [InlineData("always", PaneHeaderButtons.Hide)]
+    [InlineData("show", PaneHeaderButtons.Hide)] // the name it had before it shipped
     public void ReadsPaneHeaderButtons(string value, PaneHeaderButtons expected) =>
         Assert.Equal(expected, Load($"[window]\npane-header-buttons = \"{value}\"").PaneHeaderButtons);
 

@@ -50,9 +50,10 @@ public class PaneHeaderTests
     [Theory]
     // mode, focused, hovered -> shown
     [InlineData(PaneHeaderButtons.Hide, true, true, false)]
-    [InlineData(PaneHeaderButtons.Show, true, false, true)]
-    [InlineData(PaneHeaderButtons.Show, false, false, false)]
-    [InlineData(PaneHeaderButtons.Show, false, true, true)]
+    [InlineData(PaneHeaderButtons.Always, false, false, true)]
+    [InlineData(PaneHeaderButtons.Focused, true, false, true)]
+    [InlineData(PaneHeaderButtons.Focused, false, false, false)]
+    [InlineData(PaneHeaderButtons.Focused, false, true, true)]
     [InlineData(PaneHeaderButtons.Hover, true, false, false)]
     [InlineData(PaneHeaderButtons.Hover, false, true, true)]
     public void ButtonsFollowTheSetting(PaneHeaderButtons mode, bool focused, bool hovered, bool expected) =>

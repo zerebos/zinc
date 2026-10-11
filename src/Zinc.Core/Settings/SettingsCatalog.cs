@@ -303,7 +303,8 @@ public static class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Show", "show", "On the focused pane, and on the others while the pointer is over their header."),
+                    new("Always", "always", "On every pane."),
+                    new("Focused pane", "focused", "On the focused pane, and on the others while the pointer is over their header."),
                     new("On hover", "hover",
                         "On a pane while the pointer is over its header. Touch and pen have no hover. The command palette and a pane's right-click menu have every action."),
                     new("Hide", "hide"),

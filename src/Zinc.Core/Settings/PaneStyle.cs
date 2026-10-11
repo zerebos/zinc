@@ -38,7 +38,7 @@ public static class PaneStyle
     private static readonly IReadOnlyDictionary<string, object> Cards = new Dictionary<string, object>
     {
         ["window.pane-headers"] = "always",
-        ["window.pane-header-buttons"] = "show",
+        ["window.pane-header-buttons"] = "focused",
         ["window.pane-gap"] = 6L,
         ["window.pane-gap-edges"] = true,
         ["window.pane-focus"] = "ring",
