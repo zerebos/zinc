@@ -6,7 +6,7 @@ public enum PaneHeaderKind
     /// <summary>No header: the terminal starts at the pane's top edge.</summary>
     None,
 
-    /// <summary>The shown tab's title across the full width (a pane with one tab, or with pane tabs off).</summary>
+    /// <summary>The shown tab's title, drawn as the tab (a pane with one tab, or with pane tabs off).</summary>
     Title,
 
     /// <summary>The pane's tabs.</summary>
@@ -36,7 +36,7 @@ public static class PaneHeader
 
     /// <summary>
     /// Whether a pane shows the accent line (<c>pane-focus</c>): on its shown tab whenever it has focus, as tabs always
-    /// did; across a title header or along the top of a pane without a header only when there are other panes to tell
+    /// did; on a title header or along the top of a pane without a header only when there are other panes to tell
     /// it from (<paramref name="several"/>: split, nothing maximized; decision 33). Ring draws the line too until the
     /// ring exists.
     /// </summary>

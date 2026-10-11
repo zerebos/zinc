@@ -873,7 +873,7 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
 - `pane-tabs = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces (and "New tab" is called "New workspace" in menus, the palette and Settings).
 - In a split workspace the focused pane is marked by an accent line along its top (on the shown
-  tab when the pane shows its tabs, across its header when it shows its title), and the others are dimmed.
+  tab when the pane shows its tabs, on its title when it shows one tab's title), and the others are dimmed.
   A pane's shown tab keeps its line whenever the pane has focus, split or not. `unfocused-pane-opacity` (in `[window]`,
   0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-pane-fill`
   what they fade toward (default: each pane's background).

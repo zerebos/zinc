@@ -573,7 +573,7 @@ public sealed partial class MainWindow : Window
     {
         ClearSeenAttention(tab);
         // A shown tab carries the accent line whenever its pane has focus; otherwise focus is only marked once a
-        // workspace is split (and no pane is maximized): the line across the focused pane's title header or along its
+        // workspace is split (and no pane is maximized): the line on the focused pane's title header or along its
         // top, and optionally dimmed others (PaneHeader.AccentLine).
         var split = tab.Workspace.Layout.Count > 1;
         var several = split && tab.Workspace.Maximized == null;

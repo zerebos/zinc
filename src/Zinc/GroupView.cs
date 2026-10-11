@@ -222,7 +222,7 @@ internal sealed partial class GroupView : Grid
     /// <summary>
     /// Shows the group's current state: its header (<paramref name="header"/>: its tabs in order, the active one
     /// highlighted, or its one tab's title), and the active tab's terminal below. The focused pane gets the accent line
-    /// (<see cref="PaneHeader.AccentLine"/>): on its shown tab, else across its title header or along its top when
+    /// (<see cref="PaneHeader.AccentLine"/>): on its shown tab or its title header (drawn as the tab), else along its top when
     /// there are other panes (<paramref name="several"/>), where unfocused panes can also be dimmed toward
     /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
     /// only with <paramref name="paneTabs"/>.
@@ -239,13 +239,12 @@ internal sealed partial class GroupView : Grid
         _scroll.Visibility = titled ? Visibility.Collapsed : Visibility.Visible;
 
         var accentLine = PaneHeader.AccentLine(focus, header, focused, several);
-        // A tab carries its own line; otherwise it runs across the title header, or over the terminal's top edge.
-        var line = accentLine && header != PaneHeaderKind.Tabs;
+        // A tab (the title header too) carries its own line; a pane without a header has it over the terminal's top edge.
+        var line = accentLine && header == PaneHeaderKind.None;
         _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
-        SetRow(_focusLine, titled ? 0 : 1);
         if (line && group.Active is { } shown)
         {
-            // Kept visible on the terminal's background (the title header sits on the window, near enough).
+            // Over the terminal's top edge: kept visible on its background.
             var lineBrush = Contrast.AccentOn(TerminalRenderer.ToColor(shown.Profile.Config.Theme.Background), accent);
             if (_focusLine.Background != lineBrush)
             {
@@ -282,7 +281,7 @@ internal sealed partial class GroupView : Grid
 
         if (titled)
         {
-            _title.Show(group.Active, TitleOf(group.Active), focused);
+            _title.Show(group.Active, TitleOf(group.Active), accentLine, accent);
             _shown = group.Active;
             _shownScrolled = null; // tabs shown again scroll to it
             return;
@@ -383,8 +382,9 @@ internal sealed partial class GroupView : Grid
     }
 
     /// <summary>
-    /// A one-tab pane's header: the tab's icon, title and attention dot, on the window behind it. It is the tab, so it
-    /// selects, opens the tab menu and drags as one.
+    /// A one-tab pane's header: the tab's icon, title and attention dot, drawn as the shown tab (its terminal's
+    /// background, joining the terminal below), as a one-tab strip was (decision 36). It is the tab, so it selects,
+    /// opens the tab menu and drags as one, and carries the accent line as a tab does.
     /// </summary>
     private sealed partial class TitleHeader : Grid, ISelectableItem
     {
@@ -396,13 +396,16 @@ internal sealed partial class GroupView : Grid
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        private readonly AttentionDot _dot = new() { Corner = false, Margin = new Thickness(8, 0, 0, 0) };
+        private readonly AttentionDot _dot = new() { Corner = false, Margin = new Thickness(6, 0, 0, 0) };
+        private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
+        private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        private SolidColorBrush? _background;
         private Profile? _profile;
         private string? _name;
 
         public TitleHeader()
         {
-            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); // hit-testable: menu and drag
+            CornerRadius = new CornerRadius(6, 6, 0, 0);
             var icon = new Grid
             {
                 Width = 14,
@@ -411,13 +414,14 @@ internal sealed partial class GroupView : Grid
                 VerticalAlignment = VerticalAlignment.Center,
                 Children = { _icon },
             };
-            // The padding a tab's content has, so the icon sits where a tab's would.
+            // A tab's left padding, so the icon sits where a tab's would.
             Children.Add(new StackPanel
             {
-                Padding = new Thickness(10, 0, 4, 0),
+                Padding = new Thickness(10, 0, 10, 0),
                 Orientation = Orientation.Horizontal,
                 Children = { icon, _text, _dot },
             });
+            Children.Add(_accent);
         }
 
         /// <summary>What a click does (set by the view), for screen readers selecting it.</summary>
@@ -430,7 +434,7 @@ internal sealed partial class GroupView : Grid
         protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
             new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.TabItem);
 
-        public void Show(MainWindow.TerminalTab tab, string title, bool focused)
+        public void Show(MainWindow.TerminalTab tab, string title, bool accentLine, Brush accent)
         {
             if (_profile != tab.Profile)
             {
@@ -450,7 +454,23 @@ internal sealed partial class GroupView : Grid
                 ToolTipService.SetToolTip(this, AttentionWords.ToolTip(title, words));
             }
 
-            _text.Opacity = focused ? 1 : 0.7; // as a shown tab's title against the others
+            // The terminal's background (it can change: a config reload), and dark text on a light one.
+            var background = TerminalRenderer.ToColor(tab.Profile.Config.Theme.Background);
+            if (_background?.Color != background)
+            {
+                _background = new SolidColorBrush(background);
+                Background = _background;
+                if (Contrast.TextOn(background) is { } text)
+                {
+                    _text.Foreground = text;
+                }
+                else
+                {
+                    _text.ClearValue(TextBlock.ForegroundProperty);
+                }
+            }
+
+            _accent.Background = accentLine ? Contrast.AccentOn(background, accent) : _clear;
         }
     }
 
