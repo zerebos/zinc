@@ -356,9 +356,9 @@ shaders written for Ghostty work unchanged
   when it moved: cursor trails), the live palette and colors, and `iMouse` (Shadertoy's: while the left button
   is down). Positions are in pixels with y going down, as in Ghostty on macOS.
 
-**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-tab-strip`, `start-in`,
+**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-headers`, `start-in`,
 `unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
-features they control below (the old names `tab-groups`, `group-tab-strip` and `unfocused-split-*` still work, and
+features they control below (the old names `tab-groups`, `pane-tab-strip`, `group-tab-strip` and `unfocused-split-*` still work, and
 Settings writes the new ones); `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
 how far a resize key moves it); `explorer-menu = true` (off by default) adds Open in Zinc to File Explorer's
 right-click menu for folders, a folder's background and drives (a new workspace in that folder; on Windows 11
@@ -874,8 +874,10 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-pane-fill`
   what they fade toward (default: each pane's background).
   `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes.
-- `pane-tab-strip = "always"` (in `[window]`) shows the strip on every pane, even with one tab
-  (default `"auto"`: only with two or more).
+- `pane-headers` (in `[window]`) says which panes show their row of tabs: `"with-tabs"` (default: panes with two
+  or more tabs), `"auto"` (every pane once the workspace is split, and any pane with two or more tabs),
+  `"always"` (every pane, even with one tab) or `"never"`. It was called `pane-tab-strip`, whose `"auto"` is
+  `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
   close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows

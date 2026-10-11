@@ -6,6 +6,9 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### Changed
+- `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices: Automatic shows the row of tabs on every pane once a workspace is split, and Never hides it. Your old setting (`pane-tab-strip`) still works and keeps its meaning.
+
 ## 0.1.0-dev.344 (2026-10-10)
 
 ### New
