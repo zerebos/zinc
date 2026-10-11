@@ -167,16 +167,33 @@ public sealed partial class MainWindow
             flyout.Hide();
         }
 
+        // Enter and Escape act on their release, not their press so closing on the press handed focus to the terminal
+        // before the key's character arrived, and the shell got the Enter. Only a press made in the box counts, so
+        // the Enter that opened it (from the palette) doesn't commit it.
+        Windows.System.VirtualKey? pressed = null;
         box.KeyDown += (_, e) =>
         {
+            if (e.Key is Windows.System.VirtualKey.Enter or Windows.System.VirtualKey.Escape)
+            {
+                e.Handled = true;
+                pressed = e.Key;
+            }
+        };
+        box.KeyUp += (_, e) =>
+        {
+            if (e.Key != pressed)
+            {
+                return;
+            }
+
+            e.Handled = true;
+            pressed = null;
             if (e.Key == Windows.System.VirtualKey.Enter)
             {
-                e.Handled = true;
                 Commit();
             }
-            else if (e.Key == Windows.System.VirtualKey.Escape)
+            else
             {
-                e.Handled = true;
                 flyout.Hide();
             }
         };

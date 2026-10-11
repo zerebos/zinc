@@ -94,6 +94,13 @@ internal sealed partial class GroupView
     {
         var available = _settings.Buttons != PaneHeaderButtons.Hide && _header != PaneHeaderKind.None;
         _buttons.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        // With buttons, the header's empty part takes the pointer too, so hovering anywhere on it shows them (without a
+        // background only the tabs and + did). Not on the defaults: a tab dropped there would then join the tabs instead
+        // of reaching the pane's drop zones (this might change later).
+        if ((_strip.Background != null) != available)
+        {
+            _strip.Background = available ? new SolidColorBrush(Microsoft.UI.Colors.Transparent) : null;
+        }
         var shown = PaneHeader.ButtonsShown(_settings.Buttons, _focused, _hovered);
         _buttons.Opacity = shown ? 1 : 0; // hidden, not removed: the tabs keep their place
         _buttons.IsHitTestVisible = shown;
