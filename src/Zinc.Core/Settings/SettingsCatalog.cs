@@ -298,15 +298,14 @@ public static class SettingsCatalog
                     new("Never", "never"),
                 ],
             },
-        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more, on the right of a pane's header.",
+        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more on the right of a pane's header, with a program's progress beside them.",
             SettingKind.Choice, "hide")
             {
-                Unfinished = true,
                 Choices =
                 [
-                    new("Show", "show", "On the focused pane, and on the others while the pointer is over them."),
+                    new("Show", "show", "On the focused pane, and on the others while the pointer is over their header."),
                     new("On hover", "hover",
-                        "On a pane while the pointer is over it. Touch and pen have no hover: the command palette and a pane's right-click menu have every action."),
+                        "On a pane while the pointer is over its header. Touch and pen have no hover. The command palette and a pane's right-click menu have every action."),
                     new("Hide", "hide"),
                 ],
             },

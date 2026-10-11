@@ -486,6 +486,7 @@ public sealed partial class MainWindow
         }, AsksArgument: true));
         Action(TerminalAction.NextAttention);
         Custom("Rename workspace…", () => ShowRename(tab));
+        Custom("Rename tab…", () => ShowRenameTab(tab, tab.Active, TabAnchor(tab, tab.Active)));
         Custom("Save tab text…", () => _ = ExportText(tab));
         commands.AddRange(ArgumentCommands(tab));
         Action(TerminalAction.NewWindow);

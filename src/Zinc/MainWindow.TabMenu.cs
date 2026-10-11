@@ -131,11 +131,31 @@ public sealed partial class MainWindow
 
     // ---- rename ----
 
-    private void ShowRename(WorkspaceTab tab)
+    private void ShowRename(WorkspaceTab tab) => ShowRenameBox(tab, tab.CustomTitle ?? tab.Header.Title, AnchorOf(tab), name =>
+    {
+        tab.CustomTitle = name;
+        UpdateTitle(tab);
+    });
+
+    /// <summary>Where a terminal tab's own popups go: its tab or title in its pane's header, else its workspace's tab.</summary>
+    private FrameworkElement TabAnchor(WorkspaceTab tab, TerminalTab pane) =>
+        tab.Workspace.GroupOf(pane) is { Tag: Border { Child: GroupView view } } && view.AnchorFor(pane) is { } anchor ? anchor : AnchorOf(tab);
+
+    /// <summary>Renames one terminal tab (its pane's header and tab label; null gives it back to the program, as zn's does).</summary>
+    private void ShowRenameTab(WorkspaceTab tab, TerminalTab pane, FrameworkElement anchor) =>
+        ShowRenameBox(tab, pane.CustomTitle ?? pane.Title, anchor, name =>
+        {
+            pane.CustomTitle = name;
+            UpdateTitle(tab);
+            UpdateFocusBorders(tab);
+        });
+
+    /// <summary>A rename box under <paramref name="anchor"/>: Enter sets the name (empty: none), Escape leaves it.</summary>
+    private void ShowRenameBox(WorkspaceTab tab, string current, FrameworkElement anchor, Action<string?> rename)
     {
         var box = new TextBox
         {
-            Text = tab.CustomTitle ?? tab.Header.Title,
+            Text = current,
             PlaceholderText = "Leave empty to use the program's title",
             MinWidth = 240,
         };
@@ -143,9 +163,8 @@ public sealed partial class MainWindow
 
         void Commit()
         {
-            tab.CustomTitle = string.IsNullOrWhiteSpace(box.Text) ? null : box.Text.Trim();
+            rename(string.IsNullOrWhiteSpace(box.Text) ? null : box.Text.Trim());
             flyout.Hide();
-            UpdateTitle(tab);
         }
 
         box.KeyDown += (_, e) =>
@@ -167,7 +186,7 @@ public sealed partial class MainWindow
             box.SelectAll();
         };
         flyout.Closed += (_, _) => FocusActive(tab);
-        flyout.ShowAt(AnchorOf(tab));
+        flyout.ShowAt(anchor);
     }
 
     // ---- color ----

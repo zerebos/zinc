@@ -7,6 +7,8 @@ is the version it builds, and hands it to the installer as the release notes).
 ## Unreleased
 
 ### New
+- Pane header buttons (`Settings > Layout > Panes > Header buttons`, `pane-header-buttons` in `[window]`)! Split, Maximize pane, a menu with the pane's other commands (including Close pane), and with one tab Close, on the right of a pane's header. Show them on the focused pane, only while the pointer is over a header, or not at all (the default). With them, the header also shows a program's progress.
+- Rename tab. Give one tab in a pane its own name, from its right-click menu, the pane's menu or the command palette.
 - Added "Maximize pane". It fills the workspace with the focused pane and hides the others. Trigger it again, or move focus to another pane, to bring them back. From the command palette, or bind `maximize-pane` to a key. The other panes keep running and keep their size.
 - Added "Close pane". It closes the focused pane and every tab in it, asking once first if a command is still running in any of them. From the command palette, or bind `close-pane` to a key.
 

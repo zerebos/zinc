@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Zinc.Input;
 using Zinc.Panes;
 using Zinc.Terminal;
 using Windows.UI;
@@ -48,9 +49,23 @@ internal sealed partial class GroupView : Grid
         _add = add;
         add.Click += (_, _) => NewTabClicked?.Invoke();
 
-        // Tabs scroll when they don't fit; the + stays pinned after them. A one-tab title takes the tabs' place.
-        _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        // Columns: the tabs (or a one-tab title), the + after tabs, room, the status slot, the + on a title header,
+        // the buttons (ArrangeHeader sizes them per kind). Tabs scroll when they don't fit; the + stays pinned after them.
+        foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto, GridLength.Auto })
+        {
+            _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
+        }
+
+        _split = HeaderButton("", "Split right",
+            () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)));
+        _maximize = HeaderButton("", "Maximize pane", () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.MaximizePane)), _maximizeIcon);
+        _more = HeaderButton("", "More options", () => MoreRequested?.Invoke(_more!));
+        _close = HeaderButton("", "Close tab", () => WithShown(t => TabCloseClicked?.Invoke(t)));
+        _status.Children.Add(_statusRing);
+        _status.Children.Add(_statusText);
+        SetColumn(_status, 3);
+        SetColumn(_buttons, 5);
+        _buttons.Visibility = Visibility.Collapsed;
         var scroll = _scroll = new ScrollViewer
         {
             Content = _tabs,
@@ -65,13 +80,26 @@ internal sealed partial class GroupView : Grid
         _strip.Children.Add(scroll);
         _strip.Children.Add(_title);
         _strip.Children.Add(add);
-        // The tabs (or the title) take what they need, up to the width left beside the +.
-        _strip.SizeChanged += (_, e) =>
+        _strip.Children.Add(_status);
+        _strip.Children.Add(_buttons);
+        // The tabs (or the title) take what they need, up to the width the + and the buttons leave.
+        _strip.SizeChanged += (_, _) =>
         {
-            scroll.MaxWidth = Math.Max(0, e.NewSize.Width - AddWidth - 2);
-            _title.SetAvailable(scroll.MaxWidth);
+            ArrangeHeader();
             BringShownIntoView(); // a narrower pane (e.g. after a split) can hide it
         };
+        // Buttons shown on hover come with the pointer over the header (decision 40).
+        _strip.PointerEntered += (_, _) =>
+        {
+            _hovered = true;
+            ApplyButtons();
+        };
+        _strip.PointerExited += (_, _) =>
+        {
+            _hovered = false;
+            ApplyButtons();
+        };
+        _title.CloseClicked += () => WithShown(t => TabCloseClicked?.Invoke(t));
         _title.Selecting = () => WithShown(t => TabClicked?.Invoke(t));
         _title.Tapped += (_, e) =>
         {
@@ -226,20 +254,28 @@ internal sealed partial class GroupView : Grid
     /// (<see cref="PaneHeader.AccentLine"/>): on its shown tab or its title header (drawn as the tab), else along its top when
     /// there are other panes (<paramref name="several"/>), where unfocused panes can also be dimmed toward
     /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
-    /// only with <paramref name="paneTabs"/>.
+    /// only with pane tabs on; the buttons and status slot per <paramref name="settings"/>, Maximize only when the
+    /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>).
     /// </summary>
-    public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, bool focused, Brush accent,
-        PaneFocus focus = PaneFocus.TabAccent, bool several = false, double dim = 0, Color dimFill = default, bool paneTabs = true)
+    public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, HeaderSettings settings, bool focused,
+        Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default)
     {
         _header = header;
-        _add.Visibility = paneTabs ? Visibility.Visible : Visibility.Collapsed; // with pane tabs off a title has no +
+        _settings = settings;
+        (_focused, _splitWorkspace, _maximized) = (focused, split, maximized);
+        _add.Visibility = settings.PaneTabs ? Visibility.Visible : Visibility.Collapsed; // with pane tabs off a title has no +
         var showStrip = header != PaneHeaderKind.None;
         _strip.Visibility = showStrip ? Visibility.Visible : Visibility.Collapsed;
         var titled = header == PaneHeaderKind.Title;
         _title.Visibility = titled ? Visibility.Visible : Visibility.Collapsed;
         _scroll.Visibility = titled ? Visibility.Collapsed : Visibility.Visible;
 
-        var accentLine = PaneHeader.AccentLine(focus, header, focused, several);
+        // The status slot shows the shown terminal's progress where buttons can show; its tab's dot then doesn't (decision 44).
+        var buttons = settings.Buttons != PaneHeaderButtons.Hide;
+        _progress = buttons && showStrip ? group.Active.Control.Progress : TerminalProgress.None;
+        ApplyButtons();
+
+        var accentLine = PaneHeader.AccentLine(settings.Focus, header, focused, several);
         // A tab (the title header too) carries its own line; a pane without a header has it over the terminal's top edge.
         var line = accentLine && header == PaneHeaderKind.None;
         _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
@@ -282,7 +318,8 @@ internal sealed partial class GroupView : Grid
 
         if (titled)
         {
-            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent);
+            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent, closeHere: !buttons,
+                _progress.Active ? TerminalProgress.None : group.Active.Control.Progress);
             _shown = group.Active;
             _shownScrolled = null; // tabs shown again scroll to it
             return;
@@ -306,8 +343,12 @@ internal sealed partial class GroupView : Grid
 
         foreach (var tab in group.Tabs)
         {
-            _items[tab].Show(TitleOf(tab), tab == group.Active, accentLine, accent, tab.Attention, tab.Control.Progress);
+            var shownTab = tab == group.Active;
+            _items[tab].Show(TitleOf(tab), shownTab, accentLine, accent, tab.Attention,
+                shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress, closeOnHover: buttons);
         }
+
+        ArrangeHeader(); // the tabs' width may have changed
 
         _shown = group.Active;
         if (_shownScrolled != group.Active)
@@ -339,6 +380,14 @@ internal sealed partial class GroupView : Grid
             DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => item.StartBringIntoView());
         }
     }
+
+    /// <summary>The element showing <paramref name="tab"/> in the header (its tab, or the title), if the header shows it.</summary>
+    public FrameworkElement? AnchorFor(MainWindow.TerminalTab tab) => _header switch
+    {
+        PaneHeaderKind.Title when tab == _shown => _title,
+        PaneHeaderKind.Tabs when _items.TryGetValue(tab, out var item) => item,
+        _ => null,
+    };
 
     /// <summary>Lets go of the shown terminal (the group is moving to another window).</summary>
     public void Release() => _content.Child = null;
@@ -411,16 +460,21 @@ internal sealed partial class GroupView : Grid
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        private readonly AttentionDot _dot = new() { Corner = false, Margin = new Thickness(6, 0, 0, 0) };
+        /// <summary>The tab drawn inside the header's full width (which all drags, shows the tooltip, opens the menu).</summary>
+        private readonly Grid _tab = new() { CornerRadius = new CornerRadius(6, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
+
+        private readonly AttentionDot _dot = new() { Corner = false, HorizontalAlignment = HorizontalAlignment.Center };
+        private readonly Button _close;
         private readonly Border _accent = new() { Height = 2, VerticalAlignment = VerticalAlignment.Top };
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private SolidColorBrush? _background;
         private Profile? _profile;
         private string? _name;
+        private bool _closeHere, _hovered;
 
         public TitleHeader()
         {
-            CornerRadius = new CornerRadius(6, 6, 0, 0);
+            Background = _clear; // hit-testable across the header
             var icon = new Grid
             {
                 Width = 14,
@@ -429,9 +483,24 @@ internal sealed partial class GroupView : Grid
                 VerticalAlignment = VerticalAlignment.Center,
                 Children = { _icon },
             };
+            // A tab's × when the header has no buttons (pane-header-buttons = hide), sharing its slot with the dot as a
+            // tab's does: the dot until you hover, then the ×.
+            _close = new Button
+            {
+                Content = new FontIcon { Glyph = "", FontSize = 9 },
+                Padding = new Thickness(5),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Background = _clear,
+                BorderThickness = new Thickness(0),
+            };
+            AutomationProperties.SetName(_close, "Close tab");
+            _close.Click += (_, _) => CloseClicked?.Invoke();
+            var slot = new Grid { Width = 20, Margin = new Thickness(6, 0, 0, 0), Children = { _close, _dot } };
+
             // A tab's left padding, so the icon sits where a tab's would. The detail's column gives way first when
             // narrow; the title's is capped (SetAvailable), since an Auto column never trims.
-            var row = new Grid { Padding = new Thickness(10, 0, 10, 0) };
+            var row = new Grid { Padding = new Thickness(10, 0, 4, 0) };
             foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto })
             {
                 row.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
@@ -439,19 +508,33 @@ internal sealed partial class GroupView : Grid
 
             SetColumn(_text, 1);
             SetColumn(_detail, 2);
-            SetColumn(_dot, 3);
+            SetColumn(slot, 3);
             row.Children.Add(icon);
             row.Children.Add(_text);
             row.Children.Add(_detail);
-            row.Children.Add(_dot);
-            Children.Add(row);
-            Children.Add(_accent);
+            row.Children.Add(slot);
+            _tab.Children.Add(row);
+            _tab.Children.Add(_accent);
+            Children.Add(_tab);
+
+            PointerEntered += (_, _) =>
+            {
+                _hovered = true;
+                ShowSlot();
+            };
+            PointerExited += (_, _) =>
+            {
+                _hovered = false;
+                ShowSlot();
+            };
         }
 
-        /// <summary>The width the header may take: the title keeps room for the icon, padding and dot beside it.</summary>
+        public event Action? CloseClicked;
+
+        /// <summary>The width the tab may take: the title keeps room for the icon, padding and slot beside it.</summary>
         public void SetAvailable(double width)
         {
-            MaxWidth = width;
+            _tab.MaxWidth = width;
             _text.MaxWidth = Math.Max(40, width - 70);
         }
 
@@ -465,7 +548,16 @@ internal sealed partial class GroupView : Grid
         protected override Microsoft.UI.Xaml.Automation.Peers.AutomationPeer OnCreateAutomationPeer() =>
             new SelectableItemPeer(this, Microsoft.UI.Xaml.Automation.Peers.AutomationControlType.TabItem);
 
-        public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent)
+        private void ShowSlot()
+        {
+            var dot = _dot.HasContent && (!_hovered || !_closeHere);
+            _dot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
+            _close.Visibility = _closeHere && !dot ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <param name="closeHere">The tab carries its own × (the header shows no buttons, so no Close there).</param>
+        /// <param name="progress">The progress its dot shows (none while the header's status slot shows it).</param>
+        public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent, bool closeHere, TerminalProgress progress)
         {
             if (_profile != tab.Profile)
             {
@@ -473,8 +565,10 @@ internal sealed partial class GroupView : Grid
                 _icon.IconSource = ProfileIcons.For(tab.Profile);
             }
 
+            _closeHere = closeHere;
             _dot.Show(tab.Attention);
-            _dot.ShowProgress(tab.Control.Progress);
+            _dot.ShowProgress(progress);
+            ShowSlot();
             var words = AttentionWords.For(tab.Attention, tab.FailedExit);
             var name = AttentionWords.Name(title.Detail == null ? title.Lead : $"{title.Lead}, {title.Detail}", words);
             if (name != _name)
@@ -493,7 +587,7 @@ internal sealed partial class GroupView : Grid
             if (_background?.Color != background)
             {
                 _background = new SolidColorBrush(background);
-                Background = _background;
+                _tab.Background = _background;
                 var dark = Contrast.TextOn(background);
                 foreach (var block in new[] { _text, _detail })
                 {
@@ -505,6 +599,15 @@ internal sealed partial class GroupView : Grid
                     {
                         block.ClearValue(TextBlock.ForegroundProperty);
                     }
+                }
+
+                if (dark is { } closeText)
+                {
+                    _close.Foreground = closeText;
+                }
+                else
+                {
+                    _close.ClearValue(Control.ForegroundProperty);
                 }
             }
 
@@ -529,7 +632,7 @@ internal sealed partial class GroupView : Grid
         private readonly Button _close;
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        private bool _active, _hovered;
+        private bool _active, _hovered, _closeOnHover;
         private Attention _attention;
         private string? _words;
         private TerminalProgress _progress = TerminalProgress.None;
@@ -616,13 +719,21 @@ internal sealed partial class GroupView : Grid
             _dot.ShowProgress(_progress);
             var dot = _dot.HasContent && !_hovered;
             _dot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
-            _close.Visibility = dot ? Visibility.Collapsed : Visibility.Visible;
+            // Where the header has buttons, only the shown tab keeps its ×; the others show one under the pointer
+            // (decision 39). Elsewhere every tab keeps it, as before.
+            var close = !dot && (!_closeOnHover || _active || _hovered);
+            _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        public void Show(string title, bool active, bool focused, Brush accent, Attention attention, TerminalProgress progress)
+        /// <param name="accentLine">The tab carries the accent line (its pane is focused: <see cref="PaneHeader.AccentLine"/>).</param>
+        /// <param name="closeOnHover">A hidden tab shows its × only under the pointer.</param>
+        public void Show(string title, bool active, bool accentLine, Brush accent, Attention attention, TerminalProgress progress,
+            bool closeOnHover = false)
         {
             _attention = attention;
             _progress = progress;
+            _active = active;
+            _closeOnHover = closeOnHover;
             ShowSlot();
             // The title, and what its dot means, for the tooltip and screen readers.
             var words = AttentionWords.For(attention, _tab.FailedExit);
@@ -641,7 +752,6 @@ internal sealed partial class GroupView : Grid
                 _background = new SolidColorBrush(background);
             }
 
-            _active = active;
             Background = active ? _background : _clear;
             // On a light terminal background (the shown tab takes it), dark text.
             if (active && Contrast.TextOn(_background.Color) is { } text)
@@ -656,7 +766,7 @@ internal sealed partial class GroupView : Grid
             }
 
             _title.Opacity = active ? 1 : 0.7;
-            _accent.Background = active && focused ? Contrast.AccentOn(background, accent) : _clear;
+            _accent.Background = active && accentLine ? Contrast.AccentOn(background, accent) : _clear;
         }
     }
 }

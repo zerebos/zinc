@@ -1,4 +1,6 @@
+using Zinc.Ghostty;
 using Zinc.Panes;
+using Zinc.Terminal;
 
 namespace Zinc.Tests;
 
@@ -44,4 +46,37 @@ public class PaneHeaderTests
     [InlineData(PaneFocus.Ring, Title, true, true, true)]         // the line stands in until the ring exists
     public void AccentLineMarksTheFocusedPane(PaneFocus focus, PaneHeaderKind header, bool focused, bool several, bool expected) =>
         Assert.Equal(expected, PaneHeader.AccentLine(focus, header, focused, several));
+
+    [Theory]
+    // mode, focused, hovered -> shown
+    [InlineData(PaneHeaderButtons.Hide, true, true, false)]
+    [InlineData(PaneHeaderButtons.Show, true, false, true)]
+    [InlineData(PaneHeaderButtons.Show, false, false, false)]
+    [InlineData(PaneHeaderButtons.Show, false, true, true)]
+    [InlineData(PaneHeaderButtons.Hover, true, false, false)]
+    [InlineData(PaneHeaderButtons.Hover, false, true, true)]
+    public void ButtonsFollowTheSetting(PaneHeaderButtons mode, bool focused, bool hovered, bool expected) =>
+        Assert.Equal(expected, PaneHeader.ButtonsShown(mode, focused, hovered));
+
+    [Fact]
+    public void SplitAndMaximizeFoldBeforeTheStatusLosesItsWords()
+    {
+        // content 200 + fixed 100 + foldable 60 + words 40 = 400
+        Assert.Equal(new HeaderFit(false, true), PaneHeader.Fit(400, 200, 100, 60, 40));
+        Assert.Equal(new HeaderFit(true, true), PaneHeader.Fit(399, 200, 100, 60, 40));
+        Assert.Equal(new HeaderFit(true, true), PaneHeader.Fit(340, 200, 100, 60, 40));
+        Assert.Equal(new HeaderFit(true, false), PaneHeader.Fit(339, 200, 100, 60, 40));
+        Assert.Equal(new HeaderFit(false, true), PaneHeader.Fit(300, 200, 100, 0, 0)); // nothing to fold
+    }
+
+    [Fact]
+    public void StatusSaysWhatTheProgressIs()
+    {
+        Assert.Null(PaneHeader.StatusWords(TerminalProgress.None));
+        Assert.Equal("40%", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Set, 40)));
+        Assert.Equal("Working", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Indeterminate, -1)));
+        Assert.Equal("Working", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Set, -1)));
+        Assert.Equal("Paused", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Pause, 40)));
+        Assert.Equal("Error", PaneHeader.StatusWords(new TerminalProgress(TerminalProgressState.Error, 40)));
+    }
 }
