@@ -35,7 +35,7 @@ internal sealed partial class SettingsWindow
         static string Text(SettingDef s) => $"{s.Label} {s.Description} {s.Key} {s.Group} {SectionTitle(s.Section)}";
 
         // Settings, under the section they live in.
-        foreach (var section in SettingsCatalog.All.Where(s => All(Text(s), words)).GroupBy(s => s.Section))
+        foreach (var section in ShownSettings.Where(s => All(Text(s), words)).GroupBy(s => s.Section))
         {
             var where = SectionTitle(section.Key);
             _page.Children.Add(GroupTitle(where));
@@ -68,7 +68,7 @@ internal sealed partial class SettingsWindow
                 continue;
             }
 
-            var settings = SettingsCatalog.All.Where(s => s.ProfileOverridable && All(Text(s), rest)).ToList();
+            var settings = ShownSettings.Where(s => s.ProfileOverridable && All(Text(s), rest)).ToList();
             if (settings.Count == 0)
             {
                 continue;

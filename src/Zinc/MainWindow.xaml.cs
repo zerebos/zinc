@@ -551,9 +551,18 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Whether a group shows its own strip of tabs (see tab-groups, group-tab-strip).</summary>
-    private bool ShowsStrip(TabGroup<TerminalTab> group) =>
-        !_quick && _config.Global.TabGroups && (group.Tabs.Count > 1 || _config.Global.GroupTabStrip == GroupTabStrip.Always);
+    /// <summary>
+    /// Whether a group shows its own strip of tabs (pane-tabs, pane-headers), in a workspace that's split
+    /// (<paramref name="split"/>) or not.
+    /// </summary>
+    private bool ShowsStrip(TabGroup<TerminalTab> group, bool split) =>
+        !_quick && _config.Global.TabGroups && _config.Global.PaneHeaders switch
+        {
+            PaneHeaders.Always => true,
+            PaneHeaders.Never => false,
+            PaneHeaders.Auto => split || group.Tabs.Count > 1,
+            _ => group.Tabs.Count > 1,
+        };
 
     private static void Dismantle(Panel panel)
     {
@@ -578,7 +587,7 @@ public sealed partial class MainWindow : Window
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
             var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
-            ((GroupView)host.Child).Update(group, ShowsStrip(group), focused, _focusBrush, several, dim, fill);
+            ((GroupView)host.Child).Update(group, ShowsStrip(group, several), focused, _focusBrush, several, dim, fill);
         }
 
         ShowWorkspaceAttention(tab);

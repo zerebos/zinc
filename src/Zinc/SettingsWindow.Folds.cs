@@ -198,6 +198,11 @@ internal sealed partial class SettingsWindow
             return folded;
         }
 
+        if (fold == PaneStyle.Fold)
+        {
+            return Fold($"fold:{fold.Children[0]}", fold.Title!, PaneStyleHeader(), rows);
+        }
+
         var (title, summary) = FoldHeader(fold.Title!, fold.Description);
         var bundle = Fold($"fold:{fold.Children[0]}", fold.Title!, title, rows);
         void Refresh() => SetText(summary, Summary(fold.Description,
