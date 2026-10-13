@@ -15,7 +15,7 @@
 
 .EXAMPLE
   pwsh scripts/install.ps1                  # build + install
-  pwsh scripts/install.ps1 -InstallGitHook  # also reinstall after every commit
+  pwsh scripts/install.ps1 -InstallGitHook  # also reinstall after every commit or merge
   pwsh scripts/install.ps1 -Uninstall
 #>
 param(
@@ -35,7 +35,8 @@ $repo = Split-Path -Parent $PSScriptRoot
 $installRoot = Join-Path $env:LOCALAPPDATA 'Programs\Zinc'
 $versions = Join-Path $installRoot 'versions'
 $shortcut = Join-Path ([Environment]::GetFolderPath('Programs')) 'Zinc.lnk'
-$hook = Join-Path $repo '.git\hooks\post-commit'
+# A merge (git merge, git pull) runs post-merge, not post-commit: both reinstall.
+$hooks = 'post-commit', 'post-merge' | ForEach-Object { Join-Path $repo ".git\hooks\$_" }
 $hookMarker = '# zinc-install-hook'
 
 function Say($msg) { if (-not $Quiet) { Write-Host $msg } }
@@ -60,9 +61,11 @@ $appId = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershe
 }
 
 if ($RemoveGitHook -or $Uninstall) {
-    if ((Test-Path $hook) -and (Get-Content $hook -Raw) -match $hookMarker) {
-        Remove-Item $hook
-        Say 'Removed post-commit hook.'
+    foreach ($hook in $hooks) {
+        if ((Test-Path $hook) -and (Get-Content $hook -Raw) -match $hookMarker) {
+            Remove-Item $hook
+            Say "Removed $(Split-Path -Leaf $hook) hook."
+        }
     }
 }
 
@@ -92,20 +95,23 @@ if ($Uninstall) {
 if ($RemoveGitHook) { return }
 
 if ($InstallGitHook) {
-    if ((Test-Path $hook) -and -not ((Get-Content $hook -Raw) -match $hookMarker)) {
-        throw "$hook already exists and isn't ours; not overwriting it."
+    foreach ($hook in $hooks) {
+        if ((Test-Path $hook) -and -not ((Get-Content $hook -Raw) -match $hookMarker)) {
+            throw "$hook already exists and isn't ours; not overwriting it."
+        }
     }
-    # Runs detached so `git commit` returns immediately; output goes to a log.
-    @"
+    # Runs detached so `git commit` and `git merge` return immediately; output goes to a log.
+    $script = @"
 #!/bin/sh
 $hookMarker
-# Reinstall Zinc in the background after each commit (scripts/install.ps1 -RemoveGitHook to undo).
+# Reinstall Zinc in the background after each commit or merge (scripts/install.ps1 -RemoveGitHook to undo).
 # Only on main: commits on other branches (experiments) never replace the installed copy.
 [ "`$(git rev-parse --abbrev-ref HEAD)" = "main" ] || exit 0
 log="`$(git rev-parse --git-dir)/zinc-install.log"
 nohup pwsh -NoProfile -File scripts/install.ps1 -Quiet > "`$log" 2>&1 &
-"@ -replace "`r", '' | Set-Content -NoNewline -Encoding utf8NoBOM $hook
-    Say "Installed post-commit hook (log: .git/zinc-install.log)."
+"@ -replace "`r", ''
+    foreach ($hook in $hooks) { $script | Set-Content -NoNewline -Encoding utf8NoBOM $hook }
+    Say "Installed post-commit and post-merge hooks (log: .git/zinc-install.log)."
 }
 
 # ---- build ----
