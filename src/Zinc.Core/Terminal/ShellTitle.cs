@@ -2,8 +2,12 @@ using System.Text.RegularExpressions;
 
 namespace Zinc.Terminal;
 
-/// <summary>A pane header's title: what leads, and the quieter text after it (null: none).</summary>
-public sealed record HeaderTitle(string Lead, string? Detail);
+/// <summary>
+/// A pane header's title: what leads, and the quieter text after it (null: none). A part that's a folder
+/// (<paramref name="LeadIsFolder"/>, <paramref name="DetailIsFolder"/>) loses its start when narrow, not its end
+/// (<see cref="ShellTitle.FitFolder"/>).
+/// </summary>
+public sealed record HeaderTitle(string Lead, string? Detail, bool LeadIsFolder = false, bool DetailIsFolder = false);
 
 /// <summary>
 /// What a terminal's tab is called (<c>[terminal] shell-titles</c>, Ghostty's <c>title</c> feature, done from the marks
@@ -73,24 +77,71 @@ public static partial class ShellTitle
         {
             if (programTitleSinceCommand && program.Length > 0)
             {
-                return Make(program, place);
+                return Make(program, place, detailIsFolder: true);
             }
 
             if (UntilCommandLeads(commandStarted, now) == TimeSpan.Zero && FirstLine(command) is { Length: > 0 } text)
             {
-                return Make(text, place);
+                return Make(text, place, detailIsFolder: true);
             }
         }
 
         // At the prompt (or a command that hasn't led yet): the folder, else the program's title, else the profile.
-        return Make(atPrompt != null && place != null ? place : program.Length > 0 ? program : profileName, profileName);
+        return atPrompt != null && place != null
+            ? Make(place, profileName, leadIsFolder: true)
+            : Make(program.Length > 0 ? program : profileName, profileName);
 
         // No quieter text the title already says: a program's title often names the folder itself (as the command
         // center skips it), as written (~/dev/x) or in full (/home/zack/dev/x).
-        HeaderTitle Make(string lead, string? detail) =>
-            new(lead, detail == null || Says(lead, detail) || (detail == place && Says(lead, folder)) ? null : detail);
+        HeaderTitle Make(string lead, string? detail, bool leadIsFolder = false, bool detailIsFolder = false)
+        {
+            var said = detail == null || Says(lead, detail) || (detailIsFolder && Says(lead, folder));
+            return new(lead, said ? null : detail, leadIsFolder, !said && detailIsFolder);
+        }
 
         static bool Says(string lead, string? text) => text is { Length: > 0 } && lead.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A folder shortened from its start, longest first, as far as its last name: "…\dev\zinc", "…\zinc" for
+    /// "~\dev\zinc". The end of a path says where you are, so that's what stays. None for a root ("~", "C:\", "/").
+    /// </summary>
+    public static IEnumerable<string> FolderShortenings(string folder)
+    {
+        var separator = folder.Contains('\\') ? '\\' : '/';
+        var path = folder.TrimEnd(separator);
+        var first = path.Length - path.TrimStart(separator).Length; // a leading / or \\server isn't a folder to drop
+        for (var i = path.IndexOf(separator, first); i > 0; i = path.IndexOf(separator, i + 1))
+        {
+            if (i > 1) // "~" for "…" saves nothing
+            {
+                yield return "…" + path[i..];
+            }
+        }
+    }
+
+    /// <summary>
+    /// A folder as it fits in <paramref name="room"/> (by <paramref name="measure"/>): whole, else the longest of its
+    /// <see cref="FolderShortenings"/> that fits, else the shortest (it's then trimmed at the end like any text).
+    /// </summary>
+    public static string FitFolder(string folder, double room, Func<string, double> measure)
+    {
+        var fitted = folder;
+        if (measure(folder) <= room)
+        {
+            return folder;
+        }
+
+        foreach (var shorter in FolderShortenings(folder))
+        {
+            fitted = shorter;
+            if (measure(shorter) <= room)
+            {
+                break;
+            }
+        }
+
+        return fitted;
     }
 
     /// <summary>A folder as a title: the home folder as ~ (Windows, MSYS's /c/Users/x, a Linux /home/x or /root).</summary>

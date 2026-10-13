@@ -353,6 +353,16 @@ internal sealed partial class GroupView : Grid
         ArrangeHeader(); // the tabs' width may have changed
     }
 
+    /// <summary>Measures header text (12 px, as titles show): what fits is decided before it's shown.</summary>
+    private static readonly TextBlock Measurer = new() { FontSize = 12 };
+
+    private static double TextWidth(string text)
+    {
+        Measurer.Text = text;
+        Measurer.Measure(new Windows.Foundation.Size(double.PositiveInfinity, StripHeight));
+        return Measurer.DesiredSize.Width;
+    }
+
     /// <summary>The shown tab (the title header's, and the one menus and drags from it act on).</summary>
     private MainWindow.TerminalTab? _shown;
 
@@ -521,6 +531,37 @@ internal sealed partial class GroupView : Grid
         {
             _tab.MaxWidth = width;
             _text.MaxWidth = Math.Max(40, width - 70);
+            if (_available != width)
+            {
+                _available = width;
+                ShowText();
+            }
+        }
+
+        private double _available = double.PositiveInfinity;
+        private HeaderTitle? _title;
+
+        /// <summary>
+        /// The title as it fits: a folder loses its start, not its end ("…/BetterDiscord/betterdiscord.app"), dropping
+        /// leading folders only as far as the width needs. The lead first, the quieter text in what's left.
+        /// </summary>
+        private void ShowText()
+        {
+            if (_title is not { } title)
+            {
+                return;
+            }
+
+            var room = _text.MaxWidth;
+            var lead = title.LeadIsFolder ? ShellTitle.FitFolder(title.Lead, room, TextWidth) : title.Lead;
+            _text.Text = lead;
+            if (title.Detail is { } detail)
+            {
+                var left = room - Math.Min(room, TextWidth(lead)) - _detail.Margin.Left;
+                _detail.Text = title.DetailIsFolder ? ShellTitle.FitFolder(detail, left, TextWidth) : detail;
+            }
+
+            _detail.Visibility = title.Detail == null ? Visibility.Collapsed : Visibility.Visible;
         }
 
         /// <summary>What a click does (set by the view), for screen readers selecting it.</summary>
@@ -556,12 +597,15 @@ internal sealed partial class GroupView : Grid
             ShowSlot();
             var words = AttentionWords.For(tab.Attention, tab.FailedExit);
             var name = AttentionWords.Name(title.Detail == null ? title.Lead : $"{title.Lead}, {title.Detail}", words);
+            if (title != _title)
+            {
+                _title = title;
+                ShowText();
+            }
+
             if (name != _name)
             {
                 _name = name;
-                _text.Text = title.Lead;
-                _detail.Text = title.Detail ?? "";
-                _detail.Visibility = title.Detail == null ? Visibility.Collapsed : Visibility.Visible;
                 AutomationProperties.SetName(this, name);
                 var tip = title.Detail == null ? title.Lead : $"{title.Lead}  ·  {title.Detail}";
                 ToolTipService.SetToolTip(this, AttentionWords.ToolTip(tip, words));
@@ -614,9 +658,6 @@ internal sealed partial class GroupView : Grid
 
         /// <summary>A tab shown as its icon and mark (<see cref="TabsStage.Icons"/>).</summary>
         public const double IconWidth = 10 + 14 + 6 + 20 + 4;
-
-        /// <summary>Measures titles (FitTabs wants each tab's full width whatever it shows now).</summary>
-        private static readonly TextBlock Measurer = new() { FontSize = 12 };
 
         private readonly TextBlock _title = new()
         {
@@ -761,9 +802,7 @@ internal sealed partial class GroupView : Grid
             {
                 if (_title.Text != title)
                 {
-                    Measurer.Text = title;
-                    Measurer.Measure(new Windows.Foundation.Size(double.PositiveInfinity, StripHeight));
-                    TitleWidth = Math.Min(LongestTitle, Math.Ceiling(Measurer.DesiredSize.Width));
+                    TitleWidth = Math.Min(LongestTitle, Math.Ceiling(TextWidth(title)));
                 }
 
                 _title.Text = title;

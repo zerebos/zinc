@@ -71,16 +71,17 @@ public class ShellTitleTests
     [Fact]
     public void HeaderLeadsWithTheFolderAtThePromptAndTheCommandWhileItRuns()
     {
-        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell"), Header(true, @"C:\Users\Zack\dev\zinc"));
-        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc"), Header(false, @"C:\Users\Zack\dev\zinc", "npm test"));
+        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell", LeadIsFolder: true), Header(true, @"C:\Users\Zack\dev\zinc"));
+        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true), Header(false, @"C:\Users\Zack\dev\zinc", "npm test"));
     }
 
     [Fact]
     public void HeaderKeepsTheFolderUntilACommandHasRunEightyMilliseconds()
     {
         // git status, ls: never in the header.
-        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell"), Header(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: 0.07));
-        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc"), Header(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: 0.1));
+        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell", LeadIsFolder: true),
+            Header(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: 0.07));
+        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true), Header(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: 0.1));
         Assert.Equal(TimeSpan.FromMilliseconds(30), ShellTitle.UntilCommandLeads(Now.AddMilliseconds(-50), Now));
         Assert.Equal(TimeSpan.Zero, ShellTitle.UntilCommandLeads(Now.AddSeconds(-3), Now));
         Assert.Null(ShellTitle.UntilCommandLeads(null, Now));
@@ -89,7 +90,7 @@ public class ShellTitleTests
     [Fact]
     public void HeaderLetsAProgramsOwnTitleLeadAtOnce()
     {
-        Assert.Equal(new HeaderTitle("vim: notes.md", @"~\dev"),
+        Assert.Equal(new HeaderTitle("vim: notes.md", @"~\dev", DetailIsFolder: true),
             Header(false, @"C:\Users\Zack\dev", "vim notes.md", ranSeconds: 0.01, program: "vim: notes.md", programSinceCommand: true));
         // A title the shell set before the command doesn't count; with program-titles off no program names it.
         Assert.Equal(new HeaderTitle("vim notes.md", null), Header(false, null, "vim notes.md", program: "zack@fedora:~"));
@@ -117,9 +118,35 @@ public class ShellTitleTests
         Assert.Equal(new HeaderTitle(@"vim C:\Users\Zack\dev\zinc\notes.md", null),
             Header(false, @"C:\Users\Zack\dev\zinc", "vim notes.md", program: @"vim C:\Users\Zack\dev\zinc\notes.md", programSinceCommand: true));
         // Only the whole folder counts: its last name alone isn't enough.
-        Assert.Equal(new HeaderTitle("zinc: build", @"~\dev\zinc"),
+        Assert.Equal(new HeaderTitle("zinc: build", @"~\dev\zinc", DetailIsFolder: true),
             Header(false, @"C:\Users\Zack\dev\zinc", "make", program: "zinc: build", programSinceCommand: true));
         // The profile likewise.
         Assert.Equal(new HeaderTitle("Windows PowerShell", null), Header(null, program: "Windows PowerShell"));
+    }
+
+    [Fact]
+    public void FoldersShortenFromTheirStart()
+    {
+        Assert.Equal([@"…\BetterDiscord\betterdiscord.app", @"…\betterdiscord.app"],
+            ShellTitle.FolderShortenings(@"~\dev\BetterDiscord\betterdiscord.app"));
+        Assert.Equal(["…/x"], ShellTitle.FolderShortenings("/home/x"));
+        Assert.Equal([@"…\share\x", @"…\x"], ShellTitle.FolderShortenings(@"\\server\share\x"));
+        Assert.Equal([@"…\x"], ShellTitle.FolderShortenings(@"C:\x\"));
+        foreach (var root in new[] { "~", @"C:\", "/" })
+        {
+            Assert.Empty(ShellTitle.FolderShortenings(root));
+        }
+    }
+
+    [Fact]
+    public void AFolderDropsOnlyWhatDoesntFit()
+    {
+        static double Chars(string text) => text.Length; // a character a pixel
+        const string folder = @"~\dev\BetterDiscord\betterdiscord.app";
+        Assert.Equal(folder, ShellTitle.FitFolder(folder, folder.Length, Chars));
+        Assert.Equal(@"…\BetterDiscord\betterdiscord.app", ShellTitle.FitFolder(folder, 33, Chars));
+        Assert.Equal(@"…\betterdiscord.app", ShellTitle.FitFolder(folder, 32, Chars));
+        Assert.Equal(@"…\betterdiscord.app", ShellTitle.FitFolder(folder, 5, Chars)); // then trimmed at its end
+        Assert.Equal("~", ShellTitle.FitFolder("~", 0, Chars));
     }
 }
