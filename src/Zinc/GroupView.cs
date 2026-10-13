@@ -20,8 +20,7 @@ internal sealed partial class GroupView : Grid
     public const double StripHeight = 28;
     private const double AddWidth = 30;
 
-    private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal };
-    private readonly ScrollViewer _scroll;
+    private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Grid _strip = new() { Height = StripHeight };
     private readonly TitleHeader _title = new() { Visibility = Visibility.Collapsed, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Border _content = new();
@@ -49,8 +48,7 @@ internal sealed partial class GroupView : Grid
         _add = add;
         add.Click += (_, _) => NewTabClicked?.Invoke();
 
-        // Columns: the tabs (or a one-tab title), the + after them, room, the status slot, the buttons. Tabs scroll when
-        // they don't fit; the + stays pinned after them.
+        // Columns: the tabs (or a one-tab title), the + after them (or the count of folded tabs), room, the status slot, the buttons.
         foreach (var width in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto, GridLength.Auto })
         {
             _strip.ColumnDefinitions.Add(new ColumnDefinition { Width = width });
@@ -65,28 +63,17 @@ internal sealed partial class GroupView : Grid
         SetColumn(_status, 3);
         SetColumn(_buttons, 4);
         _buttons.Visibility = Visibility.Collapsed;
-        var scroll = _scroll = new ScrollViewer
-        {
-            Content = _tabs,
-            HorizontalScrollMode = ScrollMode.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
-            VerticalScrollMode = ScrollMode.Disabled,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            HorizontalAlignment = HorizontalAlignment.Left,
-        };
         SetColumn(add, 1);
         add.HorizontalAlignment = HorizontalAlignment.Left;
-        _strip.Children.Add(scroll);
+        _count = CountButton();
+        _strip.Children.Add(_tabs);
         _strip.Children.Add(_title);
         _strip.Children.Add(add);
+        _strip.Children.Add(_count);
         _strip.Children.Add(_status);
         _strip.Children.Add(_buttons);
-        // The tabs (or the title) take what they need, up to the width the + and the buttons leave.
-        _strip.SizeChanged += (_, _) =>
-        {
-            ArrangeHeader();
-            BringShownIntoView(); // a narrower pane (e.g. after a split) can hide it
-        };
+        // The tabs (or the title) take what they need, up to the width the + and the buttons leave. Tabs that don't fit shorten, then fold.
+        _strip.SizeChanged += (_, _) => ArrangeHeader();
         // Buttons shown on hover come with the pointer over the header (decision 40).
         _strip.PointerEntered += (_, _) =>
         {
@@ -202,23 +189,33 @@ internal sealed partial class GroupView : Grid
     /// <summary>Something was dropped on the strip at a position (0 = before the first tab).</summary>
     public event Action<DragEventArgs, int>? StripDrop;
 
-    /// <summary>The drop position under the pointer: how many tabs lie left of it.</summary>
+    /// <summary>
+    /// The drop position under the pointer: how many tabs lie left of it. Folded tabs count where they sit in order, so
+    /// a drop beside the shown tab lands next to it.
+    /// </summary>
     private int IndexAt(DragEventArgs e)
     {
         var x = e.GetPosition(_strip).X;
-        var index = 0;
-        foreach (var child in HeaderItems())
+        var items = HeaderItems();
+        var after = 0; // past the last tab shown left of the pointer
+        for (var i = 0; i < items.Count; i++)
         {
+            var child = items[i];
+            if (child.Visibility != Visibility.Visible)
+            {
+                continue;
+            }
+
             var left = child.TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
             if (x < left + child.ActualWidth / 2)
             {
-                break;
+                return i;
             }
 
-            index++;
+            after = i + 1;
         }
 
-        return index;
+        return items.Any(c => c.Visibility == Visibility.Visible) ? after : items.Count;
     }
 
     /// <summary>The header's tabs, left to right: the title counts as the one tab.</summary>
@@ -227,19 +224,20 @@ internal sealed partial class GroupView : Grid
 
     private void ShowMarker(int index)
     {
-        var items = HeaderItems();
+        // The left edge of the first tab shown from the position on, else the right edge of the last one shown
+        var shown = HeaderItems().Select((item, i) => (item, i)).Where(p => p.item.Visibility == Visibility.Visible).ToList();
         double x;
-        if (items.Count == 0)
+        if (shown.Count == 0)
         {
             x = 0;
         }
-        else if (index < items.Count)
+        else if (shown.FirstOrDefault(p => p.i >= index).item is { } next)
         {
-            x = items[index].TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
+            x = next.TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(0, 0)).X;
         }
         else
         {
-            var last = items[^1];
+            var last = shown[^1].item;
             x = last.TransformToVisual(_strip).TransformPoint(new Windows.Foundation.Point(last.ActualWidth, 0)).X;
         }
 
@@ -267,7 +265,7 @@ internal sealed partial class GroupView : Grid
         _strip.Visibility = showStrip ? Visibility.Visible : Visibility.Collapsed;
         var titled = header == PaneHeaderKind.Title;
         _title.Visibility = titled ? Visibility.Visible : Visibility.Collapsed;
-        _scroll.Visibility = titled ? Visibility.Collapsed : Visibility.Visible;
+        _tabs.Visibility = titled ? Visibility.Collapsed : Visibility.Visible;
 
         // The status slot shows the shown terminal's progress where buttons can show; its tab's dot then doesn't (decision 44).
         var buttons = settings.Buttons != PaneHeaderButtons.Hide;
@@ -321,7 +319,7 @@ internal sealed partial class GroupView : Grid
             _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent, closeHere: true, // its own ×, as a tab's
                 _progress.Active ? TerminalProgress.None : group.Active.Control.Progress);
             _shown = group.Active;
-            _shownScrolled = null; // tabs shown again scroll to it
+            ArrangeHeader();
             return;
         }
 
@@ -349,21 +347,14 @@ internal sealed partial class GroupView : Grid
                 closeOnHover: false); // every tab keeps its ×: hover-only waits for the filled header (session C, decision 39)
         }
 
-        ArrangeHeader(); // the tabs' width may have changed
-
         _shown = group.Active;
-        if (_shownScrolled != group.Active)
-        {
-            _shownScrolled = group.Active;
-            BringShownIntoView();
-        }
+        _order = [.. group.Tabs];
+        ShowCount();
+        ArrangeHeader(); // the tabs' width may have changed
     }
 
     /// <summary>The shown tab (the title header's, and the one menus and drags from it act on).</summary>
     private MainWindow.TerminalTab? _shown;
-
-    /// <summary>The tab the strip last scrolled into view (the title header shows a tab without scrolling).</summary>
-    private MainWindow.TerminalTab? _shownScrolled;
 
     private void WithShown(Action<MainWindow.TerminalTab> action)
     {
@@ -373,20 +364,14 @@ internal sealed partial class GroupView : Grid
         }
     }
 
-    /// <summary>Scrolls the strip so the shown tab is visible (after layout, when sizes are known).</summary>
-    private void BringShownIntoView()
-    {
-        if (_shown != null && _items.TryGetValue(_shown, out var item))
-        {
-            DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => item.StartBringIntoView());
-        }
-    }
-
-    /// <summary>The element showing <paramref name="tab"/> in the header (its tab, or the title), if the header shows it.</summary>
+    /// <summary>
+    /// The element showing <paramref name="tab"/> in the header (its tab, the title, or the count it's folded into), if the
+    /// header shows it.
+    /// </summary>
     public FrameworkElement? AnchorFor(MainWindow.TerminalTab tab) => _header switch
     {
         PaneHeaderKind.Title when tab == _shown => _title,
-        PaneHeaderKind.Tabs when _items.TryGetValue(tab, out var item) => item,
+        PaneHeaderKind.Tabs when _items.TryGetValue(tab, out var item) => item.Visibility == Visibility.Visible ? item : _count,
         _ => null,
     };
 
@@ -618,9 +603,24 @@ internal sealed partial class GroupView : Grid
     /// <summary>One tab in the strip: icon, title, close button.</summary>
     private sealed partial class TabItem : Grid, ISelectableItem
     {
+        // TODO: test and tune these over time
+        private const double LongestTitle = 180;
+
+        /// <summary>The narrowest title worth showing (the shown tab beside the count).</summary>
+        private const double MinTitle = 24;
+
+        /// <summary>A tab's width beside its title: padding, icon, the dot/× slot.</summary>
+        public const double Chrome = 10 + 14 + 8 + 6 + 20 + 4;
+
+        /// <summary>A tab shown as its icon and mark (<see cref="TabsStage.Icons"/>).</summary>
+        public const double IconWidth = 10 + 14 + 6 + 20 + 4;
+
+        /// <summary>Measures titles (FitTabs wants each tab's full width whatever it shows now).</summary>
+        private static readonly TextBlock Measurer = new() { FontSize = 12 };
+
         private readonly TextBlock _title = new()
         {
-            MaxWidth = 180,
+            MaxWidth = LongestTitle,
             FontSize = 12,
             TextTrimming = TextTrimming.CharacterEllipsis,
             VerticalAlignment = VerticalAlignment.Center,
@@ -630,9 +630,10 @@ internal sealed partial class GroupView : Grid
         private readonly MainWindow.TerminalTab _tab;
         private readonly AttentionDot _dot = new() { Corner = false };
         private readonly Button _close;
+        private readonly Grid _icon;
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        private bool _active, _hovered, _closeOnHover;
+        private bool _active, _hovered, _closeOnHover, _iconOnly;
         private Attention _attention;
         private string? _words;
         private TerminalProgress _progress = TerminalProgress.None;
@@ -657,7 +658,7 @@ internal sealed partial class GroupView : Grid
             AutomationProperties.SetName(close, "Close tab");
             close.Click += (_, _) => CloseClicked?.Invoke();
 
-            var icon = new Grid
+            var icon = _icon = new Grid
             {
                 Width = 14,
                 Height = 14,
@@ -703,6 +704,28 @@ internal sealed partial class GroupView : Grid
 
         public event Action? CloseClicked;
 
+        /// <summary>The title's width in full (up to the longest a tab shows).</summary>
+        public double TitleWidth { get; private set; }
+
+        /// <summary>
+        /// Shows the tab as the header's fit says (<see cref="PaneHeader.FitTabs"/>): the shown tab whole (its title capped
+        /// when the others fold), the others shortened, as their icon and mark (the title stays in the tooltip), or folded.
+        /// </summary>
+        public void Fit(TabsFit fit, bool shown)
+        {
+            var folded = fit.Stage == TabsStage.Folded && !shown;
+            Visibility = folded ? Visibility.Collapsed : Visibility.Visible;
+            // An icon tab shows its mark, and its × only under the pointer: the × would be most of the tab.
+            var icon = _iconOnly = fit.Stage == TabsStage.Icons && !shown;
+            var capped = shown ? fit.Stage == TabsStage.Folded : fit.Stage == TabsStage.Short;
+            var cap = capped ? Math.Min(LongestTitle, fit.TitleCap) : LongestTitle;
+            var titled = !icon && cap >= MinTitle; // a sliver of a title says nothing: the shown tab keeps its icon
+            _title.Visibility = titled ? Visibility.Visible : Visibility.Collapsed;
+            _icon.Margin = new Thickness(0, 0, titled ? 8 : 0, 0);
+            _title.MaxWidth = cap;
+            ShowSlot();
+        }
+
         /// <summary>What a click does (set by the list), for screen readers selecting it.</summary>
         public Action? Selecting { get; set; }
 
@@ -721,7 +744,7 @@ internal sealed partial class GroupView : Grid
             _dot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
             // Where the header has buttons, only the shown tab keeps its ×; the others show one under the pointer
             // (decision 39). Elsewhere every tab keeps it, as before.
-            var close = !dot && (!_closeOnHover || _active || _hovered);
+            var close = !dot && (!(_closeOnHover || _iconOnly) || _active || _hovered);
             _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -739,6 +762,13 @@ internal sealed partial class GroupView : Grid
             var words = AttentionWords.For(attention, _tab.FailedExit);
             if (_title.Text != title || words != _words)
             {
+                if (_title.Text != title)
+                {
+                    Measurer.Text = title;
+                    Measurer.Measure(new Windows.Foundation.Size(double.PositiveInfinity, StripHeight));
+                    TitleWidth = Math.Min(LongestTitle, Math.Ceiling(Measurer.DesiredSize.Width));
+                }
+
                 _title.Text = title;
                 _words = words;
                 AutomationProperties.SetName(this, AttentionWords.Name(title, words));

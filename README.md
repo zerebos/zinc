@@ -888,6 +888,9 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   text; once a command has run for a second, the command, then the folder (quick commands never show). A name
   you gave the tab, or a title the running program sets (vim, ssh), comes first instead; the folder or profile isn't
   repeated after a title that already names it.
+  When a pane's tabs don't fit its header, the shown tab stays whole while the others shorten, then show only their
+  icon and dot (the title is in the tooltip), then fold into a count ("4 of 5", with the most urgent dot among them).
+  The count opens a menu of every tab and what each is waiting on, with New tab in this pane.
   It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `pane-header-buttons` (in `[window]`) puts buttons on the right of a pane's header: Split (right), Maximize pane
   (when the workspace is split; Restore panes while maximized) and ⋯. `"always"` (every pane), `"focused"` (the

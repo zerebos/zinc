@@ -131,7 +131,8 @@ internal sealed partial class GroupView
     private void ArrangeHeader()
     {
         var width = _strip.ActualWidth;
-        var add = _add.Visibility == Visibility.Visible ? AddWidth : 0; // its 2 px margin is the room's - 2 below
+        // The + (or the count folded tabs put in its place) and its 2 px margin is the room's - 2 below
+        var add = _settings.PaneTabs ? AddWidth : 0;
         var buttons = _buttons.Visibility == Visibility.Visible;
         var foldable = buttons ? ButtonWidth + 2 + (_splitWorkspace ? ButtonWidth + 2 : 0) : 0;
         var fixedWidth = add + (buttons ? ButtonWidth + 2 : 0); // the + and ⋯
@@ -151,8 +152,8 @@ internal sealed partial class GroupView
         }
         else
         {
-            _tabs.Measure(new Windows.Foundation.Size(double.PositiveInfinity, StripHeight));
-            content = _tabs.DesiredSize.Width;
+            // Split and Maximize fold before the tabs shorten.
+            content = _order.Sum(t => _items.TryGetValue(t, out var item) ? TabItem.Chrome + item.TitleWidth : 0);
         }
 
         var fit = width > 0 ? PaneHeader.Fit(width, content, fixedWidth, foldable, words) : new HeaderFit(false, true);
@@ -161,10 +162,10 @@ internal sealed partial class GroupView
         _maximize.Visibility = !fit.Fold && _splitWorkspace ? Visibility.Visible : Visibility.Collapsed;
         _statusText.Visibility = fit.Words ? Visibility.Visible : Visibility.Collapsed;
 
-        // What's left for the tabs (they scroll past it) or the title (it trims).
+        // What's left for the tabs (they shorten and fold to fit it) or the title (it trims).
         var used = fixedWidth + (fit.Fold ? 0 : foldable) + (fit.Words ? words : 0);
         var room = Math.Max(0, width - used - 2);
-        _scroll.MaxWidth = room;
         _title.SetAvailable(room);
+        ArrangeTabs(width > 0 ? room + add : 0);
     }
 }

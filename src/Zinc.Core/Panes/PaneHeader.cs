@@ -72,6 +72,56 @@ public static class PaneHeader
             : new HeaderFit(true, false);
     }
 
+    /// <summary>The narrowest a shortened tab's title gets before the tabs become icons.</summary>
+    public const double ShortestTitle = 64;
+
+    /// <summary>
+    /// How a pane's tabs fit in <paramref name="room"/> (decision 49). The shown tab stays whole while the others give
+    /// way: they shorten (down to <see cref="ShortestTitle"/>), then become an icon and a mark, then fold all at once
+    /// into a count ("4 of 5") that takes the +'s place. <paramref name="titles"/> are each tab's title width in full,
+    /// <paramref name="chrome"/> a tab's width beside its title, <paramref name="iconTab"/> a tab shown as its icon and
+    /// mark; <paramref name="add"/> and <paramref name="count"/> the + and the count, after the tabs.
+    /// </summary>
+    public static TabsFit FitTabs(double room, IReadOnlyList<double> titles, int shown, double chrome, double iconTab,
+        double add, double count)
+    {
+        var shownWidth = chrome + titles[shown];
+        var others = titles.Where((_, i) => i != shown).ToList();
+        var budget = room - add - shownWidth - others.Count * chrome; // what the others' titles may take
+        if (others.Sum() <= budget)
+        {
+            return new TabsFit(TabsStage.Full, double.PositiveInfinity);
+        }
+
+        if (others.Sum(t => Math.Min(t, ShortestTitle)) <= budget)
+        {
+            return new TabsFit(TabsStage.Short, ShortCap(others, budget));
+        }
+
+        return shownWidth + others.Count * iconTab + add <= room
+            ? new TabsFit(TabsStage.Icons, double.PositiveInfinity)
+            : new TabsFit(TabsStage.Folded, Math.Max(0, room - count - chrome));
+    }
+
+    /// <summary>The widest cap on the titles that keeps their sum within the budget (short titles stay whole).</summary>
+    private static double ShortCap(List<double> titles, double budget)
+    {
+        titles.Sort();
+        double whole = 0;
+        for (var i = 0; i < titles.Count; i++)
+        {
+            var cap = (budget - whole) / (titles.Count - i);
+            if (cap <= titles[i])
+            {
+                return Math.Max(ShortestTitle, Math.Floor(cap));
+            }
+
+            whole += titles[i];
+        }
+
+        return double.PositiveInfinity;
+    }
+
     /// <summary>
     /// The shown terminal's status in words for the status slot: its program's exit while the pane stays ("Exited
     /// (code 1)", or "Exited" after a clean one; decision 48), else its progress (OSC 9;4): "40%", "Working", "Paused",
@@ -94,3 +144,25 @@ public static class PaneHeader
 
 /// <summary>A header's fit: whether Split and Maximize fold into ⋯, and whether the status slot keeps its words.</summary>
 public readonly record struct HeaderFit(bool Fold, bool Words);
+
+/// <summary>How far a pane's tabs give way in a narrow header (<see cref="PaneHeader.FitTabs"/>).</summary>
+public enum TabsStage
+{
+    /// <summary>Every tab whole.</summary>
+    Full,
+
+    /// <summary>The other tabs' titles shortened to the cap.</summary>
+    Short,
+
+    /// <summary>The other tabs as their icon and mark.</summary>
+    Icons,
+
+    /// <summary>Only the shown tab (its title capped), the others folded into a count.</summary>
+    Folded,
+}
+
+/// <summary>
+/// A stage and its title cap: the other tabs' when <see cref="TabsStage.Short"/>, the shown tab's when
+/// <see cref="TabsStage.Folded"/>; infinite otherwise.
+/// </summary>
+public readonly record struct TabsFit(TabsStage Stage, double TitleCap);
