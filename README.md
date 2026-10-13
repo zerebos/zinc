@@ -294,7 +294,9 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `scrollback-lines`: how many lines you can scroll back through, `10000` by default (0 to
   100,000; libghostty prunes a page at a time, so it keeps about that many).
 - `close-on-exit`: `"success"` (default) closes a tab whose program ended cleanly and keeps a
-  failure on screen; `"always"` or `"never"` (any key then closes it).
+  failure on screen; `"always"` or `"never"` (any key then closes it). A failure kept where you
+  weren't looking (a dropped `ssh` session, a crashed program) puts a red dot on its tab and flashes
+  the taskbar button from the background; a pane header with buttons says "Exited (code N)".
 - `bell`: `"attention"` (default) puts a dot on the tab and flashes the taskbar button when you
   aren't looking at it; `"flash"` also flashes the pane; `"none"`. `bell-sound = true` plays
   Windows' default sound too. A burst of bells (a held key the prompt refuses) rings once; the
@@ -387,8 +389,8 @@ get a small ring on their tab and a progress bar on Zinc's taskbar button.
 Windows notifications come from Zinc's tray icon and respect Do Not Disturb.
 
 **Dot colors** (`[notify] finished-color`, `bell-color`, `failed-color`, `"#rrggbb"`): the tab dots for a
-finished command or a program's notification, the bell, and a failed command (default: Zinc's green, amber
-and red, darker in light mode).
+finished command or a program's notification, the bell, and a failed command or a program that exited with an
+error (default: Zinc's green, amber and red, darker in light mode).
 
 **Light or dark** (`[window] appearance`): `"system"` (default: as Windows' app mode is when Zinc starts),
 `"light"` or `"dark"`, for windows, menus and dialogs. The terminal keeps its color scheme (`theme = "light:X,dark:Y"`
@@ -781,7 +783,7 @@ Ctrl+A, unless you bind that sequence too. The palette and menus show sequences 
 | `profile-menu` | Open the ▾ menu of profiles. |
 | `command-palette` | Open the command palette. |
 | `tab-switcher` | Open the palette searching this window's tabs (its `@`). |
-| `next-attention` | Go to the next tab with a dot: failed commands first, then programs' notifications, then finished commands. |
+| `next-attention` | Go to the next tab with a dot: programs that exited with an error first, then failed commands, the bell, programs' notifications and finished commands. |
 | `jump-to-prompt previous`, `jump-to-prompt next` | Scroll the previous or next prompt to the top (needs [shell integration](#shell-integration); without it, a line). |
 | `select-output`, `copy-output` | Select or copy the output of the command at the top of the pane, or the last one ([shell integration](#shell-integration)). |
 | `toggle-sidebar` | With workspaces on the left: cycle the sidebar through full, rail and auto-hide. `toggle-sidebar rail` (or `auto-hide`) switches between that and full. |
@@ -873,14 +875,30 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
 - `pane-tabs = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces (and "New tab" is called "New workspace" in menus, the palette and Settings).
 - In a split workspace the focused pane is marked by an accent line along its top (on the shown
-  tab when the pane has a strip), and the others are dimmed. `unfocused-pane-opacity` (in `[window]`,
+  tab when the pane shows its tabs, on its title when it shows one tab's title), and the others are dimmed.
+  A pane's shown tab keeps its line whenever the pane has focus, split or not. `unfocused-pane-opacity` (in `[window]`,
   0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-pane-fill`
   what they fade toward (default: each pane's background).
   `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes.
-- `pane-headers` (in `[window]`) says which panes show their row of tabs: `"with-tabs"` (default: panes with two
-  or more tabs), `"auto"` (every pane once the workspace is split, and any pane with two or more tabs),
-  `"always"` (every pane, even with one tab) or `"never"`. It was called `pane-tab-strip`, whose `"auto"` is
-  `"with-tabs"`; when a file has both, `pane-headers` wins.
+- `pane-headers` (in `[window]`) says which panes show a header: a row of their tabs, or with one tab its title
+  (icon, title, dot) and the + for a new tab. `"with-tabs"` (default: panes with two or more tabs), `"auto"`
+  (every pane once the workspace is split, and any pane with two or more tabs), `"always"` (every pane) or
+  `"never"`. With `pane-tabs = false`, `"auto"` and `"always"` still show each pane's title (without the +).
+  The title says where the shell is and what runs there: at the prompt the folder, then the profile in quieter
+  text; once a command has run for a second, the command, then the folder (quick commands never show). A name
+  you gave the tab, or a title the running program sets (vim, ssh), comes first instead; the folder or profile isn't
+  repeated after a title that already names it. A long folder that doesn't fit loses its start, not its end
+  (`…/ParentFolder/cwd`), in the title and in a pane's tabs.
+  When a pane's tabs don't fit its header, the others shorten first (then the shown tab), then show only their
+  icon and dot (the title is in the tooltip), then fold into a count ("4 of 5", with the most urgent dot among them).
+  The count opens a menu of every tab and what each is waiting on, with New tab in this pane.
+  It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
+- `pane-header-buttons` (in `[window]`) puts buttons on the right of a pane's header: Split (right), Maximize pane
+  (when the workspace is split; Restore panes while maximized) and ⋯. `"always"` (every pane), `"focused"` (the
+  focused pane's, and others' while the pointer is over their header), `"hover"` (only under the pointer) or
+  `"hide"` (default). ⋯ holds Split right and down, Maximize, New tab in this pane, Rename tab, moving the tab,
+  Close tab, Close other tabs and "Close pane (N tabs)"; in a narrow pane Split and Maximize fold into it. With
+  buttons, a program's progress shows beside them (its percent, Working, Paused or Error).
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
   close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows

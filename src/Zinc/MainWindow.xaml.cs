@@ -45,6 +45,9 @@ public sealed partial class MainWindow : Window
         /// <summary>What its tab says: the given title, else the program's, else the profile's name.</summary>
         public string Title => CustomTitle ?? (string.IsNullOrWhiteSpace(Control.Title) ? Profile.Name : Control.Title);
 
+        /// <summary><see cref="Title"/> is the shell's folder.</summary>
+        public bool TitleIsFolder => CustomTitle == null && Control.TitleIsFolder;
+
         /// <summary>A console Windows handed over (default terminal): not saved with the session.</summary>
         public bool HandedOver { get; set; }
 
@@ -54,7 +57,10 @@ public sealed partial class MainWindow : Window
         /// <summary>A long command finished (or failed) here out of view; cleared once seen.</summary>
         public Attention Attention { get; set; }
 
-        /// <summary>The exit code of the command that failed here (with <see cref="Attention.Failed"/>), for its words.</summary>
+        /// <summary>
+        /// The exit code of the command that failed here (with <see cref="Attention.Failed"/>), or of its program that
+        /// exited (<see cref="Attention.Exited"/>, as a uint's bits), for its words.
+        /// </summary>
         public int? FailedExit { get; set; }
 
         /// <summary>
@@ -359,6 +365,7 @@ public sealed partial class MainWindow : Window
             UpdateTitle(tab, fromShell: true);
             UpdateFocusBorders(tab); // group strips show titles too
         };
+        Action header = () => UpdateFocusBorders(tab); // a one-tab pane's header title
         Action close = () => ClosePane(tab, pane);
         Action directory = () =>
         {
@@ -368,6 +375,7 @@ public sealed partial class MainWindow : Window
         Action<ShellCommand> finished = command => OnCommandFinished(tab, pane, command);
         Action<string, string> notified = (title, body) => OnProgramNotified(tab, pane, title, body);
         Action bell = () => OnBell(tab, pane);
+        Action<uint> exited = code => OnExited(tab, pane, code);
         Action progress = () => OnProgress(tab);
         Action<IReadOnlyList<string>> shaders = problems => ShowShaderProblems(control, problems);
         RoutedEventHandler focus = (_, _) =>
@@ -379,11 +387,13 @@ public sealed partial class MainWindow : Window
 
         control.ActionHandler = invocation => HandleAction(invocation, tab, pane);
         control.TitleChanged += title;
+        control.HeaderTitleChanged += header;
         control.DirectoryChanged += directory;
         control.CommandsChanged += directory; // and the running command
         control.CommandFinished += finished;
         control.Notified += notified;
         control.BellRang += bell;
+        control.ExitedAndKept += exited;
         control.ProgressChanged += progress;
         control.ShaderProblems += shaders;
         control.CloseRequested += close;
@@ -392,11 +402,13 @@ public sealed partial class MainWindow : Window
         {
             control.ActionHandler = null;
             control.TitleChanged -= title;
+            control.HeaderTitleChanged -= header;
             control.DirectoryChanged -= directory;
             control.CommandsChanged -= directory;
             control.CommandFinished -= finished;
             control.Notified -= notified;
             control.BellRang -= bell;
+            control.ExitedAndKept -= exited;
             control.ProgressChanged -= progress;
             control.ShaderProblems -= shaders;
             ForgetShaderProblems(control);
@@ -521,6 +533,12 @@ public sealed partial class MainWindow : Window
         {
             var view = new GroupView();
             view.SetAddToolTip(ShortcutTip("New tab in this pane", new ActionInvocation(TerminalAction.NewTab)));
+            view.SetButtonToolTips(ShortcutTip("Split right", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)),
+                ShortcutTip("Maximize pane", new ActionInvocation(TerminalAction.MaximizePane)),
+                ShortcutTip("Restore panes", new ActionInvocation(TerminalAction.MaximizePane)));
+            // The header's buttons act on their own pane, focused or not, as its keys would there.
+            view.HeaderAction += invocation => WithTabOf(group, t => HandleAction(invocation, t, group.Active));
+            view.MoreRequested += anchor => WithTabOf(group, t => ShowPaneMenu(t, group, anchor));
             // Groups can move between workspaces, so look the workspace up when it's needed.
             view.TabClicked += pane => WithTabOf(group, t => ShowGroupTab(t, pane));
             view.TabCloseClicked += pane => WithTabOf(group, t => AskClosePane(t, pane));
@@ -552,17 +570,11 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Whether a group shows its own strip of tabs (pane-tabs, pane-headers), in a workspace that's split
-    /// (<paramref name="split"/>) or not.
+    /// A group's header (pane-headers, pane-tabs), in a workspace that's split (<paramref name="split"/>, a maximized
+    /// pane included: decision 31) or not. The quick terminal has none.
     /// </summary>
-    private bool ShowsStrip(TabGroup<TerminalTab> group, bool split) =>
-        !_quick && _config.Global.TabGroups && _config.Global.PaneHeaders switch
-        {
-            PaneHeaders.Always => true,
-            PaneHeaders.Never => false,
-            PaneHeaders.Auto => split || group.Tabs.Count > 1,
-            _ => group.Tabs.Count > 1,
-        };
+    private PaneHeaderKind HeaderOf(TabGroup<TerminalTab> group, bool split) => _quick ? PaneHeaderKind.None
+        : PaneHeader.For(_config.Global.PaneHeaders, _config.Global.TabGroups, split, group.Tabs.Count);
 
     private static void Dismantle(Panel panel)
     {
@@ -574,21 +586,24 @@ public sealed partial class MainWindow : Window
         panel.Children.Clear();
     }
 
-    /// <summary>Brings each group's pane up to date: focus marks, tab strip, shown terminal.</summary>
+    /// <summary>Brings each group's pane up to date: focus marks, header, shown terminal.</summary>
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
         ClearSeenAttention(tab);
-        // Focus is only marked once a workspace is split (and no pane is maximized): an accent line along the focused
-        // pane's top (its shown tab's, when it has a strip), and optionally dimmed others.
+        // A shown tab carries the accent line whenever its pane has focus; otherwise focus is only marked once a
+        // workspace is split (and no pane is maximized): the line on the focused pane's title header or along its
+        // top, and optionally dimmed others (PaneHeader.AccentLine).
         var split = tab.Workspace.Layout.Count > 1;
         var several = split && tab.Workspace.Maximized == null;
         var dim = 1 - _config.Global.UnfocusedSplitOpacity;
+        var settings = new HeaderSettings(_config.Global.PaneFocus, _config.Global.PaneHeaderButtons, _config.Global.TabGroups);
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
             var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
-            ((GroupView)host.Child).Update(group, ShowsStrip(group, split), focused, _focusBrush, several, dim, fill);
+            ((GroupView)host.Child).Update(group, HeaderOf(group, split), settings, focused, _focusBrush, split, several,
+                tab.Workspace.Maximized == group, dim, fill);
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
 
@@ -804,11 +819,64 @@ public sealed partial class MainWindow : Window
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Item("Rename tab…", "", null, () => ShowRenameTab(tab, pane, anchor)));
+        AddMoveTabItems(menu, tab, pane, alone);
+        menu.ShowAt(anchor);
+    }
+
+    private void AddMoveTabItems(MenuFlyout menu, WorkspaceTab tab, TerminalTab pane, bool alone)
+    {
         var toWorkspace = Item("Move tab to new workspace", null, null, () => MoveTabToNewWorkspace(tab, pane));
         toWorkspace.IsEnabled = !alone;
         menu.Items.Add(toWorkspace);
         menu.Items.Add(Item("Move tab to new window", "", null, () => MoveTabToNewWindow(tab, pane)));
-        menu.ShowAt(anchor);
+    }
+
+    /// <summary>
+    /// A pane header's ⋯ menu: its buttons' actions (which fold into it when the header is narrow), then its shown tab's
+    /// menu, then closing the pane with all its tabs (decision 4). Everything else stays in the right-click menu and the
+    /// palette.
+    /// </summary>
+    private void ShowPaneMenu(WorkspaceTab tab, TabGroup<TerminalTab> group, FrameworkElement anchor)
+    {
+        var pane = group.Active;
+        var menu = new MenuFlyout();
+        void Run(ActionInvocation invocation) => HandleAction(invocation, tab, pane);
+        var right = new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right);
+        var down = new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down);
+        menu.Items.Add(Item("Split right", "", Shortcut(right), () => Run(right)));
+        menu.Items.Add(Item("Split down", "", Shortcut(down), () => Run(down)));
+        if (tab.Workspace.Layout.Count > 1)
+        {
+            var maximize = new ActionInvocation(TerminalAction.MaximizePane);
+            var maximized = tab.Workspace.Maximized == group;
+            menu.Items.Add(Item(maximized ? "Restore panes" : "Maximize pane", maximized ? "" : "", Shortcut(maximize),
+                () => Run(maximize)));
+        }
+
+        menu.Items.Add(new MenuFlyoutSeparator());
+        if (_config.Global.TabGroups)
+        {
+            menu.Items.Add(Item("New tab in this pane", "", Shortcut(TerminalAction.NewTab),
+                () => NewTabInGroup(tab, group, pane.Profile)));
+        }
+
+        menu.Items.Add(Item("Rename tab…", "", null, () => ShowRenameTab(tab, pane, anchor)));
+        AddMoveTabItems(menu, tab, pane, tab.Workspace.Tabs.Count() == 1);
+        menu.Items.Add(new MenuFlyoutSeparator());
+        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.ClosePane), () => AskClosePane(tab, pane)));
+        if (group.Tabs.Count > 1)
+        {
+            menu.Items.Add(Item("Close other tabs", null, null, () => AskClosePanes(tab, group.Tabs.Where(t => t != pane).ToList())));
+            menu.Items.Add(Item($"Close pane ({group.Tabs.Count} tabs)", null, Shortcut(TerminalAction.CloseGroup),
+                () => AskClosePanes(tab, [.. group.Tabs], "pane")));
+        }
+
+        // Below the button, right edges aligned, like other app menus (the default opened above when there was room).
+        menu.ShowAt(anchor, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        {
+            Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
+        });
     }
 
     /// <summary>Takes one terminal tab out of its workspace, running, and gives it a workspace of its own.</summary>

@@ -77,6 +77,21 @@ public sealed partial class TerminalControl : UserControl
     public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt,
         CurrentFolder, RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
 
+    /// <summary><see cref="Title"/> is the shell's folder (a tab label then shortens from its start).</summary>
+    public bool TitleIsFolder => ShellTitle.ChoosesFolder(_config.ShellTitles, _session?.AtPrompt, CurrentFolder);
+
+    /// <summary>A one-tab pane header's title (<see cref="ShellTitle.Header"/>): what leads, and the quieter text after it.</summary>
+    public HeaderTitle HeaderTitle(string profileName) => ShellTitle.Header(_config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
+        RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand, UserHome, profileName);
+
+    /// <summary><see cref="HeaderTitle"/> changed (an input, or a running command reaching the time it leads).</summary>
+    public event Action? HeaderTitleChanged;
+
+    private HeaderTitle? _shownHeaderTitle;
+
+    // Held in a field: a timer only a local references is collected and stops firing.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _headerTimer;
+
     private static readonly string UserHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     private string _programTitle = "";
@@ -105,6 +120,36 @@ public sealed partial class TerminalControl : UserControl
             _shownTitle = title;
             TitleChanged?.Invoke(title);
         }
+
+        NoteHeaderTitle(running);
+    }
+
+    /// <summary>
+    /// Tells the app when <see cref="HeaderTitle"/> changed, and checks again once a running command has run long enough
+    /// to lead it (compared without the profile's name, which only a config reload changes).
+    /// </summary>
+    private void NoteHeaderTitle(DateTime? running)
+    {
+        _headerTimer?.Stop();
+        if (ShellTitle.UntilCommandLeads(running, DateTime.UtcNow) is { } left && left > TimeSpan.Zero)
+        {
+            if (_headerTimer == null)
+            {
+                _headerTimer = DispatcherQueue.CreateTimer();
+                _headerTimer.IsRepeating = false;
+                _headerTimer.OnTick(_ => NoteTitle());
+            }
+
+            _headerTimer.Interval = left + TimeSpan.FromMilliseconds(20); // past the mark, not just short of it
+            _headerTimer.Start();
+        }
+
+        var header = HeaderTitle("");
+        if (header != _shownHeaderTitle)
+        {
+            _shownHeaderTitle = header;
+            HeaderTitleChanged?.Invoke();
+        }
     }
 
     /// <summary>The working directory the shell last reported, as sent (see <see cref="TerminalSession.ReportedDirectory"/>).</summary>
@@ -119,6 +164,12 @@ public sealed partial class TerminalControl : UserControl
 
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;
+
+    /// <summary>The program ended and the pane stays (close-on-exit kept it), with its exit code; on the UI thread.</summary>
+    public event Action<uint>? ExitedAndKept;
+
+    /// <summary>The ended program's exit code while the pane stays; null while it runs (or if it never started).</summary>
+    public uint? ExitCode { get; private set; }
 
     public TerminalControl(Config config, string commandLine, string? workingDirectory)
         : this(config, Keybindings.Default, commandLine, workingDirectory)
@@ -654,6 +705,8 @@ public sealed partial class TerminalControl : UserControl
 
         // Like Windows Terminal: keep a failed session on screen so its output can be read.
         _exited = true;
+        ExitCode = code;
+        ExitedAndKept?.Invoke(code);
         _session.WriteToScreen(code == 0
             ? "\r\n\x1b[0;2m[Process exited. Press any key to close.]\x1b[0m"
             : $"\r\n\x1b[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\x1b[0m");

@@ -3,6 +3,13 @@ using System.Text.RegularExpressions;
 namespace Zinc.Terminal;
 
 /// <summary>
+/// A pane header's title: what leads, and the quieter text after it (null: none). A part that's a folder
+/// (<paramref name="LeadIsFolder"/>, <paramref name="DetailIsFolder"/>) loses its start when narrow, not its end
+/// (<see cref="ShellTitle.FitFolder"/>).
+/// </summary>
+public sealed record HeaderTitle(string Lead, string? Detail, bool LeadIsFolder = false, bool DetailIsFolder = false);
+
+/// <summary>
 /// What a terminal's tab is called (<c>[terminal] shell-titles</c>, Ghostty's <c>title</c> feature, done from the marks
 /// instead of in each shell's script, so every shell that marks its prompt gets it): the folder while the shell waits at
 /// its prompt, the command while one runs. A title the running program sets itself (vim, htop) wins until it ends.
@@ -36,6 +43,109 @@ public static partial class ShellTitle
         }
 
         return folder != null ? Folder(folder, home) : program;
+    }
+
+    /// <summary>Whether <see cref="Choose"/> names the tab by its folder (which then shortens from its start, as a header's).</summary>
+    public static bool ChoosesFolder(bool shellTitles, bool? atPrompt, string? folder) =>
+        shellTitles && atPrompt == true && folder != null;
+
+    /// <summary>How long a command runs before it leads a pane header's title: quick ones (ls, git status) never flash there.</summary>
+    public static readonly TimeSpan CommandLeadsAfter = TimeSpan.FromMilliseconds(80); // TODO: de-dup this logic with the command center? reconsider this threshold
+
+    /// <summary>How long until a command started at <paramref name="started"/> leads a header (zero: it does); null if none runs.</summary>
+    public static TimeSpan? UntilCommandLeads(DateTime? started, DateTime now)
+    {
+        if (started is not { } at)
+        {
+            return null;
+        }
+
+        var left = CommandLeadsAfter - (now - at);
+        return left > TimeSpan.Zero ? left : TimeSpan.Zero;
+    }
+
+    /// <summary>
+    /// A one-tab pane header's title (decisions 19, 38): what leads, and quieter text after it. At the prompt the folder
+    /// leads and the profile follows; once a command has run <see cref="CommandLeadsAfter"/>, the command leads and the
+    /// folder follows; a title the running program set (vim) leads at once. Without the marks: the program's title (or
+    /// the profile's name) and the profile. <c>shell-titles</c> is about tab labels and isn't read here.
+    /// </summary>
+    /// <param name="commandStarted">When the running command started, if one runs.</param>
+    /// <param name="profileName">The tab's profile ("PowerShell").</param>
+    public static HeaderTitle Header(bool programTitles, bool? atPrompt, string? folder, string? command, DateTime? commandStarted,
+        DateTime now, string programTitle, bool programTitleSinceCommand, string? home, string profileName)
+    {
+        var program = programTitles ? programTitle : "";
+        var place = folder != null ? Folder(folder, home) : null;
+        if (atPrompt == false)
+        {
+            if (programTitleSinceCommand && program.Length > 0)
+            {
+                return Make(program, place, detailIsFolder: true);
+            }
+
+            if (UntilCommandLeads(commandStarted, now) == TimeSpan.Zero && FirstLine(command) is { Length: > 0 } text)
+            {
+                return Make(text, place, detailIsFolder: true);
+            }
+        }
+
+        // At the prompt (or a command that hasn't led yet): the folder, else the program's title, else the profile.
+        return atPrompt != null && place != null
+            ? Make(place, profileName, leadIsFolder: true)
+            : Make(program.Length > 0 ? program : profileName, profileName);
+
+        // No quieter text the title already says: a program's title often names the folder itself (as the command
+        // center skips it), as written (~/dev/x) or in full (/home/zack/dev/x).
+        HeaderTitle Make(string lead, string? detail, bool leadIsFolder = false, bool detailIsFolder = false)
+        {
+            var said = detail == null || Says(lead, detail) || (detailIsFolder && Says(lead, folder));
+            return new(lead, said ? null : detail, leadIsFolder, !said && detailIsFolder);
+        }
+
+        static bool Says(string lead, string? text) => text is { Length: > 0 } && lead.Contains(text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A folder shortened from its start, longest first, as far as its last name: "…\dev\zinc", "…\zinc" for
+    /// "~\dev\zinc". The end of a path says where you are, so that's what stays. None for a root ("~", "C:\", "/").
+    /// </summary>
+    public static IEnumerable<string> FolderShortenings(string folder)
+    {
+        var separator = folder.Contains('\\') ? '\\' : '/';
+        var path = folder.TrimEnd(separator);
+        var first = path.Length - path.TrimStart(separator).Length; // a leading / or \\server isn't a folder to drop
+        for (var i = path.IndexOf(separator, first); i > 0; i = path.IndexOf(separator, i + 1))
+        {
+            if (i > 1) // "~" for "…" saves nothing
+            {
+                yield return "…" + path[i..];
+            }
+        }
+    }
+
+    /// <summary>
+    /// A folder as it fits in <paramref name="room"/> (by <paramref name="measure"/>): whole, else the longest of its
+    /// <see cref="FolderShortenings"/> that fits, else the shortest (it's then trimmed at the end like any text).
+    /// </summary>
+    public static string FitFolder(string folder, double room, Func<string, double> measure)
+    {
+        var fitted = folder;
+        if (measure(folder) <= room)
+        {
+            return folder;
+        }
+
+        foreach (var shorter in FolderShortenings(folder))
+        {
+            fitted = shorter;
+            if (measure(shorter) <= room)
+            {
+                break;
+            }
+        }
+
+        return fitted;
     }
 
     /// <summary>A folder as a title: the home folder as ~ (Windows, MSYS's /c/Users/x, a Linux /home/x or /root).</summary>

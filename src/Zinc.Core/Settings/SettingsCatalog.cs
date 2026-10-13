@@ -288,7 +288,7 @@ public static class SettingsCatalog
                 ],
             },
         new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
-        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row of tabs above a pane.", SettingKind.Choice, "with-tabs")
+        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row above a pane. Its tabs, or its title when it has one tab.", SettingKind.Choice, "with-tabs")
             {
                 Choices =
                 [
@@ -298,15 +298,15 @@ public static class SettingsCatalog
                     new("Never", "never"),
                 ],
             },
-        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more, on the right of a pane's header.",
+        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more on the right of a pane's header, with a program's progress beside them.",
             SettingKind.Choice, "hide")
             {
-                Unfinished = true,
                 Choices =
                 [
-                    new("Show", "show", "On the focused pane, and on the others while the pointer is over them."),
+                    new("Always", "always", "On every pane."),
+                    new("Focused pane", "focused", "On the focused pane, and on the others while the pointer is over their header."),
                     new("On hover", "hover",
-                        "On a pane while the pointer is over it. Touch and pen have no hover: the command palette and a pane's right-click menu have every action."),
+                        "On a pane while the pointer is over its header. Touch and pen have no hover. The command palette and a pane's right-click menu have every action."),
                     new("Hide", "hide"),
                 ],
             },
@@ -517,7 +517,7 @@ public static class SettingsCatalog
             { NullLabel = "Use Zinc's green", Placeholder = "Zinc's green" },
         new("notifications", "Dot colors", "notify.bell-color", "Bell", "A program rang the bell.", SettingKind.Color, null)
             { NullLabel = "Use Zinc's amber", Placeholder = "Zinc's amber" },
-        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed.", SettingKind.Color, null)
+        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed, or a program exited with an error.", SettingKind.Color, null)
             { NullLabel = "Use Zinc's red", Placeholder = "Zinc's red" },
 
         // ---- Quick terminal

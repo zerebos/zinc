@@ -229,7 +229,7 @@ public class SettingsWriterTests
         writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Cards)[k])));
         var file = ConfigFile.Parse(File.ReadAllText(path), "config.toml", "", _ => []);
         Assert.Equal(PaneStyleKind.Cards, PaneStyle.Of(file.ValueOf));
-        Assert.Equal((PaneHeaders.Always, PaneHeaderButtons.Show, 6, true, PaneFocus.Ring),
+        Assert.Equal((PaneHeaders.Always, PaneHeaderButtons.Focused, 6, true, PaneFocus.Ring),
             (file.Global.PaneHeaders, file.Global.PaneHeaderButtons, file.Global.PaneGap, file.Global.PaneGapEdges, file.Global.PaneFocus));
         Assert.DoesNotContain("pane-tab-strip", File.ReadAllText(path));
         Assert.Equal(4, writer.ChangeCount()); // pane-tab-strip = "always" already read as pane-headers = "always"

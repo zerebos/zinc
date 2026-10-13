@@ -25,6 +25,9 @@ internal enum Attention
 
     /// <summary>A long command failed out of view.</summary>
     Failed,
+
+    /// <summary>The tab's own program exited with an error out of view, and the tab stays (a dropped ssh session; decision 46).</summary>
+    Exited,
 }
 
 /// <summary>
@@ -37,6 +40,7 @@ internal static class AttentionWords
     {
         Attention.Finished => "finished",
         Attention.Failed => exitCode is { } code ? $"failed (exit {code})" : "failed",
+        Attention.Exited => exitCode is { } code ? $"exited (code {ExitCodes.Format(unchecked((uint)code))})" : "exited",
         Attention.Bell => "needs you",
         Attention.Notified => "has a notification",
         _ => null,
@@ -132,6 +136,9 @@ internal sealed partial class AttentionDot : Grid
         Corner = true;
     }
 
+    /// <summary>Never pulses: a status shown where you're looking (a header's status slot), not news.</summary>
+    public bool Steady { get; init; }
+
     /// <summary>On an icon's corner (true), or on its own after a title.</summary>
     public bool Corner
     {
@@ -176,7 +183,7 @@ internal sealed partial class AttentionDot : Grid
             var dark = Brand.IsDark(this);
             var brush = new SolidColorBrush(attention switch
             {
-                Attention.Failed => _failed ?? Brand.ErrorFor(dark),
+                Attention.Failed or Attention.Exited => _failed ?? Brand.ErrorFor(dark),
                 Attention.Bell => _bell ?? Brand.CautionFor(dark),
                 _ => _finished ?? Brand.Attention(dark),
             });
@@ -191,7 +198,7 @@ internal sealed partial class AttentionDot : Grid
         {
             StopPulse();
         }
-        else if (news && !TestHooks.Still)
+        else if (news && !TestHooks.Still && !Steady)
         {
             Pulse();
         }
@@ -233,7 +240,7 @@ internal sealed partial class AttentionDot : Grid
 
     public void PulseIfShown()
     {
-        if (_shown != Attention.None && !TestHooks.Still)
+        if (_shown != Attention.None && !TestHooks.Still && !Steady)
         {
             Pulse();
         }

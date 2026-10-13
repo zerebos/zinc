@@ -94,6 +94,27 @@ public sealed partial class MainWindow
         }
     }
 
+    /// <summary>
+    /// A tab's own program ended and its pane stays (decisions 46-48): after an error, a red mark where you weren't
+    /// looking (it outranks every other) and a taskbar flash from the background, as the bell. The pane's status slot
+    /// says it either way.
+    /// </summary>
+    private void OnExited(WorkspaceTab tab, TerminalTab pane, uint code)
+    {
+        if (code != 0 && !IsLookingAt(tab, pane))
+        {
+            pane.Attention = Attention.Exited;
+            pane.FailedExit = unchecked((int)code);
+            Log.Write($"attention: '{pane.Title}' exited ({ExitCodes.Format(code)})");
+            if (!_active)
+            {
+                FlashTaskbarButton();
+            }
+        }
+
+        UpdateFocusBorders(tab);
+    }
+
     /// <summary>A program asked for a notification (OSC 9 / OSC 777).</summary>
     private void OnProgramNotified(WorkspaceTab tab, TerminalTab pane, string title, string body)
     {
