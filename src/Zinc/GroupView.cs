@@ -633,7 +633,7 @@ internal sealed partial class GroupView : Grid
         private readonly Grid _icon;
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        private bool _active, _hovered, _closeOnHover, _iconOnly;
+        private bool _active, _hovered, _closeOnHover;
         private Attention _attention;
         private string? _words;
         private TerminalProgress _progress = TerminalProgress.None;
@@ -708,22 +708,19 @@ internal sealed partial class GroupView : Grid
         public double TitleWidth { get; private set; }
 
         /// <summary>
-        /// Shows the tab as the header's fit says (<see cref="PaneHeader.FitTabs"/>): the shown tab whole (its title capped
-        /// when the others fold), the others shortened, as their icon and mark (the title stays in the tooltip), or folded.
+        /// Shows the tab as the header's fit says (<see cref="PaneHeader.FitTabs"/>): its title capped (the shown tab's
+        /// last), as its icon and mark (the title stays in the tooltip; the × stays, as on every tab), or folded.
         /// </summary>
         public void Fit(TabsFit fit, bool shown)
         {
             var folded = fit.Stage == TabsStage.Folded && !shown;
             Visibility = folded ? Visibility.Collapsed : Visibility.Visible;
-            // An icon tab shows its mark, and its × only under the pointer: the × would be most of the tab.
-            var icon = _iconOnly = fit.Stage == TabsStage.Icons && !shown;
-            var capped = shown ? fit.Stage == TabsStage.Folded : fit.Stage == TabsStage.Short;
-            var cap = capped ? Math.Min(LongestTitle, fit.TitleCap) : LongestTitle;
+            var icon = fit.Stage == TabsStage.Icons && !shown;
+            var cap = Math.Min(LongestTitle, shown ? fit.ShownCap : fit.OthersCap);
             var titled = !icon && cap >= MinTitle; // a sliver of a title says nothing: the shown tab keeps its icon
             _title.Visibility = titled ? Visibility.Visible : Visibility.Collapsed;
             _icon.Margin = new Thickness(0, 0, titled ? 8 : 0, 0);
             _title.MaxWidth = cap;
-            ShowSlot();
         }
 
         /// <summary>What a click does (set by the list), for screen readers selecting it.</summary>
@@ -742,9 +739,9 @@ internal sealed partial class GroupView : Grid
             _dot.ShowProgress(_progress);
             var dot = _dot.HasContent && !_hovered;
             _dot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
-            // Where the header has buttons, only the shown tab keeps its ×; the others show one under the pointer
-            // (decision 39). Elsewhere every tab keeps it, as before.
-            var close = !dot && (!(_closeOnHover || _iconOnly) || _active || _hovered);
+            // Where the header has buttons, only the shown tab keeps its ×; the others show one under the pointer.
+            // Elsewhere every tab keeps it, as before.
+            var close = !dot && (!_closeOnHover || _active || _hovered);
             _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
         }
 

@@ -76,31 +76,42 @@ public static class PaneHeader
     public const double ShortestTitle = 64;
 
     /// <summary>
-    /// How a pane's tabs fit in <paramref name="room"/> (decision 49). The shown tab stays whole while the others give
-    /// way: they shorten (down to <see cref="ShortestTitle"/>), then become an icon and a mark, then fold all at once
-    /// into a count ("4 of 5") that takes the +'s place. <paramref name="titles"/> are each tab's title width in full,
-    /// <paramref name="chrome"/> a tab's width beside its title, <paramref name="iconTab"/> a tab shown as its icon and
-    /// mark; <paramref name="add"/> and <paramref name="count"/> the + and the count, after the tabs.
+    /// How a pane's tabs fit in <paramref name="room"/> (decisions 49, 50). The others give way first: they shorten
+    /// (down to <see cref="ShortestTitle"/>, then the shown tab does too), then become an icon and a mark, then fold all
+    /// at once into a count ("4 of 5") that takes the +'s place. Which of those stages applies depends only on the room
+    /// and the number of tabs, never on the titles: a title that changes (a new tab's profile name giving way to its
+    /// folder, a command) only lengthens or shortens tabs, and never flips the row between icons and the count.
+    /// <paramref name="titles"/> are each tab's title width in full, <paramref name="chrome"/> a tab's width beside its
+    /// title, <paramref name="iconTab"/> a tab shown as its icon and mark; <paramref name="add"/> and
+    /// <paramref name="count"/> the + and the count, after the tabs.
     /// </summary>
     public static TabsFit FitTabs(double room, IReadOnlyList<double> titles, int shown, double chrome, double iconTab,
         double add, double count)
     {
-        var shownWidth = chrome + titles[shown];
+        const double whole = double.PositiveInfinity;
         var others = titles.Where((_, i) => i != shown).ToList();
-        var budget = room - add - shownWidth - others.Count * chrome; // what the others' titles may take
-        if (others.Sum() <= budget)
+        var budget = room - add - titles.Count * chrome; // what all the titles may take
+        if (titles.Sum() <= budget)
         {
-            return new TabsFit(TabsStage.Full, double.PositiveInfinity);
+            return new TabsFit(TabsStage.Full, whole, whole);
         }
 
-        if (others.Sum(t => Math.Min(t, ShortestTitle)) <= budget)
+        if (titles.Count * ShortestTitle <= budget)
         {
-            return new TabsFit(TabsStage.Short, ShortCap(others, budget));
+            // The others shorten while the shown tab stays whole; once they're all at the shortest, the shown tab shortens.
+            var shortened = others.Sum(t => Math.Min(t, ShortestTitle));
+            return shortened + titles[shown] <= budget
+                ? new TabsFit(TabsStage.Short, ShortCap(others, budget - titles[shown]), whole)
+                : new TabsFit(TabsStage.Short, ShortestTitle, Math.Floor(budget - shortened));
         }
 
-        return shownWidth + others.Count * iconTab + add <= room
-            ? new TabsFit(TabsStage.Icons, double.PositiveInfinity)
-            : new TabsFit(TabsStage.Folded, Math.Max(0, room - count - chrome));
+        var left = room - add - others.Count * iconTab - chrome; // for the shown title beside the icons
+        if (left >= ShortestTitle)
+        {
+            return new TabsFit(TabsStage.Icons, whole, left >= titles[shown] ? whole : Math.Floor(left));
+        }
+
+        return new TabsFit(TabsStage.Folded, whole, Math.Max(0, Math.Floor(room - count - chrome)));
     }
 
     /// <summary>The widest cap on the titles that keeps their sum within the budget (short titles stay whole).</summary>
@@ -151,18 +162,15 @@ public enum TabsStage
     /// <summary>Every tab whole.</summary>
     Full,
 
-    /// <summary>The other tabs' titles shortened to the cap.</summary>
+    /// <summary>The other tabs' titles shortened to the cap (at the shortest, the shown tab's too).</summary>
     Short,
 
-    /// <summary>The other tabs as their icon and mark.</summary>
+    /// <summary>The other tabs as their icon and mark (the shown tab's title capped to what's left).</summary>
     Icons,
 
     /// <summary>Only the shown tab (its title capped), the others folded into a count.</summary>
     Folded,
 }
 
-/// <summary>
-/// A stage and its title cap: the other tabs' when <see cref="TabsStage.Short"/>, the shown tab's when
-/// <see cref="TabsStage.Folded"/>; infinite otherwise.
-/// </summary>
-public readonly record struct TabsFit(TabsStage Stage, double TitleCap);
+/// <summary>A stage, and how wide the other tabs' and the shown tab's titles may be (infinite: whole).</summary>
+public readonly record struct TabsFit(TabsStage Stage, double OthersCap, double ShownCap);

@@ -7,8 +7,9 @@ using Zinc.Panes;
 
 namespace Zinc;
 
-// A narrow header's tabs (decision 49): the shown tab stays whole while the others shorten, then become their icon and
-// mark, then all fold at once into a count ("4 of 5", with the most urgent mark among them) that takes the +'s place.
+// A narrow header's tabs: the others shorten (then the shown tab, down to the shortest), then become their icon and mark,
+// then all fold at once into a count ("4 of 5", with the most urgent mark among them) that takes the +'s place.
+// Which stage applies follows the width and the number of tabs only, so a title change never flips it.
 // The count opens a menu of every tab with its status in words, then New tab in this pane. The same count and menu are
 // what a later "Show pane tabs as: a menu" setting would show at every width (row 28).
 internal sealed partial class GroupView
@@ -74,7 +75,7 @@ internal sealed partial class GroupView
         var fit = space > 0
             ? PaneHeader.FitTabs(space, [.. _order.Select(t => _items[t].TitleWidth)], _order.IndexOf(_shown),
                 TabItem.Chrome, TabItem.IconWidth, AddWidth + 2, countWidth + 2)
-            : new TabsFit(TabsStage.Full, double.PositiveInfinity);
+            : new TabsFit(TabsStage.Full, double.PositiveInfinity, double.PositiveInfinity);
         foreach (var tab in _order)
         {
             _items[tab].Fit(fit, tab == _shown);

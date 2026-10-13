@@ -93,32 +93,39 @@ public class PaneHeaderTests
     // Three 100 px titles, the middle one shown: a tab is 60 px beside its title, 50 px as an icon; the + 30, the count 70.
     private static TabsFit FitThree(double room) => PaneHeader.FitTabs(room, [100, 100, 100], 1, 60, 50, 30, 70);
 
+    private const double Whole = double.PositiveInfinity;
+
     [Fact]
     public void OtherTabsShortenThenBecomeIconsThenFold()
     {
-        Assert.Equal(new TabsFit(TabsStage.Full, double.PositiveInfinity), FitThree(510));
-        Assert.Equal(new TabsFit(TabsStage.Short, 99), FitThree(509)); // 199 px for two titles
-        Assert.Equal(new TabsFit(TabsStage.Short, PaneHeader.ShortestTitle), FitThree(438));
-        Assert.Equal(new TabsFit(TabsStage.Icons, double.PositiveInfinity), FitThree(437));
-        Assert.Equal(new TabsFit(TabsStage.Icons, double.PositiveInfinity), FitThree(290)); // the shown tab, two icons, the +
-        Assert.Equal(new TabsFit(TabsStage.Folded, 159), FitThree(289)); // what the shown title keeps beside the count
-        Assert.Equal(new TabsFit(TabsStage.Folded, 0), FitThree(50));
+        Assert.Equal(new TabsFit(TabsStage.Full, Whole, Whole), FitThree(510));
+        Assert.Equal(new TabsFit(TabsStage.Short, 99, Whole), FitThree(509)); // 199 px for the others' titles
+        Assert.Equal(new TabsFit(TabsStage.Short, 64, 99), FitThree(437)); // the others at the shortest: the shown tab gives way
+        Assert.Equal(new TabsFit(TabsStage.Short, 64, 64), FitThree(402)); // every tab at the shortest
+        Assert.Equal(new TabsFit(TabsStage.Icons, Whole, Whole), FitThree(401));
+        Assert.Equal(new TabsFit(TabsStage.Icons, Whole, 64), FitThree(254)); // the shown tab at the shortest beside two icons
+        Assert.Equal(new TabsFit(TabsStage.Folded, Whole, 123), FitThree(253)); // what the shown title keeps beside the count
+        Assert.Equal(new TabsFit(TabsStage.Folded, Whole, 0), FitThree(50));
     }
 
     [Fact]
     public void ShorteningCapsOnlyTheLongTitles()
     {
-        // The shown tab is the first; the others' titles get 150 px (budget), then 250.
-        Assert.Equal(new TabsFit(TabsStage.Short, 75), PaneHeader.FitTabs(150 + 30 + 90 + 120, [30, 200, 100], 0, 60, 50, 30, 70));
-        Assert.Equal(new TabsFit(TabsStage.Short, 150), PaneHeader.FitTabs(250 + 30 + 90 + 120, [30, 200, 100], 0, 60, 50, 30, 70));
+        // The shown tab is the first (30 px); the others' titles get 170 px, then 250.
+        Assert.Equal(new TabsFit(TabsStage.Short, 85, Whole), PaneHeader.FitTabs(410, [30, 200, 100], 0, 60, 50, 30, 70));
+        Assert.Equal(new TabsFit(TabsStage.Short, 150, Whole), PaneHeader.FitTabs(490, [30, 200, 100], 0, 60, 50, 30, 70));
     }
 
-    [Fact]
-    public void TheShownTabStaysWholeWhereverItIs()
+    [Theory]
+    [InlineData(300, TabsStage.Icons)]
+    [InlineData(253, TabsStage.Folded)]
+    public void TitlesNeverSwitchBetweenIconsAndTheCount(double room, TabsStage stage)
     {
-        // A long shown title last: the others shorten around it rather than it.
-        Assert.Equal(TabsStage.Short, PaneHeader.FitTabs(540, [100, 100, 180], 2, 60, 50, 30, 70).Stage);
-        Assert.Equal(TabsStage.Icons, PaneHeader.FitTabs(400, [100, 100, 180], 2, 60, 50, 30, 70).Stage);
+        // A new tab's profile name, then its folder ("~"), or a long command: the stage stays (decision 50).
+        foreach (var shownTitle in new double[] { 8, 40, 180 })
+        {
+            Assert.Equal(stage, PaneHeader.FitTabs(room, [100, shownTitle, 100], 1, 60, 50, 30, 70).Stage);
+        }
     }
 
     [Theory]
