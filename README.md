@@ -888,7 +888,7 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   text; once a command has run for a second, the command, then the folder (quick commands never show). A name
   you gave the tab, or a title the running program sets (vim, ssh), comes first instead; the folder or profile isn't
   repeated after a title that already names it. A long folder that doesn't fit loses its start, not its end
-  (`…/ParentFolder/cwd`).
+  (`…/ParentFolder/cwd`), in the title and in a pane's tabs.
   When a pane's tabs don't fit its header, the others shorten first (then the shown tab), then show only their
   icon and dot (the title is in the tooltip), then fold into a count ("4 of 5", with the most urgent dot among them).
   The count opens a menu of every tab and what each is waiting on, with New tab in this pane.

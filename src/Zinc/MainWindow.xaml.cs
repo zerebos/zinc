@@ -45,6 +45,9 @@ public sealed partial class MainWindow : Window
         /// <summary>What its tab says: the given title, else the program's, else the profile's name.</summary>
         public string Title => CustomTitle ?? (string.IsNullOrWhiteSpace(Control.Title) ? Profile.Name : Control.Title);
 
+        /// <summary><see cref="Title"/> is the shell's folder.</summary>
+        public bool TitleIsFolder => CustomTitle == null && Control.TitleIsFolder;
+
         /// <summary>A console Windows handed over (default terminal): not saved with the session.</summary>
         public bool HandedOver { get; set; }
 

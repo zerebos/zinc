@@ -45,6 +45,10 @@ public static partial class ShellTitle
         return folder != null ? Folder(folder, home) : program;
     }
 
+    /// <summary>Whether <see cref="Choose"/> names the tab by its folder (which then shortens from its start, as a header's).</summary>
+    public static bool ChoosesFolder(bool shellTitles, bool? atPrompt, string? folder) =>
+        shellTitles && atPrompt == true && folder != null;
+
     /// <summary>How long a command runs before it leads a pane header's title: quick ones (ls, git status) never flash there.</summary>
     public static readonly TimeSpan CommandLeadsAfter = TimeSpan.FromMilliseconds(80); // TODO: de-dup this logic with the command center? reconsider this threshold
 

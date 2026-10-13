@@ -342,7 +342,7 @@ internal sealed partial class GroupView : Grid
         foreach (var tab in group.Tabs)
         {
             var shownTab = tab == group.Active;
-            _items[tab].Show(TitleOf(tab), shownTab, accentLine, accent, tab.Attention,
+            _items[tab].Show(TitleOf(tab), tab.TitleIsFolder, shownTab, accentLine, accent, tab.Attention,
                 shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress,
                 closeOnHover: false); // every tab keeps its ×: hover-only waits for the filled header (session C, decision 39)
         }
@@ -676,7 +676,7 @@ internal sealed partial class GroupView : Grid
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private bool _active, _hovered, _closeOnHover;
         private Attention _attention;
-        private string? _words;
+        private string? _name;
         private TerminalProgress _progress = TerminalProgress.None;
 
         public TabItem(MainWindow.TerminalTab tab)
@@ -762,7 +762,20 @@ internal sealed partial class GroupView : Grid
             _title.Visibility = titled ? Visibility.Visible : Visibility.Collapsed;
             _icon.Margin = new Thickness(0, 0, titled ? 8 : 0, 0);
             _title.MaxWidth = cap;
+            if (cap != _cap)
+            {
+                _cap = cap;
+                ShowTitle();
+            }
         }
+
+        private string _fullTitle = "";
+        private bool _folder;
+        private double _cap = LongestTitle;
+
+        /// <summary>The label as it fits its cap: a folder loses its start, not its end, as a title header's does.</summary>
+        private void ShowTitle() =>
+            _title.Text = _folder ? ShellTitle.FitFolder(_fullTitle, _cap, TextWidth) : _fullTitle;
 
         /// <summary>What a click does (set by the list), for screen readers selecting it.</summary>
         public Action? Selecting { get; set; }
@@ -787,9 +800,10 @@ internal sealed partial class GroupView : Grid
         }
 
         /// <param name="accentLine">The tab carries the accent line (its pane is focused: <see cref="PaneHeader.AccentLine"/>).</param>
+        /// <param name="folder">The title is the shell's folder.</param>
         /// <param name="closeOnHover">A hidden tab shows its × only under the pointer.</param>
-        public void Show(string title, bool active, bool accentLine, Brush accent, Attention attention, TerminalProgress progress,
-            bool closeOnHover = false)
+        public void Show(string title, bool folder, bool active, bool accentLine, Brush accent, Attention attention,
+            TerminalProgress progress, bool closeOnHover = false)
         {
             _attention = attention;
             _progress = progress;
@@ -798,16 +812,22 @@ internal sealed partial class GroupView : Grid
             ShowSlot();
             // The title, and what its dot means, for the tooltip and screen readers.
             var words = AttentionWords.For(attention, _tab.FailedExit);
-            if (_title.Text != title || words != _words)
+            if (_fullTitle != title || folder != _folder)
             {
-                if (_title.Text != title)
+                if (_fullTitle != title)
                 {
                     TitleWidth = Math.Min(LongestTitle, Math.Ceiling(TextWidth(title)));
                 }
 
-                _title.Text = title;
-                _words = words;
-                AutomationProperties.SetName(this, AttentionWords.Name(title, words));
+                (_fullTitle, _folder) = (title, folder);
+                ShowTitle();
+            }
+
+            var name = AttentionWords.Name(title, words);
+            if (name != _name)
+            {
+                _name = name;
+                AutomationProperties.SetName(this, name);
                 ToolTipService.SetToolTip(this, AttentionWords.ToolTip(title, words));
             }
 

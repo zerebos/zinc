@@ -124,6 +124,21 @@ public class ShellTitleTests
         Assert.Equal(new HeaderTitle("Windows PowerShell", null), Header(null, program: "Windows PowerShell"));
     }
 
+    [Theory]
+    [InlineData(true, true, true)] // at the prompt, a folder reported: the label is the folder
+    [InlineData(true, false, false)] // a command runs
+    [InlineData(true, null, false)] // no marks: the program's title
+    [InlineData(false, true, false)] // shell-titles off
+    public void TabLabelsKnowWhenTheyAreAFolder(bool shellTitles, bool? atPrompt, bool folder)
+    {
+        Assert.Equal(folder, ShellTitle.ChoosesFolder(shellTitles, atPrompt, @"C:\Users\Zack\dev"));
+        Assert.False(ShellTitle.ChoosesFolder(shellTitles, atPrompt, null));
+        if (folder)
+        {
+            Assert.Equal(@"~\dev", Title(atPrompt, @"C:\Users\Zack\dev", shellTitles: shellTitles));
+        }
+    }
+
     [Fact]
     public void FoldersShortenFromTheirStart()
     {

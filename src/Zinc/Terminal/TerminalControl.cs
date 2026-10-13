@@ -77,6 +77,9 @@ public sealed partial class TerminalControl : UserControl
     public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt,
         CurrentFolder, RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
 
+    /// <summary><see cref="Title"/> is the shell's folder (a tab label then shortens from its start).</summary>
+    public bool TitleIsFolder => ShellTitle.ChoosesFolder(_config.ShellTitles, _session?.AtPrompt, CurrentFolder);
+
     /// <summary>A one-tab pane header's title (<see cref="ShellTitle.Header"/>): what leads, and the quieter text after it.</summary>
     public HeaderTitle HeaderTitle(string profileName) => ShellTitle.Header(_config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
         RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand, UserHome, profileName);
