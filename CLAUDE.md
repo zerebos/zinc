@@ -178,8 +178,8 @@ and read state after the write (see `_titleDirty`).
   would otherwise hand itself to the user's running Zinc. Update tests use the `Zinc.Test` id
   (`.scratch/tools/update-roundtrip.ps1`).
 - Installed copies live in `%LOCALAPPDATA%\Programs\Zinc\versions\<stamp>-<version>`; installed zinc.exe processes
-  are the user's own windows. A post-commit hook reinstalls in the background after every commit on `main` (the
-user's commits of what you staged; log at
+  are the user's own windows. Git hooks reinstall in the background after every commit or merge on `main` (the
+user's commits of what you staged; post-commit and post-merge, since a merge runs only the latter; log at
   `.git/zinc-install.log`). **It builds the working tree while it runs: after a commit on main, wait for it to finish
   (a new folder under versions\, no install pwsh left) before switching branches or popping a stash** — once it
   installed a stash's uncommitted experiment as "-dirty".
