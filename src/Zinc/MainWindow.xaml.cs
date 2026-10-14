@@ -548,12 +548,14 @@ public sealed partial class MainWindow : Window
             {
                 e.AllowedOperations = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
                 App.Instance.Drag = new TabDrag(this, pane);
+                ShowPanesForDrag(group);
             };
             view.TabDragCompleted += OnTerminalTabDragCompleted;
             view.PaneDragStarting += e =>
             {
                 e.AllowedOperations = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
                 App.Instance.Drag = new TabDrag(this, group);
+                ShowPanesForDrag(group);
             };
             view.PaneDragCompleted += result => OnPaneDragCompleted(group, result);
             view.StripDragOver += (e, _) => AcceptStripDrop(group, e);
@@ -764,19 +766,9 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // Release the pane's terminal while the pane is still in the layout (see Rebuild).
-        if (tab.Workspace.GroupOf(pane) is { } moving)
+        if (tab.Workspace.GroupOf(pane) is { } group)
         {
-            ReleaseHost(moving);
-        }
-
-        if (TakeGroup(tab, pane) is { } group)
-        {
-            foreach (var t in group.Tabs)
-            {
-                t.Unwire?.Invoke();
-            }
-
+            TakeGroupOut(tab, group);
             App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(group), null, null));
         }
     }
@@ -992,28 +984,83 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Moves pane <paramref name="group"/> within <paramref name="tab"/>: beside <paramref name="target"/> on side
-    /// <paramref name="edge"/>, or into its tabs at <paramref name="index"/> when <paramref name="edge"/> is null.
+    /// Moves pane <paramref name="group"/> (from <paramref name="source"/>, maybe this window) into <paramref name="tab"/>:
+    /// beside <paramref name="target"/> on side <paramref name="edge"/>, or into its tabs at <paramref name="index"/> when
+    /// <paramref name="edge"/> is null. A workspace's only pane takes its workspace with it (not remembered as closed:
+    /// its terminals live on).
     /// </summary>
-    private void MovePane(TabGroup<TerminalTab> group, WorkspaceTab tab, TabGroup<TerminalTab> target, PaneDirection? edge,
-        int? index = null)
+    private void MovePane(MainWindow source, TabGroup<TerminalTab> group, WorkspaceTab tab, TabGroup<TerminalTab> target,
+        PaneDirection? edge, int? index = null)
     {
-        // Ignore moves where the source and target are the same, or either is not in the workspace.
-        if (group == target || !tab.Workspace.Groups.Contains(group) || !tab.Workspace.Groups.Contains(target))
+        // Ignore moves onto itself, or to a pane that's gone.
+        if (group == target || !tab.Workspace.Groups.Contains(target) || source.WorkspaceOf(group) is not { } from)
         {
             return;
         }
 
-        if (edge == null)
+        if (from == tab)
         {
-            // Its tabs join another pane, whose view shows its terminal next. Release it while this pane is still in
-            // the layout (see `Rebuild`). The pane's own host goes with it.
-            ReleaseHost(group);
+            if (edge == null)
+            {
+                // Its tabs join another pane, whose view shows its terminal next. Release it while this pane is still in
+                // the layout (see `Rebuild`). The pane's own host goes with it.
+                ReleaseHost(group);
+            }
+
+            tab.Workspace.MoveGroup(group, target, edge, index);
+            Rebuild(tab);
+            return;
         }
 
-        tab.Workspace.MoveGroup(group, target, edge, index);
+        source.TakeGroupOut(from, group);
+        if (edge is { } side)
+        {
+            tab.Workspace.Place(group, target, side);
+        }
+        else
+        {
+            tab.Workspace.Join(group, target, index);
+        }
+
+        foreach (var pane in group.Tabs)
+        {
+            Wire(pane, tab);
+        }
+
         Rebuild(tab);
+        if (source != this)
+        {
+            source.CloseIfEmpty();
+            Activate();
+        }
     }
+
+    /// <summary>
+    /// Takes pane <paramref name="group"/> out of <paramref name="tab"/>, terminals running and unwired, ready for another
+    /// workspace or window. It leaves its host behind (the new place builds its own); an emptied workspace goes, not
+    /// remembered as closed. The caller closes this window if it's now empty, once the pane has its new home.
+    /// </summary>
+    private void TakeGroupOut(WorkspaceTab tab, TabGroup<TerminalTab> group)
+    {
+        // Release the pane's terminal while the pane is still in the layout (see Rebuild).
+        ReleaseHost(group);
+        foreach (var pane in group.Tabs)
+        {
+            pane.Unwire?.Invoke();
+        }
+
+        if (tab.Workspace.Detach(group))
+        {
+            Rebuild(tab);
+        }
+        else
+        {
+            DetachEmptyWorkspace(tab);
+        }
+    }
+
+    /// <summary>The workspace holding a pane, in this window.</summary>
+    private WorkspaceTab? WorkspaceOf(TabGroup<TerminalTab> group) => AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group));
 
     /// <summary>The workspace holding a terminal tab, in this window.</summary>
     private WorkspaceTab? WorkspaceOf(TerminalTab pane) => AllTabs().FirstOrDefault(t => t.Workspace.Tabs.Contains(pane));
@@ -1480,15 +1527,28 @@ public sealed partial class MainWindow : Window
             if (chord.StartsWith("test:pane-"))
             {
                 // What dragging the focused pane by its header would do... `test:pane-to:1` drops it into pane 1 (layout
-                // order) of this workspace, `test:pane-right:1` / `test:pane-down:1` onto that pane's edge.
-                var arg = int.Parse(chord[(chord.LastIndexOf(':') + 1)..]);
-                var target = tab.Workspace.Groups.ElementAtOrDefault(arg);
+                // order) of this workspace, `test:pane-right:1` / `test:pane-down:1` onto that pane's edge. With a
+                // workspace first, another workspace's pane: `test:pane-to:0:1` into pane 1 of workspace 0.
+                // `test:pane-title:0` drops it on the title bar at position 0.
+                var args = chord[(chord.IndexOf(':', "test:pane-".Length) + 1)..].Split(':').Select(int.Parse).ToArray();
+                var group = tab.Workspace.ActiveGroup;
+                if (chord.StartsWith("test:pane-title:"))
+                {
+                    Log.Write($"test {chord}: dropping");
+                    App.Instance.Drag = new TabDrag(this, group);
+                    DropOnWorkspaces(args[0]);
+                    App.Instance.Drag = null;
+                    return;
+                }
+
+                var into = args.Length > 1 ? AllTabs().ElementAtOrDefault(args[0]) : tab;
+                var target = into?.Workspace.Groups.ElementAtOrDefault(args[^1]);
                 PaneDirection? edge = chord.StartsWith("test:pane-right:") ? PaneDirection.Right
                     : chord.StartsWith("test:pane-down:") ? PaneDirection.Down : null;
                 Log.Write($"test {chord}: {(target != null ? "moving" : "no such pane")}");
-                if (target != null)
+                if (into != null && target != null)
                 {
-                    MovePane(tab.Workspace.ActiveGroup, tab, target, edge);
+                    MovePane(this, group, into, target, edge);
                 }
 
                 return;

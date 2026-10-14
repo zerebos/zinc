@@ -835,7 +835,9 @@ holds one or more **tabs**, each a terminal. A pane with two or more tabs shows 
 of them (click to switch, middle-click or × to close, right-click to close others or move a
 tab to a new workspace or window, + for another tab). Double-click a pane's header to maximize
 the pane, and again to bring the others back. Drag the empty part of a pane's header to move the
-whole pane: onto another pane's edge, or onto its header or middle to add its tabs there. New tabs open in the focused pane with
+whole pane: onto another pane's edge, or onto its header or middle to add its tabs there, in any
+workspace or window; onto the title bar for a workspace of its own; or out of the window for a
+window of its own. New tabs open in the focused pane with
 its current tab's profile; the title bar's + and ▾ open workspaces.
 
 A **new workspace** (+, `Ctrl+Alt+T`, the sidebar's New workspace, the palette), and a new window

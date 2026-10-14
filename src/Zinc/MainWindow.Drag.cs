@@ -12,8 +12,10 @@ namespace Zinc;
 // the pane). A pane's own tab (a terminal) can be reordered in its strip, go into another pane
 // (middle or strip) or beside it (edge), onto the title bar (its own workspace; hovering a
 // workspace switches to it), or out of every window (new window). A whole pane, dragged by its
-// header's empty part, goes beside another pane (edge) or into its tabs (middle or strip). Windows
-// are in one process, so the dragged tab or pane is handed over directly via App.Drag.
+// header's empty part, goes everywhere a pane's tab can, in any workspace or window; a workspace's
+// only pane takes its workspace along. Dragging from a maximized pane shows every pane until the
+// drag ends. Windows are in one process, so the dragged tab or pane is handed over directly via
+// App.Drag.
 public sealed partial class MainWindow
 {
     /// <summary>
@@ -87,6 +89,7 @@ public sealed partial class MainWindow
         HideDropPreview();
         if (App.Instance.Drag is not { Tab: TerminalTab dragged } drag || dragged != pane)
         {
+            RestoreMaximized();
             return; // taken by a drop target
         }
 
@@ -95,6 +98,7 @@ public sealed partial class MainWindow
         if (result != DataPackageOperation.None || App.Instance.IsOverWindow(new PointInt32(cursor.X, cursor.Y)) ||
             drag.Window.WorkspaceOf(pane) is not { } from)
         {
+            RestoreMaximized();
             return;
         }
 
@@ -110,10 +114,14 @@ public sealed partial class MainWindow
         }
 
         window.AppWindow.Move(new PointInt32(cursor.X - 120, cursor.Y - 20));
+        RestoreMaximized();
         drag.Window.CloseIfEmpty();
     }
 
-    /// <summary>A pane was dragged and released. Nobody took it: it stays where it was.</summary>
+    /// <summary>
+    /// A pane was dragged and released. Nobody took it: outside every Zinc window it becomes a window there (a
+    /// workspace's only pane takes its workspace), elsewhere it stays where it was.
+    /// </summary>
     private void OnPaneDragCompleted(TabGroup<TerminalTab> group, DataPackageOperation result)
     {
         _springTimer?.Stop();
@@ -121,6 +129,60 @@ public sealed partial class MainWindow
         if (App.Instance.Drag?.Tab == group)
         {
             App.Instance.Drag = null;
+            GetCursorPos(out var cursor);
+            if (result == DataPackageOperation.None && !App.Instance.IsOverWindow(new PointInt32(cursor.X, cursor.Y)) &&
+                WorkspaceOf(group) is { } from)
+            {
+                MainWindow window;
+                if (from.Workspace.Layout.Count == 1)
+                {
+                    window = App.Instance.OpenWindow(DetachWorkspace(from));
+                }
+                else
+                {
+                    TakeGroupOut(from, group);
+                    window = App.Instance.OpenWindow(new WorkspaceTransfer(new Workspace<TerminalTab>(group), null, null));
+                }
+
+                window.AppWindow.Move(new PointInt32(cursor.X - 120, cursor.Y - 20));
+                CloseIfEmpty();
+            }
+        }
+
+        RestoreMaximized();
+    }
+
+    /// <summary>The maximized pane a drag showed every pane for, and its workspace (see <see cref="ShowPanesForDrag"/>).</summary>
+    private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? _dragMaximized;
+
+    /// <summary>
+    /// A drag from a maximized pane (the pane itself, or one of its tabs) shows every pane while it lasts, so they're
+    /// drop targets, each at its real size. Drags start only once the pointer has moved, so a click changes nothing.
+    /// </summary>
+    private void ShowPanesForDrag(TabGroup<TerminalTab> group)
+    {
+        _dragMaximized = null;
+        if (WorkspaceOf(group) is { } tab && tab.Workspace.Maximized == group)
+        {
+            _dragMaximized = (tab, group);
+            tab.Workspace.ToggleMaximize();
+            UpdateFocusBorders(tab);
+        }
+    }
+
+    /// <summary>A drag ended: if the pane it showed the others for is still there and focused, it fills the workspace again.</summary>
+    private void RestoreMaximized()
+    {
+        if (_dragMaximized is not var (tab, group))
+        {
+            return;
+        }
+
+        _dragMaximized = null;
+        if (AllTabs().Contains(tab) && tab.Workspace.ActiveGroup == group && tab.Workspace.Maximized == null)
+        {
+            tab.Workspace.ToggleMaximize();
+            UpdateFocusBorders(tab);
         }
     }
 
@@ -169,6 +231,16 @@ public sealed partial class MainWindow
                 }
 
                 break;
+            case { Tab: TabGroup<TerminalTab> group } drag:
+                // A workspace's only pane already is one here.
+                SpringLoad(under);
+                accept = !(drag.Window == this && WorkspaceOf(group)?.Workspace.Layout.Count == 1);
+                if (accept)
+                {
+                    e.DragUIOverride.Caption = "New workspace";
+                }
+
+                break;
         }
 
         // Only ever raise it: the title bar's own reorder goes through this event too.
@@ -207,6 +279,31 @@ public sealed partial class MainWindow
                 App.Instance.Drag = null;
                 drag.Window.TakeTab(from, pane);
                 AddWorkspace(new Workspace<TerminalTab>(pane), index: index);
+                if (drag.Window != this)
+                {
+                    drag.Window.CloseIfEmpty();
+                }
+
+                Activate();
+                break;
+            }
+
+            case { Tab: TabGroup<TerminalTab> group } drag when drag.Window.WorkspaceOf(group) is { } from &&
+                                                               !(drag.Window == this && from.Workspace.Layout.Count == 1):
+            {
+                App.Instance.Drag = null;
+                if (from.Workspace.Layout.Count == 1)
+                {
+                    // Another window's workspace with only this pane: the workspace moves here, its name and color too.
+                    var transfer = drag.Window.DetachWorkspace(from);
+                    AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index, transfer.Folder, transfer.Icon, transfer.Id);
+                }
+                else
+                {
+                    drag.Window.TakeGroupOut(from, group);
+                    AddWorkspace(new Workspace<TerminalTab>(group), index: index);
+                }
+
                 if (drag.Window != this)
                 {
                     drag.Window.CloseIfEmpty();
@@ -398,7 +495,7 @@ public sealed partial class MainWindow
                 MoveTerminalTab(drag.Window, pane, target.Tab, target.Group, edge);
                 break;
             case TabGroup<TerminalTab> moving:
-                MovePane(moving, target.Tab, target.Group, edge);
+                MovePane(drag.Window, moving, target.Tab, target.Group, edge);
                 break;
         }
     }
@@ -417,7 +514,7 @@ public sealed partial class MainWindow
         {
             { Tab: TerminalTab } => true,
             { Tab: WorkspaceTab dragged } => !dragged.Workspace.Groups.Contains(group),
-            { Tab: TabGroup<TerminalTab> moving } => moving != group && Movable(moving, group),
+            { Tab: TabGroup<TerminalTab> moving } => moving != group,
             _ => false,
         };
         e.AcceptedOperation = accept ? DataPackageOperation.Move : DataPackageOperation.None;
@@ -446,9 +543,9 @@ public sealed partial class MainWindow
                 App.Instance.Drag = null;
                 DropWorkspace(drag.Window, dragged, tab, group, null);
                 break;
-            case TabGroup<TerminalTab> moving when moving != group && Movable(moving, group):
+            case TabGroup<TerminalTab> moving when moving != group:
                 App.Instance.Drag = null;
-                MovePane(moving, tab, group, null, index);
+                MovePane(drag.Window, moving, tab, group, null, index);
                 break;
         }
     }
@@ -506,14 +603,10 @@ public sealed partial class MainWindow
         {
             WorkspaceTab dragged when dragged != tab => (tab, group),
             TerminalTab pane when !group.Contains(pane) || (edge != null && group.Tabs.Count > 1) => (tab, group),
-            TabGroup<TerminalTab> moving when moving != group && Movable(moving, group) => (tab, group),
+            TabGroup<TerminalTab> moving when moving != group => (tab, group),
             _ => null,
         };
     }
-
-    /// <summary>Whether a dragged pane can go to <paramref name="target"/>: for now, only within its own workspace.</summary>
-    private bool Movable(TabGroup<TerminalTab> moving, TabGroup<TerminalTab> target) =>
-        AllTabs().Any(t => t.Workspace.Groups.Contains(moving) && t.Workspace.Groups.Contains(target));
 
     /// <summary>The edge whose band (the outer third, like VS Code) holds <paramref name="p"/>; null in the middle.</summary>
     private static PaneDirection? EdgeUnder(FrameworkElement host, Point p)
