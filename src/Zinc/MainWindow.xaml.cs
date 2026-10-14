@@ -550,6 +550,12 @@ public sealed partial class MainWindow : Window
                 App.Instance.Drag = new TabDrag(this, pane);
             };
             view.TabDragCompleted += OnTerminalTabDragCompleted;
+            view.PaneDragStarting += e =>
+            {
+                e.AllowedOperations = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+                App.Instance.Drag = new TabDrag(this, group);
+            };
+            view.PaneDragCompleted += result => OnPaneDragCompleted(group, result);
             view.StripDragOver += (e, _) => AcceptStripDrop(group, e);
             view.StripDrop += (e, index) => OnStripDrop(group, index);
             // The host knows its group, so a tab dropped on it knows where to go.
@@ -983,6 +989,30 @@ public sealed partial class MainWindow : Window
             source.CloseIfEmpty();
             Activate();
         }
+    }
+
+    /// <summary>
+    /// Moves pane <paramref name="group"/> within <paramref name="tab"/>: beside <paramref name="target"/> on side
+    /// <paramref name="edge"/>, or into its tabs at <paramref name="index"/> when <paramref name="edge"/> is null.
+    /// </summary>
+    private void MovePane(TabGroup<TerminalTab> group, WorkspaceTab tab, TabGroup<TerminalTab> target, PaneDirection? edge,
+        int? index = null)
+    {
+        // Ignore moves where the source and target are the same, or either is not in the workspace.
+        if (group == target || !tab.Workspace.Groups.Contains(group) || !tab.Workspace.Groups.Contains(target))
+        {
+            return;
+        }
+
+        if (edge == null)
+        {
+            // Its tabs join another pane, whose view shows its terminal next. Release it while this pane is still in
+            // the layout (see `Rebuild`). The pane's own host goes with it.
+            ReleaseHost(group);
+        }
+
+        tab.Workspace.MoveGroup(group, target, edge, index);
+        Rebuild(tab);
     }
 
     /// <summary>The workspace holding a terminal tab, in this window.</summary>
@@ -1442,6 +1472,23 @@ public sealed partial class MainWindow : Window
                 {
                     MoveTerminalTab(this, pane, tab, target, chord.StartsWith("test:tab-right:") ? PaneDirection.Right : null,
                         chord.StartsWith("test:tab-at:") ? arg : null);
+                }
+
+                return;
+            }
+
+            if (chord.StartsWith("test:pane-"))
+            {
+                // What dragging the focused pane by its header would do... `test:pane-to:1` drops it into pane 1 (layout
+                // order) of this workspace, `test:pane-right:1` / `test:pane-down:1` onto that pane's edge.
+                var arg = int.Parse(chord[(chord.LastIndexOf(':') + 1)..]);
+                var target = tab.Workspace.Groups.ElementAtOrDefault(arg);
+                PaneDirection? edge = chord.StartsWith("test:pane-right:") ? PaneDirection.Right
+                    : chord.StartsWith("test:pane-down:") ? PaneDirection.Down : null;
+                Log.Write($"test {chord}: {(target != null ? "moving" : "no such pane")}");
+                if (target != null)
+                {
+                    MovePane(tab.Workspace.ActiveGroup, tab, target, edge);
                 }
 
                 return;

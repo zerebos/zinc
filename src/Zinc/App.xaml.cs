@@ -313,10 +313,10 @@ public partial class App : Application
         set
         {
             _drag = value;
-            // While a pane's tab is dragged, workspace tabs must stay put: TabView's reordering
+            // While a pane or its tab is dragged, workspace tabs must stay put: TabView's reordering
             // slides them apart under any drag (moving the one being rested on to switch to it)
             // and overrides the drop's caption with its own "Move".
-            var reorder = value?.Tab is not MainWindow.TerminalTab;
+            var reorder = value?.Tab is not (MainWindow.TerminalTab or Panes.TabGroup<MainWindow.TerminalTab>);
             foreach (var window in _quick != null ? _windows.Append(_quick) : _windows)
             {
                 window.SetTabReordering(reorder);

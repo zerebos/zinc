@@ -11,11 +11,15 @@ namespace Zinc;
 // window's strip, onto a pane's edge (its layout becomes a split) or middle (its terminals join
 // the pane). A pane's own tab (a terminal) can be reordered in its strip, go into another pane
 // (middle or strip) or beside it (edge), onto the title bar (its own workspace; hovering a
-// workspace switches to it), or out of every window (new window). Windows are in one process,
-// so the dragged tab is handed over directly via App.Drag.
+// workspace switches to it), or out of every window (new window). A whole pane, dragged by its
+// header's empty part, goes beside another pane (edge) or into its tabs (middle or strip). Windows
+// are in one process, so the dragged tab or pane is handed over directly via App.Drag.
 public sealed partial class MainWindow
 {
-    /// <summary>A tab being dragged: its window, and a <see cref="WorkspaceTab"/> or a <see cref="TerminalTab"/>.</summary>
+    /// <summary>
+    /// A tab being dragged: its window, and a <see cref="WorkspaceTab"/>, a <see cref="TerminalTab"/> or a whole pane
+    /// (<see cref="TabGroup{T}"/> of terminal tabs).
+    /// </summary>
     internal sealed record TabDrag(MainWindow Window, object Tab);
 
     private void OnTabDragStarting(TabView sender, TabViewTabDragStartingEventArgs args)
@@ -107,6 +111,17 @@ public sealed partial class MainWindow
 
         window.AppWindow.Move(new PointInt32(cursor.X - 120, cursor.Y - 20));
         drag.Window.CloseIfEmpty();
+    }
+
+    /// <summary>A pane was dragged and released. Nobody took it: it stays where it was.</summary>
+    private void OnPaneDragCompleted(TabGroup<TerminalTab> group, DataPackageOperation result)
+    {
+        _springTimer?.Stop();
+        HideDropPreview();
+        if (App.Instance.Drag?.Tab == group)
+        {
+            App.Instance.Drag = null;
+        }
     }
 
     // ------------------------------------------------------ the title bar
@@ -382,12 +397,18 @@ public sealed partial class MainWindow
             case TerminalTab pane:
                 MoveTerminalTab(drag.Window, pane, target.Tab, target.Group, edge);
                 break;
+            case TabGroup<TerminalTab> moving:
+                MovePane(moving, target.Tab, target.Group, edge);
+                break;
         }
     }
 
     // ------------------------------------------------------- a pane's strip
 
-    /// <summary>Whether a pane's strip takes the dragged tab (at the marker): any terminal tab, or another workspace.</summary>
+    /// <summary>
+    /// Whether a pane's strip takes the dragged tab (at the marker): any terminal tab, another workspace, or another pane of
+    /// its workspace.
+    /// </summary>
     private bool AcceptStripDrop(TabGroup<TerminalTab> group, DragEventArgs e)
     {
         HideDropPreview();
@@ -396,6 +417,7 @@ public sealed partial class MainWindow
         {
             { Tab: TerminalTab } => true,
             { Tab: WorkspaceTab dragged } => !dragged.Workspace.Groups.Contains(group),
+            { Tab: TabGroup<TerminalTab> moving } => moving != group && Movable(moving, group),
             _ => false,
         };
         e.AcceptedOperation = accept ? DataPackageOperation.Move : DataPackageOperation.None;
@@ -423,6 +445,10 @@ public sealed partial class MainWindow
             case WorkspaceTab dragged when dragged != tab:
                 App.Instance.Drag = null;
                 DropWorkspace(drag.Window, dragged, tab, group, null);
+                break;
+            case TabGroup<TerminalTab> moving when moving != group && Movable(moving, group):
+                App.Instance.Drag = null;
+                MovePane(moving, tab, group, null, index);
                 break;
         }
     }
@@ -466,7 +492,7 @@ public sealed partial class MainWindow
     /// The workspace and group under a host, if the dragged tab can be dropped there on
     /// <paramref name="edge"/> (null: the middle, which joins the pane's tabs; only with tab
     /// groups). A workspace can't be dropped onto its own panes; a terminal tab not into its
-    /// own pane, nor beside it when it's the pane's only tab.
+    /// own pane, nor beside it when it's the pane's only tab; a pane nowhere on itself.
     /// </summary>
     private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? DropTarget(Border host, PaneDirection? edge)
     {
@@ -480,9 +506,14 @@ public sealed partial class MainWindow
         {
             WorkspaceTab dragged when dragged != tab => (tab, group),
             TerminalTab pane when !group.Contains(pane) || (edge != null && group.Tabs.Count > 1) => (tab, group),
+            TabGroup<TerminalTab> moving when moving != group && Movable(moving, group) => (tab, group),
             _ => null,
         };
     }
+
+    /// <summary>Whether a dragged pane can go to <paramref name="target"/>: for now, only within its own workspace.</summary>
+    private bool Movable(TabGroup<TerminalTab> moving, TabGroup<TerminalTab> target) =>
+        AllTabs().Any(t => t.Workspace.Groups.Contains(moving) && t.Workspace.Groups.Contains(target));
 
     /// <summary>The edge whose band (the outer third, like VS Code) holds <paramref name="p"/>; null in the middle.</summary>
     private static PaneDirection? EdgeUnder(FrameworkElement host, Point p)

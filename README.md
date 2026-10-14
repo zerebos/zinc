@@ -834,7 +834,8 @@ The title-bar tabs are **workspaces**: each has its own layout of split **panes*
 holds one or more **tabs**, each a terminal. A pane with two or more tabs shows its own strip
 of them (click to switch, middle-click or × to close, right-click to close others or move a
 tab to a new workspace or window, + for another tab). Double-click a pane's header to maximize
-the pane, and again to bring the others back. New tabs open in the focused pane with
+the pane, and again to bring the others back. Drag the empty part of a pane's header to move the
+whole pane: onto another pane's edge, or onto its header or middle to add its tabs there. New tabs open in the focused pane with
 its current tab's profile; the title bar's + and ▾ open workspaces.
 
 A **new workspace** (+, `Ctrl+Alt+T`, the sidebar's New workspace, the palette), and a new window

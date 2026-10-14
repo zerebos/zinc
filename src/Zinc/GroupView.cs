@@ -70,6 +70,7 @@ internal sealed partial class GroupView : Grid
         SetColumn(add, 1);
         add.HorizontalAlignment = HorizontalAlignment.Left;
         _count = CountButton();
+        AddGrip();
         _strip.Children.Add(_tabs);
         _strip.Children.Add(_title);
         _strip.Children.Add(add);
