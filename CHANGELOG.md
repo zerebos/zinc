@@ -10,12 +10,13 @@ is the version it builds, and hands it to the installer as the release notes).
 - Pane header buttons (`Settings > Layout > Panes > Header buttons`, `pane-header-buttons` in `[window]`)! Split, Maximize pane and a menu with the pane's other commands (including Close pane), on the right of a pane's header. Show them on every pane, on the focused pane, only while the pointer is over a header, or not at all (the default). With them, the header also shows a program's progress.
 - A tab whose program exits with an error and stays open (a dropped `ssh` session, a command profile that crashed, WSL shut down) now gets a red dot when you weren't looking, and the taskbar button flashes if Zinc is in the background. It comes first for Next tab needing attention, and a pane header with buttons shows "Exited (code N)".
 - Rename tab. Give one tab in a pane its own name, from its right-click menu, the pane's menu or the command palette.
-- Added "Maximize pane". It fills the workspace with the focused pane and hides the others. Trigger it again, or move focus to another pane, to bring them back. From the command palette, or bind `maximize-pane` to a key. The other panes keep running and keep their size.
+- Added "Maximize pane". It fills the workspace with the focused pane and hides the others. Trigger it again, or move focus to another pane, to bring them back. Double-click the pane's header, use the command palette, or bind `maximize-pane` to a key. The other panes keep running and keep their size.
 - Added "Close pane". It closes the focused pane and every tab in it, asking once first if a command is still running in any of them. From the command palette, or bind `close-pane` to a key.
 
 ### Changed
 - A pane's tabs no longer scroll out of sight when they don't fit. The inactive tabs get shorter and show only their icon and dot. Any shorter and they fold into a count ("4 of 5") that opens a dropdown menu of all of them.
 - `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` gives every pane a header once a workspace is split, and `Never` hides them. A pane with one tab shows its title there instead of a single tab, also with `Always`, and with `Tabs inside panes` off: its folder and profile at the prompt, or a command once it has run for a second. A long folder is shortened from its start, so you still see where you are (in a pane's tabs too). The old setting (`pane-tab-strip`) still works and keeps its original meaning.
+- Dropping a tab anywhere on a pane's header now adds it to that pane's tabs. Before, a drop beside the tabs split the pane instead.
 - Closing two or more tabs at once (a pane, a workspace, a window, or Close other tabs and Close other workspaces) now asks first, even when no command is running. Turn it off with `Settings > Layout > Closing > Ask before closing`, which also stops the question about running commands.
 
 ### Fixed
