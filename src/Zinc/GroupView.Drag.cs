@@ -8,8 +8,9 @@ using Windows.Graphics.Imaging;
 namespace Zinc;
 
 // Dragging the whole pane: from the header's empty part (a grip behind the tabs and buttons, so it only gets the pointer
-// where nothing else does) or from the fold's count, which stands for every tab. A one-tab pane's tab already moves its
-// whole pane. The window decides where the pane can go (MainWindow.Drag.cs).
+// where nothing else does). A one-tab pane's tab already moves its whole pane. Not the fold's count: it's a button, which
+// takes the pointer on press, and a folded header still leaves empty room beside it. The window decides where the pane
+// can go (MainWindow.Drag.cs).
 internal sealed partial class GroupView
 {
     private readonly Border _grip = new() { Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
@@ -24,16 +25,13 @@ internal sealed partial class GroupView
     {
         SetColumnSpan(_grip, 5);
         _strip.Children.Add(_grip); // first: behind everything else in the header
-        foreach (var handle in new UIElement[] { _grip, _count })
+        _grip.CanDrag = true;
+        _grip.DragStarting += (_, e) =>
         {
-            handle.CanDrag = true;
-            handle.DragStarting += (_, e) =>
-            {
-                PaneDragStarting?.Invoke(e);
-                ShowDragPicture(e);
-            };
-            handle.DropCompleted += (_, e) => PaneDragCompleted?.Invoke(e.DropResult);
-        }
+            PaneDragStarting?.Invoke(e);
+            ShowDragPicture(e);
+        };
+        _grip.DropCompleted += (_, e) => PaneDragCompleted?.Invoke(e.DropResult);
     }
 
     /// <summary>
