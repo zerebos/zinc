@@ -620,8 +620,7 @@ public sealed partial class MainWindow : Window
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
 
-        var edges = PaneGap.Edges(Gap, _config.Global.PaneGapEdges, tabsAbove: _workspaceList == null);
-        tab.Container.Padding = new Thickness(edges.Left, edges.Top, edges.Right, edges.Bottom);
+        tab.Container.Padding = new Thickness(PaneGap.Edge(Gap, _config.Global.PaneGapEdges));
         ShowMaximized(tab, Gap);
 
         ShowWorkspaceAttention(tab);

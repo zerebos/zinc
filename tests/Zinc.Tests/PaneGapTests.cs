@@ -29,15 +29,11 @@ public class PaneGapTests
     }
 
     [Theory]
-    // gap, edges, workspace tabs above -> left, top, right, bottom
-    [InlineData(0, true, true, 0, 0, 0, 0)]
-    [InlineData(6, false, true, 0, 0, 0, 0)]
-    [InlineData(6, true, true, 6, 2, 6, 6)]
-    [InlineData(1, true, true, 1, 1, 1, 1)]
-    [InlineData(16, true, true, 16, 2, 16, 16)]
-    [InlineData(6, true, false, 6, 6, 6, 6)]   // workspaces listed on the left: nothing flows down into the panes
-    [InlineData(0, true, false, 0, 0, 0, 0)]
-    public void TheEdgesTakeTheGapAndTwoUnderTheTabs(int gap, bool edges, bool tabsAbove, double left, double top, double right,
-        double bottom) =>
-        Assert.Equal(new GapEdges(left, top, right, bottom), PaneGap.Edges(gap, edges, tabsAbove));
+    // gap, edges -> padding on every side
+    [InlineData(0, true, 0)]
+    [InlineData(6, false, 0)]
+    [InlineData(6, true, 6)]
+    [InlineData(1, true, 1)]
+    [InlineData(16, true, 16)]
+    public void TheEdgesTakeTheGap(int gap, bool edges, double padding) => Assert.Equal(padding, PaneGap.Edge(gap, edges));
 }
