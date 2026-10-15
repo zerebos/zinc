@@ -47,6 +47,22 @@ public sealed class TabGroup<T> where T : class
     }
 
     /// <summary>
+    /// Adds every tab of <paramref name="other"/>, in their order, after the active tab (or at <paramref name="index"/>),
+    /// and shows the one <paramref name="other"/> showed. <paramref name="other"/> should be discarded.
+    /// </summary>
+    public void Join(TabGroup<T> other, int? index = null)
+    {
+        if (other == this)
+        {
+            throw new ArgumentException("Can't join a group to itself.", nameof(other));
+        }
+
+        var at = Math.Clamp(index ?? _tabs.IndexOf(Active) + 1, 0, _tabs.Count);
+        _tabs.InsertRange(at, other.Tabs);
+        Active = other.Active;
+    }
+
+    /// <summary>
     /// Moves <paramref name="tab"/> so it sits before the tab now at <paramref name="index"/>
     /// (an index counted with the tab still in place, as a drop position is; past the end = last).
     /// </summary>
@@ -164,6 +180,67 @@ public sealed class Workspace<T> where T : class
         Layout.Split(leaf, where, group, newShare);
         ActiveGroup = group;
         return group;
+    }
+
+    /// <summary>
+    /// Puts <paramref name="group"/> (from another workspace, or just detached from this one) beside
+    /// <paramref name="target"/> on side <paramref name="where"/>, and focuses it.
+    /// </summary>
+    public void Place(TabGroup<T> group, TabGroup<T> target, PaneDirection where, double newShare = 0.5)
+    {
+        var leaf = Layout.Find(target) ?? throw new ArgumentException("Not in this workspace.", nameof(target));
+        if (Layout.Find(group) != null)
+        {
+            throw new ArgumentException("Already in this workspace.", nameof(group));
+        }
+
+        Layout.Split(leaf, where, group, newShare);
+        ActiveGroup = group;
+    }
+
+    /// <summary>
+    /// Adds <paramref name="group"/>'s tabs to <paramref name="target"/>'s (see <see cref="TabGroup{T}.Join"/>) and
+    /// focuses them there. <paramref name="group"/> must not be in this layout: it should be discarded.
+    /// </summary>
+    public void Join(TabGroup<T> group, TabGroup<T> target, int? index = null)
+    {
+        if (Layout.Find(target) == null)
+        {
+            throw new ArgumentException("Not in this workspace.", nameof(target));
+        }
+
+        target.Join(group, index);
+        ActiveGroup = target;
+    }
+
+    /// <summary>
+    /// Moves <paramref name="group"/> within this workspace: beside <paramref name="target"/> on side
+    /// <paramref name="where"/>, or into its tabs (at <paramref name="index"/>) when <paramref name="where"/> is null,
+    /// as a drop of the pane there does. Returns false (and changes nothing) for a move onto itself.
+    /// </summary>
+    public bool MoveGroup(TabGroup<T> group, TabGroup<T> target, PaneDirection? where, int? index = null)
+    {
+        if (group == target)
+        {
+            return false;
+        }
+
+        if (Layout.Find(group) == null || Layout.Find(target) == null)
+        {
+            throw new ArgumentException("Not in this workspace.");
+        }
+
+        Detach(group); // target stays
+        if (where is { } side)
+        {
+            Place(group, target, side);
+        }
+        else
+        {
+            Join(group, target, index);
+        }
+
+        return true;
     }
 
     /// <summary>

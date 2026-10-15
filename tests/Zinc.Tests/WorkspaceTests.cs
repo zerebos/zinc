@@ -251,6 +251,125 @@ public class WorkspaceTests
     }
 
     [Fact]
+    public void JoiningAGroupAddsItsTabsInOrderAndShowsItsShownTab()
+    {
+        T a = new("a"), b = new("b"), c = new("c"), d = new("d");
+        var target = new TabGroup<T>(a);
+        target.Add(b);
+        var other = new TabGroup<T>(c);
+        other.Add(d);
+        other.Activate(c);
+
+        target.Join(other, index: 1);
+        Assert.Equal([a, c, d, b], target.Tabs);
+        Assert.Same(c, target.Active);
+    }
+
+    [Fact]
+    public void JoiningAGroupWithoutAnIndexPutsItsTabsAfterTheShownTab()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var target = new TabGroup<T>(a);
+        target.Add(b);
+        target.Activate(a);
+
+        target.Join(new TabGroup<T>(c));
+        Assert.Equal([a, c, b], target.Tabs);
+        Assert.Throws<ArgumentException>(() => target.Join(target));
+    }
+
+    [Fact]
+    public void MovingAPaneToAnotherPanesEdgePutsItThere()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        var left = ws.ActiveGroup;
+        var middle = ws.Split(left, PaneDirection.Right, b);
+        var right = ws.Split(middle, PaneDirection.Right, c);
+
+        // a | b | c  ->  b | a | c, then c below a
+        Assert.True(ws.MoveGroup(left, middle, PaneDirection.Right));
+        Assert.Same(left, ws.ActiveGroup);
+        Assert.Equal([b, a, c], ws.Tabs);
+        Assert.Same(middle, ws.Neighbor(left, PaneDirection.Left));
+        Assert.Same(right, ws.Neighbor(left, PaneDirection.Right));
+
+        Assert.True(ws.MoveGroup(right, left, PaneDirection.Down));
+        Assert.Same(left, ws.Neighbor(right, PaneDirection.Up));
+        Assert.Equal(3, ws.Layout.Count);
+    }
+
+    [Fact]
+    public void MovingAPaneBesideItsOnlyNeighborSwapsThem()
+    {
+        T a = new("a"), b = new("b");
+        var ws = new Workspace<T>(a);
+        var left = ws.ActiveGroup;
+        var right = ws.Split(left, PaneDirection.Right, b);
+
+        Assert.True(ws.MoveGroup(left, right, PaneDirection.Right));
+        Assert.Equal([b, a], ws.Tabs);
+        Assert.Same(left, ws.ActiveGroup);
+    }
+
+    [Fact]
+    public void MovingAPaneIntoAnotherJoinsItsTabsAndRemovesIt()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        var left = ws.ActiveGroup;
+        var right = ws.Split(left, PaneDirection.Right, b);
+        right.Add(c);
+
+        Assert.True(ws.MoveGroup(right, left, null, index: 0));
+        Assert.Equal([left], ws.Groups);
+        Assert.Equal([b, c, a], left.Tabs);
+        Assert.Same(c, ws.Active); // the pane showed c, so it still does
+    }
+
+    [Fact]
+    public void MovingAPaneOntoItselfDoesNothing()
+    {
+        T a = new("a"), b = new("b");
+        var ws = new Workspace<T>(a);
+        var right = ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+
+        Assert.False(ws.MoveGroup(right, right, PaneDirection.Left));
+        Assert.False(ws.MoveGroup(right, right, null));
+        Assert.Equal([a, b], ws.Tabs);
+        Assert.Equal(2, ws.Layout.Count);
+    }
+
+    [Fact]
+    public void MovingTheMaximizedPaneShowsThemAll()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var ws = new Workspace<T>(a);
+        var middle = ws.Split(ws.ActiveGroup, PaneDirection.Right, b);
+        var right = ws.Split(middle, PaneDirection.Right, c);
+        ws.ToggleMaximize();
+        Assert.Same(right, ws.Maximized);
+
+        ws.MoveGroup(right, ws.GroupOf(a)!, PaneDirection.Left);
+        Assert.Null(ws.Maximized);
+    }
+
+    [Fact]
+    public void PlacingAGroupFromAnotherWorkspaceFocusesIt()
+    {
+        T a = new("a"), b = new("b"), c = new("c");
+        var source = new Workspace<T>(a);
+        var moving = source.Split(source.ActiveGroup, PaneDirection.Right, b);
+        var ws = new Workspace<T>(c);
+
+        Assert.True(source.Detach(moving));
+        ws.Place(moving, ws.ActiveGroup, PaneDirection.Down);
+        Assert.Same(moving, ws.ActiveGroup);
+        Assert.Equal([c, b], ws.Tabs);
+        Assert.Throws<ArgumentException>(() => ws.Place(moving, ws.GroupOf(c)!, PaneDirection.Up));
+    }
+
+    [Fact]
     public void ClosingEveryTabOfTheOnlyPaneEmptiesTheWorkspace()
     {
         T a = new("a"), b = new("b");

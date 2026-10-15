@@ -21,7 +21,11 @@ internal sealed partial class GroupView : Grid
     private const double AddWidth = 30;
 
     private readonly StackPanel _tabs = new() { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Left };
-    private readonly Grid _strip = new() { Height = StripHeight };
+    /// <summary>
+    /// The header. Its empty part takes the pointer too (transparent, not no background). Hovering anywhere on it shows
+    /// the buttons, a double-click there maximizes, and a tab dropped there joins the tabs.
+    /// </summary>
+    private readonly Grid _strip = new() { Height = StripHeight, Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
     private readonly TitleHeader _title = new() { Visibility = Visibility.Collapsed, HorizontalAlignment = HorizontalAlignment.Left };
     private readonly Border _content = new();
     private readonly Dictionary<MainWindow.TerminalTab, TabItem> _items = new();
@@ -66,6 +70,7 @@ internal sealed partial class GroupView : Grid
         SetColumn(add, 1);
         add.HorizontalAlignment = HorizontalAlignment.Left;
         _count = CountButton();
+        AddGrip();
         _strip.Children.Add(_tabs);
         _strip.Children.Add(_title);
         _strip.Children.Add(add);
@@ -97,6 +102,24 @@ internal sealed partial class GroupView : Grid
             e.Handled = true;
             WithShown(t => TabMenuRequested?.Invoke(t, _title));
         };
+        _title.PointerReleased += (_, e) =>
+        {
+            // Middle click closes its tab, as it does on a tab.
+            if (e.GetCurrentPoint(_title).Properties.PointerUpdateKind == Microsoft.UI.Input.PointerUpdateKind.MiddleButtonReleased)
+            {
+                e.Handled = true;
+                WithShown(t => TabCloseClicked?.Invoke(t));
+            }
+        };
+        // Double-click anywhere on the header but its buttons maximizes the pane, or restores it. Not in a lone pane, where "Maximize" isn't offered (or needed tbf).
+        _strip.DoubleTapped += (_, e) =>
+        {
+            if (_splitWorkspace && !OnButton(e.OriginalSource as DependencyObject))
+            {
+                e.Handled = true;
+                HeaderAction?.Invoke(new ActionInvocation(TerminalAction.MaximizePane));
+            }
+        };
         // Dragging the title drags its tab, as a one-tab strip did.
         _title.CanDrag = true;
         _title.DragStarting += (_, e) => WithShown(t => TabDragStarting?.Invoke(t, e));
@@ -112,11 +135,18 @@ internal sealed partial class GroupView : Grid
         Children.Add(_focusLine);
         Children.Add(_paneDot); // above the dimming: it's what you should notice
 
-        // Dropping a tab on the strip puts it between the tabs where it lands.
+        // Dropping a tab anywhere on the header puts it between the tabs where it lands. With pane tabs off a pane holds one tab, so drops go on to the pane's edges below.
         _strip.Children.Add(_marker);
         _strip.AllowDrop = true;
         _strip.DragOver += (_, e) =>
         {
+            // If pane tabs are off, we don't handle drag here.
+            // That would be silly, and definitely not a latent bug I forgot to handle...
+            if (!_settings.PaneTabs)
+            {
+                return;
+            }
+
             e.Handled = true; // not also an edge/middle drop on the pane below
             var index = IndexAt(e);
             if (StripDragOver?.Invoke(e, index) == true)
@@ -131,6 +161,13 @@ internal sealed partial class GroupView : Grid
         _strip.DragLeave += (_, _) => _marker.Visibility = Visibility.Collapsed;
         _strip.Drop += (_, e) =>
         {
+            // If pane tabs are off, we don't handle drops here.
+            // That would be silly, and definitely not a latent bug I forgot to handle...
+            if (!_settings.PaneTabs)
+            {
+                return;
+            }
+
             e.Handled = true;
             _marker.Visibility = Visibility.Collapsed;
             StripDrop?.Invoke(e, IndexAt(e));
@@ -216,6 +253,20 @@ internal sealed partial class GroupView : Grid
         }
 
         return items.Any(c => c.Visibility == Visibility.Visible) ? after : items.Count;
+    }
+
+    /// <summary>Whether <paramref name="element"/> is in one of the header's buttons (a tab's ×, the +, the count, Split…).</summary>
+    private bool OnButton(DependencyObject? element)
+    {
+        for (; element != null && element != _strip; element = VisualTreeHelper.GetParent(element))
+        {
+            if (element is Microsoft.UI.Xaml.Controls.Primitives.ButtonBase)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>The header's tabs, left to right: the title counts as the one tab.</summary>
