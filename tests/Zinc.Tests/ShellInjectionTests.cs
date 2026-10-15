@@ -3,9 +3,28 @@ using Zinc.Terminal;
 
 namespace Zinc.Tests;
 
-public class ShellInjectionTests
+public class ShellInjectionTests : IDisposable
 {
     private const string Scripts = @"C:\Zinc\ShellIntegration";
+
+    private readonly List<(TerminalSession Session, ManualResetEventSlim Exited)> _shells = [];
+
+    /// <summary>
+    /// Each shell is told to exit before its console closes. Closed under a busy Git Bash or MSYS2 shell (within
+    /// milliseconds of its last output, as these tests do), the console sometimes left behind a forked bash that never
+    /// started (created suspended, its parent gone), and with it OpenConsole.exe, which locked the test output for the
+    /// next build. Closing a tab in a real running Zinc instance hasn't done this. It seems specific to the test environment.
+    /// Could also be an interaction with WT (Windows Terminal) or VSCode since he reuse their OpenConsole.exe instances.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var (session, exited) in _shells)
+        {
+            session.SendInput("exit\r");
+            exited.Wait(TimeSpan.FromSeconds(5)); // a test that failed mid-command: closed anyway
+            session.Dispose();
+        }
+    }
 
     private static ShellLaunch Prepare(string command, Dictionary<string, string>? env = null) =>
         ShellIntegration.Prepare(command, Scripts, name => env?.GetValueOrDefault(name));
@@ -159,8 +178,8 @@ public class ShellInjectionTests
         throw new DirectoryNotFoundException("assets/shell-integration");
     }
 
-    /// <summary>A shell started the way the app starts it, with a clean home where that's possible.</summary>
-    private static TerminalSession StartShell(string command, Dictionary<string, string?>? extra = null)
+    /// <summary>A shell started the way the app starts it, with a clean home where that's possible. Ended by <see cref="Dispose"/>.</summary>
+    private TerminalSession StartShell(string command, Dictionary<string, string?>? extra = null)
     {
         var launch = ShellIntegration.Prepare(command, RepoScripts(), Environment.GetEnvironmentVariable);
         var env = new Dictionary<string, string?>(launch.Environment) { ["NO_COLOR"] = null };
@@ -170,6 +189,9 @@ public class ShellInjectionTests
         }
 
         var session = new TerminalSession(100, 30, TerminalTheme.Default);
+        var exited = new ManualResetEventSlim();
+        session.ProcessExited += _ => exited.Set();
+        _shells.Add((session, exited));
         session.Resize(100, 30, 8, 16);
         session.Start(launch.CommandLine, Path.GetTempPath(), 100, 30, env);
         return session;
@@ -219,7 +241,7 @@ public class ShellInjectionTests
     {
         var pwsh = ShellResolver.FindOnPath(Environment.GetEnvironmentVariable("PATH") ?? "", "pwsh.exe");
         Assert.SkipWhen(pwsh == null, "no pwsh.exe");
-        using var session = StartShell("pwsh.exe -NoLogo -NoProfile");
+        var session = StartShell("pwsh.exe -NoLogo -NoProfile");
         ChecksMarks(session, "cmd /c exit 3", 3, "cd ..", Path.GetFileName(Path.GetDirectoryName(Path.GetTempPath().TrimEnd('\\')))!);
     }
 
@@ -227,7 +249,7 @@ public class ShellInjectionTests
     public void WindowsPowerShell()
     {
         // Its default execution policy refuses script files: the script is loaded as text.
-        using var session = StartShell("powershell.exe -NoLogo -NoProfile");
+        var session = StartShell("powershell.exe -NoLogo -NoProfile");
         ChecksMarks(session, "cmd /c exit 4", 4, "cd C:\\Windows", "Windows");
     }
 
@@ -235,7 +257,7 @@ public class ShellInjectionTests
     public void WindowsPowerShellAfterACommandThatStaysOpen()
     {
         // Started as Developer PowerShell for VS is (its quoting included): the command runs first, then the marks.
-        using var session = StartShell("powershell.exe -NoLogo -NoProfile -NoExit -Command \"&{Set-Variable -Name zincDev -Value \"\"\"entered\"\"\" -Scope Global}\"");
+        var session = StartShell("powershell.exe -NoLogo -NoProfile -NoExit -Command \"&{Set-Variable -Name zincDev -Value \"\"\"entered\"\"\" -Scope Global}\"");
         ChecksMarks(session, "cmd /c exit 5", 5, "cd C:\\Windows", "Windows");
         session.SendInput("Write-Output \"dev=$zincDev\"\r");
         WaitFor(session, () => session.ReadScreenText().Contains("dev=entered"), "the first command's variable");
@@ -246,7 +268,7 @@ public class ShellInjectionTests
     {
         // cmd's PROMPT carries A, B, D (no exit code) and the folder; Zinc marks C itself when Enter is pressed.
         // (/d: no AutoRun, so no Clink even where it's installed: CmdUnderClink covers that.)
-        using var session = StartShell("cmd.exe /d");
+        var session = StartShell("cmd.exe /d");
         WaitFor(session, () => session.Commands().Count >= 1, "the first prompt mark");
         session.SendInput("echo zinc-hello\r");
         WaitFor(session, () => session.Commands().Any(c => c.Ran && c.Text == "echo zinc-hello" && !c.Running), "the command");
@@ -284,7 +306,7 @@ public class ShellInjectionTests
         // Its rc (here given with -rc, which ours takes over) runs first, and what it defines is there at the prompt.
         var rc = Path.Combine(Directory.CreateTempSubdirectory("zinc-elvish-").FullName, "rc.elv");
         File.WriteAllText(rc, "var zinc-greeting = rc-read\nfn zinc-hello { echo hello-from-rc }\n");
-        using var session = StartShell($"\"{elvish}\" -rc \"{rc}\"");
+        var session = StartShell($"\"{elvish}\" -rc \"{rc}\"");
         ChecksMarks(session, "cmd /c exit 4", 4, "cd C:\\Windows", "Windows");
         session.SendInput("echo $zinc-greeting; zinc-hello\r");
         WaitFor(session, () => session.ReadScreenText() is var s && s.Contains("rc-read") && s.Contains("hello-from-rc"), "rc.elv's definitions");
@@ -302,7 +324,7 @@ public class ShellInjectionTests
             Assert.SkipUnless(found, "no OSH in WSL Fedora");
         }
 
-        using var session = StartShell("wsl.exe -d Fedora --exec osh -i");
+        var session = StartShell("wsl.exe -d Fedora --exec osh -i");
         ChecksMarks(session, "false", 1, "cd /tmp", "/tmp");
         Assert.DoesNotContain("declare", session.ReadScreenText()); // no complaint about bash-only declare -f
     }
@@ -342,7 +364,7 @@ public class ShellInjectionTests
             "local p = clink.promptfilter(50)\nfunction p:filter() end\nfunction p:rightfilter() return \"zinc-rprompt\" end\n");
         try
         {
-            using var session = StartShell($"cmd.exe /d /k \"\"{clink}\" inject --profile \"{profile}\"\"");
+            var session = StartShell($"cmd.exe /d /k \"\"{clink}\" inject --profile \"{profile}\"\"");
             ChecksMarks(session, "dir zinc-no-such-file", 1, "cd C:\\Windows", "Windows");
             Assert.Equal("dir zinc-no-such-file", session.Commands().First(c => c.Ran).Text);
             // Read off the screen, a wide gap would end the command (it looks like the gap before a right prompt).
@@ -369,7 +391,7 @@ public class ShellInjectionTests
     {
         const string bash = @"C:\Program Files\Git\bin\bash.exe";
         Assert.SkipUnless(File.Exists(bash), "no Git Bash");
-        using var session = StartShell($"\"{bash}\" --noprofile --norc -i");
+        var session = StartShell($"\"{bash}\" --noprofile --norc -i");
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
         ChecksFolderEncoding(session);
     }
@@ -381,7 +403,7 @@ public class ShellInjectionTests
         Assert.SkipUnless(File.Exists(bash), "no Git Bash");
         var home = Directory.CreateTempSubdirectory("zinc-bash-").FullName;
         File.WriteAllText(Path.Combine(home, ".bashrc"), "PROMPT_COMMAND=\"${PROMPT_COMMAND:+$PROMPT_COMMAND; }echo -n\"\n");
-        using var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
+        var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
         session.SendInput("echo \"[$PROMPT_COMMAND]\"\r");
         WaitFor(session, () => session.ReadScreenText().Contains("[__zinc_si_status; echo -n; __zinc_si_prompt]"), "PROMPT_COMMAND");
@@ -397,7 +419,7 @@ public class ShellInjectionTests
         var home = Directory.CreateTempSubdirectory("zinc-bash-").FullName;
         File.WriteAllText(Path.Combine(home, ".bashrc"), "PROMPT_COMMAND='history -a'\nzinc_rc=read\n");
         File.WriteAllText(Path.Combine(home, ".bash_profile"), "zinc_profile=read\n. ~/.bashrc\n");
-        using var session = StartShell($"\"{bash}\" {args}", new() { ["HOME"] = home });
+        var session = StartShell($"\"{bash}\" {args}", new() { ["HOME"] = home });
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
 
         // Its startup files were read as bash reads them, and its own prompt command still runs (after ours).
@@ -436,7 +458,7 @@ public class ShellInjectionTests
         Assert.SkipUnless(File.Exists(bash), "no Git Bash");
         var home = Directory.CreateTempSubdirectory("zinc-bash-").FullName;
         File.WriteAllText(Path.Combine(home, ".bashrc"), OldBashSnippet);
-        using var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
+        var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
         // The snippet sends no command text: it's read back from the screen.
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
     }
@@ -448,7 +470,7 @@ public class ShellInjectionTests
         Assert.SkipUnless(File.Exists(zsh), "no MSYS2 zsh");
         var home = Directory.CreateTempSubdirectory("zinc-zsh-").FullName;
         File.WriteAllText(Path.Combine(home, ".zshrc"), OldZshSnippet);
-        using var session = StartShell($"{zsh} -i", new() { ["HOME"] = home });
+        var session = StartShell($"{zsh} -i", new() { ["HOME"] = home });
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
     }
 
@@ -461,7 +483,7 @@ public class ShellInjectionTests
         File.WriteAllText(Path.Combine(home, ".zshrc"), "PS1='%~ %# '\n");
         // MSYS2's own tools and a UTF-8 locale, as its launcher sets them (Git's mkdir on PATH first
         // named a non-ASCII folder differently from how this zsh looked it up).
-        using var session = StartShell($"{zsh} -i", new()
+        var session = StartShell($"{zsh} -i", new()
         {
             ["HOME"] = home,
             ["LANG"] = "C.UTF-8",
