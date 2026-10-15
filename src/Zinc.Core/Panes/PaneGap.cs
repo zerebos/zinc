@@ -10,7 +10,10 @@ public static class PaneGap
     /// <summary>The divider's band at gap 0: wide enough to grab, drawn as a 1 px line in its middle.</summary>
     public const double Divider = 5;
 
-    /// <summary>The most the top edge takes: the workspace's tabs sit right above it (decision 61).</summary>
+    /// <summary>
+    /// The most the top edge takes under the workspace tabs: the shown workspace's tab flows down into
+    /// its panes, which a full gap would cut off.
+    /// </summary>
     public const double TopEdge = 2;
 
     /// <summary>The band between two panes of a split: the gap, or the divider's at 0.</summary>
@@ -27,12 +30,13 @@ public static class PaneGap
         extent - band > 0 ? (pointer - band / 2) / (extent - band) : null;
 
     /// <summary>
-    /// The workspace's padding at its outer edges: none at gap 0 or with <paramref name="edges"/> off, else the gap on
-    /// the sides and bottom and at most <see cref="TopEdge"/> at the top. Split or not, and maximized or not, so neither
-    /// moves the outer edges (decisions 17, 60).
+    /// The workspace's padding at its outer edges: none at gap 0 or with <paramref name="edges"/> off, else the gap all
+    /// round, but at most <see cref="TopEdge"/> at the top when the workspace tabs are right above
+    /// (<paramref name="tabsAbove"/>; with workspaces listed on the left, the title bar or the window's edge is). Split or
+    /// not, and maximized or not, so neither moves the outer edges (decisions 17, 60).
     /// </summary>
-    public static GapEdges Edges(int gap, bool edges) => gap <= 0 || !edges ? default
-        : new GapEdges(gap, Math.Min(gap, TopEdge), gap, gap);
+    public static GapEdges Edges(int gap, bool edges, bool tabsAbove) => gap <= 0 || !edges ? default
+        : new GapEdges(gap, tabsAbove ? Math.Min(gap, TopEdge) : gap, gap, gap);
 }
 
 /// <summary>Pixels at each of the workspace's outer edges (<see cref="PaneGap.Edges"/>).</summary>
