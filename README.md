@@ -240,6 +240,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `selection-background`, `selection-foreground`: `"#rrggbb"`, instead of the scheme's (most
   schemes set them). With neither, selection inverts the colors; with only a background, selected
   text keeps its color.
+- `pane-header`: `"#rrggbb"`, behind pane headers and around cards. Without it, the background
+  a shade lighter (darker on a light scheme).
 - `palette`: an array of up to 256 colors from index 0, or single entries: `palette.1 = "#AC4242"`.
 
 **`[terminal]`**

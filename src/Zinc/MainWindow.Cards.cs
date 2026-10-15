@@ -14,15 +14,15 @@ namespace Zinc;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Makes a pane's host a card for its shown tab's profile and returns its header fill: the scheme's background just
-    /// enough lighter or darker (WCAG contrast) to stand apart (<see cref="PaneCard.HeaderFill"/>), as see-through as
+    /// Makes a pane's host a card for its shown tab's profile and returns its header fill: the profile's pane-header color,
+    /// else the scheme's background just enough lighter or darker (WCAG contrast) to stand apart (<see cref="PaneCard.HeaderFill(GhosttyColorRgb)"/>), as see-through as
     /// the terminal so the card stays one piece. The edge takes the same fill, dimmed with the rest of the card by
     /// <paramref name="dim"/> toward <paramref name="dimFill"/>, or the <paramref name="ring"/> on the focused card.
     /// Every card keeps its 2 px edge, so focus never resizes a terminal.
     /// </summary>
     private static Color ShowCard(Border host, Config config, double dim, GhosttyColorRgb dimFill, Brush? ring)
     {
-        var header = PaneCard.HeaderFill(config.Theme.Background);
+        var header = PaneCard.HeaderFill(config);
         var edge = PaneCard.Mix(header, dimFill, dim);
         host.CornerRadius = new CornerRadius(PaneCard.Radius);
         host.BorderThickness = new Thickness(PaneCard.Edge);
@@ -51,7 +51,7 @@ public sealed partial class MainWindow
         host.CornerRadius = default;
         host.BorderThickness = default;
         host.BorderBrush = null;
-        return WithOpacity(PaneCard.HeaderFill(config.Theme.Background), config);
+        return WithOpacity(PaneCard.HeaderFill(config), config);
     }
 
     /// <summary>A color as see-through as the profile's terminal background.</summary>

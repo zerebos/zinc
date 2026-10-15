@@ -784,6 +784,7 @@ public sealed class ConfigFile
             ["window.divider-color"] = ("split-divider-color", v => v as string),
             ["colors.minimum-contrast"] = ("minimum-contrast", v => Number(v)),
             ["colors.bold"] = ("bold-color", v => v as string),
+            ["colors.pane-header"] = ("pane-header-color", v => v as string),
             ["colors.bold-is-bright"] = ("bold-is-bright", v => Bool(v)),
             ["colors.palette-generate"] = ("palette-generate", v => Bool(v)),
             ["colors.palette-harmonious"] = ("palette-harmonious", v => Bool(v)),

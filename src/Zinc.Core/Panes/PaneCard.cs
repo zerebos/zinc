@@ -47,6 +47,9 @@ public static class PaneCard
         return Mix(background, toward, high);
     }
 
+    /// <summary>A profile's header fill: its <c>pane-header</c> color, else made from its background.</summary>
+    public static GhosttyColorRgb HeaderFill(Config config) => config.PaneHeaderColor ?? HeaderFill(config.Theme.Background);
+
     /// <summary>The WCAG contrast ratio between two colors (1 to 21), as the app's <c>Contrast.Ratio</c>.</summary>
     public static double Ratio(GhosttyColorRgb a, GhosttyColorRgb b)
     {

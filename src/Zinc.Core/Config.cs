@@ -643,6 +643,9 @@ public sealed record Config
     /// <summary>Bold text in the default color takes this one; null: the same. Config: <c>[colors] bold</c>.</summary>
     public GhosttyColorRgb? BoldColor { get; init; }
 
+    /// <summary>Pane headers (and cards' edges) take this fill; null: made from the background. Config: <c>[colors] pane-header</c>.</summary>
+    public GhosttyColorRgb? PaneHeaderColor { get; init; }
+
     /// <summary>Bold text in palette colors 0-7 shows their bright versions (8-15). Config: <c>[colors] bold-is-bright</c>.</summary>
     public bool BoldIsBright { get; init; }
 
@@ -799,6 +802,7 @@ public sealed record Config
             "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },
             "minimum-contrast" when TryDouble(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
+            "pane-header-color" when TryColor(value, out var header) => this with { PaneHeaderColor = header },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
             "palette-generate" when bool.TryParse(value, out var generate) => this with { PaletteGeneration = PaletteGeneration with { Generate = generate } },
             "palette-harmonious" when bool.TryParse(value, out var harmonious) => this with { PaletteGeneration = PaletteGeneration with { Harmonious = harmonious } },

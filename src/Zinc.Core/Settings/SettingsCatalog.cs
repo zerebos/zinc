@@ -163,6 +163,8 @@ public static class SettingsCatalog
             "Behind selected text (without either, selection inverts the colors).", SettingKind.Color, null),
         new("appearance", "Colors", "colors.selection-foreground", "Selected text",
             "Without either, the text keeps its color.", SettingKind.Color, null),
+        new("appearance", "Colors", "colors.pane-header", "Pane headers", "Behind pane titles and tabs, and around cards.", SettingKind.Color, null)
+            { Placeholder = "From the background" },
         new("appearance", "Readability", "colors.minimum-contrast", "Minimum contrast",
             "Text that reads poorly against its background turns black or white. 1: off; 4.5: the usual accessibility level; 21: always black or white.",
             SettingKind.Number, 1.0)

@@ -46,5 +46,14 @@ public class PaneCardTests
 
     private static string Hex(GhosttyColorRgb c) => $"{c.R:X2}{c.G:X2}{c.B:X2}";
 
+    [Fact]
+    public void PaneHeaderColorReplacesTheMadeFill()
+    {
+        var config = new Config().Apply("pane-header-color", "#334455")!;
+        Assert.Equal("334455", Hex(PaneCard.HeaderFill(config)));
+        Assert.Equal(PaneCard.HeaderFill(new Config().Theme.Background), PaneCard.HeaderFill(new Config()));
+        Assert.Null(new Config().Apply("pane-header-color", "blue-ish"));
+    }
+
     private static GhosttyColorRgb Rgb(int rgb) => new((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
 }
