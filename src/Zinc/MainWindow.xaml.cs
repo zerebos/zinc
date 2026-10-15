@@ -496,11 +496,11 @@ public sealed partial class MainWindow : Window
 
         if (horizontal)
         {
-            grid.ColumnDefinitions[1].Width = new GridLength(PaneDivider.Thickness);
+            grid.ColumnDefinitions[1].Width = new GridLength(PaneGap.Band(Gap));
         }
         else
         {
-            grid.RowDefinitions[1].Height = new GridLength(PaneDivider.Thickness);
+            grid.RowDefinitions[1].Height = new GridLength(PaneGap.Band(Gap));
         }
 
         PaneDivider.ApplyRatio(grid, split);
@@ -584,6 +584,9 @@ public sealed partial class MainWindow : Window
     private PaneHeaderKind HeaderOf(TabGroup<TerminalTab> group, bool split) => _quick ? PaneHeaderKind.None
         : PaneHeader.For(_config.Global.PaneHeaders, _config.Global.TabGroups, split, group.Tabs.Count);
 
+    /// <summary>Pixels between panes (pane-gap). The quick terminal has none, as it has no header.</summary>
+    private int Gap => _quick ? 0 : _config.Global.PaneGap;
+
     private static void Dismantle(Panel panel)
     {
         foreach (var child in panel.Children.OfType<Panel>().ToList())
@@ -615,7 +618,9 @@ public sealed partial class MainWindow : Window
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
 
-        ShowMaximized(tab);
+        var edges = PaneGap.Edges(Gap, _config.Global.PaneGapEdges);
+        tab.Container.Padding = new Thickness(edges.Left, edges.Top, edges.Right, edges.Bottom);
+        ShowMaximized(tab, Gap);
 
         ShowWorkspaceAttention(tab);
         UpdateTaskbarProgress(); // the shown workspace's progress wins; closed panes drop theirs
@@ -635,7 +640,7 @@ public sealed partial class MainWindow : Window
     /// Shows the workspace's maximized pane alone (maximize-pane), or every pane: along the path from the maximized
     /// pane's host up to the root, each split shows only the side holding it. Nothing leaves the tree (PaneDivider.ShowOnly).
     /// </summary>
-    private static void ShowMaximized(WorkspaceTab tab)
+    private static void ShowMaximized(WorkspaceTab tab, int gap)
     {
         var path = new HashSet<PaneNode>();
         for (PaneNode? node = tab.Workspace.Maximized is { } group ? tab.Workspace.Layout.Find(group) : null; node != null; node = node.Parent)
@@ -647,7 +652,7 @@ public sealed partial class MainWindow : Window
         {
             if (grid.Tag is PaneSplit split)
             {
-                PaneDivider.ShowOnly(grid, split, path.Contains(split) ? path.Contains(split.First) : null);
+                PaneDivider.ShowOnly(grid, split, path.Contains(split) ? path.Contains(split.First) : null, gap);
             }
         }
     }
