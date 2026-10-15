@@ -614,7 +614,10 @@ public sealed partial class MainWindow : Window
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
             var fill = _config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background;
-            var cardFill = card ? ShowCard(host, group.Active.Profile.Config, several && !focused ? dim : 0, fill) : ShowFlat(host);
+            var config = group.Active.Profile.Config;
+            var ring = PaneHeader.Ring(_config.Global.PaneFocus, focused, several)
+                ? Contrast.AccentOn(TerminalRenderer.ToColor(config.Theme.Background), _focusBrush) : null;
+            var cardFill = card ? ShowCard(host, config, several && !focused ? dim : 0, fill, ring) : ShowFlat(host);
             ((GroupView)host.Child).Update(group, HeaderOf(group, split), settings, focused, _focusBrush, split, several,
                 tab.Workspace.Maximized == group, dim, TerminalRenderer.ToColor(fill), cardFill);
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)

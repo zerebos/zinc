@@ -38,13 +38,18 @@ public static class PaneHeader
     }
 
     /// <summary>
-    /// Whether a pane shows the accent line (<c>pane-focus</c>): on its shown tab whenever it has focus, as tabs always
-    /// did; on a title header or along the top of a pane without a header only when there are other panes to tell
-    /// it from (<paramref name="several"/>: split, nothing maximized; decision 33). Ring draws the line too until the
-    /// ring exists.
+    /// Whether a pane shows the accent line (<c>pane-focus = tab-accent</c>): on its shown tab whenever it has focus, as
+    /// tabs always did; on a title header or along the top of a pane without a header only when there are other panes
+    /// to tell it from (<paramref name="several"/>: split, nothing maximized).
     /// </summary>
     public static bool AccentLine(PaneFocus focus, PaneHeaderKind header, bool focused, bool several) =>
-        focused && focus != PaneFocus.None && (header == PaneHeaderKind.Tabs || several);
+        focused && focus == PaneFocus.TabAccent && (header == PaneHeaderKind.Tabs || several);
+
+    /// <summary>
+    /// Whether a pane shows the ring (<c>pane-focus = ring</c>): around the focused pane when there are others to tell it
+    /// from (<paramref name="several"/>), so not on a lone pane or a maximized one.
+    /// </summary>
+    public static bool Ring(PaneFocus focus, bool focused, bool several) => focused && several && focus == PaneFocus.Ring;
 
     /// <summary>
     /// Whether a header shows its buttons (<c>pane-header-buttons</c>): always; the focused pane's and any under the

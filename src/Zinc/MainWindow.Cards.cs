@@ -13,12 +13,13 @@ namespace Zinc;
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Makes a pane's host a card for its shown tab's profile and returns its header fill: the scheme's background a few
-    /// percent lighter or darker (<see cref="PaneCard.HeaderFill"/>), as see-through as the terminal so the card stays
-    /// one piece. The edge takes the same fill, dimmed with the rest of the card by <paramref name="dim"/> toward
-    /// <paramref name="dimFill"/>.
+    /// Makes a pane's host a card for its shown tab's profile and returns its header fill: the scheme's background just
+    /// enough lighter or darker (WCAG contrast) to stand apart (<see cref="PaneCard.HeaderFill"/>), as see-through as
+    /// the terminal so the card stays one piece. The edge takes the same fill, dimmed with the rest of the card by
+    /// <paramref name="dim"/> toward <paramref name="dimFill"/>, or the <paramref name="ring"/> on the focused card.
+    /// Every card keeps its 2 px edge, so focus never resizes a terminal.
     /// </summary>
-    private static Color ShowCard(Border host, Config config, double dim, GhosttyColorRgb dimFill)
+    private static Color ShowCard(Border host, Config config, double dim, GhosttyColorRgb dimFill, Brush? ring)
     {
         var alpha = (byte)Math.Round(255 * config.BackgroundOpacity);
         var header = PaneCard.HeaderFill(config.Theme.Background);
@@ -26,7 +27,14 @@ public sealed partial class MainWindow
         host.CornerRadius = new CornerRadius(PaneCard.Radius);
         host.BorderThickness = new Thickness(PaneCard.Edge);
         var edgeColor = Color.FromArgb(alpha, edge.R, edge.G, edge.B);
-        if (host.BorderBrush is not SolidColorBrush { } brush || brush.Color != edgeColor)
+        if (ring != null)
+        {
+            if (host.BorderBrush != ring)
+            {
+                host.BorderBrush = ring;
+            }
+        }
+        else if (host.BorderBrush is not SolidColorBrush { } brush || brush.Color != edgeColor)
         {
             host.BorderBrush = new SolidColorBrush(edgeColor);
         }

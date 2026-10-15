@@ -43,9 +43,20 @@ public class PaneHeaderTests
     [InlineData(PaneFocus.None, Tabs, true, true, false)]         // no mark anywhere, whatever the tab count
     [InlineData(PaneFocus.None, Title, true, true, false)]
     [InlineData(PaneFocus.None, None, true, true, false)]
-    [InlineData(PaneFocus.Ring, Title, true, true, true)]         // the line stands in until the ring exists
+    [InlineData(PaneFocus.Ring, Title, true, true, false)]        // the ring marks it instead
+    [InlineData(PaneFocus.Ring, Tabs, true, false, false)]
     public void AccentLineMarksTheFocusedPane(PaneFocus focus, PaneHeaderKind header, bool focused, bool several, bool expected) =>
         Assert.Equal(expected, PaneHeader.AccentLine(focus, header, focused, several));
+
+    [Theory]
+    // focus, focused, several -> ring
+    [InlineData(PaneFocus.Ring, true, true, true)]
+    [InlineData(PaneFocus.Ring, false, true, false)]
+    [InlineData(PaneFocus.Ring, true, false, false)]   // a lone or maximized pane: nothing to tell apart
+    [InlineData(PaneFocus.TabAccent, true, true, false)]
+    [InlineData(PaneFocus.None, true, true, false)]
+    public void RingGoesAroundTheFocusedPaneAmongOthers(PaneFocus focus, bool focused, bool several, bool expected) =>
+        Assert.Equal(expected, PaneHeader.Ring(focus, focused, several));
 
     [Theory]
     // mode, focused, hovered -> shown

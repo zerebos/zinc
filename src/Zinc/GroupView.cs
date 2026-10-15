@@ -129,10 +129,12 @@ internal sealed partial class GroupView : Grid
         SetRow(_dim, 1);
         SetRow(_focusLine, 1);
         SetRow(_paneDot, 1);
+        SetRowSpan(_ring, 2);
         Children.Add(_strip);
         Children.Add(_content);
         Children.Add(_dim);
         Children.Add(_focusLine);
+        Children.Add(_ring);
         Children.Add(_paneDot); // above the dimming: it's what you should notice
 
         // Dropping a tab anywhere on the header puts it between the tabs where it lands. With pane tabs off a pane holds one tab, so drops go on to the pane's edges below.
@@ -204,6 +206,17 @@ internal sealed partial class GroupView : Grid
         HorizontalAlignment = HorizontalAlignment.Right,
         VerticalAlignment = VerticalAlignment.Top,
         Margin = new Thickness(0, 8, 10, 0),
+    };
+
+    /// <summary>
+    /// The ring around a flat pane (gap 0): drawn inside its edge, over the terminal's padding and the header.
+    /// A card's ring is its own edge (<c>MainWindow.ShowCard</c>).
+    /// </summary>
+    private readonly Border _ring = new()
+    {
+        BorderThickness = new Thickness(PaneCard.Edge),
+        IsHitTestVisible = false,
+        Visibility = Visibility.Collapsed,
     };
 
     /// <summary>Dims an unfocused pane (unfocused-split-opacity): its fill color, partly transparent, over the terminal.</summary>
@@ -304,7 +317,9 @@ internal sealed partial class GroupView : Grid
     /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
     /// only with pane tabs on; the buttons and status slot per <paramref name="settings"/>, Maximize only when the
     /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>). A card
-    /// (gap above 0) has its header filled with <paramref name="cardFill"/>; null keeps panes flat.
+    /// (gap above 0) has its header filled with <paramref name="cardFill"/>; null keeps panes flat. With pane-focus = ring
+    /// the focused pane gets the ring instead of the line (<see cref="PaneHeader.Ring"/>): drawn here on a flat pane, by
+    /// the window on a card's edge.
     /// </summary>
     public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, HeaderSettings settings, bool focused,
         Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default,
@@ -341,6 +356,18 @@ internal sealed partial class GroupView : Grid
         }
 
         ShowCard(cardFill);
+        var ring = cardFill == null && PaneHeader.Ring(settings.Focus, focused, several);
+        _ring.Visibility = ring ? Visibility.Visible : Visibility.Collapsed;
+        if (ring)
+        {
+            // Kept visible on the terminal's background, like the accent line
+            var ringBrush = Contrast.AccentOn(TerminalRenderer.ToColor(group.Active.Profile.Config.Theme.Background), accent);
+            if (_ring.BorderBrush != ringBrush)
+            {
+                _ring.BorderBrush = ringBrush;
+            }
+        }
+
         var dimmed = several && !focused && dim > 0;
         _dim.Visibility = dimmed ? Visibility.Visible : Visibility.Collapsed;
         if (dimmed)
