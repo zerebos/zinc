@@ -7,6 +7,11 @@ is the version it builds, and hands it to the installer as the release notes).
 ## Unreleased
 
 ### New
+- Panes as cards (`Settings > Layout > Panes > Pane style`)! Pick Cards and each pane becomes a rounded card with a header, a gap between them, header buttons on the focused pane and a ring around it. Compact, the default, keeps panes edge to edge. Change any of the settings under it to make your own mix:
+  - `Gap between panes` (`pane-gap`): the space between panes. You drag the gap to resize them, as you dragged the divider.
+  - `Gap at the workspace edges` (`pane-gap-edges`): the same gap around the outside, so splitting never moves a pane's outer edges.
+  - `Show focus with` (`pane-focus`): a ring around the focused pane, the accent line along its top, or nothing but the dimming.
+- Pane headers now have a background of their own, a shade off the terminal's, so they don't look like empty space between split panes. Dimming an unfocused pane dims its header too.
 - Pane header buttons (`Settings > Layout > Panes > Header buttons`, `pane-header-buttons` in `[window]`)! Split, Maximize pane and a menu with the pane's other commands (including Close pane), on the right of a pane's header. Show them on every pane, on the focused pane, only while the pointer is over a header, or not at all (the default). With them, the header also shows a program's progress. With `Tabs inside panes` off, the buttons end with ×, which closes the pane, and the title no longer has its own. Without buttons, middle-click the title or use its right-click menu.
 - A tab whose program exits with an error and stays open (a dropped `ssh` session, a command profile that crashed, WSL shut down) now gets a red dot when you weren't looking, and the taskbar button flashes if Zinc is in the background. It comes first for Next tab needing attention, and a pane header with buttons shows "Exited (code N)".
 - Move a pane like a tab by dragging the empty part of its header, beside its tabs. Drop it on another pane's edge to put it there, or on its header or middle to add its tabs to that pane, in any workspace or window. Drop it on the title bar for a workspace of its own, or outside Zinc for a window of its own. A workspace's only pane takes the workspace with it. Dragging from a maximized pane shows the other panes until you let go, so you can drop it on them.

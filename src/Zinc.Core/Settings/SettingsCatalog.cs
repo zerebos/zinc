@@ -310,15 +310,15 @@ public static class SettingsCatalog
                     new("Hide", "hide"),
                 ],
             },
-        new("layout", "Panes", "window.pane-gap", "Gap between panes", "0 puts panes edge to edge, with a thin divider.", SettingKind.Number, 0L)
-            { Unfinished = true, Unit = "px", Minimum = 0, Maximum = 32, Step = 1 },
+        new("layout", "Panes", "window.pane-gap", "Gap between panes",
+            "Above 0, panes are rounded cards with space between them. At 0 they meet at a thin divider.", SettingKind.Number, 0L)
+            { Unit = "px", Minimum = 0, Maximum = 32, Step = 1 },
         new("layout", "Panes", "window.pane-gap-edges", "Gap at the workspace edges",
-            "The same gap around the outside, split or not, so splitting never moves a pane's outer edges.", SettingKind.Toggle, false)
-            { Unfinished = true },
+            "The same gap around the outside, split or not, so splitting never moves a pane's outer edges. Only with a \"Gap between panes\" above 0.",
+            SettingKind.Toggle, false),
         new("layout", "Panes", "window.pane-focus", "Show focus with", "How the focused pane stands out from the others.",
             SettingKind.Choice, "tab-accent")
             {
-                Unfinished = true,
                 Choices =
                 [
                     new("Ring", "ring", "An accent-colored outline around the focused pane."),
@@ -335,7 +335,7 @@ public static class SettingsCatalog
             { Minimum = 0.15, Maximum = 1, Step = 0.05 },
         new("layout", "Panes", "window.unfocused-pane-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color, null)
             { Placeholder = "The pane's background" },
-        new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes.", SettingKind.Color, null)
+        new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes, when \"Gap between panes\" is 0.", SettingKind.Color, null)
             { Placeholder = "Zinc's grey" },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
             "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice, "always")
