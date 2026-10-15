@@ -535,7 +535,8 @@ public sealed partial class MainWindow : Window
             view.SetAddToolTip(ShortcutTip("New tab in this pane", new ActionInvocation(TerminalAction.NewTab)));
             view.SetButtonToolTips(ShortcutTip("Split right", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)),
                 ShortcutTip("Maximize pane", new ActionInvocation(TerminalAction.MaximizePane)),
-                ShortcutTip("Restore panes", new ActionInvocation(TerminalAction.MaximizePane)));
+                ShortcutTip("Restore panes", new ActionInvocation(TerminalAction.MaximizePane)),
+                ShortcutTip("Close pane", new ActionInvocation(TerminalAction.CloseGroup)));
             // The header's buttons act on their own pane, focused or not, as its keys would there.
             view.HeaderAction += invocation => WithTabOf(group, t => HandleAction(invocation, t, group.Active));
             view.MoreRequested += anchor => WithTabOf(group, t => ShowPaneMenu(t, group, anchor));

@@ -11,11 +11,12 @@ namespace Zinc;
 /// <summary>The settings a pane's header follows (<c>pane-focus</c>, <c>pane-header-buttons</c>, <c>pane-tabs</c>).</summary>
 internal readonly record struct HeaderSettings(PaneFocus Focus, PaneHeaderButtons Buttons, bool PaneTabs);
 
-// The header's right end: the status slot (the shown terminal's progress) and the buttons (Split, Maximize, ⋯), per
-// pane-header-buttons. Both only where buttons can show (decision 37); hidden buttons keep their width so the tabs don't
-// move under the pointer. In a narrow header Split and Maximize fold into ⋯, then the status drops its words
-// (PaneHeader.Fit). Until the gap and the filled header exist (session C), the header otherwise stays today's tab
-// strip: every tab keeps its ×, a one-tab header's × is on its tab, the + follows the tab (decisions 35, 39, 45).
+// The header's right end: the status slot (the shown terminal's progress) and the buttons (Split, Maximize, ⋯, and
+// Close pane with pane tabs off), per pane-header-buttons. Both only where buttons can show; hidden buttons
+// keep their width so the tabs don't move under the pointer. In a narrow header Split and Maximize fold into ⋯, then the
+// status drops its words (PaneHeader.Fit). With pane tabs on, every tab keeps its ×, a one-tab header's × is on its tab
+// and the + follows the tab, in both styles. With them off a pane never grows a second tab, so its × moves to the end
+// of the buttons (none with buttons hidden: middle-click, the tab menu, keys and the palette close it).
 internal sealed partial class GroupView
 {
     private const double ButtonWidth = 28;
@@ -24,7 +25,7 @@ internal sealed partial class GroupView
     private const double TitleRoom = 160;
 
     private readonly StackPanel _buttons = new() { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-    private readonly Button _split, _maximize, _more;
+    private readonly Button _split, _maximize, _more, _close;
     private readonly FontIcon _maximizeIcon = new() { Glyph = "", FontSize = 12 };
     private ToolTip? _maximizeTip, _restoreTip;
 
@@ -76,9 +77,10 @@ internal sealed partial class GroupView
     }
 
     /// <summary>The buttons' tooltips with their shortcuts (the window's, which knows the key bindings).</summary>
-    public void SetButtonToolTips(ToolTip split, ToolTip maximize, ToolTip restore)
+    public void SetButtonToolTips(ToolTip split, ToolTip maximize, ToolTip restore, ToolTip close)
     {
         ToolTipService.SetToolTip(_split, split);
+        ToolTipService.SetToolTip(_close, close);
         (_maximizeTip, _restoreTip) = (maximize, restore);
         ShowMaximizeState();
     }
@@ -99,6 +101,7 @@ internal sealed partial class GroupView
         var shown = PaneHeader.ButtonsShown(_settings.Buttons, _focused, _hovered);
         _buttons.Opacity = shown ? 1 : 0; // hidden, not removed: the tabs keep their place
         _buttons.IsHitTestVisible = shown;
+        _close.Visibility = !_settings.PaneTabs && _header == PaneHeaderKind.Title ? Visibility.Visible : Visibility.Collapsed;
         ShowMaximizeState();
 
         // An ended program's exit wins over progress (decision 48).
@@ -128,7 +131,8 @@ internal sealed partial class GroupView
         var add = _settings.PaneTabs ? AddWidth : 0;
         var buttons = _buttons.Visibility == Visibility.Visible;
         var foldable = buttons ? ButtonWidth + 2 + (_splitWorkspace ? ButtonWidth + 2 : 0) : 0;
-        var fixedWidth = add + (buttons ? ButtonWidth + 2 : 0); // the + and ⋯
+        var close = buttons && _close.Visibility == Visibility.Visible ? ButtonWidth + 2 : 0;
+        var fixedWidth = add + (buttons ? ButtonWidth + 2 : 0) + close; // the +, ⋯ and Close
         double words = 0;
         if (_status.Visibility == Visibility.Visible)
         {

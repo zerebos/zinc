@@ -62,6 +62,7 @@ internal sealed partial class GroupView : Grid
             () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)));
         _maximize = HeaderButton("", "Maximize pane", () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.MaximizePane)), _maximizeIcon);
         _more = HeaderButton("", "More options", () => MoreRequested?.Invoke(_more!));
+        _close = HeaderButton("", "Close pane", () => HeaderAction?.Invoke(new ActionInvocation(TerminalAction.CloseGroup)));
         _status.Children.Add(_statusRing);
         _status.Children.Add(_statusText);
         SetColumn(_status, 3);
@@ -343,8 +344,11 @@ internal sealed partial class GroupView : Grid
 
         var accentLine = PaneHeader.AccentLine(settings.Focus, header, focused, several);
         // A tab (the title header too) carries its own line; a pane without a header has it over the terminal's top edge.
-        var line = accentLine && header == PaneHeaderKind.None;
+        // A flat title (pane tabs off, on a card) has no tab shape to carry it so the line runs along the header's top
+        var flat = header == PaneHeaderKind.Title && !settings.PaneTabs && cardFill != null;
+        var line = accentLine && (header == PaneHeaderKind.None || flat);
         _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
+        SetRow(_focusLine, flat ? 0 : 1);
         if (line && group.Active is { } shown)
         {
             // Over the terminal's top edge: kept visible on its background.
@@ -397,8 +401,11 @@ internal sealed partial class GroupView : Grid
 
         if (titled)
         {
-            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine, accent, closeHere: true, // its own ×, as a tab's
-                _progress.Active ? TerminalProgress.None : group.Active.Control.Progress);
+            // With pane tabs on the title is a tab, with its own ×. With them off a pane never grows a second tab, so its
+            // header is a title bar: the × closes the pane from the end of the buttons, and on a card the title sits flat
+            // on the fill.
+            _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine && !flat, accent, closeHere: settings.PaneTabs,
+                _progress.Active ? TerminalProgress.None : group.Active.Control.Progress, flat);
             _shown = group.Active;
             ArrangeHeader();
             return;
@@ -425,7 +432,7 @@ internal sealed partial class GroupView : Grid
             var shownTab = tab == group.Active;
             _items[tab].Show(TitleOf(tab), tab.TitleIsFolder, shownTab, accentLine, accent, tab.Attention,
                 shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress,
-                closeOnHover: false); // every tab keeps its ×: hover-only waits for the filled header (session C, decision 39)
+                closeOnHover: false); // every tab keeps its ×, cards too and hiding it left its slot empty
         }
 
         _shown = group.Active;
@@ -563,7 +570,7 @@ internal sealed partial class GroupView : Grid
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        /// <summary>The tab itself (a Cards header may later stretch around it: session C).</summary>
+        /// <summary>The tab itself (with pane tabs off, on a card, only the title's room: no tab shape).</summary>
         private readonly Grid _tab = new() { CornerRadius = new CornerRadius(6, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
 
         private readonly AttentionDot _dot = new() { Corner = false, HorizontalAlignment = HorizontalAlignment.Center };
@@ -573,7 +580,7 @@ internal sealed partial class GroupView : Grid
         private SolidColorBrush? _background;
         private Profile? _profile;
         private string? _name;
-        private bool _closeHere, _hovered;
+        private bool _closeHere, _hovered, _flat;
 
         public TitleHeader()
         {
@@ -688,9 +695,11 @@ internal sealed partial class GroupView : Grid
             _close.Visibility = _closeHere && !dot ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        /// <param name="closeHere">The tab carries its own × (until session C decides whether Cards moves it to the buttons).</param>
+        /// <param name="closeHere">The tab carries its own × (with pane tabs off it's among the header's buttons).</param>
         /// <param name="progress">The progress its dot shows (none while the header's status slot shows it).</param>
-        public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent, bool closeHere, TerminalProgress progress)
+        /// <param name="flat">The title sits on the card's header fill, not in a tab shape.</param>
+        public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent, bool closeHere, TerminalProgress progress,
+            bool flat)
         {
             if (_profile != tab.Profile)
             {
@@ -720,11 +729,12 @@ internal sealed partial class GroupView : Grid
 
             // The terminal's background (it can change: a config reload), and dark text on a light one.
             var background = TerminalRenderer.ToColor(tab.Profile.Config.Theme.Background);
-            if (_background?.Color != background)
+            if (_background?.Color != background || _flat != flat)
             {
+                _flat = flat;
                 _background = new SolidColorBrush(background);
-                _tab.Background = _background;
-                var dark = Contrast.TextOn(background);
+                _tab.Background = flat ? _clear : _background;
+                var dark = flat ? null : Contrast.TextOn(background); // flat: the header's own text
                 foreach (var block in new[] { _text, _detail })
                 {
                     if (dark is { } text)
