@@ -49,6 +49,16 @@ public enum PaneFocus
     None,
 }
 
+/// <summary>How a pane shows its tabs. Config: <c>[window] pane-tabs-as</c>.</summary>
+public enum PaneTabsAs
+{
+    /// <summary>A row of tabs, shortened, then icons, then folded into a count as the pane narrows.</summary>
+    Tabs,
+
+    /// <summary>The shown tab and the count ("2 of 5") that opens a menu of them all, at every width (row 28).</summary>
+    Menu,
+}
+
 public enum WorkspaceTabs
 {
     /// <summary>In the title bar.</summary>
@@ -557,6 +567,9 @@ public sealed record Config
     /// <summary>How the focused pane is marked. Config: <c>[window] pane-focus = ring | tab-accent | none</c>.</summary>
     public PaneFocus PaneFocus { get; init; }
 
+    /// <summary>How a pane shows its tabs. Config: <c>[window] pane-tabs-as = tabs | menu</c>.</summary>
+    public PaneTabsAs PaneTabsAs { get; init; }
+
     /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
@@ -629,6 +642,9 @@ public sealed record Config
 
     /// <summary>Bold text in the default color takes this one; null: the same. Config: <c>[colors] bold</c>.</summary>
     public GhosttyColorRgb? BoldColor { get; init; }
+
+    /// <summary>Pane headers (and cards' edges) take this fill; null: made from the background. Config: <c>[colors] pane-header</c>.</summary>
+    public GhosttyColorRgb? PaneHeaderColor { get; init; }
 
     /// <summary>Bold text in palette colors 0-7 shows their bright versions (8-15). Config: <c>[colors] bold-is-bright</c>.</summary>
     public bool BoldIsBright { get; init; }
@@ -769,6 +785,7 @@ public sealed record Config
                 this with { PaneGap = gap },
             "pane-gap-edges" when bool.TryParse(value, out var gapEdges) => this with { PaneGapEdges = gapEdges },
             "pane-focus" when TryMode<PaneFocus>(value, out var focus) => this with { PaneFocus = focus },
+            "pane-tabs-as" when TryMode<PaneTabsAs>(value, out var tabsAs) => this with { PaneTabsAs = tabsAs },
             "pane-resize-step" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var step) && step is >= 1 and <= 50 =>
                 this with { PaneResizeStep = step / 100 },
@@ -785,6 +802,7 @@ public sealed record Config
             "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },
             "minimum-contrast" when TryDouble(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
+            "pane-header-color" when TryColor(value, out var header) => this with { PaneHeaderColor = header },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
             "palette-generate" when bool.TryParse(value, out var generate) => this with { PaletteGeneration = PaletteGeneration with { Generate = generate } },
             "palette-harmonious" when bool.TryParse(value, out var harmonious) => this with { PaletteGeneration = PaletteGeneration with { Harmonious = harmonious } },

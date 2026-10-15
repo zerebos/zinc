@@ -38,13 +38,18 @@ public static class PaneHeader
     }
 
     /// <summary>
-    /// Whether a pane shows the accent line (<c>pane-focus</c>): on its shown tab whenever it has focus, as tabs always
-    /// did; on a title header or along the top of a pane without a header only when there are other panes to tell
-    /// it from (<paramref name="several"/>: split, nothing maximized; decision 33). Ring draws the line too until the
-    /// ring exists.
+    /// Whether a pane shows the accent line (<c>pane-focus = tab-accent</c>): on its shown tab whenever it has focus, as
+    /// tabs always did; on a title header or along the top of a pane without a header only when there are other panes
+    /// to tell it from (<paramref name="several"/>: split, nothing maximized).
     /// </summary>
     public static bool AccentLine(PaneFocus focus, PaneHeaderKind header, bool focused, bool several) =>
-        focused && focus != PaneFocus.None && (header == PaneHeaderKind.Tabs || several);
+        focused && focus == PaneFocus.TabAccent && (header == PaneHeaderKind.Tabs || several);
+
+    /// <summary>
+    /// Whether a pane shows the ring (<c>pane-focus = ring</c>): around the focused pane when there are others to tell it
+    /// from (<paramref name="several"/>), so not on a lone pane or a maximized one.
+    /// </summary>
+    public static bool Ring(PaneFocus focus, bool focused, bool several) => focused && several && focus == PaneFocus.Ring;
 
     /// <summary>
     /// Whether a header shows its buttons (<c>pane-header-buttons</c>): always; the focused pane's and any under the
@@ -83,11 +88,17 @@ public static class PaneHeader
     /// folder, a command) only lengthens or shortens tabs, and never flips the row between icons and the count.
     /// <paramref name="titles"/> are each tab's title width in full, <paramref name="chrome"/> a tab's width beside its
     /// title, <paramref name="iconTab"/> a tab shown as its icon and mark; <paramref name="add"/> and
-    /// <paramref name="count"/> the + and the count, after the tabs.
+    /// <paramref name="count"/> the + and the count, after the tabs. With <paramref name="menu"/> (<c>pane-tabs-as = menu</c>)
+    /// the tabs are folded at every width.
     /// </summary>
     public static TabsFit FitTabs(double room, IReadOnlyList<double> titles, int shown, double chrome, double iconTab,
-        double add, double count)
+        double add, double count, bool menu = false)
     {
+        if (menu)
+        {
+            return Folded();
+        }
+
         const double whole = double.PositiveInfinity;
         var others = titles.Where((_, i) => i != shown).ToList();
         var budget = room - add - titles.Count * chrome; // what all the titles may take
@@ -111,7 +122,9 @@ public static class PaneHeader
             return new TabsFit(TabsStage.Icons, whole, left >= titles[shown] ? whole : Math.Floor(left));
         }
 
-        return new TabsFit(TabsStage.Folded, whole, Math.Max(0, Math.Floor(room - count - chrome)));
+        return Folded();
+
+        TabsFit Folded() => new(TabsStage.Folded, whole, Math.Max(0, Math.Floor(room - count - chrome)));
     }
 
     /// <summary>The widest cap on the titles that keeps their sum within the budget (short titles stay whole).</summary>

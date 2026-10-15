@@ -122,6 +122,13 @@ public class ConfigTests : IDisposable
         Assert.Equal(expected, Load($"[window]\npane-focus = \"{value}\"").PaneFocus);
 
     [Theory]
+    [InlineData("tabs", PaneTabsAs.Tabs)]
+    [InlineData("menu", PaneTabsAs.Menu)]
+    [InlineData("list", PaneTabsAs.Tabs)]
+    public void ReadsPaneTabsAs(string value, PaneTabsAs expected) =>
+        Assert.Equal(expected, Load($"[window]\npane-tabs-as = \"{value}\"").PaneTabsAs);
+
+    [Theory]
     [InlineData("0", 0)]
     [InlineData("6", 6)]
     [InlineData("32", 32)]

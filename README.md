@@ -85,7 +85,7 @@ in the exe's file properties, and in install folder names (after a timestamp, wh
 
 The first time Zinc starts, a welcome page asks how you like to work (**Simple**: tabs along
 the top, one terminal each; **Workspaces**: in a sidebar or along the top, each with its own tabs
-and splits), a color scheme and font (with a preview; or two schemes that follow Windows' light
+and splits), how panes look (**Compact** or **Cards**), a color scheme and font (with a preview; or two schemes that follow Windows' light
 and dark mode), your default shell, and whether a long command finishing in the background shows
 a Windows notification, and writes your answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
 you change there and leaves the rest of the file as it is.
@@ -240,6 +240,8 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `selection-background`, `selection-foreground`: `"#rrggbb"`, instead of the scheme's (most
   schemes set them). With neither, selection inverts the colors; with only a background, selected
   text keeps its color.
+- `pane-header`: `"#rrggbb"`, behind pane headers and around cards. Without it, the background
+  a shade lighter (darker on a light scheme).
 - `palette`: an array of up to 256 colors from index 0, or single entries: `palette.1 = "#AC4242"`.
 
 **`[terminal]`**
@@ -358,8 +360,8 @@ shaders written for Ghostty work unchanged
   when it moved: cursor trails), the live palette and colors, and `iMouse` (Shadertoy's: while the left button
   is down). Positions are in pixels with y going down, as in Ghostty on macOS.
 
-**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-headers`, `start-in`,
-`unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
+**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-tabs-as`, `pane-headers`, `pane-header-buttons`,
+`pane-gap`, `pane-gap-edges`, `pane-focus`, `start-in`, `unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
 features they control below (the old names `tab-groups`, `pane-tab-strip`, `group-tab-strip` and `unfocused-split-*` still work, and
 Settings writes the new ones); `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
 how far a resize key moves it); `explorer-menu = true` (off by default) adds Open in Zinc to File Explorer's
@@ -878,12 +880,21 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   folder, icon, color, and its name with " 2".
 - `pane-tabs = false` (in `[window]`) keeps one terminal per pane, like Windows Terminal: new tabs
   open as workspaces (and "New tab" is called "New workspace" in menus, the palette and Settings).
-- In a split workspace the focused pane is marked by an accent line along its top (on the shown
-  tab when the pane shows its tabs, on its title when it shows one tab's title), and the others are dimmed.
-  A pane's shown tab keeps its line whenever the pane has focus, split or not. `unfocused-pane-opacity` (in `[window]`,
-  0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how much, and `unfocused-pane-fill`
-  what they fade toward (default: each pane's background).
-  `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes.
+- Panes come in two styles, chosen at once with Settings > Layout > Panes > Pane style: **Compact** (the default:
+  panes edge to edge, a header only on panes with several tabs) or **Cards** (each pane a rounded card with a
+  header, a 6 px gap between them, header buttons on the focused pane and a ring around it). Change any of the five
+  settings it sets and it reads Custom. `pane-gap` (in `[window]`, 0–32 px, default 0) is the space between panes:
+  above 0 they're cards, at 0 they meet at a thin divider. Either way the gap or the divider is what you drag to
+  resize. `pane-gap-edges = true` puts the same gap around the outside of the workspace, split or not, so splitting
+  never moves a pane's outer edges. A pane's header is filled with its scheme's background, a little lighter (or
+  darker on a light scheme), and as see-through as the terminal.
+- In a split workspace the focused pane stands out, and the others are dimmed. `pane-focus` (in `[window]`) says
+  how: `"tab-accent"` (default) is an accent line along its top (on the shown tab when the pane shows its tabs,
+  across the header with `pane-tabs = false`), `"ring"` an accent outline around it, `"none"` nothing but the
+  dimming. A pane's shown tab keeps its line whenever the pane has focus, split or not; the ring only shows beside
+  other panes. `unfocused-pane-opacity` (in `[window]`, 0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how
+  much, and `unfocused-pane-fill` what they fade toward (default: each pane's background).
+  `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes at a gap of 0.
 - `pane-headers` (in `[window]`) says which panes show a header: a row of their tabs, or with one tab its title
   (icon, title, dot) and the + for a new tab. `"with-tabs"` (default: panes with two or more tabs), `"auto"`
   (every pane once the workspace is split, and any pane with two or more tabs), `"always"` (every pane) or
@@ -896,13 +907,16 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   When a pane's tabs don't fit its header, the others shorten first (then the shown tab), then show only their
   icon and dot (the title is in the tooltip), then fold into a count ("4 of 5", with the most urgent dot among them).
   The count opens a menu of every tab and what each is waiting on, with New tab in this pane.
+  `pane-tabs-as = "menu"` (in `[window]`; default `"tabs"`) shows them that way at every width: the shown tab,
+  then the count.
   It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `pane-header-buttons` (in `[window]`) puts buttons on the right of a pane's header: Split (right), Maximize pane
   (when the workspace is split; Restore panes while maximized) and ⋯. `"always"` (every pane), `"focused"` (the
   focused pane's, and others' while the pointer is over their header), `"hover"` (only under the pointer) or
   `"hide"` (default). ⋯ holds Split right and down, Maximize, New tab in this pane, Rename tab, moving the tab,
   Close tab, Close other tabs and "Close pane (N tabs)"; in a narrow pane Split and Maximize fold into it. With
-  buttons, a program's progress shows beside them (its percent, Working, Paused or Error).
+  buttons, a program's progress shows beside them (its percent, Working, Paused or Error). With `pane-tabs = false`
+  the title has no × of its own: the buttons end with one that closes the pane.
 - `workspace-tabs = "left"` (in `[window]`) lists workspaces in a column on the left, under a plain
   title bar, instead of as title-bar tabs (default `"top"`). The list works like the tabs: click,
   close, right-click, drag to reorder or anywhere a title-bar tab can go. The title bar then shows

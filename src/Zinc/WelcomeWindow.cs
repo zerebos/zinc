@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Media;
 using Zinc.Ghostty;
+using Zinc.Settings;
 using Zinc.Terminal;
 using Windows.UI;
 
@@ -16,7 +17,7 @@ namespace Zinc;
 /// <summary>
 /// The welcome page: shown instead of a terminal on first launch (no config file yet), and later
 /// from the palette (Welcome…). Asks how you like to work (Simple: tabs on top; Workspaces: in a
-/// sidebar, or on top), colors and font (previewed), and the default shell, then raises
+/// sidebar, or on top), how panes look (Compact or Cards), colors and font (previewed), and the default shell, then raises
 /// <see cref="Finished"/> with the answers (null: skipped or closed) for App to write into
 /// config.toml. A window of its own: its layout choice decides how the main window is built.
 /// </summary>
@@ -36,7 +37,8 @@ internal sealed partial class WelcomeWindow : Window
     private string? _profile;
     private bool _finished;
 
-    private readonly Button _simpleCard, _workspacesCard;
+    private PaneStyleKind? _paneStyle; // null means a mix of your own aka left alone
+    private readonly Button _simpleCard, _workspacesCard, _compactCard, _cardsCard;
     private readonly StackPanel _workspacesOnRow;
     private readonly Border _preview = new() { CornerRadius = new CornerRadius(8), Padding = new Thickness(14, 12, 14, 12) };
     private readonly RichTextBlock _previewText = new() { FontSize = 13, IsTextSelectionEnabled = false };
@@ -85,10 +87,14 @@ internal sealed partial class WelcomeWindow : Window
 
         _toast = !firstRun && global.NotifyCommandFinished is NotifyMode.Toast or NotifyMode.ToastAlways;
         _profile = config.DefaultProfile.Id;
+        // Compact on first run which are the built-in defaults (which style new users get is still open).
+        var paneStyle = firstRun ? PaneStyleKind.Compact : PaneStyle.Of(config.ValueOf);
+        _paneStyle = paneStyle == PaneStyleKind.Custom ? null : paneStyle;
 
-        FrameworkElement style;
+        FrameworkElement style, panes;
         (style, _simpleCard, _workspacesCard, _workspacesOnRow) = StylePage();
-        _pages = [style, LookPage(), ShellPage()];
+        (panes, _compactCard, _cardsCard) = PanesPage();
+        _pages = [style, panes, LookPage(), ShellPage()];
 
         // Header, the page (scrolls if the window is small), footer pinned at the bottom.
         var root = new Grid { Padding = new Thickness(40, 44, 40, 24), RowSpacing = 24 };
@@ -111,6 +117,7 @@ internal sealed partial class WelcomeWindow : Window
         root.Children.Add(footer);
         Content = root;
         ShowStyle();
+        ShowPanes();
         UpdatePreview();
         ShowPage(0);
 
@@ -347,6 +354,116 @@ internal sealed partial class WelcomeWindow : Window
         }
 
         _workspacesOnRow.Visibility = _style == WorkStyle.Workspaces ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // ------------------------------------------------------------ how panes look
+
+    private (FrameworkElement Page, Button Compact, Button Cards) PanesPage()
+    {
+        var compact = Card("Compact", SettingsWindow.PaneStyleDetail(PaneStyleKind.Compact), PanesMockup(cards: false));
+        var cards = Card("Cards", SettingsWindow.PaneStyleDetail(PaneStyleKind.Cards), PanesMockup(cards: true));
+        compact.Click += (_, _) => { _paneStyle = PaneStyleKind.Compact; ShowPanes(); };
+        cards.Click += (_, _) => { _paneStyle = PaneStyleKind.Cards; ShowPanes(); };
+
+        var row = new Grid { ColumnSpacing = 16 };
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        row.ColumnDefinitions.Add(new ColumnDefinition());
+        Grid.SetColumn(cards, 1);
+        row.Children.Add(compact);
+        row.Children.Add(cards);
+
+        var page = new StackPanel
+        {
+            Spacing = 12,
+            Children =
+            {
+                SectionTitle("How should panes look?"),
+                Note("When you split a workspace, or put several tabs in one pane."),
+                row,
+                Note("Mix the two in Settings > Layout > Panes: the gap, headers, their buttons and how focus shows."),
+            },
+        };
+        return (page, compact, cards);
+    }
+
+    /// <summary>
+    /// A little drawing of two split panes, the left one focused: edge to edge with a divider, a header only on the pane
+    /// with two tabs and an accent line on the focused one (Compact); or rounded cards with a gap, a header on each and a
+    /// ring around the focused one (Cards).
+    /// </summary>
+    private static FrameworkElement PanesMockup(bool cards)
+    {
+        Brush Fill(string key) => (Brush)Application.Current.Resources[key];
+        var blockKey = Application.Current.RequestedTheme == ApplicationTheme.Light ? "ControlStrongStrokeColorDisabledBrush" : "ControlFillColorSecondaryBrush";
+        var accent = Fill("AccentFillColorDefaultBrush");
+        Border Block(double w, string? key = null) =>
+            new() { Width = w, Height = 6, CornerRadius = new CornerRadius(3), Background = Fill(key ?? blockKey), VerticalAlignment = VerticalAlignment.Center };
+
+        var grid = new Grid { Height = 96, ColumnSpacing = cards ? 6 : 0 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        if (!cards)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1) });
+        }
+
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        for (var i = 0; i < 2; i++)
+        {
+            var focused = i == 0;
+            var pane = new Grid { Background = Fill("SolidBackgroundFillColorBaseBrush") };
+            pane.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            pane.RowDefinitions.Add(new RowDefinition());
+            if (cards || !focused)
+            {
+                // The header: its tabs (two on Compact's, which is why it has one), or one title on a card.
+                var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Height = 14, Padding = new Thickness(5, 0, 5, 0) };
+                header.Children.Add(Block(28, focused ? null : "TextFillColorTertiaryBrush"));
+                header.Children.Add(Block(cards ? 14 : 22, cards ? null : blockKey));
+                pane.Children.Add(new Border { Background = Fill("ControlFillColorDefaultBrush"), Child = header });
+            }
+
+            var lines = new StackPanel { Spacing = 5, Margin = new Thickness(6, 7, 6, 0) };
+            foreach (var width in new[] { 40.0, 64, 28 })
+            {
+                lines.Children.Add(new Border { Width = width, Height = 4, CornerRadius = new CornerRadius(2), HorizontalAlignment = HorizontalAlignment.Left, Background = Fill(blockKey) });
+            }
+
+            Grid.SetRow(lines, 1);
+            pane.Children.Add(lines);
+            if (focused && !cards)
+            {
+                pane.Children.Add(new Border { Height = 2, VerticalAlignment = VerticalAlignment.Top, Background = accent });
+            }
+
+            var host = new Border
+            {
+                Child = pane,
+                CornerRadius = new CornerRadius(cards ? 6 : 0),
+                BorderThickness = new Thickness(cards ? 2 : 0),
+                BorderBrush = cards && focused ? accent : Fill("ControlFillColorDefaultBrush"),
+                Opacity = focused ? 1 : 0.7,
+            };
+            Grid.SetColumn(host, cards ? i : i * 2);
+            grid.Children.Add(host);
+        }
+
+        if (!cards)
+        {
+            var divider = new Border { Background = Fill("ControlStrongStrokeColorDefaultBrush") };
+            Grid.SetColumn(divider, 1);
+            grid.Children.Add(divider);
+        }
+
+        return grid;
+    }
+
+    private void ShowPanes()
+    {
+        foreach (var (card, chosen) in new[] { (_compactCard, _paneStyle == PaneStyleKind.Compact), (_cardsCard, _paneStyle == PaneStyleKind.Cards) })
+        {
+            card.BorderThickness = new Thickness(chosen ? 2 : 1);
+            card.BorderBrush = (Brush)Application.Current.Resources[chosen ? "AccentFillColorDefaultBrush" : "CardStrokeColorDefaultBrush"];
+        }
     }
 
     // ------------------------------------------------------------ colors and font
@@ -723,7 +840,7 @@ internal sealed partial class WelcomeWindow : Window
     }
 
     private void Save() => Finish(new WelcomeChoices(_style, _workspacesOn,
-        _follow && _scheme != null && _light != null ? $"light:{_light},dark:{_scheme}" : _scheme, _font, _profile, _toast));
+        _follow && _scheme != null && _light != null ? $"light:{_light},dark:{_scheme}" : _scheme, _font, _profile, _toast, _paneStyle));
 
     private void Finish(WelcomeChoices? choices)
     {

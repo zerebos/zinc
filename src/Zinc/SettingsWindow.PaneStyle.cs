@@ -29,6 +29,9 @@ internal sealed partial class SettingsWindow
         ("Cards", PaneStyleKind.Cards, "Each pane a rounded card with a header, a gap between them, and a ring around the focused one."),
     ];
 
+    /// <summary>What a style is, in one sentence (the welcome page's cards say the same).</summary>
+    internal static string PaneStyleDetail(PaneStyleKind style) => PaneStyles.First(s => s.Style == style).Detail;
+
     /// <summary>The Pane style fold's header: the style in force, a dropdown that sets all five, and an arrow back to Compact.</summary>
     private FrameworkElement PaneStyleHeader()
     {

@@ -9,15 +9,14 @@ using Zinc.Panes;
 namespace Zinc;
 
 /// <summary>
-/// The draggable bar between two panes of a split. Sits in the middle row/column of
-/// the split's Grid and rewrites the Grid's star sizes while dragged.
+/// The draggable band between two panes of a split. Sits in the middle row/column of the split's Grid and rewrites the
+/// Grid's star sizes while dragged. At gap 0 it's the divider (a 1 px line in a 5 px band); above it, the gap itself.
 /// </summary>
 internal sealed partial class PaneDivider : Grid
 {
-    public const double Thickness = 5;
-
     private readonly PaneSplit _split;
     private readonly Grid _owner;
+    private readonly Rectangle _line;
     private bool _dragging;
 
     public PaneDivider(PaneSplit split, Grid owner, Brush lineBrush)
@@ -28,20 +27,24 @@ internal sealed partial class PaneDivider : Grid
 
         Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); // hit-testable
         ProtectedCursor = InputSystemCursor.Create(horizontal ? InputSystemCursorShape.SizeWestEast : InputSystemCursorShape.SizeNorthSouth);
-        Children.Add(new Rectangle
+        _line = new Rectangle
         {
             Fill = lineBrush,
             Width = horizontal ? 1 : double.NaN,
             Height = horizontal ? double.NaN : 1,
             HorizontalAlignment = horizontal ? HorizontalAlignment.Center : HorizontalAlignment.Stretch,
             VerticalAlignment = horizontal ? VerticalAlignment.Stretch : VerticalAlignment.Center,
-        });
+        };
+        Children.Add(_line);
 
         // Panels have no OnPointer* overrides (those live on Control).
         PointerPressed += OnPressed;
         PointerMoved += OnMoved;
         PointerReleased += OnReleased;
     }
+
+    /// <summary>The band's width (<see cref="PaneGap.Band"/>), written into the Grid by <see cref="ShowOnly"/>.</summary>
+    private double Band { get; set; } = PaneGap.Divider;
 
     /// <summary>Applies the split's ratio to the owning Grid's star sizes.</summary>
     public static void ApplyRatio(Grid grid, PaneSplit split)
@@ -62,17 +65,18 @@ internal sealed partial class PaneDivider : Grid
 
     /// <summary>
     /// Shows one side of the split alone (<paramref name="first"/> true or false: a maximized pane is on that side), or
-    /// both at the split's ratio (null). The other side and the divider are collapsed, never taken out of the Grid:
-    /// removing panes is what froze them (Win2D's Loaded/Unloaded count), and a collapsed terminal keeps its rows and
-    /// columns (it skips a 0 size) instead of reflowing.
+    /// both at the split's ratio (null), with a band for <paramref name="gap"/> between them. The other side and the
+    /// divider are collapsed, never taken out of the Grid: removing panes is what froze them (Win2D's Loaded/Unloaded
+    /// count), and a collapsed terminal keeps its rows and columns (it skips a 0 size) instead of reflowing.
     /// </summary>
-    public static void ShowOnly(Grid grid, PaneSplit split, bool? first)
+    public static void ShowOnly(Grid grid, PaneSplit split, bool? first, int gap)
     {
         var horizontal = split.Orientation == SplitOrientation.Horizontal;
+        var band = PaneGap.Band(gap);
         var shown = first switch { true => 0, false => 2, null => -1 };
         for (var slot = 0; slot < 3; slot++)
         {
-            var size = shown < 0 ? new GridLength(Thickness) // (the sides get the ratio below)
+            var size = shown < 0 ? new GridLength(band) // (the sides get the ratio below)
                 : slot == shown ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
             if (horizontal)
             {
@@ -93,6 +97,11 @@ internal sealed partial class PaneDivider : Grid
         {
             var slot = horizontal ? GetColumn(child) : GetRow(child);
             child.Visibility = shown < 0 || slot == shown ? Visibility.Visible : Visibility.Collapsed;
+            if (child is PaneDivider divider)
+            {
+                divider.Band = band;
+                divider._line.Visibility = PaneGap.Line(gap) ? Visibility.Visible : Visibility.Collapsed;
+            }
         }
     }
 
@@ -111,10 +120,9 @@ internal sealed partial class PaneDivider : Grid
 
         var pos = e.GetCurrentPoint(_owner).Position;
         var horizontal = _split.Orientation == SplitOrientation.Horizontal;
-        var extent = (horizontal ? _owner.ActualWidth : _owner.ActualHeight) - Thickness;
-        if (extent > 0)
+        if (PaneGap.RatioAt(horizontal ? pos.X : pos.Y, horizontal ? _owner.ActualWidth : _owner.ActualHeight, Band) is { } ratio)
         {
-            PaneTree<object>.SetRatio(_split, ((horizontal ? pos.X : pos.Y) - Thickness / 2) / extent);
+            PaneTree<object>.SetRatio(_split, ratio);
             ApplyRatio(_owner, _split);
         }
 

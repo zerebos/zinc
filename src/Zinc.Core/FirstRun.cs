@@ -1,3 +1,5 @@
+using Zinc.Settings;
+
 namespace Zinc;
 
 /// <summary>The welcome page's two ways of working.</summary>
@@ -15,8 +17,9 @@ public enum WorkStyle
 /// <param name="FontFamily">Null keeps the default (the bundled Cascadia Mono NF).</param>
 /// <param name="DefaultProfile">A profile id; null keeps the first one.</param>
 /// <param name="ToastWhenDone">A Windows notification (too) when a long command finishes out of view; null: not asked.</param>
+/// <param name="PaneStyle">Compact or Cards; null leaves the pane settings as they are (a mix of your own).</param>
 public sealed record WelcomeChoices(WorkStyle Style, WorkspaceTabs WorkspacesOn, string? Scheme, string? FontFamily, string? DefaultProfile,
-    bool? ToastWhenDone = null);
+    bool? ToastWhenDone = null, PaneStyleKind? PaneStyle = null);
 
 /// <summary>Writes the welcome page's choices into config.toml.</summary>
 public static class FirstRun
@@ -73,6 +76,16 @@ public static class FirstRun
             else if (!toast && (toasting || global == null))
             {
                 text = ConfigEditor.Remove(text, ["notify", "command-finished"]);
+            }
+        }
+
+        // A pane style sets its five settings; Compact's are the defaults, so it removes them.
+        if (choices.PaneStyle is { } style && (current == null || PaneStyle.Of(current.ValueOf) != style))
+        {
+            foreach (var (key, value) in PaneStyle.Values(style))
+            {
+                var path = key.Split('.');
+                text = style == PaneStyleKind.Compact ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
             }
         }
 

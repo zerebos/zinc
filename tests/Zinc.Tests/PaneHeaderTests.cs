@@ -43,9 +43,20 @@ public class PaneHeaderTests
     [InlineData(PaneFocus.None, Tabs, true, true, false)]         // no mark anywhere, whatever the tab count
     [InlineData(PaneFocus.None, Title, true, true, false)]
     [InlineData(PaneFocus.None, None, true, true, false)]
-    [InlineData(PaneFocus.Ring, Title, true, true, true)]         // the line stands in until the ring exists
+    [InlineData(PaneFocus.Ring, Title, true, true, false)]        // the ring marks it instead
+    [InlineData(PaneFocus.Ring, Tabs, true, false, false)]
     public void AccentLineMarksTheFocusedPane(PaneFocus focus, PaneHeaderKind header, bool focused, bool several, bool expected) =>
         Assert.Equal(expected, PaneHeader.AccentLine(focus, header, focused, several));
+
+    [Theory]
+    // focus, focused, several -> ring
+    [InlineData(PaneFocus.Ring, true, true, true)]
+    [InlineData(PaneFocus.Ring, false, true, false)]
+    [InlineData(PaneFocus.Ring, true, false, false)]   // a lone or maximized pane: nothing to tell apart
+    [InlineData(PaneFocus.TabAccent, true, true, false)]
+    [InlineData(PaneFocus.None, true, true, false)]
+    public void RingGoesAroundTheFocusedPaneAmongOthers(PaneFocus focus, bool focused, bool several, bool expected) =>
+        Assert.Equal(expected, PaneHeader.Ring(focus, focused, several));
 
     [Theory]
     // mode, focused, hovered -> shown
@@ -106,6 +117,13 @@ public class PaneHeaderTests
         Assert.Equal(new TabsFit(TabsStage.Icons, Whole, 64), FitThree(254)); // the shown tab at the shortest beside two icons
         Assert.Equal(new TabsFit(TabsStage.Folded, Whole, 123), FitThree(253)); // what the shown title keeps beside the count
         Assert.Equal(new TabsFit(TabsStage.Folded, Whole, 0), FitThree(50));
+    }
+
+    [Fact]
+    public void AMenuFoldsTheTabsAtEveryWidth()
+    {
+        Assert.Equal(new TabsFit(TabsStage.Folded, Whole, 870), PaneHeader.FitTabs(1000, [100, 100, 100], 1, 60, 50, 30, 70, menu: true));
+        Assert.Equal(FitThree(253), PaneHeader.FitTabs(253, [100, 100, 100], 1, 60, 50, 30, 70, menu: true));
     }
 
     [Fact]
