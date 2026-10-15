@@ -85,7 +85,7 @@ in the exe's file properties, and in install folder names (after a timestamp, wh
 
 The first time Zinc starts, a welcome page asks how you like to work (**Simple**: tabs along
 the top, one terminal each; **Workspaces**: in a sidebar or along the top, each with its own tabs
-and splits), a color scheme and font (with a preview; or two schemes that follow Windows' light
+and splits), how panes look (**Compact** or **Cards**), a color scheme and font (with a preview; or two schemes that follow Windows' light
 and dark mode), your default shell, and whether a long command finishing in the background shows
 a Windows notification, and writes your answers to `config.toml`. Reopen it from the command palette (**Welcome…**): it changes only what
 you change there and leaves the rest of the file as it is.

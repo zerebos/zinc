@@ -1,3 +1,5 @@
+using Zinc.Settings;
+
 namespace Zinc.Tests;
 
 public class FirstRunTests
@@ -122,5 +124,34 @@ public class FirstRunTests
         Assert.Equal((own.Background, own.Foreground, own.Cursor, own.CursorText, own.SelectionBackground, own.SelectionForeground),
             (file.Background, file.Foreground, file.Cursor, file.CursorText, file.SelectionBackground, file.SelectionForeground));
         Assert.Equal(own.Palette.OrderBy(p => p.Key), file.Palette.OrderBy(p => p.Key));
+    }
+
+    [Fact]
+    public void CardsSetsTheFivePaneSettings()
+    {
+        var text = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards));
+        Assert.Equal(PaneStyleKind.Cards, PaneStyle.Of(Read(text).ValueOf));
+    }
+
+    [Fact]
+    public void CompactRemovesThemAndNullLeavesAMixAlone()
+    {
+        const string existing = "[window]\npane-gap = 6\npane-focus = \"ring\"\n";
+        var current = Read(existing);
+        var compact = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null, PaneStyle: PaneStyleKind.Compact), current);
+        Assert.DoesNotContain("pane-gap", compact);
+        Assert.DoesNotContain("pane-focus", compact);
+        var mixed = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null), current);
+        Assert.Contains("pane-gap = 6", mixed);
+        Assert.Contains("pane-focus = \"ring\"", mixed);
+    }
+
+    [Fact]
+    public void AStyleAlreadyInForceIsntRewritten()
+    {
+        var cards = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards));
+        var current = Read(cards);
+        var same = new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, current.DefaultProfile.Id, PaneStyle: PaneStyleKind.Cards);
+        Assert.Equal(cards, FirstRun.Apply(cards, same, current));
     }
 }

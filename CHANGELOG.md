@@ -7,7 +7,7 @@ is the version it builds, and hands it to the installer as the release notes).
 ## Unreleased
 
 ### New
-- Panes as cards (`Settings > Layout > Panes > Pane style`)! Pick Cards and each pane becomes a rounded card with a header, a gap between them, header buttons on the focused pane and a ring around it. Compact, the default, keeps panes edge to edge. Change any of the settings under it to make your own mix:
+- Panes as cards (`Settings > Layout > Panes > Pane style`)! Pick Cards and each pane becomes a rounded card with a header, a gap between them, header buttons on the focused pane and a ring around it. Compact, the default, keeps panes edge to edge. The welcome page asks which you'd like. Change any of the settings under it to make your own mix:
   - `Gap between panes` (`pane-gap`): the space between panes. You drag the gap to resize them, as you dragged the divider.
   - `Gap at the workspace edges` (`pane-gap-edges`): the same gap around the outside, so splitting never moves a pane's outer edges.
   - `Show focus with` (`pane-focus`): a ring around the focused pane, the accent line along its top, or nothing but the dimming.
