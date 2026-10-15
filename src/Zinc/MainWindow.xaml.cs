@@ -608,13 +608,15 @@ public sealed partial class MainWindow : Window
         var several = split && tab.Workspace.Maximized == null;
         var dim = 1 - _config.Global.UnfocusedSplitOpacity;
         var settings = new HeaderSettings(_config.Global.PaneFocus, _config.Global.PaneHeaderButtons, _config.Global.TabGroups);
+        var card = PaneCard.At(Gap);
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
-            var fill = TerminalRenderer.ToColor(_config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background);
+            var fill = _config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background;
+            var cardFill = card ? ShowCard(host, group.Active.Profile.Config, several && !focused ? dim : 0, fill) : ShowFlat(host);
             ((GroupView)host.Child).Update(group, HeaderOf(group, split), settings, focused, _focusBrush, split, several,
-                tab.Workspace.Maximized == group, dim, fill);
+                tab.Workspace.Maximized == group, dim, TerminalRenderer.ToColor(fill), cardFill);
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
 

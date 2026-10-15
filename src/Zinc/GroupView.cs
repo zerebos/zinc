@@ -303,10 +303,12 @@ internal sealed partial class GroupView : Grid
     /// there are other panes (<paramref name="several"/>), where unfocused panes can also be dimmed toward
     /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
     /// only with pane tabs on; the buttons and status slot per <paramref name="settings"/>, Maximize only when the
-    /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>).
+    /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>). A card
+    /// (gap above 0) has its header filled with <paramref name="cardFill"/>; null keeps panes flat.
     /// </summary>
     public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, HeaderSettings settings, bool focused,
-        Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default)
+        Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default,
+        Color? cardFill = null)
     {
         _header = header;
         _settings = settings;
@@ -338,6 +340,7 @@ internal sealed partial class GroupView : Grid
             }
         }
 
+        ShowCard(cardFill);
         var dimmed = several && !focused && dim > 0;
         _dim.Visibility = dimmed ? Visibility.Visible : Visibility.Collapsed;
         if (dimmed)
@@ -402,6 +405,32 @@ internal sealed partial class GroupView : Grid
         _order = [.. group.Tabs];
         ShowCount();
         ArrangeHeader(); // the tabs' width may have changed
+    }
+
+    /// <summary>
+    /// A card's header is filled (still hit-testable when it isn't: transparent, not none) and themed to match, its top
+    /// corners follow the card's inside its edge (and so does the pane drag's picture of it), and dimming covers the whole card (decision 22).
+    /// </summary>
+    private void ShowCard(Color? fill)
+    {
+        var color = fill ?? Microsoft.UI.Colors.Transparent;
+        if (_strip.Background is not SolidColorBrush { } brush || brush.Color != color)
+        {
+            _strip.Background = new SolidColorBrush(color);
+        }
+
+        // The header's own text and glyphs (hidden tabs, +, buttons) follow the fill, not the window: dark on a light scheme's.
+        // The shown tab's text keeps following its background (TextOn), and inherits this where it clears its own.
+        var theme = fill is { } f ? Contrast.IsLight(f) ? ElementTheme.Light : ElementTheme.Dark : ElementTheme.Default;
+        if (_strip.RequestedTheme != theme)
+        {
+            _strip.RequestedTheme = theme;
+        }
+
+        var inner = PaneCard.Radius - PaneCard.Edge;
+        _strip.CornerRadius = fill != null ? new CornerRadius(inner, inner, 0, 0) : default;
+        SetRow(_dim, fill != null ? 0 : 1);
+        SetRowSpan(_dim, fill != null ? 2 : 1);
     }
 
     /// <summary>Measures header text (12 px, as titles show): what fits is decided before it's shown.</summary>
