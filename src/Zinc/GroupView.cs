@@ -112,6 +112,15 @@ internal sealed partial class GroupView : Grid
                 WithShown(t => TabCloseClicked?.Invoke(t));
             }
         };
+        // A click on the header's empty space focuses its pane, as a click on its shown tab would.
+        _strip.Tapped += (_, e) =>
+        {
+            if (!e.Handled && !OnButton(e.OriginalSource as DependencyObject))
+            {
+                e.Handled = true;
+                WithShown(t => TabClicked?.Invoke(t));
+            }
+        };
         // Double-click anywhere on the header but its buttons maximizes the pane, or restores it. Not in a lone pane, where "Maximize" isn't offered (or needed tbf).
         _strip.DoubleTapped += (_, e) =>
         {
