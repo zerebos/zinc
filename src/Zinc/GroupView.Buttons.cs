@@ -9,7 +9,7 @@ using Zinc.Terminal;
 namespace Zinc;
 
 /// <summary>The settings a pane's header follows (<c>pane-focus</c>, <c>pane-header-buttons</c>, <c>pane-tabs</c>).</summary>
-internal readonly record struct HeaderSettings(PaneFocus Focus, PaneHeaderButtons Buttons, bool PaneTabs);
+internal readonly record struct HeaderSettings(PaneFocus Focus, PaneHeaderButtons Buttons, bool PaneTabs, PaneTabsAs TabsAs = PaneTabsAs.Tabs);
 
 // The header's right end: the status slot (the shown terminal's progress) and the buttons (Split, Maximize, ⋯, and
 // Close pane with pane tabs off), per pane-header-buttons. Both only where buttons can show; hidden buttons
@@ -146,6 +146,11 @@ internal sealed partial class GroupView
         if (_header == PaneHeaderKind.Title)
         {
             content = TitleRoom;
+        }
+        else if (_settings.TabsAs == PaneTabsAs.Menu)
+        {
+            // Only the shown tab, and the count in the +'s place (counted in fixedWidth).
+            content = _shown != null && _items.TryGetValue(_shown, out var item) ? TabItem.Chrome + item.TitleWidth : 0;
         }
         else
         {

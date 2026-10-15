@@ -88,11 +88,17 @@ public static class PaneHeader
     /// folder, a command) only lengthens or shortens tabs, and never flips the row between icons and the count.
     /// <paramref name="titles"/> are each tab's title width in full, <paramref name="chrome"/> a tab's width beside its
     /// title, <paramref name="iconTab"/> a tab shown as its icon and mark; <paramref name="add"/> and
-    /// <paramref name="count"/> the + and the count, after the tabs.
+    /// <paramref name="count"/> the + and the count, after the tabs. With <paramref name="menu"/> (<c>pane-tabs-as = menu</c>)
+    /// the tabs are folded at every width.
     /// </summary>
     public static TabsFit FitTabs(double room, IReadOnlyList<double> titles, int shown, double chrome, double iconTab,
-        double add, double count)
+        double add, double count, bool menu = false)
     {
+        if (menu)
+        {
+            return Folded();
+        }
+
         const double whole = double.PositiveInfinity;
         var others = titles.Where((_, i) => i != shown).ToList();
         var budget = room - add - titles.Count * chrome; // what all the titles may take
@@ -116,7 +122,9 @@ public static class PaneHeader
             return new TabsFit(TabsStage.Icons, whole, left >= titles[shown] ? whole : Math.Floor(left));
         }
 
-        return new TabsFit(TabsStage.Folded, whole, Math.Max(0, Math.Floor(room - count - chrome)));
+        return Folded();
+
+        TabsFit Folded() => new(TabsStage.Folded, whole, Math.Max(0, Math.Floor(room - count - chrome)));
     }
 
     /// <summary>The widest cap on the titles that keeps their sum within the budget (short titles stay whole).</summary>

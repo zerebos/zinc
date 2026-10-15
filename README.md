@@ -358,7 +358,7 @@ shaders written for Ghostty work unchanged
   when it moved: cursor trails), the live palette and colors, and `iMouse` (Shadertoy's: while the left button
   is down). Positions are in pixels with y going down, as in Ghostty on macOS.
 
-**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-headers`, `pane-header-buttons`,
+**`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-tabs-as`, `pane-headers`, `pane-header-buttons`,
 `pane-gap`, `pane-gap-edges`, `pane-focus`, `start-in`, `unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
 features they control below (the old names `tab-groups`, `pane-tab-strip`, `group-tab-strip` and `unfocused-split-*` still work, and
 Settings writes the new ones); `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
@@ -905,6 +905,8 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   When a pane's tabs don't fit its header, the others shorten first (then the shown tab), then show only their
   icon and dot (the title is in the tooltip), then fold into a count ("4 of 5", with the most urgent dot among them).
   The count opens a menu of every tab and what each is waiting on, with New tab in this pane.
+  `pane-tabs-as = "menu"` (in `[window]`; default `"tabs"`) shows them that way at every width: the shown tab,
+  then the count.
   It was called `pane-tab-strip`, whose `"auto"` is `"with-tabs"`; when a file has both, `pane-headers` wins.
 - `pane-header-buttons` (in `[window]`) puts buttons on the right of a pane's header: Split (right), Maximize pane
   (when the workspace is split; Restore panes while maximized) and ⋯. `"always"` (every pane), `"focused"` (the

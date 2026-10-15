@@ -120,6 +120,13 @@ public class PaneHeaderTests
     }
 
     [Fact]
+    public void AMenuFoldsTheTabsAtEveryWidth()
+    {
+        Assert.Equal(new TabsFit(TabsStage.Folded, Whole, 870), PaneHeader.FitTabs(1000, [100, 100, 100], 1, 60, 50, 30, 70, menu: true));
+        Assert.Equal(FitThree(253), PaneHeader.FitTabs(253, [100, 100, 100], 1, 60, 50, 30, 70, menu: true));
+    }
+
+    [Fact]
     public void ShorteningCapsOnlyTheLongTitles()
     {
         // The shown tab is the first (30 px); the others' titles get 170 px, then 250.

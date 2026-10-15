@@ -608,7 +608,8 @@ public sealed partial class MainWindow : Window
         var split = tab.Workspace.Layout.Count > 1;
         var several = split && tab.Workspace.Maximized == null;
         var dim = 1 - _config.Global.UnfocusedSplitOpacity;
-        var settings = new HeaderSettings(_config.Global.PaneFocus, _config.Global.PaneHeaderButtons, _config.Global.TabGroups);
+        var settings = new HeaderSettings(_config.Global.PaneFocus, _config.Global.PaneHeaderButtons, _config.Global.TabGroups,
+            _config.Global.PaneTabsAs);
         var card = PaneCard.At(Gap);
         foreach (var group in tab.Workspace.Groups)
         {

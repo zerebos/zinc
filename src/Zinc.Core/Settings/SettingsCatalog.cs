@@ -288,6 +288,14 @@ public static class SettingsCatalog
                 ],
             },
         new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
+        new("layout", "Panes", "window.pane-tabs-as", "Show pane tabs as", "Only with \"Tabs inside panes\" on.", SettingKind.Choice, "tabs")
+            {
+                Choices =
+                [
+                    new("Tabs", "tabs", "A row of tabs. When they don't fit, they shorten, then show only their icons, then fold into a menu."),
+                    new("A menu", "menu", "The shown tab, then a count (\"2 of 5\") that opens a menu of every tab. Switch with it or with keys."),
+                ],
+            },
         new("layout", "Panes", "window.pane-headers", "Pane headers", "The row above a pane. Its tabs, or its title when it has one tab.", SettingKind.Choice, "with-tabs")
             {
                 Choices =
