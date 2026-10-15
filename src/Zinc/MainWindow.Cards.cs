@@ -9,7 +9,8 @@ using Windows.UI;
 namespace Zinc;
 
 // Panes as cards (pane-gap above 0): the host Border rounds the corners (clipping the terminal, shaders included) and
-// draws the 2 px edge; GroupView fills the header. At gap 0 the host stays a plain Border, as panes always were.
+// draws the 2 px edge; GroupView fills the header. At gap 0 the host stays a plain Border, as panes always were, and only
+// the header takes the card's fill.
 public sealed partial class MainWindow
 {
     /// <summary>
@@ -21,12 +22,11 @@ public sealed partial class MainWindow
     /// </summary>
     private static Color ShowCard(Border host, Config config, double dim, GhosttyColorRgb dimFill, Brush? ring)
     {
-        var alpha = (byte)Math.Round(255 * config.BackgroundOpacity);
         var header = PaneCard.HeaderFill(config.Theme.Background);
         var edge = PaneCard.Mix(header, dimFill, dim);
         host.CornerRadius = new CornerRadius(PaneCard.Radius);
         host.BorderThickness = new Thickness(PaneCard.Edge);
-        var edgeColor = Color.FromArgb(alpha, edge.R, edge.G, edge.B);
+        var edgeColor = WithOpacity(edge, config);
         if (ring != null)
         {
             if (host.BorderBrush != ring)
@@ -39,15 +39,22 @@ public sealed partial class MainWindow
             host.BorderBrush = new SolidColorBrush(edgeColor);
         }
 
-        return Color.FromArgb(alpha, header.R, header.G, header.B);
+        return WithOpacity(header, config);
     }
 
-    /// <summary>A pane's host as at gap 0: no corners or edge. Returns null: no header fill.</summary>
-    private static Color? ShowFlat(Border host)
+    /// <summary>
+    /// A pane's host at gap 0: no corners or edge. Returns its header fill, the same as a card's: on the window's backdrop
+    /// alone, a header below another pane read as empty space.
+    /// </summary>
+    private static Color ShowFlat(Border host, Config config)
     {
         host.CornerRadius = default;
         host.BorderThickness = default;
         host.BorderBrush = null;
-        return null;
+        return WithOpacity(PaneCard.HeaderFill(config.Theme.Background), config);
     }
+
+    /// <summary>A color as see-through as the profile's terminal background.</summary>
+    private static Color WithOpacity(GhosttyColorRgb color, Config config) =>
+        Color.FromArgb((byte)Math.Round(255 * config.BackgroundOpacity), color.R, color.G, color.B);
 }

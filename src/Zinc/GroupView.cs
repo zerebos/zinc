@@ -127,7 +127,7 @@ internal sealed partial class GroupView : Grid
         _title.DropCompleted += (_, e) => WithShown(t => TabDragCompleted?.Invoke(t, e.DropResult));
 
         SetRow(_content, 1);
-        SetRow(_dim, 1);
+        SetRowSpan(_dim, 2); // dimming covers the header too
         SetRow(_focusLine, 1);
         SetRow(_paneDot, 1);
         SetRowSpan(_ring, 2);
@@ -317,14 +317,14 @@ internal sealed partial class GroupView : Grid
     /// there are other panes (<paramref name="several"/>), where unfocused panes can also be dimmed toward
     /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
     /// only with pane tabs on; the buttons and status slot per <paramref name="settings"/>, Maximize only when the
-    /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>). A card
-    /// (gap above 0) has its header filled with <paramref name="cardFill"/>; null keeps panes flat. With pane-focus = ring
-    /// the focused pane gets the ring instead of the line (<see cref="PaneHeader.Ring"/>): drawn here on a flat pane, by
-    /// the window on a card's edge.
+    /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>). The header
+    /// is filled with <paramref name="headerFill"/>, rounded on a card (<paramref name="card"/>: gap above 0). With
+    /// pane-focus = ring the focused pane gets the ring instead of the line (<see cref="PaneHeader.Ring"/>): drawn here on
+    /// a flat pane, by the window on a card's edge.
     /// </summary>
     public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, HeaderSettings settings, bool focused,
         Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default,
-        Color? cardFill = null)
+        Color headerFill = default, bool card = false)
     {
         _header = header;
         _settings = settings;
@@ -344,8 +344,8 @@ internal sealed partial class GroupView : Grid
 
         var accentLine = PaneHeader.AccentLine(settings.Focus, header, focused, several);
         // A tab (the title header too) carries its own line; a pane without a header has it over the terminal's top edge.
-        // A flat title (pane tabs off, on a card) has no tab shape to carry it so the line runs along the header's top
-        var flat = header == PaneHeaderKind.Title && !settings.PaneTabs && cardFill != null;
+        // A flat title (pane tabs off) has no tab shape to carry it so the line runs along the header's top
+        var flat = header == PaneHeaderKind.Title && !settings.PaneTabs;
         var line = accentLine && (header == PaneHeaderKind.None || flat);
         _focusLine.Visibility = line ? Visibility.Visible : Visibility.Collapsed;
         SetRow(_focusLine, flat ? 0 : 1);
@@ -359,8 +359,8 @@ internal sealed partial class GroupView : Grid
             }
         }
 
-        ShowCard(cardFill);
-        var ring = cardFill == null && PaneHeader.Ring(settings.Focus, focused, several);
+        ShowFill(headerFill, card);
+        var ring = !card && PaneHeader.Ring(settings.Focus, focused, several);
         _ring.Visibility = ring ? Visibility.Visible : Visibility.Collapsed;
         if (ring)
         {
@@ -402,8 +402,7 @@ internal sealed partial class GroupView : Grid
         if (titled)
         {
             // With pane tabs on the title is a tab, with its own ×. With them off a pane never grows a second tab, so its
-            // header is a title bar: the × closes the pane from the end of the buttons, and on a card the title sits flat
-            // on the fill.
+            // header is a title bar: the × closes the pane from the end of the buttons, and the title sits flat on the fill.
             _title.Show(group.Active, HeaderTitleOf(group.Active), accentLine && !flat, accent, closeHere: settings.PaneTabs,
                 _progress.Active ? TerminalProgress.None : group.Active.Control.Progress, flat);
             _shown = group.Active;
@@ -442,29 +441,26 @@ internal sealed partial class GroupView : Grid
     }
 
     /// <summary>
-    /// A card's header is filled (still hit-testable when it isn't: transparent, not none) and themed to match, its top
-    /// corners follow the card's inside its edge (and so does the pane drag's picture of it), and dimming covers the whole card (decision 22).
+    /// The header is filled and themed to match; on a card its top corners follow the card's inside its edge (and so does
+    /// the pane drag's picture of it).
     /// </summary>
-    private void ShowCard(Color? fill)
+    private void ShowFill(Color fill, bool card)
     {
-        var color = fill ?? Microsoft.UI.Colors.Transparent;
-        if (_strip.Background is not SolidColorBrush { } brush || brush.Color != color)
+        if (_strip.Background is not SolidColorBrush { } brush || brush.Color != fill)
         {
-            _strip.Background = new SolidColorBrush(color);
+            _strip.Background = new SolidColorBrush(fill);
         }
 
         // The header's own text and glyphs (hidden tabs, +, buttons) follow the fill, not the window: dark on a light scheme's.
         // The shown tab's text keeps following its background (TextOn), and inherits this where it clears its own.
-        var theme = fill is { } f ? Contrast.IsLight(f) ? ElementTheme.Light : ElementTheme.Dark : ElementTheme.Default;
+        var theme = Contrast.IsLight(fill) ? ElementTheme.Light : ElementTheme.Dark;
         if (_strip.RequestedTheme != theme)
         {
             _strip.RequestedTheme = theme;
         }
 
         var inner = PaneCard.Radius - PaneCard.Edge;
-        _strip.CornerRadius = fill != null ? new CornerRadius(inner, inner, 0, 0) : default;
-        SetRow(_dim, fill != null ? 0 : 1);
-        SetRowSpan(_dim, fill != null ? 2 : 1);
+        _strip.CornerRadius = card ? new CornerRadius(inner, inner, 0, 0) : default;
     }
 
     /// <summary>Measures header text (12 px, as titles show): what fits is decided before it's shown.</summary>
@@ -570,7 +566,7 @@ internal sealed partial class GroupView : Grid
             VerticalAlignment = VerticalAlignment.Center,
         };
 
-        /// <summary>The tab itself (with pane tabs off, on a card, only the title's room: no tab shape).</summary>
+        /// <summary>The tab itself (with pane tabs off, only the title's room: no tab shape).</summary>
         private readonly Grid _tab = new() { CornerRadius = new CornerRadius(6, 6, 0, 0), HorizontalAlignment = HorizontalAlignment.Left };
 
         private readonly AttentionDot _dot = new() { Corner = false, HorizontalAlignment = HorizontalAlignment.Center };
@@ -697,7 +693,7 @@ internal sealed partial class GroupView : Grid
 
         /// <param name="closeHere">The tab carries its own × (with pane tabs off it's among the header's buttons).</param>
         /// <param name="progress">The progress its dot shows (none while the header's status slot shows it).</param>
-        /// <param name="flat">The title sits on the card's header fill, not in a tab shape.</param>
+        /// <param name="flat">The title sits on the header fill, not in a tab shape.</param>
         public void Show(MainWindow.TerminalTab tab, HeaderTitle title, bool accentLine, Brush accent, bool closeHere, TerminalProgress progress,
             bool flat)
         {
