@@ -76,6 +76,18 @@ public sealed partial class MainWindow
             }
         };
 
+        // It takes no dragged tabs, but one released over it isn't torn off either. By the time the drag ends it may
+        // already be hiding (because focus went back to the drag's window), so it says so while the drag is over it.
+        Root.AddHandler(UIElement.DragOverEvent, new DragEventHandler((_, _) => App.Instance.DragOverQuick = true), handledEventsToo: true);
+        Root.AddHandler(UIElement.DragLeaveEvent, new DragEventHandler((_, e) =>
+        {
+            var p = e.GetPosition(Root);
+            if (p.X < 0 || p.Y < 0 || p.X >= Root.ActualWidth || p.Y >= Root.ActualHeight)
+            {
+                App.Instance.DragOverQuick = false;
+            }
+        }), handledEventsToo: true);
+
         // Closing (Alt+F4, the system menu) hides it: what runs in it lives on. Only quitting Zinc, or its last tab
         // closing (nothing left to keep), closes it for real.
         AppWindow.Closing += (_, args) =>

@@ -312,6 +312,11 @@ public partial class App : Application
         get => _drag;
         set
         {
+            if (value != null && _drag == null)
+            {
+                DragOverQuick = false; // a new drag
+            }
+
             _drag = value;
             // While a pane or its tab is dragged, workspace tabs must stay put: TabView's reordering
             // slides them apart under any drag (moving the one being rested on to switch to it)
@@ -326,9 +331,17 @@ public partial class App : Application
 
     private MainWindow.TabDrag? _drag;
 
-    /// <summary>Whether a screen point is inside one of Zinc's visible windows.</summary>
+    /// <summary>The current (or last) drag is over the quick terminal, which may hide before the drag's end is handled.</summary>
+    internal bool DragOverQuick { get; set; }
+
+    /// <summary>Whether a screen point is inside one of Zinc's visible windows (or a drag was released over the quick terminal).</summary>
     internal bool IsOverWindow(Windows.Graphics.PointInt32 point)
     {
+        if (DragOverQuick)
+        {
+            return true;
+        }
+
         foreach (var window in _quick is { IsQuickShown: true } ? _windows.Append(_quick) : _windows)
         {
             var (pos, size) = (window.AppWindow.Position, window.AppWindow.Size);
