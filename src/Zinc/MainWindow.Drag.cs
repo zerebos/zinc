@@ -379,7 +379,7 @@ public sealed partial class MainWindow
 
     private void OnRootDragOver(object sender, DragEventArgs e)
     {
-        if (InTitleBand(e))
+        if (!_quick && InTitleBand(e))
         {
             OnTabStripDragOver(sender, e);
         }
@@ -401,7 +401,7 @@ public sealed partial class MainWindow
 
     private void OnRootDrop(object sender, DragEventArgs e)
     {
-        if (InTitleBand(e))
+        if (!_quick && InTitleBand(e))
         {
             OnTabStripDrop(sender, e);
         }
@@ -589,11 +589,13 @@ public sealed partial class MainWindow
     /// The workspace and group under a host, if the dragged tab can be dropped there on
     /// <paramref name="edge"/> (null: the middle, which joins the pane's tabs; only with tab
     /// groups). A workspace can't be dropped onto its own panes; a terminal tab not into its
-    /// own pane, nor beside it when it's the pane's only tab; a pane nowhere on itself.
+    /// own pane, nor beside it when it's the pane's only tab; a pane nowhere on itself. The
+    /// quick terminal takes none since it can be shown mid-drag (via its hotkey), but it
+    /// isn't a valid place to keep tabs or panes.
     /// </summary>
     private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? DropTarget(Border host, PaneDirection? edge)
     {
-        if (host.Tag is not TabGroup<TerminalTab> group || (edge == null && !_config.Global.TabGroups) ||
+        if (_quick || host.Tag is not TabGroup<TerminalTab> group || (edge == null && !_config.Global.TabGroups) ||
             AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group)) is not { } tab)
         {
             return null;
