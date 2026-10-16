@@ -522,6 +522,9 @@ internal sealed partial class GroupView : Grid
     /// </summary>
     public void FillContent(Brush? fill) => _content.Background = fill;
 
+    /// <summary>The terminal's slot as last laid out (its own size can differ while a layout animation holds it).</summary>
+    public Windows.Foundation.Size ContentSize => new(_content.ActualWidth, _content.ActualHeight);
+
     /// <summary>The + button's tooltip (the window's, which knows the current key bindings).</summary>
     public void SetAddToolTip(ToolTip tip) => ToolTipService.SetToolTip(_add, tip);
 

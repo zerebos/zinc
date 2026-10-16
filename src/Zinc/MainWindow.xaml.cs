@@ -1879,9 +1879,10 @@ public sealed partial class MainWindow : Window
                     return true; // its dividers are hidden so moving one would show the others at the new ratio
                 }
 
+                SettleTween(tab, run: true); // (a close finishing rebuilds: find the Grid after)
                 if (tab.Workspace.GroupOf(origin) is { } group &&
                     tab.Workspace.Resize(group, invocation.Direction, _config.Global.PaneResizeStep) is { } split &&
-                    GridFor(tab, split) is { } grid)
+                    GridFor(tab, split) is { } grid && !ResizeAnimated(tab, grid, split))
                 {
                     PaneDivider.ApplyRatio(grid, split);
                 }

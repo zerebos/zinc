@@ -197,6 +197,24 @@ public sealed partial class MainWindow
         return true;
     }
 
+    /// <summary>
+    /// Resize-pane: moves <paramref name="grid"/> from the sizes it shows to <paramref name="split"/>'s new ratio. False
+    /// when off (the caller applies the ratio at once). A held key repeats: each press starts where the last one got to.
+    /// </summary>
+    private bool ResizeAnimated(WorkspaceTab tab, Grid grid, PaneSplit split)
+    {
+        if (TweenLength == null || !tab.Container.IsLoaded)
+        {
+            return false;
+        }
+
+        var from = ReadWeights(grid, split);
+        var band = PaneGap.Band(Gap);
+        StartTween(tab, [(grid, split, from, new Weights(split.Ratio, band, 1 - split.Ratio))], tab.Workspace.Maximized,
+            then: null, always: null);
+        return true;
+    }
+
     /// <summary>The pane each workspace shows maximized (its model gets ahead: focus moved off a maximized pane).</summary>
     private readonly Dictionary<WorkspaceTab, TabGroup<TerminalTab>?> _shownMaximized = new();
 
@@ -380,8 +398,13 @@ public sealed partial class MainWindow
             var (width, height) = (nowW, nowH);
             if (!Empty(from) && !Empty(to))
             {
-                // The card's edge and header stay the same size, so the terminal's end size follows from the card's.
-                (width, height) = (Math.Max(1, to.Width - (from.Width - nowW)), Math.Max(1, to.Height - (from.Height - nowH)));
+                // The card's edge and header stay the same size, so the terminal's end size follows from the card's: the
+                // card less the terminal's slot, both as laid out. Not less the terminal itself: an animation cut short
+                // leaves it at that one's end size, and the terminal resized again by a column at the end.
+                var slot = view.ContentSize;
+                var (chromeW, chromeH) = host.ActualWidth > 0 && slot.Width > 0
+                    ? (host.ActualWidth - slot.Width, host.ActualHeight - slot.Height) : (from.Width - nowW, from.Height - nowH);
+                (width, height) = (Math.Max(1, to.Width - chromeW), Math.Max(1, to.Height - chromeH));
             }
 
             // Its new size waits for the second frame (Then, in OnTweenFrame). A terminal shows a new size as soon as it
