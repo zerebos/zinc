@@ -285,6 +285,11 @@ user's commits of what you staged; post-commit and post-merge, since a merge run
   `Monitor.TryEnter` spin runs nothing; measured in-app 2026-10-15). The swap chain's `DrawWhenQuiet` is High, so a
   frame could start inside a frame: `SwapChainSurface.Present` defers a nested call. Code that queues High work must
   expect to run inside any lock wait on the UI thread.
+- **XAML doesn't reliably order swap chains against each other**: with one pane drawn over others (Canvas.ZIndex,
+  negative margins: the maximize animation), some covered panes' terminals were composited above it, against both
+  ZIndex and tree order (2x2 layout, 2026-10-16; screenshots show it too). Opacity tricks didn't help. Anything that
+  overlaps terminals shows the covered ones as still pictures (`TerminalControl.ShowStill`); internals, "Layout
+  animations".
 - `await` is illegal inside an `unsafe` class → async code lives in `ClipboardText`.
 - Keyboard: a key's WM_CHAR arrives after its KeyDown and before its KeyUp. Suppress the
   char only when KeyDown already encoded the key (`_charHandledByKeyDown`), and clear the

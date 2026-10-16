@@ -37,6 +37,79 @@ public sealed partial class TerminalControl : UserControl
     /// Its window was hidden or minimized (true), or shown again. i.e., no frames meanwhile, and the swap chain's memory goes
     /// as a hidden tab's does. So the blink stops but the first frame back starts it again.
     /// </summary>
+    private Microsoft.UI.Xaml.Controls.Image? _still;
+
+    /// <summary>
+    /// Shows the terminal as a still picture (true) instead of its swap chain, until false. A pane that another one grows
+    /// over during maximize or restore: XAML's z-order doesn't reliably order swap chains against each other, and some
+    /// covered panes' terminals drew over the growing one (2026-10-16, a 2x2 layout). A picture is ordinary XAML content.
+    /// It's drawn once, shaders included (an animated one holds still meanwhile).
+    /// </summary>
+    public void ShowStill(bool still)
+    {
+        if (_swap is not { } swap)
+        {
+            return;
+        }
+
+        if (!still)
+        {
+            if (_still != null)
+            {
+                _root.Children.Remove(_still);
+                _still = null;
+                swap.Panel.Opacity = 1;
+            }
+
+            return;
+        }
+
+        // (A pane coming back from behind a maximized one is still collapsed until layout runs: the size it last had.)
+        var (width, height) = swap.Panel.ActualWidth > 0 && swap.Panel.ActualHeight > 0
+            ? ((float)swap.Panel.ActualWidth, (float)swap.Panel.ActualHeight)
+            : ((float)LaidOutSize.Width, (float)LaidOutSize.Height);
+        if (_still != null || _closing.IsCancellationRequested || width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var picture = new Microsoft.Graphics.Canvas.UI.Xaml.CanvasImageSource(swap.Device, width, height, 96 * DisplayScale,
+                Microsoft.Graphics.Canvas.CanvasAlphaMode.Premultiplied);
+            using (var ds = picture.CreateDrawingSession(Microsoft.UI.Colors.Transparent))
+            using (var frame = swap.Picture())
+            {
+                if (frame != null)
+                {
+                    ds.DrawImage(frame, new Windows.Foundation.Rect(0, 0, width, height));
+                }
+                else
+                {
+                    ds.Clear(swap.ClearColor);
+                    DrawSafely(ds, swap.Device);
+                }
+            }
+
+            _still = new Microsoft.UI.Xaml.Controls.Image
+            {
+                Source = picture,
+                Width = width,
+                Height = height,
+                Stretch = Microsoft.UI.Xaml.Media.Stretch.Fill,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Top,
+                IsHitTestVisible = false,
+            };
+            _root.Children.Insert(_root.Children.IndexOf(swap.Panel) + 1, _still);
+            swap.Panel.Opacity = 0;
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"pane: still picture failed ({ex.HResult:X8}): {ex.Message}");
+        }
+    }
+
     public void SetWindowHidden(bool hidden)
     {
         _swap?.SetWindowHidden(hidden);
@@ -448,6 +521,21 @@ public sealed partial class TerminalControl : UserControl
     // The grid's top-left corner in DIPs (the padding, balanced or not): what pointer positions are measured from.
     private float _gridLeft, _gridTop;
 
+    /// <summary>The size the terminal last had its grid laid out at (kept while it's collapsed, which skips sizing).</summary>
+    public Windows.Foundation.Size LaidOutSize { get; private set; }
+
+    /// <summary>
+    /// The next resize that changes the grid goes to the shell at once instead of once the size settles (a layout
+    /// animation holds the terminal at one size, so there is only the one). False drops a request not used.
+    /// </summary>
+    public bool ResizeAtOnce
+    {
+        get => _resizeAtOnce;
+        set => _resizeAtOnce = value;
+    }
+
+    private bool _resizeAtOnce;
+
     private void UpdateGrid()
     {
         if (_closing.IsCancellationRequested)
@@ -462,6 +550,7 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
+        LaidOutSize = new Windows.Foundation.Size(ActualWidth, ActualHeight);
         var place = GridLayout.Place(Surface.ActualWidth, Surface.ActualHeight, _config.PaddingLeft, _config.PaddingRight,
             _config.PaddingTop, _config.PaddingBottom, m.Width, m.Height, m.Scale, _config.PaddingBalance);
         var (cols, rows) = (place.Columns, place.Rows);
@@ -480,7 +569,8 @@ public sealed partial class TerminalControl : UserControl
         {
             // Resize even when the grid is unchanged: the cell pixel size
             // (reported to apps via XTWINOPS/mouse pixels) may have changed.
-            _session.Resize(cols, rows, m.WidthPx, m.HeightPx);
+            _session.Resize(cols, rows, m.WidthPx, m.HeightPx, atOnce: resized && _resizeAtOnce);
+            _resizeAtOnce &= !resized;
             if (resized && _previewScript is { } script)
             {
                 ReplayPreview(_session, script);

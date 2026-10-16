@@ -135,8 +135,11 @@ internal sealed class ShaderPass : IDisposable
         return target!;
     }
 
-    /// <summary>Runs the shaders over the frame into <paramref name="chain"/>'s back buffer (Present is the caller's).</summary>
-    public void Run(CanvasSwapChain chain)
+    /// <summary>
+    /// Runs the shaders over the frame into <paramref name="chain"/>'s back buffer (Present is the caller's), or into
+    /// <paramref name="into"/> (the chain's size: a still picture of the pane).
+    /// </summary>
+    public void Run(CanvasSwapChain chain, CanvasRenderTarget? into = null)
     {
         var frame = _frame!;
         var (width, height) = ((int)frame.SizeInPixels.Width, (int)frame.SizeInPixels.Height);
@@ -166,8 +169,8 @@ internal sealed class ShaderPass : IDisposable
             var target = last ? null : ReferenceEquals(source, _scratchA) ? Sized(ref _scratchB, chain) : Sized(ref _scratchA, chain);
             using var input = TextureOf(source);
             using var view = _device.CreateShaderResourceView(input);
-            using var swapChain = last ? SwapChainOf(chain) : null;
-            using var output = last ? swapChain!.GetBuffer<ID3D11Texture2D>(0) : TextureOf(target!);
+            using var swapChain = last && into == null ? SwapChainOf(chain) : null;
+            using var output = !last ? TextureOf(target!) : into != null ? TextureOf(into) : swapChain!.GetBuffer<ID3D11Texture2D>(0);
             using var outputView = _device.CreateRenderTargetView(output);
 
             _context.OMSetRenderTargets(outputView);

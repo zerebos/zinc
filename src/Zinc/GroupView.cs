@@ -332,6 +332,13 @@ internal sealed partial class GroupView : Grid
     /// pane-focus = ring the focused pane gets the ring instead of the line (<see cref="PaneHeader.Ring"/>): drawn here on
     /// a flat pane, by the window on a card's edge.
     /// </summary>
+    /// <summary>Drops the focus line and ring (a pane closing while it shrinks away: focus has moved on).</summary>
+    public void HideFocus()
+    {
+        _focusLine.Visibility = Visibility.Collapsed;
+        _ring.Visibility = Visibility.Collapsed;
+    }
+
     public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, HeaderSettings settings, bool focused,
         Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default,
         Color headerFill = default, bool card = false, Color? hiddenTabFill = null)
@@ -508,6 +515,12 @@ internal sealed partial class GroupView : Grid
 
     /// <summary>Lets go of the shown terminal (the group is moving to another window).</summary>
     public void Release() => _content.Child = null;
+
+    /// <summary>
+    /// Fills the terminal's slot around it (null: nothing, the card shows through). A layout animation holds a
+    /// terminal at one size while its card changes, and the space beside it should read as more terminal.
+    /// </summary>
+    public void FillContent(Brush? fill) => _content.Background = fill;
 
     /// <summary>The + button's tooltip (the window's, which knows the current key bindings).</summary>
     public void SetAddToolTip(ToolTip tip) => ToolTipService.SetToolTip(_add, tip);

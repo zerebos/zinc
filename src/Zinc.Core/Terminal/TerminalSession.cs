@@ -189,6 +189,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
 
         Attach(new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, environment));
+        _ptySentSize = ((short)cols, (short)rows); // (a handed-over console's size is unknown: Attach leaves it unset)
     }
 
     /// <summary>
@@ -731,7 +732,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     public void SendInput(string text) => SendInput(Encoding.UTF8.GetBytes(text));
 
-    public void Resize(ushort cols, ushort rows, uint cellWidthPx, uint cellHeightPx)
+    /// <param name="atOnce">Tell the shell now instead of once the size settles: a resize known to be the only one
+    /// (a pane held at its size through a layout animation).</param>
+    public void Resize(ushort cols, ushort rows, uint cellWidthPx, uint cellHeightPx, bool atOnce = false)
     {
         lock (Lock)
         {
@@ -752,7 +755,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         {
             _ptyPendingSize = ((short)cols, (short)rows);
             _ptyResizeTimer ??= new Timer(_ => SendPtySize());
-            _ptyResizeTimer.Change(PtyResizeSettle, Timeout.InfiniteTimeSpan);
+            _ptyResizeTimer.Change(atOnce ? TimeSpan.Zero : PtyResizeSettle, Timeout.InfiniteTimeSpan);
         }
     }
 
@@ -762,13 +765,16 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private readonly object _ptyResizeGate = new();
     private Timer? _ptyResizeTimer;
     private (short Cols, short Rows)? _ptyPendingSize;
+    private (short Cols, short Rows)? _ptySentSize;
 
     private void SendPtySize()
     {
         (short Cols, short Rows)? size;
         lock (_ptyResizeGate)
         {
-            size = _ptyPendingSize;
+            // The same size again (a layout rebuilt around an unchanged terminal) isn't news to the shell.
+            size = _ptyPendingSize == _ptySentSize ? null : _ptyPendingSize;
+            _ptySentSize = size ?? _ptySentSize;
             _ptyPendingSize = null;
         }
 
@@ -776,6 +782,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         {
             if (size is var (cols, rows))
             {
+                Log.Write($"pty: resize {cols}x{rows}");
                 _pty?.Resize(cols, rows);
             }
         }

@@ -437,7 +437,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Closes one terminal tab; an emptied group, then workspace, goes with it.</summary>
     private void ClosePane(WorkspaceTab tab, TerminalTab pane)
     {
-        if (tab.Workspace.GroupOf(pane) == null)
+        if (tab.Workspace.GroupOf(pane) == null || CloseAnimated(tab, pane))
         {
             return;
         }
@@ -459,6 +459,9 @@ public sealed partial class MainWindow : Window
     /// <summary>Rebuilds a workspace's content from its layout and focuses the active tab.</summary>
     private void Rebuild(WorkspaceTab tab)
     {
+        SettleTween(tab, run: false);
+        var before = NoteLayout(tab);
+
         // Swap each pane's shown terminal while its host is still in the tree: removing a
         // terminal from a subtree that was just detached makes XAML report its Unloaded
         // twice, and Win2D's canvas (which counts Loaded/Unloaded) then never draws again.
@@ -476,6 +479,7 @@ public sealed partial class MainWindow : Window
         UpdateFocusBorders(tab);
         UpdateTitle(tab);
         FocusActive(tab);
+        PlayLayout(tab, before);
     }
 
     private UIElement Build(PaneNode node)
@@ -633,7 +637,10 @@ public sealed partial class MainWindow : Window
         }
 
         tab.Container.Padding = new Thickness(PaneGap.Edge(Gap, _config.Global.PaneGapEdges));
-        ShowMaximized(tab, Gap);
+        if (!Tweening(tab))
+        {
+            ShowMaximized(tab, Gap);
+        }
 
         ShowWorkspaceAttention(tab);
         UpdateTaskbarProgress(); // the shown workspace's progress wins; closed panes drop theirs
@@ -653,10 +660,11 @@ public sealed partial class MainWindow : Window
     /// Shows the workspace's maximized pane alone (maximize-pane), or every pane: along the path from the maximized
     /// pane's host up to the root, each split shows only the side holding it. Nothing leaves the tree (PaneDivider.ShowOnly).
     /// </summary>
-    private static void ShowMaximized(WorkspaceTab tab, int gap)
+    private static void ShowMaximized(WorkspaceTab tab, int gap, bool everyPane = false)
     {
         var path = new HashSet<PaneNode>();
-        for (PaneNode? node = tab.Workspace.Maximized is { } group ? tab.Workspace.Layout.Find(group) : null; node != null; node = node.Parent)
+        for (PaneNode? node = !everyPane && tab.Workspace.Maximized is { } group ? tab.Workspace.Layout.Find(group) : null; node != null;
+             node = node.Parent)
         {
             path.Add(node);
         }
@@ -1837,10 +1845,12 @@ public sealed partial class MainWindow : Window
             case TerminalAction.MaximizePane:
                 if (tab.Workspace.GroupOf(origin) is { } maximize)
                 {
+                    var before = NoteLift(tab, maximize);
                     tab.Workspace.Activate(maximize.Active);
                     tab.Workspace.ToggleMaximize();
                     UpdateFocusBorders(tab);
                     FocusActive(tab);
+                    PlayLift(tab, maximize, before);
                 }
 
                 return true;

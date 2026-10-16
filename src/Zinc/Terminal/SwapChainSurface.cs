@@ -177,6 +177,47 @@ internal sealed class SwapChainSurface
         }
     }
 
+    /// <summary>
+    /// The pane as it looks now, shaders included, drawn into a new picture the size of the swap chain (null: nothing to
+    /// draw yet, or asked for during a frame). The caller disposes it.
+    /// </summary>
+    public CanvasRenderTarget? Picture()
+    {
+        if (_closed || _presenting || _chain is not { } chain)
+        {
+            return null;
+        }
+
+        _presenting = true; // (the same drawing; a frame asked for meanwhile waits, as in Present)
+        try
+        {
+            var picture = new CanvasRenderTarget(Device, (float)chain.Size.Width, (float)chain.Size.Height, chain.Dpi);
+            if (_shader is { } shader)
+            {
+                using (var ds = shader.FrameFor(chain, out _).CreateDrawingSession())
+                {
+                    ds.Clear(ClearColor);
+                    _draw(ds);
+                }
+
+                FillUniforms?.Invoke(shader);
+                shader.Run(chain, picture);
+            }
+            else
+            {
+                using var ds = picture.CreateDrawingSession();
+                ds.Clear(ClearColor);
+                _draw(ds);
+            }
+
+            return picture;
+        }
+        finally
+        {
+            _presenting = false;
+        }
+    }
+
     /// <summary>The custom shaders to run over every frame, in order (none: frames go straight to the swap chain).</summary>
     public void SetShaders(IReadOnlyList<CompiledShader> shaders)
     {
