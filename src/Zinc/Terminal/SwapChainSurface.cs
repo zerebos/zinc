@@ -60,6 +60,10 @@ internal sealed class SwapChainSurface
     // runs the shaders again over the last picture (redrawing the terminal each refresh cost ~30% of a core).
     private bool _stale = true;
     private bool _resourcesCreated, _drawQueued, _dirty, _presentedThisTick, _onRendering, _closed, _presenting;
+
+    // Its window is hidden (the quick terminal dismissed) or minimized where the panel stays loaded, so this stands in for
+    // Unloaded (no frames, no animation, the memory goes after FreeHiddenAfter).
+    private bool _windowHidden;
     private int _failures;
 
     /// <param name="createResources">Device-bound resources (fonts, the atlas): once loaded, and after a lost device.</param>
@@ -125,7 +129,7 @@ internal sealed class SwapChainSurface
     /// </summary>
     private void FreeHidden()
     {
-        if (_closed || Panel.IsLoaded || _chain == null)
+        if (_closed || (Panel.IsLoaded && !_windowHidden) || _chain == null)
         {
             return;
         }
@@ -138,6 +142,39 @@ internal sealed class SwapChainSurface
         _stale = true;
         UnhookRendering();
         Log.Write($"pane: swap chain: freed while hidden ({pixels.Width}x{pixels.Height})");
+    }
+
+    /// <summary>
+    /// Its window was hidden or minimized (true), or shown again. A loaded panel in a hidden window would otherwise go on
+    /// drawing. e.g. an animated shader at every refresh could cause constant GPU use behind a dismissed quick terminal.
+    /// </summary>
+    public void SetWindowHidden(bool hidden)
+    {
+        if (_closed || hidden == _windowHidden)
+        {
+            return;
+        }
+
+        _windowHidden = hidden;
+        if (hidden)
+        {
+            UnhookRendering();
+            StartFreeTimer();
+            return;
+        }
+
+        _freeTimer?.Stop();
+        if (Panel.IsLoaded)
+        {
+            // A freed chain comes back as with the Loaded event, and the frame is drawn now so the old picture doesn't show first.
+            Resize();
+            _stale = true;
+            Present();
+            if (Animating)
+            {
+                HookRendering();
+            }
+        }
     }
 
     /// <summary>The custom shaders to run over every frame, in order (none: frames go straight to the swap chain).</summary>
@@ -198,8 +235,8 @@ internal sealed class SwapChainSurface
         }
     }
 
-    // Not on a hidden tab (TabView unloads it): nobody would see the frames.
-    private bool Animating => _animate && _shader is { UsesTime: true } && Panel.IsLoaded;
+    // Not on a hidden tab (TabView unloads it) or in a hidden window where nobody would see the frames.
+    private bool Animating => _animate && _shader is { UsesTime: true } && Panel.IsLoaded && !_windowHidden;
 
     /// <summary>Whether nothing moves at all (animation "never": see <see cref="ShaderPass.AtRest"/>).</summary>
     public void SetAtRest(bool atRest)
@@ -235,9 +272,9 @@ internal sealed class SwapChainSurface
         // Compared in whole pixels (DIP floats differ by rounding at scales like 125%: a needless ResizeBuffers and
         // full redraw on every window change), and at least a pixel each way (a 0-pixel swap chain throws).
         var (pixelsWide, pixelsHigh) = ((int)Math.Round(width * dpi / 96), (int)Math.Round(height * dpi / 96));
-        if (_closed || pixelsWide < 1 || pixelsHigh < 1)
+        if (_closed || pixelsWide < 1 || pixelsHigh < 1 || (_windowHidden && _chain == null))
         {
-            return;
+            return; // a swap chain is freed in a hidden window and made again when it's shown
         }
 
         try
@@ -321,9 +358,10 @@ internal sealed class SwapChainSurface
             return;
         }
 
-        if (!Panel.IsLoaded)
+        if (!Panel.IsLoaded || _windowHidden)
         {
-            // A hidden tab (TabView unloads it) or a pane between hosts: nobody would see the frame. Loaded draws one.
+            // A hidden tab (TabView unloads it), a pane between hosts or a hidden window where nobody would see the frame.
+            // Loaded (or SetWindowHidden) draws one.
             _stale = true;
             return;
         }

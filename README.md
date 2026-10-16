@@ -380,7 +380,9 @@ drawn, instead of at the window's next render tick, so typing shows up about a r
 goes back to the previous drawing, as a fallback (terminals opened after it's set). `free-hidden-memory = true`
 (the default) has a tab left in the background give back the graphics memory it draws with (two full-size
 buffers, more with shaders: tens of MB for a maximized tab on a high-resolution screen) once it has been hidden for
-`free-hidden-after` (seconds, or `"2m"`; default 60), and make it anew when you come back; `false` keeps it.
+`free-hidden-after` (seconds, or `"2m"`; default 60), and make it anew when you come back; `false` keeps it. The
+same goes for every terminal of a minimized window or the dismissed quick terminal. Hidden or minimized, terminals
+don't draw at all, so animated shaders stop meanwhile.
 
 **`[notify]`**: `command-finished`, `command-finished-after` (see
 [Shell integration](#shell-integration)), `command-finished-sound` (`"off"` by default, `"notification"` for

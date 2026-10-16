@@ -33,6 +33,38 @@ public sealed partial class MainWindow
     public bool IsQuickShownAndActive => _quickShown && _active;
     public bool IsQuickShown => _quickShown;
 
+    // Hidden (the quick terminal dismissed) or minimized, panes neither draw nor keep their swap chains.
+    private bool _windowHidden;
+
+    /// <summary>Tells every pane its window was hidden or minimized, or shown again (TerminalControl.SetWindowHidden).</summary>
+    private void SetPanesHidden(bool hidden)
+    {
+        if (hidden == _windowHidden || _windowClosed)
+        {
+            return;
+        }
+
+        _windowHidden = hidden;
+        Log.Write($"window: {(hidden ? "hidden or minimized: panes stop drawing" : "shown: panes draw again")}");
+        foreach (var pane in AllTabs().SelectMany(t => t.Workspace.Tabs))
+        {
+            pane.Control.SetWindowHidden(hidden);
+        }
+    }
+
+    /// <summary>A minimized window's panes stop drawing as a hidden one's do (the quick terminal can't be minimized).</summary>
+    private void TrackMinimized()
+    {
+        if (_quick)
+        {
+            return;
+        }
+
+        // Minimizing and restoring move and size the window: checked on every change, cheap when nothing changed.
+        AppWindow.Changed += (_, _) =>
+            SetPanesHidden(AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized });
+    }
+
     private void ConfigureQuickWindow()
     {
         // Out of the taskbar and Alt+Tab, above other windows while shown, with no frame at all: the content fades and
@@ -169,6 +201,7 @@ public sealed partial class MainWindow
         }
 
         _quickShown = true;
+        SetPanesHidden(false); // drawn before it shows so the picture from when it was dismissed doesn't flash
         AppWindow.Show(true);
         UpdateBorders(); // for the position in the config, which may have changed while hidden
         Activate();
@@ -229,6 +262,7 @@ public sealed partial class MainWindow
         void Hidden()
         {
             AppWindow.Hide();
+            SetPanesHidden(true);
             SetAppearance((1, 0, 0), opacity: 1, animate: false); // whole again for next time (hidden: nothing shows)
             if (previous != 0 && IsWindow(previous) && IsWindowVisible(previous))
             {

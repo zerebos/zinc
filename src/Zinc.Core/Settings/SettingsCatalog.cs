@@ -511,7 +511,7 @@ public static class SettingsCatalog
             "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
             SettingKind.Toggle, true),
         new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free memory of hidden tabs",
-            "Background tabs give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
+            "Background tabs, minimized windows and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
             SettingKind.Toggle, true),
         new("terminal", "Troubleshooting", "window.free-hidden-after", "Free it after",
             "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 60L)

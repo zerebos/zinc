@@ -33,6 +33,24 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>What device-bound resources (fonts, text layouts) are made with.</summary>
     private Microsoft.Graphics.Canvas.ICanvasResourceCreator Creator => _swap?.Device ?? (Microsoft.Graphics.Canvas.ICanvasResourceCreator)_canvas!;
 
+    /// <summary>
+    /// Its window was hidden or minimized (true), or shown again. i.e., no frames meanwhile, and the swap chain's memory goes
+    /// as a hidden tab's does. So the blink stops but the first frame back starts it again.
+    /// </summary>
+    public void SetWindowHidden(bool hidden)
+    {
+        _swap?.SetWindowHidden(hidden);
+        if (hidden)
+        {
+            _blinkTimer.Stop();
+            _blinkOn = true;
+        }
+        else
+        {
+            Redraw();
+        }
+    }
+
     /// <summary>Asks for a new frame.</summary>
     private void Redraw()
     {

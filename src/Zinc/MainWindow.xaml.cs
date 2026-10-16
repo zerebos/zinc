@@ -219,6 +219,7 @@ public sealed partial class MainWindow : Window
 
         Activated += OnActivated;
         TrackNormalBounds();
+        TrackMinimized();
         HotkeyNotice.Closed += (_, _) => _hotkeyNoticeDismissed = true;
         if (!quick)
         {
@@ -360,6 +361,7 @@ public sealed partial class MainWindow : Window
     {
         pane.Unwire?.Invoke();
         var control = pane.Control;
+        control.SetWindowHidden(_windowHidden); // a pane from a minimized window draws again here
         Action<string> title = _ =>
         {
             UpdateTitle(tab, fromShell: true);
