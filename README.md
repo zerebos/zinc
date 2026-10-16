@@ -1045,7 +1045,6 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 
 ## Known gaps
 
-- Ligatures are intentionally off (each glyph is placed in its own cell).
 - Sixel isn't supported (libghostty has no sixel API); kitty graphics animation shows the current
   frame only.
 - Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own
@@ -1053,7 +1052,7 @@ The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 - Default terminal mode needs Windows Terminal installed (its console host does the other half).
 - Shell integration doesn't reach a bash in WSL whose startup files replace `PROMPT_COMMAND` (a
   bash started directly, like Git Bash, is fine), elvish inside WSL, YSH or xonsh; cmd reports no
-  exit codes.
+  exit codes without Clink.
 - Git Bash and MSYS2 programs write to a console a few bytes at a time, so very large colorful
   output from them is slow in any Windows terminal (native programs and WSL are fine).
 - No ARM64 build yet.
