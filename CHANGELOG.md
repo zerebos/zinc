@@ -28,6 +28,7 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Fixed
 - Closing a workspace's last tab or pane (the tab's ×, `close-tab` or `close-pane`) closed the workspace for good: Reopen closed workspace couldn't bring it back as it does after Close workspace. Now it can.
 - A tab dragged while the quick terminal was showing (its hotkey pressed mid-drag) could be dropped into it. The quick terminal now takes no tabs or panes. Files still drop there as paths.
+- Closing a tab with its × could show an error ("Not in this workspace") once the pane switched to another tab. Nothing was lost, and it no longer happens.
 
 ## 0.1.0-dev.344 (2026-10-10)
 

@@ -440,6 +440,10 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        // Its events go first. a click on its tab's × left focus there, and when that × leaves the header, XAML hands
+        // focus to the next thing it finds, which can be this terminal, still shown until the pane switches. Its focus
+        // handler then activated a tab the workspace no longer had (ArgumentException).
+        pane.Unwire?.Invoke();
         pane.Control.Close();
         if (!tab.Workspace.Close(pane))
         {
