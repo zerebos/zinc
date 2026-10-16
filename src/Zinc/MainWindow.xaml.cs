@@ -845,7 +845,7 @@ public sealed partial class MainWindow : Window
         menu.Items.Add(new MenuFlyoutSeparator());
         menu.Items.Add(Item("Rename tab…", "", null, () => ShowRenameTab(tab, pane, anchor)));
         AddMoveTabItems(menu, tab, pane, alone);
-        menu.ShowAt(anchor);
+        menu.RunAfterClose().ShowAt(anchor);
     }
 
     private void AddMoveTabItems(MenuFlyout menu, WorkspaceTab tab, TerminalTab pane, bool alone)
@@ -897,7 +897,7 @@ public sealed partial class MainWindow : Window
         }
 
         // Below the button, right edges aligned, like other app menus (the default opened above when there was room).
-        menu.ShowAt(anchor, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+        menu.RunAfterClose().ShowAt(anchor, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
         {
             Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
         });

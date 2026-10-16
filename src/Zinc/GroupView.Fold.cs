@@ -120,14 +120,14 @@ internal sealed partial class GroupView
                 KeyboardAcceleratorTextOverride = words ?? "", // the status, right-aligned where a shortcut would be
             };
             AutomationProperties.SetName(item, AttentionWords.Name(title, words));
-            item.Click += (_, _) => TabClicked?.Invoke(tab);
+            item.Command = new RelayCommand(() => TabClicked?.Invoke(tab));
             menu.Items.Add(item);
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
         var add = new MenuFlyoutItem { Text = "New tab in this pane", Icon = new FontIcon { Glyph = "" } };
-        add.Click += (_, _) => NewTabClicked?.Invoke();
+        add.Command = new RelayCommand(() => NewTabClicked?.Invoke());
         menu.Items.Add(add);
-        menu.ShowAt(_count, new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
+        menu.RunAfterClose().ShowAt(_count, new FlyoutShowOptions { Placement = FlyoutPlacementMode.BottomEdgeAlignedLeft });
     }
 }

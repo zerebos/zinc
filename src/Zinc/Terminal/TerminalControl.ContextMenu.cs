@@ -79,7 +79,7 @@ public sealed partial class TerminalControl
         menu.Items.Add(new MenuFlyoutSeparator());
         Add(menu, "Close tab", "", TerminalAction.ClosePane);
 
-        menu.ShowAt(this, new FlyoutShowOptions { Position = at, ShowMode = FlyoutShowMode.Standard });
+        menu.RunAfterClose().ShowAt(this, new FlyoutShowOptions { Position = at, ShowMode = FlyoutShowMode.Standard });
     }
 
     /// <summary>The menu for the keyboard (Shift+F10, the Menu key): under the cursor, else at the pane's top left.</summary>

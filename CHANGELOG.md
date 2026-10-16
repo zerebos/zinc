@@ -9,6 +9,7 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Fixed
 - With an animated shader, the quick terminal kept using the graphics card after you dismissed it, and so did a minimized window. Hidden or minimized, terminals now draw nothing, and they give back their graphics memory after a minute, as background tabs do (`Free memory of hidden tabs`).
 - A pane could miss a frame at startup, leaving an error in the crash log ("The last drawing session ... must be disposed").
+- Choosing a split or a new tab from a menu (a pane's ⋯ menu, a tab's or workspace's right-click menu, the terminal's right-click menu) no longer flickers focus back to the old pane for a moment before the new one takes it.
 
 ## 0.1.0-dev.393 (2026-10-15)
 

@@ -78,7 +78,7 @@ public sealed partial class MainWindow
             CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1))));
         menu.Items.Add(Item("Close workspace", "", null, () => CloseTab(tab)));
 
-        return menu;
+        return menu.RunAfterClose();
     }
 
     private static MenuFlyoutItem Item(string text, string? glyph, string? shortcut, Action action)
@@ -308,4 +308,59 @@ internal sealed partial class RelayCommand(Action action) : System.Windows.Input
     public bool CanExecute(object? parameter) => true;
 
     public void Execute(object? parameter) => action();
+}
+
+internal static class MenuFlyouts
+{
+    /// <summary>
+    /// Runs the chosen item's command once the menu has closed and handed focus back, not while it's still open: the
+    /// focus went back to what had it before the menu after the command ran, so one that moved focus (a split, a new
+    /// tab) lost it to the old pane for a few frames and the focus ring flickered. A command run while the menu isn't
+    /// open (a test hook) runs at once. Items with Click handlers aren't covered so give them a Command.
+    /// </summary>
+    public static MenuFlyout RunAfterClose(this MenuFlyout menu)
+    {
+        var open = false;
+        Action? chosen = null;
+        menu.Opened += (_, _) => open = true;
+        menu.Closed += (_, _) =>
+        {
+            open = false;
+            if (chosen is { } run)
+            {
+                // Queued, not run here: focus goes back after Closed (logged: closed, focus to the old pane, then this).
+                chosen = null;
+                menu.DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, run);
+            }
+        };
+
+        Defer(menu.Items);
+        return menu;
+
+        void Defer(IList<MenuFlyoutItemBase> items)
+        {
+            foreach (var item in items)
+            {
+                if (item is MenuFlyoutSubItem sub)
+                {
+                    Defer(sub.Items);
+                }
+                else if (item is MenuFlyoutItem { Command: { } command } leaf)
+                {
+                    leaf.Command = new RelayCommand(() =>
+                    {
+                        void Run() => command.Execute(leaf.CommandParameter);
+                        if (open)
+                        {
+                            chosen = Run;
+                        }
+                        else
+                        {
+                            Run();
+                        }
+                    });
+                }
+            }
+        }
+    }
 }
