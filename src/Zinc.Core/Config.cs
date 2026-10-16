@@ -643,8 +643,17 @@ public sealed record Config
     /// <summary>Bold text in the default color takes this one; null: the same. Config: <c>[colors] bold</c>.</summary>
     public GhosttyColorRgb? BoldColor { get; init; }
 
-    /// <summary>Pane headers (and cards' edges) take this fill; null: made from the background. Config: <c>[colors] pane-header</c>.</summary>
+    /// <summary>
+    /// Pane headers take this fill (cards' edges a step further); null: made from the background at
+    /// <see cref="PaneHeaderLevel"/>. Config: <c>[colors] pane-header</c> = a color.
+    /// </summary>
     public GhosttyColorRgb? PaneHeaderColor { get; init; }
+
+    /// <summary>
+    /// How far a made header fill stands from the background, without <see cref="PaneHeaderColor"/>. Config:
+    /// <c>[colors] pane-header</c> = terminal | subtle | auto | strong.
+    /// </summary>
+    public Zinc.Panes.HeaderLevel PaneHeaderLevel { get; init; } = Zinc.Panes.HeaderLevel.Standard;
 
     /// <summary>Bold text in palette colors 0-7 shows their bright versions (8-15). Config: <c>[colors] bold-is-bright</c>.</summary>
     public bool BoldIsBright { get; init; }
@@ -802,7 +811,10 @@ public sealed record Config
             "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },
             "minimum-contrast" when TryDouble(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
             "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
-            "pane-header-color" when TryColor(value, out var header) => this with { PaneHeaderColor = header },
+            "pane-header-color" when Zinc.Panes.PaneCard.TryLevel(value, out var level) =>
+                this with { PaneHeaderColor = null, PaneHeaderLevel = level },
+            "pane-header-color" when TryColor(value, out var header) =>
+                this with { PaneHeaderColor = header, PaneHeaderLevel = Zinc.Panes.HeaderLevel.Standard },
             "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
             "palette-generate" when bool.TryParse(value, out var generate) => this with { PaletteGeneration = PaletteGeneration with { Generate = generate } },
             "palette-harmonious" when bool.TryParse(value, out var harmonious) => this with { PaletteGeneration = PaletteGeneration with { Harmonious = harmonious } },

@@ -3,6 +3,23 @@ using Zinc.Ghostty;
 namespace Zinc.Panes;
 
 /// <summary>
+/// How far a pane header's made fill stands from its terminal (<c>[colors] pane-header</c>: terminal, subtle, auto,
+/// strong; or a color). Its card's border goes one step further (<see cref="PaneCard.EdgeFill(GhosttyColorRgb, GhosttyColorRgb)"/>).
+/// </summary>
+public enum HeaderLevel
+{
+    /// <summary>The terminal's own background (hidden tabs then take the Standard fill).</summary>
+    Terminal,
+
+    Subtle,
+
+    /// <summary>The default (<c>auto</c>).</summary>
+    Standard,
+
+    Strong,
+}
+
+/// <summary>
 /// How a pane looks as a card (any gap above 0): rounded corners, a 2 px edge, and its header filled from its own
 /// scheme. At gap 0 panes stay flat, as they always were.
 /// </summary>
@@ -18,10 +35,44 @@ public static class PaneCard
     public const double Edge = 2;
 
     /// <summary>
-    /// How far a header's fill stands from its terminal (WCAG contrast ratio). A fixed step (e.g. 4% toward
+    /// How far a Standard header's fill stands from its terminal (WCAG contrast ratio). A fixed step (e.g. 4% toward
     /// white) was 1.06:1 on a black scheme and 1.135:1 on Dracula: faintest on the darkest schemes.
     /// </summary>
     public const double HeaderContrast = 1.15;
+
+    /// <summary>
+    /// A header this close to its terminal (Same as the terminal, or a custom color that near) doesn't tell the shown tab
+    /// apart, since the shown tab is drawn in the terminal's color: its hidden tabs take the Standard fill instead.
+    /// </summary>
+    public const double SeamlessBelow = 1.05;
+
+    /// <summary>
+    /// The contrast steps a card's border takes: one past its header's (Subtle -> Standard, Standard -> Strong, Strong -> 1.6:1).
+    /// </summary>
+    private static readonly double[] EdgeSteps = [HeaderContrast, 1.3, 1.6];
+
+    /// <summary>The contrast a <paramref name="level"/> header stands from its terminal.</summary>
+    public static double ContrastOf(HeaderLevel level) => level switch
+    {
+        HeaderLevel.Terminal => 1,
+        HeaderLevel.Subtle => 1.08,
+        HeaderLevel.Strong => 1.3,
+        _ => HeaderContrast,
+    };
+
+    /// <summary>A <c>pane-header</c> level by its config name: terminal, subtle, auto (Standard) or strong.</summary>
+    public static bool TryLevel(string value, out HeaderLevel level)
+    {
+        (var known, level) = value switch
+        {
+            "terminal" => (true, HeaderLevel.Terminal),
+            "subtle" => (true, HeaderLevel.Subtle),
+            "auto" => (true, HeaderLevel.Standard),
+            "strong" => (true, HeaderLevel.Strong),
+            _ => (false, HeaderLevel.Standard),
+        };
+        return known;
+    }
 
     /// <summary>Whether panes are cards at this gap.</summary>
     public static bool At(int gap) => gap > 0;
@@ -31,24 +82,65 @@ public static class PaneCard
 
     /// <summary>
     /// A header's fill: its terminal's <paramref name="background"/> made lighter on a dark scheme, darker on a light one,
-    /// just until it stands <see cref="HeaderContrast"/> apart, so the header reads as part of the card and still stands
-    /// apart from the terminal on every scheme.
+    /// just until it stands <paramref name="level"/>'s contrast apart (<see cref="ContrastOf"/>), so the header reads as
+    /// part of the card and still stands apart from the terminal the same way on every scheme. Terminal: the background.
     /// </summary>
-    public static GhosttyColorRgb HeaderFill(GhosttyColorRgb background)
+    public static GhosttyColorRgb HeaderFill(GhosttyColorRgb background, HeaderLevel level = HeaderLevel.Standard) =>
+        level == HeaderLevel.Terminal ? background : Away(background, background, ContrastOf(level));
+
+    /// <summary>A profile's header fill: its <c>pane-header</c> color, else made from its background at its level.</summary>
+    public static GhosttyColorRgb HeaderFill(Config config) =>
+        config.PaneHeaderColor ?? HeaderFill(config.Theme.Background, config.PaneHeaderLevel);
+
+    /// <summary>Whether a <paramref name="header"/> fill is too close to its terminal to tell the shown tab apart.</summary>
+    public static bool Seamless(GhosttyColorRgb header, GhosttyColorRgb background) => Ratio(header, background) < SeamlessBelow;
+
+    /// <summary>
+    /// What a profile's hidden tabs are filled with: nothing (the header shows through), or the Standard fill when the
+    /// header is <see cref="Seamless"/>, so the shown tab is still the one that joins its terminal.
+    /// </summary>
+    public static GhosttyColorRgb? HiddenTabFill(Config config) =>
+        Seamless(HeaderFill(config), config.Theme.Background) ? HeaderFill(config.Theme.Background) : null;
+
+    /// <summary>
+    /// A card's unfocused border: its <paramref name="header"/> fill pushed one step further from the terminal's
+    /// <paramref name="background"/> (<see cref="EdgeSteps"/>; past the last step, a quarter further), keeping a custom
+    /// color's hue. A seamless header gets none: the border is the terminal's color, so the card is all terminal.
+    /// </summary>
+    public static GhosttyColorRgb EdgeFill(GhosttyColorRgb header, GhosttyColorRgb background)
     {
-        var toward = IsLight(background) ? new GhosttyColorRgb(0, 0, 0) : new GhosttyColorRgb(255, 255, 255);
+        var ratio = Ratio(header, background);
+        if (ratio < SeamlessBelow)
+        {
+            return background;
+        }
+
+        // (A made fill lands a little past its step, in whole channel steps: 1.04 skips past its own.)
+        var next = EdgeSteps.FirstOrDefault(step => step >= ratio * 1.04);
+        return Away(header, background, next > 0 ? next : Math.Min(21, ratio * 1.25));
+    }
+
+    /// <summary>A profile's card border (<see cref="EdgeFill(GhosttyColorRgb, GhosttyColorRgb)"/>).</summary>
+    public static GhosttyColorRgb EdgeFill(Config config) => EdgeFill(HeaderFill(config), config.Theme.Background);
+
+    /// <summary>
+    /// <paramref name="from"/> moved toward white or black, whichever is away from <paramref name="background"/>, just
+    /// until it stands <paramref name="contrast"/> apart from it (or all the way, if that's not enough).
+    /// </summary>
+    private static GhosttyColorRgb Away(GhosttyColorRgb from, GhosttyColorRgb background, double contrast)
+    {
+        double lf = Luminance(from), lb = Luminance(background);
+        var lighter = lf != lb ? lf > lb : !IsLight(background);
+        var toward = lighter ? new GhosttyColorRgb(255, 255, 255) : new GhosttyColorRgb(0, 0, 0);
         double low = 0, high = 1;
         for (var i = 0; i < 16; i++)
         {
             var t = (low + high) / 2;
-            (low, high) = Ratio(Mix(background, toward, t), background) >= HeaderContrast ? (low, t) : (t, high);
+            (low, high) = Ratio(Mix(from, toward, t), background) >= contrast ? (low, t) : (t, high);
         }
 
-        return Mix(background, toward, high);
+        return Mix(from, toward, high);
     }
-
-    /// <summary>A profile's header fill: its <c>pane-header</c> color, else made from its background.</summary>
-    public static GhosttyColorRgb HeaderFill(Config config) => config.PaneHeaderColor ?? HeaderFill(config.Theme.Background);
 
     /// <summary>The WCAG contrast ratio between two colors (1 to 21), as the app's <c>Contrast.Ratio</c>.</summary>
     public static double Ratio(GhosttyColorRgb a, GhosttyColorRgb b)

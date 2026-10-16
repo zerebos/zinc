@@ -163,8 +163,21 @@ public static class SettingsCatalog
             "Behind selected text (without either, selection inverts the colors).", SettingKind.Color, null),
         new("appearance", "Colors", "colors.selection-foreground", "Selected text",
             "Without either, the text keeps its color.", SettingKind.Color, null),
-        new("appearance", "Colors", "colors.pane-header", "Pane headers", "Behind pane titles and tabs, and around cards.", SettingKind.Color, null)
-            { Placeholder = "From the background" },
+        // A color, or how far the made fill stands from the background (PaneCard.HeaderLevel). The window shows the
+        // choices in a list with "Custom color" last; null (Standard) is the default.
+        new("appearance", "Colors", "colors.pane-header", "Pane headers",
+            "Behind pane titles and tabs. On cards, the border is a step stronger.", SettingKind.Color, null)
+        {
+            Placeholder = "From the background",
+            NullLabel = "Standard",
+            Choices =
+            [
+                new("Same as the terminal", "terminal", "Hidden tabs get a shade instead, so the shown tab still stands out. Cards have no border."),
+                new("Subtle", "subtle"),
+                new("Standard", null),
+                new("Strong", "strong"),
+            ],
+        },
         new("appearance", "Readability", "colors.minimum-contrast", "Minimum contrast",
             "Text that reads poorly against its background turns black or white. 1: off; 4.5: the usual accessibility level; 21: always black or white.",
             SettingKind.Number, 1.0)

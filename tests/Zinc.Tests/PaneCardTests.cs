@@ -53,6 +53,77 @@ public class PaneCardTests
         Assert.Equal("334455", Hex(PaneCard.HeaderFill(config)));
         Assert.Equal(PaneCard.HeaderFill(new Config().Theme.Background), PaneCard.HeaderFill(new Config()));
         Assert.Null(new Config().Apply("pane-header-color", "blue-ish"));
+        Assert.Null(new Config().Apply("pane-header-color", "standard")); // auto is Standard's name in the file
+    }
+
+    [Theory]
+    [InlineData("terminal", HeaderLevel.Terminal)]
+    [InlineData("subtle", HeaderLevel.Subtle)]
+    [InlineData("auto", HeaderLevel.Standard)]
+    [InlineData("strong", HeaderLevel.Strong)]
+    public void PaneHeaderLevelsByName(string value, HeaderLevel level)
+    {
+        var config = new Config().Apply("pane-header-color", "#334455")!.Apply("pane-header-color", value)!;
+        Assert.Equal(level, config.PaneHeaderLevel);
+        Assert.Null(config.PaneHeaderColor); // the last one set wins
+        Assert.Equal(PaneCard.HeaderFill(config.Theme.Background, level), PaneCard.HeaderFill(config));
+    }
+
+    [Theory]
+    [InlineData(0x0C110E)]
+    [InlineData(0x282A36)]
+    [InlineData(0xEFF1F5)]
+    [InlineData(0xFFFFFF)]
+    public void EachLevelStandsItsContrastApart(int background)
+    {
+        Assert.Equal(Rgb(background), PaneCard.HeaderFill(Rgb(background), HeaderLevel.Terminal));
+        foreach (var level in new[] { HeaderLevel.Subtle, HeaderLevel.Standard, HeaderLevel.Strong })
+        {
+            var ratio = PaneCard.Ratio(PaneCard.HeaderFill(Rgb(background), level), Rgb(background));
+            Assert.InRange(ratio, PaneCard.ContrastOf(level) - 0.01, PaneCard.ContrastOf(level) + 0.03);
+        }
+    }
+
+    [Theory]
+    // the header's level -> the border's contrast from the terminal: one step further
+    [InlineData(0x0C110E, HeaderLevel.Subtle, 1.15)]
+    [InlineData(0x0C110E, HeaderLevel.Standard, 1.3)]
+    [InlineData(0x0C110E, HeaderLevel.Strong, 1.6)]
+    [InlineData(0xEFF1F5, HeaderLevel.Subtle, 1.15)]
+    [InlineData(0xEFF1F5, HeaderLevel.Standard, 1.3)]
+    [InlineData(0xEFF1F5, HeaderLevel.Strong, 1.6)]
+    public void TheBorderIsOneStepPastTheHeader(int background, HeaderLevel level, double border)
+    {
+        var edge = PaneCard.EdgeFill(PaneCard.HeaderFill(Rgb(background), level), Rgb(background));
+        Assert.InRange(PaneCard.Ratio(edge, Rgb(background)), border - 0.01, border + 0.04);
+    }
+
+    [Fact]
+    public void ASeamlessHeaderHasNoBorderAndFlipsTheTabs()
+    {
+        var config = new Config().Apply("pane-header-color", "terminal")!;
+        Assert.Equal(config.Theme.Background, PaneCard.EdgeFill(config));
+        Assert.Equal(PaneCard.HeaderFill(config.Theme.Background), PaneCard.HiddenTabFill(config));
+        Assert.Null(PaneCard.HiddenTabFill(new Config())); // a made fill: hidden tabs show the header
+    }
+
+    [Fact]
+    public void ACustomHeaderNearTheTerminalCountsAsSeamless()
+    {
+        var background = new Config().Theme.Background;
+        var near = new GhosttyColorRgb((byte)(background.R + 1), background.G, background.B);
+        var config = new Config().Apply("pane-header-color", $"#{Hex(near)}")!;
+        Assert.NotNull(PaneCard.HiddenTabFill(config));
+        Assert.Equal(background, PaneCard.EdgeFill(config));
+    }
+
+    [Fact]
+    public void ACustomHeadersBorderKeepsItsHue()
+    {
+        // a purple header on a dark terminal: the border is a lighter purple, still reading purple
+        var edge = PaneCard.EdgeFill(Rgb(0x5A3A7A), Rgb(0x0C110E));
+        Assert.True(PaneCard.Ratio(edge, Rgb(0x0C110E)) > PaneCard.Ratio(Rgb(0x5A3A7A), Rgb(0x0C110E)));
+        Assert.True(edge.B > edge.G && edge.R > edge.G);
     }
 
     private static GhosttyColorRgb Rgb(int rgb) => new((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
