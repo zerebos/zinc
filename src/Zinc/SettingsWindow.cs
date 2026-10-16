@@ -1392,7 +1392,7 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>A setting's description, and what its chosen option means.</summary>
     private static string Explain(SettingDef setting, object? value)
     {
-        var detail = setting.Kind == SettingKind.Choice
+        var detail = setting.Kind == SettingKind.Choice || setting.Choices.Count > 0
             ? setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value ?? setting.Default))?.Detail
             : null;
         return string.Join(" ", new[] { setting.Description, detail }.Where(t => !string.IsNullOrEmpty(t)));
@@ -1401,6 +1401,9 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>A value as words, for "Inherited: …".</summary>
     private static string Describe(SettingDef setting, object? value) => value switch
     {
+        // A color with named values (pane headers): its null is one of them ("Standard")
+        _ when setting.Kind == SettingKind.Color && setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value)) is { } level =>
+            level.Label,
         null => setting.Kind switch
         {
             SettingKind.Color => "the scheme's",
@@ -1643,6 +1646,7 @@ internal sealed partial class SettingsWindow : Window
         SettingKind.Toggle => ToggleControl(setting, commit),
         SettingKind.Choice => ChoiceControl(setting, commit),
         SettingKind.Number => NumberControl(setting, commit),
+        SettingKind.Color when setting.Choices.Count > 0 => LevelOrColorControl(setting, commit, profile),
         SettingKind.Color => ColorControl(setting, commit, profile),
         SettingKind.Font => FontControl(commit),
         _ when profile != null && setting.Section == "profiles" && setting.Key is "command" or "working-directory" or "icon" =>
@@ -1679,6 +1683,61 @@ internal sealed partial class SettingsWindow : Window
             var index = setting.Choices.ToList().FindIndex(c => SettingsCatalog.Same(c.Value, wanted));
             box.SelectedIndex = index;
             box.PlaceholderText = index < 0 && value != null ? $"{value} (set in config.toml)" : "";
+        });
+    }
+
+    /// <summary>
+    /// A color that can also be one of a few named values (pane headers: how far the made fill stands from the
+    /// background): the names in a list with "Custom color" last, and the color control under it while that's chosen.
+    /// Choosing "Custom color" starts from the color the current choice makes, so the picker opens on it.
+    /// </summary>
+    private (FrameworkElement, Action<object?>) LevelOrColorControl(SettingDef setting, Action<object?> commit, string? profile)
+    {
+        var box = new ComboBox { Width = ControlWidth };
+        AutomationProperties.SetName(box, setting.Label);
+        foreach (var choice in setting.Choices)
+        {
+            box.Items.Add(choice.Label);
+        }
+
+        box.Items.Add("Custom color");
+        var custom = setting.Choices.Count;
+        var (color, showColor) = ColorControl(setting, commit, profile);
+        var showing = false; // (setting the list from the file isn't a choice)
+        object? current = null;
+        box.SelectionChanged += (_, _) =>
+        {
+            color.Visibility = box.SelectedIndex == custom ? Visibility.Visible : Visibility.Collapsed;
+            if (showing || box.SelectedIndex < 0)
+            {
+                return;
+            }
+
+            if (box.SelectedIndex < custom)
+            {
+                commit(setting.Choices[box.SelectedIndex].Value);
+            }
+            else if (current is not string hex || !hex.StartsWith('#'))
+            {
+                var level = Zinc.Panes.PaneCard.TryLevel(current as string ?? "auto", out var l) ? l : Zinc.Panes.HeaderLevel.Standard;
+                var made = SchemeTiles.Hex(SchemeTiles.ToColor(Zinc.Panes.PaneCard.HeaderFill(SchemeTheme(profile).Background, level)));
+                showColor(made);
+                commit(made);
+            }
+        };
+
+        var panel = new StackPanel { Spacing = 8, Children = { box, color } };
+        return (panel, value =>
+        {
+            current = value;
+            var index = value is string hex && hex.StartsWith('#') ? custom
+                : setting.Choices.ToList().FindIndex(c => SettingsCatalog.Same(c.Value, value));
+            showing = true;
+            box.SelectedIndex = index;
+            showing = false;
+            box.PlaceholderText = index < 0 && value != null ? $"{value} (set in config.toml)" : "";
+            color.Visibility = index == custom ? Visibility.Visible : Visibility.Collapsed;
+            showColor(index == custom ? value : null);
         });
     }
 
@@ -1823,6 +1882,7 @@ internal sealed partial class SettingsWindow : Window
             {
                 "colors.foreground" => theme.Foreground,
                 "colors.cursor" => theme.Cursor,
+                "colors.pane-header" => Zinc.Panes.PaneCard.HeaderFill(theme.Background),
                 _ => theme.Background,
             });
         }

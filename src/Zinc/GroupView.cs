@@ -327,13 +327,14 @@ internal sealed partial class GroupView : Grid
     /// <paramref name="dimFill"/> (<paramref name="dim"/> = how much, 0 = not at all). The + (a new tab here) shows
     /// only with pane tabs on; the buttons and status slot per <paramref name="settings"/>, Maximize only when the
     /// workspace is <paramref name="split"/> (a restore button while this pane is <paramref name="maximized"/>). The header
-    /// is filled with <paramref name="headerFill"/>, rounded on a card (<paramref name="card"/>: gap above 0). With
+    /// is filled with <paramref name="headerFill"/>, rounded on a card (<paramref name="card"/>: gap above 0); hidden tabs
+    /// with <paramref name="hiddenTabFill"/> when the header matches the terminal (else the header shows through). With
     /// pane-focus = ring the focused pane gets the ring instead of the line (<see cref="PaneHeader.Ring"/>): drawn here on
     /// a flat pane, by the window on a card's edge.
     /// </summary>
     public void Update(TabGroup<MainWindow.TerminalTab> group, PaneHeaderKind header, HeaderSettings settings, bool focused,
         Brush accent, bool split = false, bool several = false, bool maximized = false, double dim = 0, Color dimFill = default,
-        Color headerFill = default, bool card = false)
+        Color headerFill = default, bool card = false, Color? hiddenTabFill = null)
     {
         _header = header;
         _settings = settings;
@@ -440,7 +441,8 @@ internal sealed partial class GroupView : Grid
             var shownTab = tab == group.Active;
             _items[tab].Show(TitleOf(tab), tab.TitleIsFolder, shownTab, accentLine, accent, tab.Attention,
                 shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress,
-                closeOnHover: false); // every tab keeps its ×, cards too and hiding it left its slot empty
+                closeOnHover: false, // every tab keeps its ×, cards too and hiding it left its slot empty
+                hiddenFill: hiddenTabFill);
         }
 
         _shown = group.Active;
@@ -796,6 +798,7 @@ internal sealed partial class GroupView : Grid
         private readonly Grid _icon;
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        private Brush _hidden; // a hidden tab's background... clear, or a fill when the header matches the terminal
         private bool _active, _hovered, _closeOnHover;
         private Attention _attention;
         private string? _name;
@@ -807,7 +810,7 @@ internal sealed partial class GroupView : Grid
             _tab = tab;
             _background = new SolidColorBrush(TerminalRenderer.ToColor(tab.Profile.Config.Theme.Background));
             CornerRadius = new CornerRadius(6, 6, 0, 0);
-            Background = _clear;
+            Background = _hidden = _clear;
 
             var close = _close = new Button
             {
@@ -860,7 +863,7 @@ internal sealed partial class GroupView : Grid
                 ShowSlot();
                 if (!_active)
                 {
-                    Background = _clear;
+                    Background = _hidden;
                 }
             };
         }
@@ -924,9 +927,14 @@ internal sealed partial class GroupView : Grid
         /// <param name="accentLine">The tab carries the accent line (its pane is focused: <see cref="PaneHeader.AccentLine"/>).</param>
         /// <param name="folder">The title is the shell's folder.</param>
         /// <param name="closeOnHover">A hidden tab shows its × only under the pointer.</param>
+        /// <param name="hiddenFill">A hidden tab's fill, when the header matches the terminal (<see cref="PaneCard.HiddenTabFill"/>).</param>
         public void Show(string title, bool folder, bool active, bool accentLine, Brush accent, Attention attention,
-            TerminalProgress progress, bool closeOnHover = false)
+            TerminalProgress progress, bool closeOnHover = false, Color? hiddenFill = null)
         {
+            var hidden = hiddenFill is { } fill
+                ? _hidden is SolidColorBrush { } was && was.Color == fill ? _hidden : new SolidColorBrush(fill)
+                : _clear;
+            _hidden = hidden;
             _attention = attention;
             _progress = progress;
             _active = active;
@@ -960,7 +968,7 @@ internal sealed partial class GroupView : Grid
                 _background = new SolidColorBrush(background);
             }
 
-            Background = active ? _background : _clear;
+            Background = active ? _background : _hidden;
             // On a light terminal background (the shown tab takes it), dark text.
             if (active && Contrast.TextOn(_background.Color) is { } text)
             {

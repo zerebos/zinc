@@ -240,8 +240,11 @@ Single-quoted strings are literal, so Windows paths need no escaping: `'C:\msys6
 - `selection-background`, `selection-foreground`: `"#rrggbb"`, instead of the scheme's (most
   schemes set them). With neither, selection inverts the colors; with only a background, selected
   text keeps its color.
-- `pane-header`: `"#rrggbb"`, behind pane headers and around cards. Without it, the background
-  a shade lighter (darker on a light scheme).
+- `pane-header`: behind pane headers. `"auto"` (default) is the background a shade lighter (darker
+  on a light scheme); `"subtle"` and `"strong"` are a lighter and a stronger shade; `"terminal"` is
+  the background itself, and then hidden tabs take the shade instead, so the shown tab still stands
+  out; or a `"#rrggbb"` of your own. A card's border is a step stronger than its header, and none
+  with `"terminal"`, so the card is all terminal.
 - `palette`: an array of up to 256 colors from index 0, or single entries: `palette.1 = "#AC4242"`.
 
 **`[terminal]`**

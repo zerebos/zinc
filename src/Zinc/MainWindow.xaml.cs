@@ -622,7 +622,7 @@ public sealed partial class MainWindow : Window
             var headerFill = card ? ShowCard(host, config, several && !focused ? dim : 0, fill, ring)
                 : ShowFlat(host, config);
             ((GroupView)host.Child).Update(group, HeaderOf(group, split), settings, focused, _focusBrush, split, several,
-                tab.Workspace.Maximized == group, dim, TerminalRenderer.ToColor(fill), headerFill, card);
+                tab.Workspace.Maximized == group, dim, TerminalRenderer.ToColor(fill), headerFill, card, HiddenTabFill(config));
             host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
         }
 
