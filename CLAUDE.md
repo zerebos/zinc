@@ -280,6 +280,11 @@ user's commits of what you staged; post-commit and post-merge, since a merge run
   realized in SetFont (`GlyphAtlas.PrepareFormat`, shared and never disposed) and never changed per draw (`_centered`).
   Also: a frame can run *inside* SetFont's own pump (sprites keyed by CellMetrics for that), and the atlas key's
   sub-pixel offset is rounded to 1/64 px (float noise made a new atlas per window size).
+  **A blocking wait on the UI thread runs High-priority DispatcherQueue work** (a contended `lock`, Monitor or
+  `System.Threading.Lock`, e.g. on `TerminalSession.Lock` while the reader parses; Normal priority doesn't run, a
+  `Monitor.TryEnter` spin runs nothing; measured in-app 2026-10-15). The swap chain's `DrawWhenQuiet` is High, so a
+  frame could start inside a frame: `SwapChainSurface.Present` defers a nested call. Code that queues High work must
+  expect to run inside any lock wait on the UI thread.
 - `await` is illegal inside an `unsafe` class → async code lives in `ClipboardText`.
 - Keyboard: a key's WM_CHAR arrives after its KeyDown and before its KeyUp. Suppress the
   char only when KeyDown already encoded the key (`_charHandledByKeyDown`), and clear the

@@ -59,7 +59,7 @@ internal sealed class SwapChainSurface
     // The terminal changed since its picture was last drawn for the shaders: an animation frame with nothing new only
     // runs the shaders again over the last picture (redrawing the terminal each refresh cost ~30% of a core).
     private bool _stale = true;
-    private bool _resourcesCreated, _drawQueued, _dirty, _presentedThisTick, _onRendering, _closed;
+    private bool _resourcesCreated, _drawQueued, _dirty, _presentedThisTick, _onRendering, _closed, _presenting;
     private int _failures;
 
     /// <param name="createResources">Device-bound resources (fonts, the atlas): once loaded, and after a lost device.</param>
@@ -328,6 +328,20 @@ internal sealed class SwapChainSurface
             return;
         }
 
+        if (_presenting)
+        {
+            // Asked for from inside this surface's own frame: a contended lock on the UI thread (the session's, while
+            // the reader parses) runs High-priority queued work during its wait, and Invalidate's DrawWhenQuiet is one.
+            // A second drawing session on the chain would throw ("The last drawing session ... must be disposed"): drawn
+            // at the next refresh instead, like a frame asked for right after a present.
+            Log.Write("pane: swap chain: frame asked for during a frame (drawn at the next refresh)");
+            _stale = true;
+            _dirty = true;
+            HookRendering();
+            return;
+        }
+
+        _presenting = true;
         try
         {
             if (_shader is { } shader)
@@ -378,6 +392,10 @@ internal sealed class SwapChainSurface
             {
                 Log.Crash("draw (swap chain)", ex);
             }
+        }
+        finally
+        {
+            _presenting = false;
         }
     }
 
