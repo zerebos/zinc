@@ -459,6 +459,19 @@ public sealed partial class MainWindow : Window
     /// <summary>Rebuilds a workspace's content from its layout and focuses the active tab.</summary>
     private void Rebuild(WorkspaceTab tab)
     {
+        _noLift++;
+        try
+        {
+            RebuildLayout(tab);
+        }
+        finally
+        {
+            _noLift--;
+        }
+    }
+
+    private void RebuildLayout(WorkspaceTab tab)
+    {
         SettleTween(tab, run: false);
         var before = NoteLayout(tab);
 
@@ -611,6 +624,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Brings each group's pane up to date: focus marks, header, shown terminal.</summary>
     private void UpdateFocusBorders(WorkspaceTab tab)
     {
+        var lift = NoteMaximizeChange(tab);
         ClearSeenAttention(tab);
         // A shown tab carries the accent line whenever its pane has focus; otherwise focus is only marked once a
         // workspace is split (and no pane is maximized): the line on the focused pane's title header or along its
@@ -641,6 +655,13 @@ public sealed partial class MainWindow : Window
         {
             ShowMaximized(tab, Gap);
         }
+
+        if (lift is var (lifted, before))
+        {
+            PlayLift(tab, lifted, before);
+        }
+
+        _shownMaximized[tab] = tab.Workspace.Maximized;
 
         ShowWorkspaceAttention(tab);
         UpdateTaskbarProgress(); // the shown workspace's progress wins; closed panes drop theirs
@@ -1845,12 +1866,10 @@ public sealed partial class MainWindow : Window
             case TerminalAction.MaximizePane:
                 if (tab.Workspace.GroupOf(origin) is { } maximize)
                 {
-                    var before = NoteLift(tab, maximize);
                     tab.Workspace.Activate(maximize.Active);
                     tab.Workspace.ToggleMaximize();
-                    UpdateFocusBorders(tab);
+                    UpdateFocusBorders(tab); // (animates it: NoteMaximizeChange)
                     FocusActive(tab);
-                    PlayLift(tab, maximize, before);
                 }
 
                 return true;

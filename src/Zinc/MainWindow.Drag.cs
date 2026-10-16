@@ -166,7 +166,9 @@ public sealed partial class MainWindow
         {
             _dragMaximized = (tab, group);
             tab.Workspace.ToggleMaximize();
+            _noLift++; // the panes are drop targets now
             UpdateFocusBorders(tab);
+            _noLift--;
         }
     }
 
@@ -182,7 +184,9 @@ public sealed partial class MainWindow
         if (AllTabs().Contains(tab) && tab.Workspace.ActiveGroup == group && tab.Workspace.Maximized == null)
         {
             tab.Workspace.ToggleMaximize();
+            _noLift++;
             UpdateFocusBorders(tab);
+            _noLift--;
         }
     }
 

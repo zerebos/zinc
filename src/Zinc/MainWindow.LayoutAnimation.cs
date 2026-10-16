@@ -197,7 +197,29 @@ public sealed partial class MainWindow
         return true;
     }
 
-    /// <summary>Before maximize-pane: where the pane is and how big its terminal is; null when off.</summary>
+    /// <summary>The pane each workspace shows maximized (its model gets ahead: focus moved off a maximized pane).</summary>
+    private readonly Dictionary<WorkspaceTab, TabGroup<TerminalTab>?> _shownMaximized = new();
+
+    /// <summary>Above 0: layout changes that aren't a maximize or restore of their own (a rebuild, a drag's targets).</summary>
+    private int _noLift;
+
+    /// <summary>
+    /// For UpdateFocusBorders, before it shows the model: the pane to grow or shrink when the model's maximized pane
+    /// isn't what's on screen, however that came about (maximize-pane, its button, focus moving to a hidden pane).
+    /// </summary>
+    private (TabGroup<TerminalTab> Group, LiftBefore Before)? NoteMaximizeChange(WorkspaceTab tab)
+    {
+        var shown = _shownMaximized.GetValueOrDefault(tab);
+        if (_noLift > 0 || shown == tab.Workspace.Maximized || (tab.Workspace.Maximized ?? shown) is not { } group
+            || !tab.Workspace.Groups.Contains(group) || (_tweens.TryGetValue(tab, out var running) && running.Lift == null))
+        {
+            return null; // a split or close moving, it settles the layout itself
+        }
+
+        return NoteLift(tab, group) is { } before ? (group, before) : null;
+    }
+
+    /// <summary>Before a maximize or restore: where the pane is and how big its terminal is; null when off.</summary>
     private LiftBefore? NoteLift(WorkspaceTab tab, TabGroup<TerminalTab> group)
     {
         if (TweenLength == null || !tab.Container.IsLoaded || tab.Workspace.Layout.Count < 2)
