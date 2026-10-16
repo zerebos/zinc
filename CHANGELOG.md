@@ -6,6 +6,8 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.393 (2026-10-15)
+
 ### New
 - Panes as cards (`Settings > Layout > Panes > Pane style`)! Pick Cards and each pane becomes a rounded card with a header, a gap between them, header buttons on the focused pane and a ring around it. Compact, the default, keeps panes edge to edge. The welcome page asks which you'd like. Change any of the settings under it to make your own mix:
   - `Gap between panes` (`pane-gap`): the space between panes. You drag the gap to resize them, as you dragged the divider.
