@@ -34,7 +34,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>An element held at a fixed size (a terminal, or a new pane's whole view), and the view filled around it.</summary>
-    private sealed record Hold(FrameworkElement Element, TerminalControl? Control, GroupView? Filled);
+    private sealed record Hold(FrameworkElement Element, TerminalControl? Control, GroupView? Filled, Size? Then = null);
 
     /// <summary>
     /// Maximize and restore: the pane lifted above the others (<paramref name="Raised"/>: it and the split slots holding it,
@@ -93,7 +93,9 @@ public sealed partial class MainWindow
             return (v[0], v[1], v[2], v[3]);
         }
 
-        return (0.2, 0, 0, 1); // decelerate: quick to start, a long soft landing
+        // Fluent's standard curve, picked over decelerate (0.2,0,0,1), which put about
+        // 80% of the motion in the first 50 ms and felt like a jump, then a drift.
+        return (0.4, 0, 0.2, 1);
     }
 
     /// <summary>Notes the split sizes and shown panes before a layout change; null when off or not on screen.</summary>
@@ -360,8 +362,12 @@ public sealed partial class MainWindow
                 (width, height) = (Math.Max(1, to.Width - (from.Width - nowW)), Math.Max(1, to.Height - (from.Height - nowH)));
             }
 
-            control.Width = width;
-            control.Height = height;
+            // Its new size waits for the second frame (Then, in OnTweenFrame). A terminal shows a new size as soon as it
+            // presents, the XAML around it only once its frame is done, and the first frame is the slow one (a new pane
+            // starts its shell: 50-90 ms). When resized there, the terminal sat at its new size inside its old card, with
+            // no fill and the backdrop beside it, for that long.
+            control.Width = nowW;
+            control.Height = nowH;
             control.ResizeAtOnce = true;
             // A pane going to or coming from nothing stays put and is covered or uncovered; one on screen throughout
             // carries its text with its card's top-left corner, as layout does (pinned to the far edge, a maximizing
@@ -369,7 +375,7 @@ public sealed partial class MainWindow
             Pin(control, from, to, stayPut: Empty(from) || Empty(to));
             var config = group.Active.Profile.Config;
             view.FillContent(new SolidColorBrush(WithOpacity(config.Theme.Background, config)));
-            holds.Add(new Hold(control, control, view));
+            holds.Add(new Hold(control, control, view, new Size(width, height)));
         }
 
         foreach (var (grid, split, from, _) in splits)
@@ -400,6 +406,18 @@ public sealed partial class MainWindow
             tween.Longest = step > tween.Longest ? step : tween.Longest;
             tween.Last = now;
             tween.Frames++;
+            if (tween.Frames == 2)
+            {
+                foreach (var hold in tween.Holds)
+                {
+                    if (hold.Then is { } size)
+                    {
+                        hold.Element.Width = size.Width;
+                        hold.Element.Height = size.Height;
+                    }
+                }
+            }
+
             tween.Played += step < MaxStep ? step : MaxStep;
             var t = _windowClosed ? 1 : Math.Min(1, tween.Played / TweenLength!.Value);
             if (t >= 1)
