@@ -25,17 +25,19 @@ wording. Then decide:
 
 1. **Leave it.** It's already clear, including short fragments and casual ones. Most comments should end up here.
    Don't rewrite a comment only to make it longer or more formal.
-2. **Reword it.** Watch for these signs:
+2. **Delete it.** It only restates the code, so the line below says the same thing without it. Keep `<summary>`
+   doc comments even when they're thin (they show up in IntelliSense), and suggest a better one in the report instead.
+3. **Reword it.** Watch for these signs:
    - colons or semicolons standing in for "because", "so", "meaning" or "for example"
    - dropped words ("noted before a rebuild", "the card less the terminal")
    - vague references ("that one's", "it" when there are two candidates)
    - bug history told in the past tense instead of what the code prevents
    - odd word choices ("less" for minus, "follows from", "noted")
    - several ideas packed into one sentence
-3. **Move the story out.** If a comment narrates what broke, what was tried, measurements or dates, keep one short
+4. **Move the story out.** If a comment narrates what broke, what was tried, measurements or dates, keep one short
    clause about the risk in the comment and put the rest in the matching section of `.scratch/internals.md`. Check
    that section first: often the story is already there, and the comment only needs trimming.
-4. **Ask.** If you can't tell what the comment means from the code, don't guess. List it for the user instead.
+5. **Ask.** If you can't tell what the comment means from the code, don't guess. List it for the user instead.
 
 Keep every fact the comment states unless it's wrong. If it's wrong, say so in the report and don't silently fix it.
 
@@ -50,5 +52,5 @@ Keep every fact the comment states unless it's wrong. If it's wrong, say so in t
 
 ## Report
 
-End with a short list: each comment you changed (`file:line`, old, new, one line each when they fit), anything moved
-to internals.md, and anything you left for the user to decide.
+End with a short list: each comment you changed (`file:line`, old, new, one line each when they fit), each one you
+deleted, anything moved to internals.md, and anything you left for the user to decide.

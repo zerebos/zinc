@@ -36,6 +36,7 @@ this file, even though it's common here. `/tidy-comments` rewrites comments in a
 - Say what the code does, or what it prevents, in the present tense. The story behind it (what broke, what was tried,
   measurements, dates) goes in `.scratch/internals.md`. A short clause like "which made it jump by a column" can stay
   if it helps the reader see the risk.
+- A comment that only restates the code adds nothing, so leave it out (`// set the width` above `view.Width = w;`).
 - A casual tone is fine: `// TODO: we should do proper i18n with pluralization at some point...`
 
 Before: `Not the card less the terminal: an animation cut short leaves the terminal at that one's end size, and it
