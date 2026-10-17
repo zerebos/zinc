@@ -475,6 +475,25 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private bool _reshaping;
 
+    /// <summary>
+    /// Rebuilds after a pane moved, then animates every pane from where <paramref name="shape"/> noted it (when the
+    /// workspace was on screen).
+    /// </summary>
+    private void RebuildShaped(WorkspaceTab tab, ShapeBefore? shape, TabGroup<TerminalTab> moved)
+    {
+        _reshaping = shape != null;
+        try
+        {
+            Rebuild(tab);
+        }
+        finally
+        {
+            _reshaping = false;
+        }
+
+        PlayShape(tab, shape, moved);
+    }
+
     private void RebuildLayout(WorkspaceTab tab)
     {
         SettleTween(tab, run: false);
@@ -1052,6 +1071,9 @@ public sealed partial class MainWindow : Window
 
         if (from == tab)
         {
+            // Every pane travels to its new place (PlayShape) instead of the split animation, which can't follow a
+            // layout that changes shape.
+            var shape = NoteShape(tab);
             if (edge == null)
             {
                 // Its tabs join another pane, whose view shows its terminal next. Release it while this pane is still in
@@ -1059,21 +1081,8 @@ public sealed partial class MainWindow : Window
                 ReleaseHost(group);
             }
 
-            // A drop beside another pane animates every pane to its new place (PlayShape), instead of the split
-            // animation.
-            var shape = edge != null ? NoteShape(tab) : null;
             tab.Workspace.MoveGroup(group, target, edge, index);
-            _reshaping = shape != null;
-            try
-            {
-                Rebuild(tab);
-            }
-            finally
-            {
-                _reshaping = false;
-            }
-
-            PlayShape(tab, shape, group);
+            RebuildShaped(tab, shape, group);
             return;
         }
 
@@ -1107,6 +1116,8 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void TakeGroupOut(WorkspaceTab tab, TabGroup<TerminalTab> group)
     {
+        var shape = NoteShape(tab);
+
         // Release the pane's terminal while the pane is still in the layout (see Rebuild).
         ReleaseHost(group);
         foreach (var pane in group.Tabs)
@@ -1116,7 +1127,7 @@ public sealed partial class MainWindow : Window
 
         if (tab.Workspace.Detach(group))
         {
-            Rebuild(tab);
+            RebuildShaped(tab, shape, group); // the panes left behind grow into its place, when they're on screen
         }
         else
         {

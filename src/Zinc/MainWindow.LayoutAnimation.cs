@@ -51,7 +51,7 @@ public sealed partial class MainWindow
     /// its terminal's size. These are measured before the rebuild, because a pane taken out of the tree and put back
     /// reads as 0 until the next layout pass.
     /// </summary>
-    private sealed record ShapeBefore(Dictionary<Border, (Rect Place, Size Chrome, Size Terminal)> Panes);
+    private sealed record ShapeBefore(Dictionary<Border, (Rect Place, Size Chrome, TerminalControl Control, Size Terminal)> Panes);
 
     /// <summary>The maximizing or restoring pane's place and its terminal's size, before the change.</summary>
     private sealed record LiftBefore(Rect Place, Size Terminal);
@@ -356,7 +356,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Measures where every shown pane is before a pane moves within its workspace (dropped beside another pane).
+    /// Measures where every shown pane is before a pane moves (see <see cref="PlayShape"/>).
     /// </summary>
     private ShapeBefore? NoteShape(WorkspaceTab tab)
     {
@@ -367,7 +367,7 @@ public sealed partial class MainWindow
 
         SettleTween(tab, run: true);
         var pad = tab.Container.Padding;
-        var panes = new Dictionary<Border, (Rect, Size, Size)>();
+        var panes = new Dictionary<Border, (Rect, Size, TerminalControl, Size)>();
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
@@ -379,15 +379,15 @@ public sealed partial class MainWindow
             var origin = host.TransformToVisual(tab.Container).TransformPoint(new Point(0, 0));
             var control = group.Active.Control;
             panes[host] = (new Rect(origin.X - pad.Left, origin.Y - pad.Top, host.ActualWidth, host.ActualHeight),
-                ChromeOf(host, view),
-                new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
+                ChromeOf(host, view), control, new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
         }
 
         return panes.Count > 1 ? new ShapeBefore(panes) : null;
     }
 
     /// <summary>
-    /// After a pane moved within its workspace and the new layout is built, animates every pane from where it was to
+    /// After a pane moved (beside another pane, into another's tabs, or out of the workspace) and the new layout is
+    /// built, animates every pane from where it was to
     /// its new place. Each card gets margins that put it back at its old place inside its new slot, and the margins animate
     /// to 0, so the card has its real size at every step (a negative margin grows a card past its slot, a positive one
     /// shrinks it inside). The moved pane is raised so it passes over the others, which show still pictures meanwhile
@@ -403,6 +403,10 @@ public sealed partial class MainWindow
 
         var places = new Dictionary<Border, Rect>();
         Measure(root, Whole(tab), g => ReadWeights(g, (PaneSplit)g.Tag), places);
+
+        // A pane that joined another's tabs or left the workspace has no card of its own any more, so nothing passes
+        // over anything and the terminals stay live.
+        var movedHost = moved.Tag is Border b && places.ContainsKey(b) ? b : null;
         var moves = new List<(Border, Thickness, Thickness)>();
         var holds = new List<Hold>();
         var stills = new List<TerminalControl>();
@@ -423,20 +427,21 @@ public sealed partial class MainWindow
             moves.Add((host, from, default));
 
             var control = group.Active.Control;
-            if (was.Terminal.Width > 0 && was.Terminal.Height > 0)
-            {
-                control.Width = was.Terminal.Width;
-                control.Height = was.Terminal.Height;
-                control.HorizontalAlignment = HorizontalAlignment.Left;
-                control.VerticalAlignment = VerticalAlignment.Top;
-                control.ResizeAtOnce = true;
-                var config = group.Active.Profile.Config;
-                view.FillContent(new SolidColorBrush(WithOpacity(config.Theme.Background, config)));
-                holds.Add(new Hold(control, control, view,
-                    new Size(Math.Max(1, now.Width - was.Chrome.Width), Math.Max(1, now.Height - was.Chrome.Height))));
-            }
+            var end = new Size(Math.Max(1, now.Width - was.Chrome.Width), Math.Max(1, now.Height - was.Chrome.Height));
+            var same = control == was.Control && was.Terminal.Width > 0 && was.Terminal.Height > 0;
 
-            if (group != moved)
+            // The terminal it showed keeps its size for the first frame and takes its new one on the second. A pane now
+            // showing the terminal that joined it takes the new size at once, which saves that terminal a resize.
+            control.Width = same ? was.Terminal.Width : end.Width;
+            control.Height = same ? was.Terminal.Height : end.Height;
+            control.HorizontalAlignment = HorizontalAlignment.Left;
+            control.VerticalAlignment = VerticalAlignment.Top;
+            control.ResizeAtOnce = true;
+            var config = group.Active.Profile.Config;
+            view.FillContent(new SolidColorBrush(WithOpacity(config.Theme.Background, config)));
+            holds.Add(new Hold(control, control, view, same ? end : null));
+
+            if (movedHost != null && group != moved)
             {
                 control.ShowStill(true);
                 stills.Add(control);
@@ -449,7 +454,7 @@ public sealed partial class MainWindow
         }
 
         var raised = new List<UIElement>();
-        if (moved.Tag is Border movedHost)
+        if (movedHost != null)
         {
             RaisePath(root, movedHost, raised);
         }
