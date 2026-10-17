@@ -42,7 +42,9 @@ Keep every fact the comment states unless it's wrong. If it's wrong, say so in t
 ## Editing
 
 - Change comments only. If a rewrite seems to need a code change, mention it in the report.
-- Keep lines within the file's existing width (120 columns in most of `src/`) and its indentation.
+- Wrap at about 120 columns (or the file's own width, if it clearly uses another) and keep its indentation. Running
+  a few characters over, up to about 125, is fine when it saves a line, for example when only a word or two would
+  spill onto the next one. Don't rewrap a comment only to bring it under 120.
 - Use the Edit tool, which keeps each file's line endings (the repo mixes LF and CRLF).
 - Don't build, stage or commit. Comment-only edits don't need a build, and the user's normal flow handles the rest.
 
