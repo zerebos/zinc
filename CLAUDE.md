@@ -23,6 +23,27 @@ holds the rules that apply everywhere and a map; detail goes there.
 the welcome and About pages, zn's output) **follows `docs/ux-writing.md`** where it can: read it before writing new
 UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
 
+## Code comments
+
+Write comments a new reader can follow on the first read. Don't copy the compressed style of older comments or of
+this file, even though it's common here. `/tidy-comments` rewrites comments in a diff or file to this standard.
+
+- Make the length fit the content. A short fragment is often best when it says one clear thing:
+  `child.Visibility = Visibility.Visible; // a maximized pane's hidden sides show while they grow or shrink`.
+  When the reason takes a few sentences, write a few sentences. Don't squeeze them into one line.
+- Join ideas with "because", "so", "which" or "instead of", not colons or semicolons, and keep the small words
+  ("the", "is", "it's"). Name the thing instead of writing "that one" or "it" when it could mean more than one thing.
+- Say what the code does, or what it prevents, in the present tense. The story behind it (what broke, what was tried,
+  measurements, dates) goes in `.scratch/internals.md`. A short clause like "which made it jump by a column" can stay
+  if it helps the reader see the risk.
+- A casual tone is fine: `// TODO: we should do proper i18n with pluralization at some point...`
+
+Before: `Not the card less the terminal: an animation cut short leaves the terminal at that one's end size, and it
+resized again by a column at the end.`
+After: `We use the chrome measured before the rebuild (via ChromeOf) instead of working it out from the terminal's
+current size, because an interrupted animation can leave the terminal at a stale size, which made it jump by a
+column when this animation finished.`
+
 ## Build / run
 
 - `scripts/build-libghostty.sh x64` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit), plus zinc-sprite.dll
