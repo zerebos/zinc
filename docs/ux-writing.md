@@ -46,7 +46,7 @@ When a situation isn't covered below (a new notice, a hint, a first-run moment),
 ## Choices
 
 - **Choice labels are short** (they're menu items): "Automatic", "Quit", "Stay in the tray".
-- **Explain the chosen option under the setting's name** (`SettingChoice.Detail`), not in the label: "Stays in the tray while the quick terminal's hotkey is set, and quits otherwise." Only options that need it get a detail.
+- **Explain the chosen option under the setting's name** (`SettingChoice.Detail`), not in the label: "While the quick terminal's hotkey is set, it stays in the tray so the hotkey keeps working. Otherwise it quits." Only options that need it get a detail.
 - **Show, don't describe, where you can**: a cursor shape with its glyph ("Bar ( ┃ )"), a color scheme as a tile in its own colors, a path translation with an example ("WSL (C:\ → /mnt/c)").
 
 ## State
