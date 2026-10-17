@@ -117,7 +117,7 @@ public sealed partial class MainWindow
                 UpdateFocusBorders(tab); // its pane's strip shows it too
                 return CliReply.Done();
             case "terminal move":
-                return CliMoveTerminal(request, tab, group, pane);
+                return CliMoveTerminal(request, group, pane);
             case "workspace rename":
                 tab.CustomTitle = string.IsNullOrEmpty(request.Name) ? null : request.Name;
                 UpdateTitle(tab);
@@ -214,7 +214,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Into another pane (in any window), as its newest tab, shown; the way a tab dropped on a pane's strip moves.</summary>
-    private CliReply CliMoveTerminal(CliRequest request, WorkspaceTab tab, TabGroup<TerminalTab> group, TerminalTab pane)
+    private CliReply CliMoveTerminal(CliRequest request, TabGroup<TerminalTab> group, TerminalTab pane)
     {
         if (!_config.Global.TabGroups)
         {

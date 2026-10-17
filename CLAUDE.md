@@ -59,6 +59,11 @@ column when this animation finished.`
   alone does not build the app project (tests don't reference it): a compile error in
   src/Zinc once got committed, the post-commit install failed, and a "verification"
   ran the stale exe. When verifying the app, check the exe/dll timestamp is fresh.
+- **The build has 0 warnings before staging.** `.editorconfig` makes dead code (unused private members, parameters and
+  assignments) a build warning, so fix it or say why it stays. An incremental build only reports warnings for files it
+  recompiled: use `--no-incremental` to see them all. For an occasional wider sweep (suggestions, not rules):
+  `dotnet format style Zinc.slnx --verify-no-changes --severity info` and the same with `analyzers`. Always keep
+  `--verify-no-changes`, because without it `dotnet format` rewrites the code.
 - **A running zinc.exe locks the output** → build fails with MSB3027. Stop only *dev*
   builds — the user daily-drives the installed copy, and this session may be running in it:
   `Get-Process zinc -ErrorAction SilentlyContinue | Where-Object Path -like '*\src\Zinc\bin\*' | Stop-Process -Force`

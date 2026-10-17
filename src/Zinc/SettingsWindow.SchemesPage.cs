@@ -57,14 +57,6 @@ internal sealed partial class SettingsWindow
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
 
-    private void LeaveSchemes()
-    {
-        _editingSchemes = false;
-        _previewedScheme = null;
-        PreviewForLibrary(open: false);
-        Render();
-    }
-
     // The scheme of the global settings (null) or of a profile, as config.toml has it: where it's written, its own (null:
     // none, i.e. Zinc's own globally, inherited in a profile), what it inherits, and what's in force.
     private static IReadOnlyList<string> SchemePath(string? profile) => profile == null ? ["colors", "theme"] : ["profile", profile, "colors", "theme"];

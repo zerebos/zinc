@@ -54,14 +54,6 @@ internal sealed partial class SettingsWindow
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
 
-    private void LeaveShaders()
-    {
-        _editingShaders = false;
-        _previewedShader = null;
-        PreviewForLibrary(open: false);
-        Render();
-    }
-
     private void ShadersPage(string? profile)
     {
         var setting = SettingsCatalog.Find("shaders.files")!;

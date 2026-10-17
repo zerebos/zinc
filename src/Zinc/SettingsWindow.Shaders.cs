@@ -15,8 +15,6 @@ namespace Zinc;
 // Custom shaders ([shaders] files): a card that sums the list up and opens its page (SettingsWindow.ShadersPage.cs).
 internal sealed partial class SettingsWindow
 {
-    private const string ShaderCollection = "https://github.com/0xhckr/ghostty-shaders";
-
     // The rows on the shaders page now, refreshed when one of its files is saved; and whether the window listens for that.
     private Action? _shaderRows;
     private bool _shaderWatch;
@@ -213,19 +211,6 @@ internal sealed partial class SettingsWindow
         Grid.SetColumn(tools, 2);
         ShowShaderState(full, icon, state, stillShown);
         return grid;
-    }
-
-    private static bool IsWithin(DependencyObject element, DependencyObject container)
-    {
-        for (var e = element; e != null; e = VisualTreeHelper.GetParent(e))
-        {
-            if (ReferenceEquals(e, container))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /// <summary>Whether the file compiles (the same check, and cache, the terminals use), shown on its row.</summary>

@@ -13,6 +13,11 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <!-- Reports code style rules (IDE…) in the build, not only in the editor. Which ones are warnings is set in .editorconfig. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
   <Target Name="ZincGitVersion" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo" Condition="'$(ZincInformationalVersion)' == ''">
     <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low"
           StandardErrorImportance="low" WorkingDirectory="$(MSBuildThisFileDirectory)">

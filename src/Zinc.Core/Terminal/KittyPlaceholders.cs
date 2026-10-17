@@ -127,12 +127,11 @@ public static partial class KittyPlaceholders
         var srcY = paddedH * run.Row / rows;
         var srcW = paddedW * run.Width / cols;
         var srcH = paddedH * 1 / rows;
-        double offX = 0, offY = 0;
         double destW = run.Width * cellWidth, destH = cellHeight;
 
         // The padding isn't part of the bitmap: trim the source and shift the destination.
-        (srcY, srcH, offY, destH) = Trim(srcY, srcH, marginY, paddedH, imgH, scale, destH);
-        (srcX, srcW, offX, destW) = Trim(srcX, srcW, marginX, paddedW, imgW, scale, destW);
+        (srcY, srcH, var offY, destH) = Trim(srcY, srcH, marginY, paddedH, imgH, scale, destH);
+        (srcX, srcW, var offX, destW) = Trim(srcX, srcW, marginX, paddedW, imgW, scale, destW);
         if (srcW <= 0 || srcH <= 0)
         {
             return null;

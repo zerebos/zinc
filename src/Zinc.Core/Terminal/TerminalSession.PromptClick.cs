@@ -172,9 +172,8 @@ public sealed unsafe partial class TerminalSession
             var gridRef = GhosttyGridRef.Init();
             var point = new GhosttyPoint { Tag = PointTag.Viewport, X = (ushort)col, Y = (uint)row };
             uint first = 0;
-            nuint len = 0;
             return Native.TerminalGridRef(terminal, point, &gridRef) != GhosttyResult.Success ||
-                   Native.GridRefGraphemes(&gridRef, &first, 1, out len) is not (GhosttyResult.Success or GhosttyResult.OutOfSpace) ||
+                   Native.GridRefGraphemes(&gridRef, &first, 1, out var len) is not (GhosttyResult.Success or GhosttyResult.OutOfSpace) ||
                    len == 0 || first == ' ';
         }
 

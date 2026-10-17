@@ -1,0 +1,20 @@
+root = true
+
+# Only rule severities live here. Line endings are left alone because the repo mixes LF and CRLF on purpose, and line
+# length is a soft target, not a rule (see the tidy-comments skill).
+
+[*.cs]
+# Dead code is usually a leftover from a change, so these show as build warnings (Directory.Build.props turns on
+# EnforceCodeStyleInBuild, which makes the build report IDE rules at all).
+
+# unused private member
+dotnet_diagnostic.IDE0051.severity = warning
+
+# private member that's assigned but never read
+dotnet_diagnostic.IDE0052.severity = warning
+
+# value assigned to a variable and never used
+dotnet_diagnostic.IDE0059.severity = warning
+
+# unused parameter
+dotnet_diagnostic.IDE0060.severity = warning
