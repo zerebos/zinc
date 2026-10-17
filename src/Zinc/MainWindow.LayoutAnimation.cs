@@ -37,15 +37,32 @@ public sealed partial class MainWindow
     private sealed record Hold(FrameworkElement Element, TerminalControl? Control, GroupView? Filled, Size? Then = null);
 
     /// <summary>
-    /// Maximize and restore: the pane lifted above the others (<paramref name="Raised"/>: it and the split slots holding it,
-    /// raised in z-order) and grown over them by negative margins, the layout itself left alone until the end.
+    /// An animation that moves pane cards by their margins and leaves the layout alone until the end. Maximize and
+    /// restore grow one pane over the others with negative margins. A pane dropped beside another moves every pane
+    /// from its old place to its new one (<see cref="PlayShape"/>). <paramref name="Moves"/> holds each card's start
+    /// and end margins. <paramref name="Raised"/> is the pane that passes over the others plus the split slots holding
+    /// it, all raised in z-order. <paramref name="Stills"/> are the covered panes, which show still pictures meanwhile.
     /// </summary>
-    private sealed record Lift(Border Host, Thickness From, Thickness To, List<UIElement> Raised, List<TerminalControl> Stills);
+    private sealed record Lift(List<(Border Host, Thickness From, Thickness To)> Moves, List<UIElement> Raised,
+        List<TerminalControl> Stills);
+
+    /// <summary>
+    /// Where each shown pane was before a move: its place, the size of its card's border and header (see ChromeOf) and
+    /// its terminal's size. These are measured before the rebuild, because a pane taken out of the tree and put back
+    /// reads as 0 until the next layout pass.
+    /// </summary>
+    private sealed record ShapeBefore(Dictionary<Border, (Rect Place, Size Chrome, Size Terminal)> Panes);
 
     /// <summary>The maximizing or restoring pane's place and its terminal's size, before the change.</summary>
     private sealed record LiftBefore(Rect Place, Size Terminal);
 
-    private sealed record LayoutBefore(Dictionary<PaneSplit, Weights> Splits, HashSet<Border> Shown);
+    /// <summary>
+    /// The layout before a rebuild: the splits' sizes, the panes on screen, and for each pane the size of its card's
+    /// border and header (see ChromeOf) and its terminal's size. The sizes are measured here because a pane taken out
+    /// of the tree and put back reads as 0 until the next layout pass.
+    /// </summary>
+    private sealed record LayoutBefore(Dictionary<PaneSplit, Weights> Splits, HashSet<Border> Shown,
+        Dictionary<Border, (Size Chrome, Size Terminal)> Sizes);
 
     private sealed class LayoutTween(WorkspaceTab tab, List<(Grid Grid, PaneSplit Split, Weights From, Weights To)> splits,
         List<Hold> holds, TabGroup<TerminalTab>? maximized, Action? then, Action? always, Lift? lift = null)
@@ -109,6 +126,7 @@ public sealed partial class MainWindow
         SettleTween(tab, run: true);
         var splits = new Dictionary<PaneSplit, Weights>();
         var shown = new HashSet<Border>();
+        var sizes = new Dictionary<Border, (Size, Size)>();
         foreach (var element in Descendants(tab.Container))
         {
             if (element is Grid { Tag: PaneSplit split } grid)
@@ -118,10 +136,16 @@ public sealed partial class MainWindow
             else if (element is Border { Tag: TabGroup<TerminalTab> } host && host.IsLoaded && host.ActualWidth > 1 && host.ActualHeight > 1)
             {
                 shown.Add(host);
+                if (host is { Tag: TabGroup<TerminalTab> group, Child: GroupView view })
+                {
+                    var control = group.Active.Control;
+                    sizes[host] = (ChromeOf(host, view),
+                        new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
+                }
             }
         }
 
-        return new LayoutBefore(splits, shown);
+        return new LayoutBefore(splits, shown, sizes);
     }
 
     /// <summary>After a layout change (model updated, Grids built): moves every split from where it was to the model's sizes.</summary>
@@ -148,7 +172,7 @@ public sealed partial class MainWindow
             splits.Add((grid, split, from, to));
         }
 
-        StartTween(tab, splits, tab.Workspace.Maximized, then: null, always: null);
+        StartTween(tab, splits, tab.Workspace.Maximized, then: null, always: null, before.Sizes);
     }
 
     /// <summary>
@@ -322,13 +346,136 @@ public sealed partial class MainWindow
             other.ShowStill(true);
         }
 
-        var lift = new Lift(host, from, maximizing ? cover : default, raised, stills);
+        var lift = new Lift([(host, from, maximizing ? cover : default)], raised, stills);
         _tweens[tab] = new LayoutTween(tab, [], [new Hold(control, control, view)], tab.Workspace.Maximized, null, null, lift);
         if (!_tweenHooked)
         {
             _tweenHooked = true;
             CompositionTarget.Rendering += OnTweenFrame;
         }
+    }
+
+    /// <summary>
+    /// Measures where every shown pane is before a pane moves within its workspace (dropped beside another pane).
+    /// </summary>
+    private ShapeBefore? NoteShape(WorkspaceTab tab)
+    {
+        if (TweenLength == null || !tab.Container.IsLoaded || tab.Workspace.Maximized != null)
+        {
+            return null;
+        }
+
+        SettleTween(tab, run: true);
+        var pad = tab.Container.Padding;
+        var panes = new Dictionary<Border, (Rect, Size, Size)>();
+        foreach (var group in tab.Workspace.Groups)
+        {
+            var host = HostOf(group);
+            if (!host.IsLoaded || host.ActualWidth <= 1 || host.ActualHeight <= 1 || host.Child is not GroupView view)
+            {
+                continue;
+            }
+
+            var origin = host.TransformToVisual(tab.Container).TransformPoint(new Point(0, 0));
+            var control = group.Active.Control;
+            panes[host] = (new Rect(origin.X - pad.Left, origin.Y - pad.Top, host.ActualWidth, host.ActualHeight),
+                ChromeOf(host, view),
+                new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
+        }
+
+        return panes.Count > 1 ? new ShapeBefore(panes) : null;
+    }
+
+    /// <summary>
+    /// After a pane moved within its workspace and the new layout is built, animates every pane from where it was to
+    /// its new place. Each card gets margins that put it back at its old place inside its new slot, and the margins animate
+    /// to 0, so the card has its real size at every step (a negative margin grows a card past its slot, a positive one
+    /// shrinks it inside). The moved pane is raised so it passes over the others, which show still pictures meanwhile
+    /// because swap chains don't keep XAML's z-order. Terminals take their new sizes on the second frame, as in the
+    /// other animations. Dividers and gaps jump to their new places at once.
+    /// </summary>
+    private void PlayShape(WorkspaceTab tab, ShapeBefore? before, TabGroup<TerminalTab> moved)
+    {
+        if (before == null || tab.Container.Children.FirstOrDefault() is not { } root)
+        {
+            return;
+        }
+
+        var places = new Dictionary<Border, Rect>();
+        Measure(root, Whole(tab), g => ReadWeights(g, (PaneSplit)g.Tag), places);
+        var moves = new List<(Border, Thickness, Thickness)>();
+        var holds = new List<Hold>();
+        var stills = new List<TerminalControl>();
+        foreach (var (host, now) in places)
+        {
+            if (!before.Panes.TryGetValue(host, out var was) || host is not { Tag: TabGroup<TerminalTab> group, Child: GroupView view })
+            {
+                continue;
+            }
+
+            var from = new Thickness(was.Place.X - now.X, was.Place.Y - now.Y, now.Right - was.Place.Right, now.Bottom - was.Place.Bottom);
+            if (Math.Abs(from.Left) + Math.Abs(from.Top) + Math.Abs(from.Right) + Math.Abs(from.Bottom) < 1)
+            {
+                continue; // didn't move
+            }
+
+            host.Margin = from;
+            moves.Add((host, from, default));
+
+            var control = group.Active.Control;
+            if (was.Terminal.Width > 0 && was.Terminal.Height > 0)
+            {
+                control.Width = was.Terminal.Width;
+                control.Height = was.Terminal.Height;
+                control.HorizontalAlignment = HorizontalAlignment.Left;
+                control.VerticalAlignment = VerticalAlignment.Top;
+                control.ResizeAtOnce = true;
+                var config = group.Active.Profile.Config;
+                view.FillContent(new SolidColorBrush(WithOpacity(config.Theme.Background, config)));
+                holds.Add(new Hold(control, control, view,
+                    new Size(Math.Max(1, now.Width - was.Chrome.Width), Math.Max(1, now.Height - was.Chrome.Height))));
+            }
+
+            if (group != moved)
+            {
+                control.ShowStill(true);
+                stills.Add(control);
+            }
+        }
+
+        if (moves.Count == 0)
+        {
+            return;
+        }
+
+        var raised = new List<UIElement>();
+        if (moved.Tag is Border movedHost)
+        {
+            RaisePath(root, movedHost, raised);
+        }
+
+        foreach (var element in raised)
+        {
+            Canvas.SetZIndex(element, 1);
+        }
+
+        _tweens[tab] = new LayoutTween(tab, [], holds, tab.Workspace.Maximized, null, null, new Lift(moves, raised, stills));
+        if (!_tweenHooked)
+        {
+            _tweenHooked = true;
+            CompositionTarget.Rendering += OnTweenFrame;
+        }
+    }
+
+    /// <summary>
+    /// The size of a card's border and header, meaning everything in the card around the terminal's slot. It's the
+    /// border plus the view's size minus the slot's, not the card's size minus the slot's, because a new pane's view is
+    /// held at its end size and overflows its card while the card grows.
+    /// </summary>
+    private static Size ChromeOf(Border host, GroupView view)
+    {
+        var (b, slot) = (host.BorderThickness, view.ContentSize);
+        return new Size(Math.Max(0, b.Left + b.Right + view.ActualWidth - slot.Width), Math.Max(0, b.Top + b.Bottom + view.ActualHeight - slot.Height));
     }
 
     /// <summary>The workspace's area for panes (inside its padding), at the origin the pane places are measured from.</summary>
@@ -351,8 +498,13 @@ public sealed partial class MainWindow
         return false;
     }
 
+    /// <param name="sizes">
+    /// Each pane's card border and header size and terminal size, measured before a rebuild. When it's null, they're
+    /// read from the panes.
+    /// </param>
     private void StartTween(WorkspaceTab tab, List<(Grid Grid, PaneSplit Split, Weights From, Weights To)> splits,
-        TabGroup<TerminalTab>? maximized, Action? then, Action? always)
+        TabGroup<TerminalTab>? maximized, Action? then, Action? always,
+        Dictionary<Border, (Size Chrome, Size Terminal)>? sizes = null)
     {
         splits.RemoveAll(s => s.From == s.To);
         if (splits.Count == 0 || tab.Container.Children.FirstOrDefault() is not { } root)
@@ -379,7 +531,9 @@ public sealed partial class MainWindow
             }
 
             var control = group.Active.Control;
-            var (nowW, nowH) = control.ActualWidth > 0 && control.ActualHeight > 0 ? (control.ActualWidth, control.ActualHeight)
+            var noted = sizes != null && sizes.TryGetValue(host, out var n) && n.Terminal.Width > 0 ? n : ((Size, Size)?)null;
+            var (nowW, nowH) = noted is var (_, terminal) ? (terminal.Width, terminal.Height)
+                : control.ActualWidth > 0 && control.ActualHeight > 0 ? (control.ActualWidth, control.ActualHeight)
                 : (control.LaidOutSize.Width, control.LaidOutSize.Height);
             if (nowW <= 0 || nowH <= 0)
             {
@@ -398,12 +552,13 @@ public sealed partial class MainWindow
             var (width, height) = (nowW, nowH);
             if (!Empty(from) && !Empty(to))
             {
-                // The card's edge and header stay the same size, so the terminal's end size follows from the card's: the
-                // card less the terminal's slot, both as laid out. Not less the terminal itself: an animation cut short
-                // leaves it at that one's end size, and the terminal resized again by a column at the end.
-                var slot = view.ContentSize;
-                var (chromeW, chromeH) = host.ActualWidth > 0 && slot.Width > 0
-                    ? (host.ActualWidth - slot.Width, host.ActualHeight - slot.Height) : (from.Width - nowW, from.Height - nowH);
+                // The card's border and header stay the same size, so subtract them from the card's end size to get the
+                // terminal's. We use the chrome measured before the rebuild (via ChromeOf) instead of working it out from
+                // the terminal's current size, because an interrupted animation can leave the terminal at a stale size,
+                // which made it jump by a column when this animation finished.
+                var (chromeW, chromeH) = noted is var (chrome, _) ? (chrome.Width, chrome.Height)
+                    : view.ContentSize.Width > 0 ? (ChromeOf(host, view).Width, ChromeOf(host, view).Height)
+                    : (from.Width - nowW, from.Height - nowH);
                 (width, height) = (Math.Max(1, to.Width - chromeW), Math.Max(1, to.Height - chromeH));
             }
 
@@ -480,8 +635,12 @@ public sealed partial class MainWindow
             if (tween.Lift is { } lift)
             {
                 static double At(double a, double b, double e) => a + (b - a) * e;
-                lift.Host.Margin = new Thickness(At(lift.From.Left, lift.To.Left, eased), At(lift.From.Top, lift.To.Top, eased),
-                    At(lift.From.Right, lift.To.Right, eased), At(lift.From.Bottom, lift.To.Bottom, eased));
+                // interpolate the margins of every moving card
+                foreach (var (host, from, to) in lift.Moves)
+                {
+                    host.Margin = new Thickness(At(from.Left, to.Left, eased), At(from.Top, to.Top, eased),
+                        At(from.Right, to.Right, eased), At(from.Bottom, to.Bottom, eased));
+                }
             }
         }
 
@@ -554,7 +713,12 @@ public sealed partial class MainWindow
     {
         if (tween.Lift is { } lift)
         {
-            lift.Host.Margin = default;
+            // reset margins for moved hosts
+            foreach (var (host, _, _) in lift.Moves)
+            {
+                host.Margin = default;
+            }
+
             foreach (var other in lift.Stills)
             {
                 other.ShowStill(false);

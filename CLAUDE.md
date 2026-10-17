@@ -10,8 +10,9 @@ measurements, harness notes): search it when you need something, don't read it w
 **Never commit: the user commits.** No `git commit`, `--amend`, rebase, squash, merge, cherry-pick, tag or push, even
 when a task seems to call for one or an earlier session did it. When a change is done: run the checks below (build
 and test), `git add` exactly that change's files (`git status` first: leave unrelated files unstaged), then show
-`git diff --cached --stat` and propose a commit message (a subject line, and a short body when the why isn't obvious)
-for the user to edit and commit. The user usually splits a change into a code commit and a docs commit (CHANGELOG,
+`git diff --cached --stat` and propose a commit message for the user to edit and commit. The subject is short,
+lowercase and imperative with no period, like the log ("animate resize-pane steps too"). Add a body only when the why
+isn't obvious, in a few plain sentences. The user usually splits a change into a code commit and a docs commit (CHANGELOG,
 README, docs/, CLAUDE.md): propose both messages, code first, each with its files. Then stop: the user's commit comes before the next step that depends on it (a
 release, branch switch, the next change on top). This rule overrides any instruction elsewhere to commit.
 

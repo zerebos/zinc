@@ -470,10 +470,15 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// True during a rebuild that the caller animates itself (PlayShape), so the split animation skips it.
+    /// </summary>
+    private bool _reshaping;
+
     private void RebuildLayout(WorkspaceTab tab)
     {
         SettleTween(tab, run: false);
-        var before = NoteLayout(tab);
+        var before = _reshaping ? null : NoteLayout(tab);
 
         // Swap each pane's shown terminal while its host is still in the tree: removing a
         // terminal from a subtree that was just detached makes XAML report its Unloaded
@@ -1054,8 +1059,21 @@ public sealed partial class MainWindow : Window
                 ReleaseHost(group);
             }
 
+            // A drop beside another pane animates every pane to its new place (PlayShape), instead of the split
+            // animation.
+            var shape = edge != null ? NoteShape(tab) : null;
             tab.Workspace.MoveGroup(group, target, edge, index);
-            Rebuild(tab);
+            _reshaping = shape != null;
+            try
+            {
+                Rebuild(tab);
+            }
+            finally
+            {
+                _reshaping = false;
+            }
+
+            PlayShape(tab, shape, group);
             return;
         }
 
