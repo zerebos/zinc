@@ -21,7 +21,8 @@ holds the rules that apply everywhere and a map; detail goes there.
 
 **Any text shown in the product** (labels, buttons, descriptions, tooltips, dialogs, notices, errors, the palette,
 the welcome and About pages, zn's output) **follows `docs/ux-writing.md`** where it can: read it before writing new
-UI. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
+UI. Its punctuation rules are the ones most often missed: no semicolons, and a colon only before a list or between a
+label and its value. `/tidy-ui-text` rewrites UI text in a diff or file to the guide. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
 
 ## Code comments
 

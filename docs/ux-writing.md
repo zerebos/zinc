@@ -17,6 +17,7 @@ When a situation isn't covered below (a new notice, a hint, a first-run moment),
 
 - **Write from the user's side of the screen.** Name things by what people recognize, not by how they're built: "Programs may copy", not "OSC 52 write". Put the mechanism in the description ("Copying with OSC 52, as tmux, neovim and remote shells do.") for people who look for it. This is where the interface differs from the marketing: the marketing names the precise detail, and the interface names the familiar thing.
 - **Plain, direct, specific.** Short sentences, active voice, no jargon a user wouldn't search for. Prefer "the reset arrow gives one back" to "reverts to the inherited value".
+- **Keep the small words, and name the thing.** "Check that the file can be opened", not "check the file can be opened". When "it" or "them" could mean more than one thing, say which.
 - **Sentence case everywhere**: names, buttons, section titles, menu items. ("Tab width mode", not "Tab Width Mode".) Windows Terminal slips here ("Application Theme", "Add Entry"); we don't. The one exception is a window's title, which follows Windows' own title case: "Zinc Settings".
 - **Zinc on its own terms.** Don't compare Zinc to other terminals in the interface ("the way Windows Terminal draws", "keys follow Windows Terminal's defaults"). Name another app only when it affects the person reading: "Windows Terminal uses Win+` for its quake mode" says who took their hotkey.
 - **Limitations stay out of the interface.** Don't advertise what Zinc doesn't do yet (no "Ligatures aren't supported yet" next to the font picker); that belongs in the docs and release notes. Mention a limit only when it affects what the person is doing right now, and then name the real cause (see State).
@@ -45,7 +46,7 @@ When a situation isn't covered below (a new notice, a hint, a first-run moment),
 ## Choices
 
 - **Choice labels are short** (they're menu items): "Automatic", "Quit", "Stay in the tray".
-- **Explain the chosen option under the setting's name** (`SettingChoice.Detail`), not in the label: "Stays in the tray while the quick terminal's hotkey is set; otherwise quits." Only options that need it get a detail.
+- **Explain the chosen option under the setting's name** (`SettingChoice.Detail`), not in the label: "Stays in the tray while the quick terminal's hotkey is set, and quits otherwise." Only options that need it get a detail.
 - **Show, don't describe, where you can**: a cursor shape with its glyph ("Bar ( ┃ )"), a color scheme as a tile in its own colors, a path translation with an example ("WSL (C:\ → /mnt/c)").
 
 ## State
@@ -75,12 +76,14 @@ The attention dot's colours and the words around it say the same thing. Use thes
 - **Apply immediately; make undo easy.** Settings write as you change them and say so ("Saved to config.toml and applied"), with "Undo N changes" counting what Undo would put back. No Save/Discard step.
 - **Buttons say what they do; reset arrows say where they go.** A text button is a verb phrase that names its object: "Restore the original", "Delete profile", "Open folder", "Open in editor". A reset arrow (icon only) has a tooltip that starts "Back to …": "Back to the default: no shaders".
 - **Destructive actions** (delete a profile, reset everything): a button that says what it does, a confirmation that states the consequence ("Removes its section from config.toml."), and a confirm button that repeats the action with its object ("Delete profile", "Reset everything"). Never "OK", "Yes" or "Delete it": a button has to make sense when a screen reader announces it on its own. Put destructive actions last on a page.
-- **Errors say what's wrong and what to do**: "config.toml has an error; fix it first (see the top of the page)." No apologies, no vague "something went wrong".
+- **Errors say what's wrong and what to do**: "config.toml has an error. Fix it first (see the top of the page)." No apologies, no vague "something went wrong".
 
 ## Punctuation
 
 - **No period** on names, labels, buttons, choice labels or tooltips that are a single phrase.
 - **Periods** on descriptions and any text of more than one sentence.
+- **Colons** introduce a list ("Bring back the workspace closed last: its tabs, splits and folders."), separate a label from its value ("Color: automatic", "Inherited: 11 pt"), and lead into a reset arrow's destination ("Back to the default: no shaders"). A colon never stands in for "because", "so" or "use it for". Write two sentences, or join them with the word: "Drag to reorder. The new-tab menu lists them in this order."
+- **No semicolons.** Two short sentences read better on screen: "A dot on its tab. The taskbar button also flashes if Zinc is in the background."
 - **Straight double quotes** for quoting labels and names ("Vintage"), and straight apostrophes (Zinc's). Never curly quotes, never single quotes for quoting. Consistency matters more than style, and straight quotes are what everyone types.
 - (In this guide, an example that itself contains a quoted label is shown in *italics* instead of quotes.)
 - **Code, keys, paths and values** appear exactly as typed, never quoted or recapitalized: `config.toml`, Ctrl+A > C, `C:\Users`.
