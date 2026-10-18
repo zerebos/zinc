@@ -1026,27 +1026,50 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        source.TakeTab(from, pane);
-        if (edge is { } side && tab.Workspace.Groups.Contains(group))
+        // A pane's only tab takes the whole pane, as dragging the pane by its header does, so it animates the same way.
+        // (Taking the tab out and splitting the target rebuilt twice, and the second rebuild cut the first one's
+        // animation short.)
+        if (from.Workspace.GroupOf(pane) is { Tabs.Count: 1 } alone && alone != group)
         {
-            tab.Workspace.Split(group, side, pane);
-        }
-        else if (tab.Workspace.Groups.Contains(group))
-        {
-            group.Add(pane, index);
-            tab.Workspace.Activate(pane);
-        }
-        else
-        {
-            // The target pane went away with the tab (it was the tab's only pane): nothing to
-            // attach to, so the tab gets a workspace of its own.
-            AddWorkspace(new Workspace<TerminalTab>(pane));
-            source.CloseIfEmpty();
+            MovePane(source, alone, tab, group, edge, index);
             return;
         }
 
-        Wire(pane, tab);
-        Rebuild(tab);
+        // Taking the tab out rebuilds its workspace, and placing it rebuilds this one. Within one workspace, the layout
+        // is noted once before both and animated once after them, because a pane read right after a rebuild has no size
+        // yet, so the second rebuild would find nothing on screen to animate from.
+        var before = from == tab ? NoteLayout(tab) : null;
+        _reshaping = before != null;
+        try
+        {
+            source.TakeTab(from, pane);
+            if (edge is { } side && tab.Workspace.Groups.Contains(group))
+            {
+                tab.Workspace.Split(group, side, pane);
+            }
+            else if (tab.Workspace.Groups.Contains(group))
+            {
+                group.Add(pane, index);
+                tab.Workspace.Activate(pane);
+            }
+            else
+            {
+                // The target pane went away with the tab (it was the tab's only pane): nothing to
+                // attach to, so the tab gets a workspace of its own.
+                AddWorkspace(new Workspace<TerminalTab>(pane));
+                source.CloseIfEmpty();
+                return;
+            }
+
+            Wire(pane, tab);
+            Rebuild(tab);
+        }
+        finally
+        {
+            _reshaping = false;
+        }
+
+        PlayLayout(tab, before);
         if (source != this)
         {
             source.CloseIfEmpty();

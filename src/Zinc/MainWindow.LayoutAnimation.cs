@@ -65,12 +65,12 @@ public sealed partial class MainWindow
     private sealed record LiftBefore(Rect Place, Size Terminal);
 
     /// <summary>
-    /// The layout before a rebuild: the splits' sizes, the panes on screen, and for each pane the size of its card's
-    /// border and header (see ChromeOf) and its terminal's size. The sizes are measured here because a pane taken out
-    /// of the tree and put back reads as 0 until the next layout pass.
+    /// The layout before a rebuild: the splits' sizes, the panes on screen, and for each shown pane the size of its card's
+    /// border without the header (see ChromeOf and WithoutHeader), the terminal it showed and that terminal's size. The sizes are measured here because a pane taken out of the tree and put back reads as 0 until
+    /// the next layout pass.
     /// </summary>
     private sealed record LayoutBefore(Dictionary<PaneSplit, Weights> Splits, HashSet<Border> Shown,
-        Dictionary<Border, (Size Chrome, Size Terminal)> Sizes);
+        Dictionary<Border, (Size Chrome, TerminalControl Control, Size Terminal)> Sizes);
 
     private sealed class LayoutTween(WorkspaceTab tab, List<(Grid Grid, PaneSplit Split, Weights From, Weights To)> splits,
         List<Hold> holds, TabGroup<TerminalTab>? maximized, Action? then, Action? always, Lift? lift = null)
@@ -134,20 +134,21 @@ public sealed partial class MainWindow
         SettleTween(tab, run: true);
         var splits = new Dictionary<PaneSplit, Weights>();
         var shown = new HashSet<Border>();
-        var sizes = new Dictionary<Border, (Size, Size)>();
+        var sizes = new Dictionary<Border, (Size, TerminalControl, Size)>();
         foreach (var element in Descendants(tab.Container))
         {
             if (element is Grid { Tag: PaneSplit split } grid)
             {
                 splits[split] = ReadWeights(grid, split);
             }
-            else if (element is Border { Tag: TabGroup<TerminalTab> } host && host.IsLoaded && host.ActualWidth > 1 && host.ActualHeight > 1)
+            else if (element is Border { Tag: TabGroup<TerminalTab> } host && host.IsLoaded
+                && host.ActualWidth > 1 && host.ActualHeight > 1)
             {
                 shown.Add(host);
                 if (host is { Tag: TabGroup<TerminalTab> group, Child: GroupView view })
                 {
                     var control = group.Active.Control;
-                    sizes[host] = (ChromeOf(host, view),
+                    sizes[host] = (WithoutHeader(ChromeOf(host, view), view), control,
                         new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
                 }
             }
@@ -493,8 +494,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A card's chrome minus its header. PlayShape adds back the header the pane has after the move, because a pane
-    /// that another pane joined gains a tab strip.
+    /// A card's chrome minus its header. PlayShape and StartTween add back the header the pane has after the rebuild,
+    /// because a pane can gain or lose its tab strip in one (another pane joined it, or a tab was dragged out of it).
     /// </summary>
     private static Size WithoutHeader(Size chrome, GroupView view) => new(chrome.Width, Math.Max(0, chrome.Height - view.HeaderHeight));
 
@@ -519,14 +520,17 @@ public sealed partial class MainWindow
     }
 
     /// <param name="sizes">
-    /// Each pane's card border and header size and terminal size, measured before a rebuild. When it's null, they're
+    /// Each pane's card border size (without the header) and terminal size, measured before a rebuild. When it's null, they're
     /// read from the panes.
     /// </param>
     private void StartTween(WorkspaceTab tab, List<(Grid Grid, PaneSplit Split, Weights From, Weights To)> splits,
         TabGroup<TerminalTab>? maximized, Action? then, Action? always,
-        Dictionary<Border, (Size Chrome, Size Terminal)>? sizes = null)
+        Dictionary<Border, (Size Chrome, TerminalControl Control, Size Terminal)>? sizes = null)
     {
-        splits.RemoveAll(s => s.From == s.To);
+        // The Grid keeps a ratio as a float (0.45 reads back as 0.44999998), so compare with room for that, or a rebuild
+        // that changed nothing held every terminal for a whole animation.
+        splits.RemoveAll(s => Math.Abs(s.From.First - s.To.First) < 1e-4 && Math.Abs(s.From.Second - s.To.Second) < 1e-4
+            && Math.Abs(s.From.Band - s.To.Band) < 0.5);
         if (splits.Count == 0 || tab.Container.Children.FirstOrDefault() is not { } root)
         {
             always?.Invoke();
@@ -551,8 +555,11 @@ public sealed partial class MainWindow
             }
 
             var control = group.Active.Control;
-            var noted = sizes != null && sizes.TryGetValue(host, out var n) && n.Terminal.Width > 0 ? n : ((Size, Size)?)null;
-            var (nowW, nowH) = noted is var (_, terminal) ? (terminal.Width, terminal.Height)
+            var noted = sizes != null && sizes.TryGetValue(host, out var n) && n.Terminal.Width > 0 ? n : ((Size, TerminalControl, Size)?)null;
+
+            // The pane shows another terminal than the one noted: a tab was dragged out of it, and the tab behind it shows.
+            var swapped = noted is var (_, notedControl, _) && notedControl != control;
+            var (nowW, nowH) = noted is var (_, _, terminal) && !swapped ? (terminal.Width, terminal.Height)
                 : control.ActualWidth > 0 && control.ActualHeight > 0 ? (control.ActualWidth, control.ActualHeight)
                 : (control.LaidOutSize.Width, control.LaidOutSize.Height);
             if (nowW <= 0 || nowH <= 0)
@@ -576,7 +583,7 @@ public sealed partial class MainWindow
                 // terminal's. We use the chrome measured before the rebuild (via ChromeOf) instead of working it out from
                 // the terminal's current size, because an interrupted animation can leave the terminal at a stale size,
                 // which made it jump by a column when this animation finished.
-                var (chromeW, chromeH) = noted is var (chrome, _) ? (chrome.Width, chrome.Height)
+                var (chromeW, chromeH) = noted is var (chrome, _, _) ? (chrome.Width, chrome.Height + view.HeaderHeight)
                     : view.ContentSize.Width > 0 ? (ChromeOf(host, view).Width, ChromeOf(host, view).Height)
                     : (from.Width - nowW, from.Height - nowH);
                 (width, height) = (Math.Max(1, to.Width - chromeW), Math.Max(1, to.Height - chromeH));
@@ -586,8 +593,9 @@ public sealed partial class MainWindow
             // presents, the XAML around it only once its frame is done, and the first frame is the slow one (a new pane
             // starts its shell: 50-90 ms). When resized there, the terminal sat at its new size inside its old card, with
             // no fill and the backdrop beside it, for that long.
-            control.Width = nowW;
-            control.Height = nowH;
+            // A terminal that wasn't showing has no size here to keep for a frame, so it takes its end size at once.
+            control.Width = swapped ? width : nowW;
+            control.Height = swapped ? height : nowH;
             control.ResizeAtOnce = true;
             // A pane going to or coming from nothing stays put and is covered or uncovered; one on screen throughout
             // carries its text with its card's top-left corner, as layout does (pinned to the far edge, a maximizing
@@ -595,7 +603,7 @@ public sealed partial class MainWindow
             Pin(control, from, to, stayPut: Empty(from) || Empty(to));
             var config = group.Active.Profile.Config;
             view.FillContent(new SolidColorBrush(WithOpacity(config.Theme.Background, config)));
-            holds.Add(new Hold(control, control, view, new Size(width, height)));
+            holds.Add(new Hold(control, control, view, swapped ? null : new Size(width, height)));
         }
 
         foreach (var (grid, split, from, _) in splits)
@@ -847,7 +855,10 @@ public sealed partial class MainWindow
         var horizontal = split.Orientation == SplitOrientation.Horizontal;
         var space = Math.Max(0, (horizontal ? place.Width : place.Height) - w.Band);
         var total = w.First + w.Second;
-        var first = total > 0 ? space * w.First / total : 0;
+        // Layout rounds each split to whole physical pixels, giving the first side the extra one at a half (541.5 each
+        // became 542 and 541). Rounding the same way here keeps a terminal's end size from coming out a column off.
+        var scale = grid.XamlRoot?.RasterizationScale ?? 1;
+        var first = total > 0 ? Math.Round(space * w.First / total * scale, MidpointRounding.AwayFromZero) / scale : 0;
         var second = total > 0 ? space - first : 0;
         foreach (var child in grid.Children)
         {
