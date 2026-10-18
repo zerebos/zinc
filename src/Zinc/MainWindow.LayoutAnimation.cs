@@ -23,6 +23,14 @@ public sealed partial class MainWindow
 
     private static readonly TimeSpan MaxStep = TimeSpan.FromMilliseconds(20);
 
+    private static readonly Windows.UI.ViewManagement.UISettings WindowsSettings = new();
+
+    /// <summary>
+    /// Whether layout changes should animate. It's false when the Windows "Animation effects" setting is off, which
+    /// is read on every change, so turning the setting off applies to the next change without a restart.
+    /// </summary>
+    private static bool LayoutAnimationsEnabled => TweenLength != null && WindowsSettings.AnimationsEnabled;
+
     private readonly Dictionary<WorkspaceTab, LayoutTween> _tweens = new();
     private bool _tweenHooked;
 
@@ -118,7 +126,7 @@ public sealed partial class MainWindow
     /// <summary>Notes the split sizes and shown panes before a layout change; null when off or not on screen.</summary>
     private LayoutBefore? NoteLayout(WorkspaceTab tab)
     {
-        if (TweenLength == null || !tab.Container.IsLoaded)
+        if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded)
         {
             return null;
         }
@@ -181,7 +189,7 @@ public sealed partial class MainWindow
     /// </summary>
     private bool CloseAnimated(WorkspaceTab tab, TerminalTab pane)
     {
-        if (TweenLength == null || !tab.Container.IsLoaded || tab.Workspace.Maximized != null
+        if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded || tab.Workspace.Maximized != null
             || !tab.Workspace.Groups.Skip(1).Any() || tab.Workspace.GroupOf(pane) is not { } group || group.Tabs.Count != 1)
         {
             return false;
@@ -227,7 +235,7 @@ public sealed partial class MainWindow
     /// </summary>
     private bool ResizeAnimated(WorkspaceTab tab, Grid grid, PaneSplit split)
     {
-        if (TweenLength == null || !tab.Container.IsLoaded)
+        if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded)
         {
             return false;
         }
@@ -264,7 +272,7 @@ public sealed partial class MainWindow
     /// <summary>Before a maximize or restore: where the pane is and how big its terminal is; null when off.</summary>
     private LiftBefore? NoteLift(WorkspaceTab tab, TabGroup<TerminalTab> group)
     {
-        if (TweenLength == null || !tab.Container.IsLoaded || tab.Workspace.Layout.Count < 2)
+        if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded || tab.Workspace.Layout.Count < 2)
         {
             return null;
         }
@@ -360,7 +368,7 @@ public sealed partial class MainWindow
     /// </summary>
     private ShapeBefore? NoteShape(WorkspaceTab tab)
     {
-        if (TweenLength == null || !tab.Container.IsLoaded || tab.Workspace.Maximized != null)
+        if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded || tab.Workspace.Maximized != null)
         {
             return null;
         }
