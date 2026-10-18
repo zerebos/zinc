@@ -525,6 +525,13 @@ internal sealed partial class GroupView : Grid
     /// <summary>The terminal's slot as last laid out (its own size can differ while a layout animation holds it).</summary>
     public Windows.Foundation.Size ContentSize => new(_content.ActualWidth, _content.ActualHeight);
 
+    /// <summary>
+    /// The header's height, read from whether the tab strip is shown instead of from the last layout pass. So a pane
+    /// that gains or loses its tab strip (e.g. when another pane joins its tabs) reports the new height at once, while
+    /// ActualHeight still has the old one.
+    /// </summary>
+    public double HeaderHeight => _strip.Visibility == Visibility.Visible ? StripHeight : 0;
+
     /// <summary>The + button's tooltip (the window's, which knows the current key bindings).</summary>
     public void SetAddToolTip(ToolTip tip) => ToolTipService.SetToolTip(_add, tip);
 

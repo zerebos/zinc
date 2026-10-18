@@ -55,9 +55,9 @@ public sealed partial class MainWindow
         List<TerminalControl> Stills);
 
     /// <summary>
-    /// Where each shown pane was before a move: its place, the size of its card's border and header (see ChromeOf) and
-    /// its terminal's size. These are measured before the rebuild, because a pane taken out of the tree and put back
-    /// reads as 0 until the next layout pass.
+    /// Where each shown pane was before a move: its place, the size of its card's border without the header (see
+    /// ChromeOf and WithoutHeader), the terminal it showed and that terminal's size. These are measured before the
+    /// rebuild, because a pane taken out of the tree and put back reads as 0 until the next layout pass.
     /// </summary>
     private sealed record ShapeBefore(Dictionary<Border, (Rect Place, Size Chrome, TerminalControl Control, Size Terminal)> Panes);
 
@@ -387,7 +387,7 @@ public sealed partial class MainWindow
             var origin = host.TransformToVisual(tab.Container).TransformPoint(new Point(0, 0));
             var control = group.Active.Control;
             panes[host] = (new Rect(origin.X - pad.Left, origin.Y - pad.Top, host.ActualWidth, host.ActualHeight),
-                ChromeOf(host, view), control, new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
+                WithoutHeader(ChromeOf(host, view), view), control, new Size(Math.Max(0, control.ActualWidth), Math.Max(0, control.ActualHeight)));
         }
 
         return panes.Count > 1 ? new ShapeBefore(panes) : null;
@@ -435,7 +435,8 @@ public sealed partial class MainWindow
             moves.Add((host, from, default));
 
             var control = group.Active.Control;
-            var end = new Size(Math.Max(1, now.Width - was.Chrome.Width), Math.Max(1, now.Height - was.Chrome.Height));
+            var end = new Size(Math.Max(1, now.Width - was.Chrome.Width),
+                Math.Max(1, now.Height - was.Chrome.Height - view.HeaderHeight));
             var same = control == was.Control && was.Terminal.Width > 0 && was.Terminal.Height > 0;
 
             // The terminal it showed keeps its size for the first frame and takes its new one on the second. A pane now
@@ -490,6 +491,12 @@ public sealed partial class MainWindow
         var (b, slot) = (host.BorderThickness, view.ContentSize);
         return new Size(Math.Max(0, b.Left + b.Right + view.ActualWidth - slot.Width), Math.Max(0, b.Top + b.Bottom + view.ActualHeight - slot.Height));
     }
+
+    /// <summary>
+    /// A card's chrome minus its header. PlayShape adds back the header the pane has after the move, because a pane
+    /// that another pane joined gains a tab strip.
+    /// </summary>
+    private static Size WithoutHeader(Size chrome, GroupView view) => new(chrome.Width, Math.Max(0, chrome.Height - view.HeaderHeight));
 
     /// <summary>The workspace's area for panes (inside its padding), at the origin the pane places are measured from.</summary>
     private static Rect Whole(WorkspaceTab tab)
