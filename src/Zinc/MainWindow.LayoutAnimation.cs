@@ -65,11 +65,12 @@ public sealed partial class MainWindow
     private sealed record LiftBefore(Rect Place, Size Terminal);
 
     /// <summary>
-    /// The layout before a rebuild: the splits' sizes, the panes on screen, and for each shown pane the size of its card's
-    /// border without the header (see ChromeOf and WithoutHeader), the terminal it showed and that terminal's size. The sizes are measured here because a pane taken out of the tree and put back reads as 0 until
-    /// the next layout pass.
+    /// The layout before a rebuild: the splits' sizes, the panes on screen, every pane in the layout (shown or hidden
+    /// behind a maximized one), and for each shown pane the size of its card's border without the header (see ChromeOf
+    /// and WithoutHeader), the terminal it showed and that terminal's size. The sizes are measured here because a pane
+    /// taken out of the tree and put back reads as 0 until the next layout pass.
     /// </summary>
-    private sealed record LayoutBefore(Dictionary<PaneSplit, Weights> Splits, HashSet<Border> Shown,
+    private sealed record LayoutBefore(Dictionary<PaneSplit, Weights> Splits, HashSet<Border> Shown, HashSet<Border> Known,
         Dictionary<Border, (Size Chrome, TerminalControl Control, Size Terminal)> Sizes);
 
     private sealed class LayoutTween(WorkspaceTab tab, List<(Grid Grid, PaneSplit Split, Weights From, Weights To)> splits,
@@ -134,6 +135,7 @@ public sealed partial class MainWindow
         SettleTween(tab, run: true);
         var splits = new Dictionary<PaneSplit, Weights>();
         var shown = new HashSet<Border>();
+        var known = new HashSet<Border>();
         var sizes = new Dictionary<Border, (Size, TerminalControl, Size)>();
         foreach (var element in Descendants(tab.Container))
         {
@@ -141,7 +143,7 @@ public sealed partial class MainWindow
             {
                 splits[split] = ReadWeights(grid, split);
             }
-            else if (element is Border { Tag: TabGroup<TerminalTab> } host && host.IsLoaded
+            else if (element is Border { Tag: TabGroup<TerminalTab> } host && known.Add(host) && host.IsLoaded
                 && host.ActualWidth > 1 && host.ActualHeight > 1)
             {
                 shown.Add(host);
@@ -154,7 +156,7 @@ public sealed partial class MainWindow
             }
         }
 
-        return new LayoutBefore(splits, shown, sizes);
+        return new LayoutBefore(splits, shown, known, sizes);
     }
 
     /// <summary>After a layout change (model updated, Grids built): moves every split from where it was to the model's sizes.</summary>
@@ -181,7 +183,7 @@ public sealed partial class MainWindow
             splits.Add((grid, split, from, to));
         }
 
-        StartTween(tab, splits, tab.Workspace.Maximized, then: null, always: null, before.Sizes);
+        StartTween(tab, splits, tab.Workspace.Maximized, then: null, always: null, before.Sizes, before.Known);
     }
 
     /// <summary>
@@ -523,9 +525,14 @@ public sealed partial class MainWindow
     /// Each pane's card border size (without the header) and terminal size, measured before a rebuild. When it's null, they're
     /// read from the panes.
     /// </param>
+    /// <param name="known">
+    /// Every pane in the layout before a rebuild. A pane not in it arrived with the rebuild (a new split, or a pane or
+    /// tab dropped here). When it's null, no pane arrived.
+    /// </param>
     private void StartTween(WorkspaceTab tab, List<(Grid Grid, PaneSplit Split, Weights From, Weights To)> splits,
         TabGroup<TerminalTab>? maximized, Action? then, Action? always,
-        Dictionary<Border, (Size Chrome, TerminalControl Control, Size Terminal)>? sizes = null)
+        Dictionary<Border, (Size Chrome, TerminalControl Control, Size Terminal)>? sizes = null,
+        HashSet<Border>? known = null)
     {
         // The Grid keeps a ratio as a float (0.45 reads back as 0.44999998), so compare with room for that, or a rebuild
         // that changed nothing held every terminal for a whole animation.
@@ -577,7 +584,17 @@ public sealed partial class MainWindow
             // Otherwise its end size, taken at the start, growing or shrinking: its app repaints while the card moves.
             // (Plain numbers, not Size: its constructor throws on a negative, and rounding can make one here.)
             var (width, height) = (nowW, nowH);
-            if (!Empty(from) && !Empty(to))
+            if (known?.Contains(host) == false)
+            {
+                // The pane arrived from elsewhere (another window, or a tab dragged out of its pane) with the size it had
+                // there, so its terminal takes its end size on the second frame, as the others do. Taking the new size at
+                // once would show the terminal at that size in the old window's last frame, inside its old card, until that
+                // window drew again. The pane's view hasn't been laid out here yet, so its chrome is its border plus the
+                // header it will show.
+                var b = host.BorderThickness;
+                (width, height) = (Math.Max(1, to.Width - b.Left - b.Right), Math.Max(1, to.Height - b.Top - b.Bottom - view.HeaderHeight));
+            }
+            else if (!Empty(from) && !Empty(to))
             {
                 // The card's border and header stay the same size, so subtract them from the card's end size to get the
                 // terminal's. We use the chrome measured before the rebuild (via ChromeOf) instead of working it out from

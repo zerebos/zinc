@@ -691,8 +691,21 @@ public sealed partial class MainWindow : Window
         UpdateTaskbarProgress(); // the shown workspace's progress wins; closed panes drop theirs
     }
 
+    /// <summary>
+    /// While this is above 0, FocusActive does nothing. It's raised while a pane leaves this window for another one,
+    /// which takes focus itself. Focusing a terminal in a window that isn't active activates that window, so if both
+    /// windows focused their panes, activation would pass back and forth and every switch would redraw both windows in
+    /// the middle of the animation.
+    /// </summary>
+    private int _noFocus;
+
     private void FocusActive(WorkspaceTab tab)
     {
+        if (_noFocus > 0)
+        {
+            return;
+        }
+
         // After a rebuild the panes are re-parented and not loaded yet; focus once
         // layout has run.
         var control = tab.Active.Control;
@@ -1042,7 +1055,16 @@ public sealed partial class MainWindow : Window
         _reshaping = before != null;
         try
         {
-            source.TakeTab(from, pane);
+            source._noFocus++;
+            try
+            {
+                source.TakeTab(from, pane);
+            }
+            finally
+            {
+                source._noFocus--;
+            }
+
             if (edge is { } side && tab.Workspace.Groups.Contains(group))
             {
                 tab.Workspace.Split(group, side, pane);
@@ -1109,7 +1131,16 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        source.TakeGroupOut(from, group);
+        source._noFocus++;
+        try
+        {
+            source.TakeGroupOut(from, group);
+        }
+        finally
+        {
+            source._noFocus--;
+        }
+
         if (edge is { } side)
         {
             tab.Workspace.Place(group, target, side);
@@ -1429,6 +1460,7 @@ public sealed partial class MainWindow : Window
     /// Automated tests can't post real modifier state to the window.
     /// </summary>
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _replayTimer;
+    private static int _replayingWindows;
 
     private void ReplayTestKeys()
     {
@@ -1437,7 +1469,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var queue = new Queue<string>(keys.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+        // Every window replays the keys from when it starts. A key with a prefix, like `w2:alt+shift+minus`, runs only in
+        // the second window to start, so one run can set up several windows. Keys without a prefix run in every window.
+        var window = $"w{++_replayingWindows}:";
+        var queue = new Queue<string>(keys.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Where(k => !System.Text.RegularExpressions.Regex.IsMatch(k, @"^w\d+:") || k.StartsWith(window))
+            .Select(k => k.StartsWith(window) ? k[window.Length..] : k));
         // Held in a field: an unreferenced DispatcherQueueTimer is collected and stops firing.
         var timer = _replayTimer = DispatcherQueue.CreateTimer();
         timer.Interval = TimeSpan.FromSeconds(1);
@@ -1637,6 +1674,22 @@ public sealed partial class MainWindow : Window
                     App.Instance.Drag = new TabDrag(this, group);
                     DropOnWorkspaces(args[0]);
                     App.Instance.Drag = null;
+                    return;
+                }
+
+                if (chord.StartsWith("test:pane-window-"))
+                {
+                    // `test:pane-window-left:0` drops the focused pane on pane 0's left edge in another window's workspace.
+                    var other = App.Instance.OtherWindow(this);
+                    var otherTab = other?.SelectedTab;
+                    var otherTarget = otherTab?.Workspace.Groups.ElementAtOrDefault(args[0]);
+                    Log.Write($"test {chord}: {(otherTarget != null ? "moving" : "no such pane")}");
+                    if (other != null && otherTab != null && otherTarget != null)
+                    {
+                        other.MovePane(this, group, otherTab, otherTarget,
+                            Enum.Parse<PaneDirection>(chord["test:pane-window-".Length..chord.LastIndexOf(':')], ignoreCase: true));
+                    }
+
                     return;
                 }
 

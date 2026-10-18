@@ -374,6 +374,9 @@ user's commits of what you staged; post-commit and post-merge, since a merge run
   Entries like `menu:Split pane/Split right` run that workspace context-menu item's command
   (context menus can't be opened by posted input or UIA), and `palette:<exact title>` runs a
   command palette entry. `ctrl+f24` (unbound) works as a one-second pause.
+  Every window replays the keys from its start, the quick terminal too (summon it with `quick-toggle.ps1`). A `w2:`
+  prefix runs a key only in the second window, so `w1:ctrl+shift+n` plus `w2:` keys set up two windows (with
+  `new-workspace-page = false`), and `test:pane-window-left:0` drops the focused pane on another window's pane 0.
 - To check a pane keeps updating, give it output that changes every line (a counter:
   `bash -c 'i=0; while true; do i=$((i+1)); echo tick $i; sleep 0.25; done'` via wsl.exe).
   `ping -t` once misled me: its lines are identical, so a full pane scrolling looks frozen in

@@ -14,6 +14,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - A pane could miss a frame at startup, leaving an error in the crash log ("The last drawing session ... must be disposed").
 - Choosing a split or a new tab from a menu (a pane's ⋯ menu, a tab's or workspace's right-click menu, the terminal's right-click menu) no longer flickers focus back to the old pane for a moment before the new one takes it.
 - In the quick terminal, Maximize pane from the command palette restored the pane right away, because closing the palette moved focus to the first pane. The pane now stays maximized.
+- Dragging a pane or tab into another window made both windows flicker between active and inactive, because the window it came from took focus back. Now the window you drop it on stays active.
 
 ## 0.1.0-dev.393 (2026-10-15)
 

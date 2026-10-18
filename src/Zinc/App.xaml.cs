@@ -355,6 +355,9 @@ public partial class App : Application
         return false;
     }
 
+    /// <summary>A normal window other than <paramref name="window"/> (for test keys that drop a pane into another window).</summary>
+    internal MainWindow? OtherWindow(MainWindow window) => _windows.FirstOrDefault(w => w != window);
+
     private MainWindow Track(MainWindow window)
     {
         _windows.Add(window);
