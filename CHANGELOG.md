@@ -15,6 +15,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - Choosing a split or a new tab from a menu (a pane's ⋯ menu, a tab's or workspace's right-click menu, the terminal's right-click menu) no longer flickers focus back to the old pane for a moment before the new one takes it.
 - In the quick terminal, Maximize pane from the command palette restored the pane right away, because closing the palette moved focus to the first pane. The pane now stays maximized.
 - Dragging a pane or tab into another window made both windows flicker between active and inactive, because the window it came from took focus back. Now the window you drop it on stays active.
+- A prompt that spans the window, like powerlevel10k's frame, no longer leaves copies of itself above the new one when a pane or window gets narrower. Zinc now clears the old prompt for your shell to draw again. It clears the whole prompt in zsh, fish, nushell and elvish, and only the last line in bash, since bash draws only that line again.
 
 ## 0.1.0-dev.393 (2026-10-15)
 

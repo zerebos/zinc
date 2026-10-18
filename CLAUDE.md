@@ -50,7 +50,9 @@ column when this animation finished.`
 ## Build / run
 
 - `scripts/build-libghostty.sh x64` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit), plus zinc-sprite.dll
-  and zinc-shader.dll. `external/` (ghostty clone) and `native/` are gitignored build products. The native DLLs
+  and zinc-shader.dll. It applies **`patches/ghostty/*.patch`** (our fixes not upstream yet) to the checkout first,
+  after resetting its sources, so edits left in `external/ghostty` never reach a build. `external/` (ghostty clone)
+  and `native/` are gitignored build products. The native DLLs
   import **`vcruntime140.dll`, which a fresh Windows lacks**: `scripts/copy-vcruntime.sh` (run by the build) copies
   VS's into native/<arch>/, Zinc.Native.targets ships it app-local, release.ps1 checks it. Check new native
   dependencies with pefile (`.scratch/vcdeps.py <folder>`).
@@ -134,6 +136,9 @@ and read state after the write (see `_titleDirty`).
   `python scripts/vt-bench.py --compare before`: more than 10% slower is worth a look. Results in .scratch/bench/results
   (`ghostty-<commit>.json` per commit; 6301810: ascii ~270, utf8 ~250, styled ~135 MB/s). Ghostty's own ghostty-bench
   doesn't build for Windows; it builds for Linux and runs in WSL (.scratch/NOTES.md, GHOSTTY-BENCH).
+- Bumping the commit: delete each patch in `patches/ghostty` whose fix upstream now has (its header says what to
+  look for), and fix up any other that no longer applies. Their tests run in the checkout with
+  `zig build test-lib-vt -Dtest-filter=<name>` (plain `zig build test` needs POSIX headers on Windows).
 - Bumping the commit also rebuilds zinc-sprite.dll (Ghostty's sprite code is internal, not
   API: if build-sprites.sh fails, look at the sprite Face/canvas/Metrics changes; SpriteTests pin
   the behavior we rely on).

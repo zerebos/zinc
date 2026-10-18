@@ -50,7 +50,7 @@ Gaps:
 
 | | Zinc | Ghostty |
 |---|---|---|
-| Prompt start | `133;A;aid=<pid>` | `133;A;cl=line` (zsh), `133;A;redraw=last;cl=line;aid=<pid>` (bash); fish/elvish add `click_events=1`/`aid` |
+| Prompt start | `133;A;aid=<pid>` (zsh, elvish), `133;A;aid=<pid>;redraw=last` (bash), `redraw=0` (pwsh, cmd, Clink) | `133;A;cl=line` (zsh), `133;A;redraw=last;cl=line;aid=<pid>` (bash); fish/elvish add `click_events=1`/`aid` |
 | Continuation prompts (PS2) | `133;P;k=s` … `B` around bash's PS2 (zsh's C carries the text, so not needed there) | `133;P;k=s` (and bash marks each line of a multi-line PS1 with `P;k=s`) |
 | Input start | `133;B` | `133;B` (bash, zsh); not in fish/elvish |
 | Command start | `133;C;cmdline_url=<percent-encoded>` (zsh, pwsh); plain `133;C` (bash: sent from PS0, which can't see the line) | `133;C`, no command text |
@@ -78,14 +78,19 @@ Ideas from Ghostty's side:
     input). Ghostty counts every input cell.
   - Click events go out as press and release, aimed at the text when the click missed it.
     Ghostty sends only the press, and nushell then ignored every later click.
-- **`redraw=last`** (bash): tells the terminal the shell redraws only the prompt's last line on
-  resize. libghostty already clears prompt lines on resize (its default assumes a full redraw).
-  **Checked 2026-10-01, not needed under ConPTY:** pwsh, Git Bash (two-line prompt) and a long
-  wrapped command all came through narrow/wide resizes intact: ConPTY repaints the screen itself
-  after a resize. powerlevel10k's full-width frame was the exception: a fast drag (dozens of sizes)
-  piled up stale copies of it, in Windows Terminal too (the user compared). Fixed by telling the
-  shell the size only once a resize settles (100 ms; the view still reflows live): one redraw per
-  drag, at most one stale copy, as a slow resize gives.
+- **`redraw`**: tells the terminal whether the shell draws its prompt again after a resize, so
+  the terminal can clear the rewrapped old one first. **Done 2026-10-18.** libghostty's C API
+  assumes it doesn't (the Ghostty app assumes it does), and only this option on a prompt mark
+  changes that, so Zinc adds `redraw=1` to marks that don't say: powerlevel10k's own, fish's,
+  nushell's and our zsh and elvish scripts. Our scripts for shells that don't redraw it all say
+  so: `last` for bash (readline redraws only the last line, as Ghostty's bash script says) and `0`
+  for pwsh, cmd and Clink. Before this, powerlevel10k's full-width frame left a stale copy above
+  the prompt on every narrowing resize: zsh goes up only the rows it drew, and the terminal had
+  already wrapped the frame onto more. That also needed a libghostty fix, because rewrapping
+  marked every wrapped part of a prompt line as a prompt start, so the clear missed the upper
+  parts (`patches/ghostty`, not upstream yet). Earlier (2026-10-01) a fast drag piled up a copy
+  per size; Zinc tells the shell the size only once a resize settles (100 ms; the view still
+  reflows live), which stays useful: one redraw per drag.
 - **`aid=<pid>`**: separates nested shells' marks. **Done differently (2026-10-01)**: Zinc tracks
   shells by their prompt mark's options as a whole, since the shells that nest most (fish,
   nushell, powerlevel10k) send no aid but differ anyway. Our scripts send `aid=<pid>` on A so
