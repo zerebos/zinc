@@ -87,6 +87,14 @@ public sealed partial class MainWindow
             return;
         }
 
+        // Focus goes to the active terminal before the palette hides. Otherwise XAML hands focus to the first focusable
+        // element, which in the quick terminal (no tab strip) is the first pane. Focusing another pane restores a
+        // maximized one, so "Maximize pane" from the palette would maximize and then restore right away.
+        if (SelectedTab is { } shown)
+        {
+            shown.Active.Control.Focus(FocusState.Programmatic);
+        }
+
         PaletteLayer.Visibility = Visibility.Collapsed;
         if (_argument is { } unanswered)
         {
