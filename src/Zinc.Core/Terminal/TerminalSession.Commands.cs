@@ -145,6 +145,7 @@ public sealed unsafe partial class TerminalSession
         {
             var end = _markScanner.Next(data, out var mark);
             var chunk = end < 0 ? data : data[..end];
+            var primaryBefore = OnPrimaryScreen();
 
             // Enter was pressed at a prompt of a shell that sends no C (cmd): the command's output starts on the line
             // after the one the shell echoes, so that's where Zinc puts its C.
@@ -170,7 +171,12 @@ public sealed unsafe partial class TerminalSession
                 VtWrite(chunk);
             }
 
-            if (_eraseWatch.Seen(chunk) is var erased and not Erased.None)
+            // A full-screen app erasing its own (alternate) screen leaves the commands alone, because their rows are on
+            // the other screen. Checking them against the alternate screen would find no prompt anywhere and forget every
+            // command. So an erase counts only when the output starts and ends on the normal screen (an app often switches
+            // screens and clears in one write), or when it's a full reset, which wipes both screens.
+            if (_eraseWatch.Seen(chunk) is var erased and not Erased.None &&
+                (erased.HasFlag(Erased.Reset) || primaryBefore && OnPrimaryScreen()))
             {
                 NoteErased(erased);
             }
@@ -246,11 +252,16 @@ public sealed unsafe partial class TerminalSession
         VtWrite(mark[^terminator..]);
     }
 
-    private void OnShellMark(ShellMark mark)
+    private bool OnPrimaryScreen()
     {
         int screen = 0;
         Native.TerminalGet(_terminal, TerminalData.ActiveScreen, &screen);
-        if (screen != 0)
+        return screen == 0;
+    }
+
+    private void OnShellMark(ShellMark mark)
+    {
+        if (!OnPrimaryScreen())
         {
             return; // full-screen apps' marks aren't commands
         }

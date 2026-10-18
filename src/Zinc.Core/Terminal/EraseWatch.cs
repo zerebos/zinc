@@ -11,6 +11,9 @@ public enum Erased
 
     /// <summary><c>CSI 3 J</c> (the scrollback: what <c>clear</c> sends in bash and PowerShell) or a full reset (<c>ESC c</c>).</summary>
     Scrollback = 2,
+
+    /// <summary>A full reset (<c>ESC c</c>), which wipes both screens, whichever one is showing.</summary>
+    Reset = 4,
 }
 
 /// <summary>
@@ -58,7 +61,7 @@ public sealed class EraseWatch
                     }
                     else
                     {
-                        seen |= b == (byte)'c' ? Erased.Scrollback : Erased.None;
+                        seen |= b == (byte)'c' ? Erased.Scrollback | Erased.Reset : Erased.None;
                         _state = b == Esc ? State.Escape : State.Ground;
                     }
 

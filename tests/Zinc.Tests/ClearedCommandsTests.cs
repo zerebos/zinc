@@ -79,6 +79,34 @@ public class ClearedCommandsTests
         Assert.True(commands[0].Running);
     }
 
+    [Theory]
+    [InlineData("\e[?1049h\e[H\e[2J\e[3J|app\e[2J|\e[?1049l")] // switching and clearing in one write (| between writes)
+    [InlineData("\e[?1049h|\e[H\e[2J|app\e[3J|\e[2J\e[?1049l")] // and in separate ones
+    public void AFullScreenAppClearingItsOwnScreenLeavesTheCommandsAlone(string app)
+    {
+        // Every scrollbar tick would go once a TUI had drawn, and never come back, if erases on the alternate screen
+        // were checked against that screen, where no row is a prompt.
+        using var session = WithFailures();
+        session.WriteToScreen("\e]133;A\a$ \e]133;B\abtm\r\n\e]133;C\a");
+        foreach (var write in app.Split('|'))
+        {
+            session.WriteToScreen(write);
+        }
+
+        session.WriteToScreen("\e]133;D;0\a\e]133;A\a$ \e]133;B\a");
+        Assert.Equal(6, session.Commands().Count(c => c.Failed));
+        Assert.Contains(session.Commands(), c => c.Text == "btm");
+    }
+
+    [Fact]
+    public void AFullResetFromAFullScreenAppStillForgetsThem()
+    {
+        using var session = WithFailures();
+        session.WriteToScreen("\e]133;A\a$ \e]133;B\abtm\r\n\e]133;C\a\e[?1049h\e[2J");
+        session.WriteToScreen("\ec");
+        Assert.DoesNotContain(session.Commands(), c => c.Failed);
+    }
+
     private static Erased[] Feed(params string[] reads)
     {
         var watch = new EraseWatch();
@@ -91,7 +119,7 @@ public class ClearedCommandsTests
         Assert.Equal([Erased.Scrollback], Feed("abc\e[3Jdef"));
         Assert.Equal([Erased.None, Erased.Scrollback], Feed("abc\e[", "3J"));
         Assert.Equal([Erased.None, Erased.None, Erased.Scrollback], Feed("\e", "[3", "J"));
-        Assert.Equal([Erased.None, Erased.Scrollback], Feed("x\e", "c"));
+        Assert.Equal([Erased.None, Erased.Scrollback | Erased.Reset], Feed("x\e", "c"));
         Assert.Equal([Erased.Display | Erased.Scrollback], Feed("\e[H\e[2J\e[3J"));
         Assert.Equal([Erased.Display, Erased.Display], Feed("\e[2J", "\e[J"));
         Assert.Equal([Erased.None, Erased.Display], Feed("\e[2", "J"));
