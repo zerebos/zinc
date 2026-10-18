@@ -1,0 +1,150 @@
+Reflow marks the rows a prompt line wraps onto as prompt continuations, and a
+rejoined row keeps the flag of the row it continues.
+
+libghostty documents Row.semantic_prompt = .prompt as "not a continuation and
+the beginning of a prompt" (since the January 2026 semantic prompt rework), and
+the prompt iterator, the clear-on-resize (prompt_redraw), jump-to-prompt and
+click-to-move rely on it. Reflow still copied a row's flag onto every wrapped
+piece, which made each piece look like a prompt start: the clear-on-resize then
+left the upper pieces of a full-width prompt line behind (powerlevel10k's
+frame piled up on every narrowing resize). Widening copied a continuation's
+flag over the row it joined, losing the prompt's start.
+
+Not upstream yet (pinned 6301810a4; still present on main 73e4ff10f,
+2026-10-17). Drop this patch once a commit bump includes a fix. Applied by
+scripts/build-libghostty.sh after checkout. Includes tests; run them with
+`zig build test-lib-vt -Dtest-filter=prompt` in external/ghostty.
+
+diff --git a/src/terminal/PageList.zig b/src/terminal/PageList.zig
+index d915bcf6d8..371982a0ad 100644
+--- a/src/terminal/PageList.zig
++++ b/src/terminal/PageList.zig
+@@ -1746,7 +1746,10 @@ const ReflowCursor = struct {
+             self.new_rows -= 1;
+         }
+ 
+-        self.copyRowMetadata(src_row);
++        // A wrap continuation joins the row it continues, which keeps its own
++        // metadata: a prompt's first row must stay a prompt, not become the
++        // continuation's prompt_continuation.
++        if (!src_row.wrap_continuation) self.copyRowMetadata(src_row);
+ 
+         var x: usize = 0;
+         while (x < cols_len) {
+@@ -1755,6 +1758,13 @@ const ReflowCursor = struct {
+                 try self.cursorScrollOrNewPage(list, cap);
+                 self.copyRowMetadata(src_row);
+                 self.page_row.wrap_continuation = true;
++
++                // A prompt row that now wraps continues onto this row, as when
++                // it wraps while printing (Terminal.printWrap), so the prompt
++                // iterator still finds the prompt's first row.
++                if (self.page_row.semantic_prompt == .prompt) {
++                    self.page_row.semantic_prompt = .prompt_continuation;
++                }
+             }
+ 
+             // Fast path: bulk-copy a run of simple cells directly
+@@ -17403,9 +17413,10 @@ test "PageList resize reflow less cols no reflow preserves semantic prompt" {
+             try testing.expect(rac.row.semantic_prompt == .prompt);
+         }
+         {
++            // The wrapped part continues the prompt that starts on the row above.
+             const p = s.pin(.{ .active = .{ .y = 2 } }).?;
+             const rac = p.rowAndCell();
+-            try testing.expect(rac.row.semantic_prompt == .prompt);
++            try testing.expect(rac.row.semantic_prompt == .prompt_continuation);
+         }
+     }
+ }
+diff --git a/src/terminal/Screen.zig b/src/terminal/Screen.zig
+index 37e762420d..2fd317aab0 100644
+--- a/src/terminal/Screen.zig
++++ b/src/terminal/Screen.zig
+@@ -9208,6 +9208,86 @@ test "Screen: resize with prompt_redraw last clears only one line" {
+     }
+ }
+ 
++test "Screen: resize reflow marks a wrapped prompt line like printing does" {
++    const testing = std.testing;
++    const alloc = testing.allocator;
++    const io = testing.io;
++
++    // The same prompt printed at 5 columns, so it wraps as it prints.
++    var printed = try init(io, alloc, .{ .cols = 5, .rows = 4, .max_scrollback_bytes = 0 });
++    defer printed.deinit();
++    printed.cursorSetSemanticContent(.{ .prompt = .initial });
++    try printed.testWriteString("ABCDEFGHIJ");
++
++    // Printed at 10 columns, then narrowed to 5, so it wraps on reflow.
++    var reflowed = try init(io, alloc, .{ .cols = 10, .rows = 4, .max_scrollback_bytes = 0 });
++    defer reflowed.deinit();
++    reflowed.cursorSetSemanticContent(.{ .prompt = .initial });
++    try reflowed.testWriteString("ABCDEFGHIJ");
++    try reflowed.resize(.{ .cols = 5, .rows = 4 });
++
++    for ([_]*Screen{ &printed, &reflowed }) |s| {
++        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });
++        defer alloc.free(contents);
++        try testing.expectEqualStrings("ABCDE\nFGHIJ", contents);
++
++        const first = s.pages.pin(.{ .screen = .{ .y = 0 } }).?;
++        const second = s.pages.pin(.{ .screen = .{ .y = 1 } }).?;
++        try testing.expectEqual(.prompt, first.rowAndCell().row.semantic_prompt);
++        try testing.expectEqual(.prompt_continuation, second.rowAndCell().row.semantic_prompt);
++
++        // One prompt, so one prompt start, found from its last row.
++        var it = second.promptIterator(.left_up, null);
++        try testing.expectEqual(@as(?size.CellCountInt, 0), if (it.next()) |p| p.y else null);
++        try testing.expect(it.next() == null);
++    }
++}
++
++test "Screen: resize reflow keeps a rejoined prompt line a prompt" {
++    const testing = std.testing;
++    const alloc = testing.allocator;
++    const io = testing.io;
++
++    var s = try init(io, alloc, .{ .cols = 5, .rows = 4, .max_scrollback_bytes = 0 });
++    defer s.deinit();
++    s.cursorSetSemanticContent(.{ .prompt = .initial });
++    try s.testWriteString("ABCDEFGHIJ");
++
++    // Widening joins the two rows back into one, which starts the prompt.
++    try s.resize(.{ .cols = 10, .rows = 4 });
++    {
++        const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });
++        defer alloc.free(contents);
++        try testing.expectEqualStrings("ABCDEFGHIJ", contents);
++    }
++    const first = s.pages.pin(.{ .screen = .{ .y = 0 } }).?;
++    try testing.expectEqual(.prompt, first.rowAndCell().row.semantic_prompt);
++}
++
++test "Screen: resize with prompt_redraw clears a prompt line that wraps" {
++    const testing = std.testing;
++    const alloc = testing.allocator;
++    const io = testing.io;
++
++    var s = try init(io, alloc, .{ .cols = 10, .rows = 5, .max_scrollback_bytes = 0 });
++    defer s.deinit();
++
++    // Output, then a two-line prompt whose first line fills the width (like a
++    // prompt with a frame or a right-aligned part), then the input.
++    try s.testWriteString("out\n");
++    s.cursorSetSemanticContent(.{ .prompt = .initial });
++    try s.testWriteString("PPPPPPPPPP\n> ");
++    s.cursorSetSemanticContent(.{ .input = .clear_explicit });
++    try s.testWriteString("ls");
++
++    // Narrowing wraps the first prompt line. The whole prompt is cleared for the
++    // shell to redraw, not only the rows from its wrapped piece down.
++    try s.resize(.{ .cols = 5, .rows = 5, .prompt_redraw = .true });
++    const contents = try s.dumpStringAlloc(alloc, .{ .screen = .{} });
++    defer alloc.free(contents);
++    try testing.expectEqualStrings("out", contents);
++}
++
+ test "Screen: resize with prompt_redraw last multiline prompt clears only last line" {
+     const testing = std.testing;
+     const alloc = testing.allocator;

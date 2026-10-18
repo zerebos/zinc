@@ -198,6 +198,8 @@ public sealed unsafe partial class TerminalSession
 
     private static ReadOnlySpan<byte> MarkPrefix => "\e]133;"u8;
     private static ReadOnlySpan<byte> PromptStartOnly => "\e]133;P\a"u8;
+    private static ReadOnlySpan<byte> RedrawOption => "redraw="u8;
+    private static ReadOnlySpan<byte> RedrawOn => ";redraw=1"u8;
 
     /// <summary>
     /// Writes output ending in a prompt-start mark (A or N), minus its fresh line. Per the spec (FinalTerm, kitty),
@@ -205,6 +207,13 @@ public sealed unsafe partial class TerminalSession
     /// the two screens disagree from there on: a tester's prompt, drawn with Write-Host before PowerShell's marks, left
     /// the cursor (and the typing PSReadLine draws) a line below the prompt. Windows Terminal does no fresh line either.
     /// Mid-line, libghostty gets a plain prompt start (P) instead; Zinc's own tracking reads the mark as sent.
+    /// <para>
+    /// A mark that doesn't say whether its shell redraws the prompt after a resize gets `redraw=1`, which is what the
+    /// Ghostty app assumes. libghostty's C API assumes the opposite, and this option is the only way to turn the clearing
+    /// on. With it, a resize clears the prompt for the shell to draw again, instead of leaving the rewrapped old prompt
+    /// above the new one (which piles up powerlevel10k's frame on every narrowing resize). Zinc's own scripts for shells
+    /// that don't redraw the whole prompt all say so in their marks.
+    /// </para>
     /// </summary>
     private void WritePromptStart(ReadOnlySpan<byte> chunk)
     {
@@ -218,7 +227,23 @@ public sealed unsafe partial class TerminalSession
         VtWrite(chunk[..at]);
         ushort x = 0;
         Native.TerminalGet(_terminal, TerminalData.CursorX, &x);
-        VtWrite(x == 0 ? chunk[at..] : PromptStartOnly);
+        if (x != 0)
+        {
+            VtWrite(PromptStartOnly);
+            return;
+        }
+
+        var mark = chunk[at..];
+        var terminator = mark.EndsWith("\a"u8) ? 1 : mark.EndsWith("\e\\"u8) ? 2 : 0;
+        if (terminator == 0 || mark.IndexOf(RedrawOption) >= 0)
+        {
+            VtWrite(mark);
+            return;
+        }
+
+        VtWrite(mark[..^terminator]);
+        VtWrite(RedrawOn);
+        VtWrite(mark[^terminator..]);
     }
 
     private void OnShellMark(ShellMark mark)

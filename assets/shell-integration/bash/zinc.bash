@@ -72,7 +72,8 @@ __zinc_si_status() { __zinc_si_last=$?; return "$__zinc_si_last"; }
 
 # OSH (Oils) runs this script too, but never shows PS0: its prompt mark asks Zinc to mark each command's start
 # itself, when Enter is pressed (as cmd's does).
-__zinc_si_aopts="aid=$$"
+# After a resize, readline redraws only the prompt's last line, so that's the only one Zinc clears for bash.
+__zinc_si_aopts="aid=$$;redraw=last"
 [[ -z "${OILS_VERSION-}" ]] || __zinc_si_aopts+=";zinc_c=enter"
 
 __zinc_si_b='\[\e]133;B\a\]'

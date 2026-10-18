@@ -52,7 +52,9 @@ local sameErrorlevel = false
 
 clink.onbeginedit(function()
     io.write(esc .. "]133;D" .. (sameErrorlevel and "" or ";" .. os.geterrorlevel()) .. st ..
-        esc .. "]133;A" .. st .. -- (not zinc_c=enter: the C below would come after Zinc's own and be dropped)
+        -- No zinc_c=enter, because the C below would come after Zinc's own and be dropped. redraw=0 because Clink
+        -- doesn't draw the prompt again after a resize, so Zinc keeps it.
+        esc .. "]133;A;redraw=0" .. st ..
         esc .. "]9;9;" .. os.getcwd() .. st)
     io.flush()
 end)

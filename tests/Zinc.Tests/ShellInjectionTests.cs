@@ -332,7 +332,7 @@ public class ShellInjectionTests : IDisposable
     [Fact]
     public void CmdKeepsTheUsersPrompt()
     {
-        Assert.Equal("$e]133;D$e\\$e]133;A;zinc_c=enter$e\\$e]9;9;$P$e\\$T $P$G$e]133;B$e\\", ShellIntegration.CmdPrompt("$T $P$G"));
+        Assert.Equal("$e]133;D$e\\$e]133;A;zinc_c=enter;redraw=0$e\\$e]9;9;$P$e\\$T $P$G$e]133;B$e\\", ShellIntegration.CmdPrompt("$T $P$G"));
         Assert.EndsWith("$P$G$e]133;B$e\\", ShellIntegration.CmdPrompt(null));
         Assert.Null(ShellIntegration.CmdPrompt("$e]133;A$e\\$P$G")); // marks of its own
         Assert.Equal(ShellIntegration.CmdPrompt(null), Prepare("cmd.exe /k echo hi").Environment["PROMPT"]);

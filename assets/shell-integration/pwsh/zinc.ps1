@@ -26,7 +26,7 @@ function Global:prompt {
     $marks = ''
     if (-not $Global:__ZincFirstPrompt) { $marks += "$e]133;D;$code$bel" }
     $Global:__ZincFirstPrompt = $false
-    $marks += "$e]133;A;aid=$PID$bel"
+    $marks += "$e]133;A;aid=$PID;redraw=0$bel" # PowerShell doesn't draw the prompt again after a resize, so Zinc keeps it
     $location = $executionContext.SessionState.Path.CurrentLocation
     if ($location.Provider.Name -eq 'FileSystem') {
         $marks += "$e]9;9;`"$($location.ProviderPath)`"$e\"

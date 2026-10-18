@@ -147,9 +147,10 @@ public static class ShellIntegration
 
     /// <summary>
     /// cmd's prompt with the marks around <paramref name="prompt"/> (its PROMPT, else cmd's default $P$G): the last
-    /// command finished (D: cmd has no exit code to give), a prompt starts (A, saying Zinc marks the command's start on
-    /// Enter: cmd has no hook for it), the folder (OSC 9;9), and typing starts (B). $e is ESC; ESC \ ends each. Null when
-    /// the prompt already sends marks of its own.
+    /// command finished (D, without an exit code because cmd has none to give), a prompt starts (A), the folder
+    /// (OSC 9;9), and typing starts (B). The A mark tells Zinc to mark the command's start on Enter, because cmd has no
+    /// hook for it, and to keep the prompt after a resize, because cmd never draws it again. $e is ESC, and ESC \ ends
+    /// each mark. Null when the prompt already sends marks of its own.
     /// </summary>
     internal static string? CmdPrompt(string? prompt)
     {
@@ -159,7 +160,7 @@ public static class ShellIntegration
             return null;
         }
 
-        return $"$e]133;D$e\\$e]133;A;{TerminalSession.COnEnter}$e\\$e]9;9;$P$e\\{prompt}$e]133;B$e\\";
+        return $"$e]133;D$e\\$e]133;A;{TerminalSession.COnEnter};redraw=0$e\\$e]9;9;$P$e\\{prompt}$e]133;B$e\\";
     }
 
     /// <summary>

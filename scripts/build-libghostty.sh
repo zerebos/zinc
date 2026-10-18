@@ -28,6 +28,16 @@ if [ "$(git -C "$SRC" rev-parse HEAD 2>/dev/null)" != "$COMMIT" ]; then
   git -C "$SRC" checkout -q --detach FETCH_HEAD
 fi
 
+# Apply our fixes that aren't upstream yet (patches/ghostty, where each patch says when to drop it). The sources are
+# reset to the pinned commit first, so a second run doesn't apply a patch twice and an edit left in the checkout never
+# reaches a build.
+git -C "$SRC" checkout -q -- .
+for patch in "$ROOT"/patches/ghostty/*.patch; do
+  [ -e "$patch" ] || continue
+  git -C "$SRC" apply "$patch"
+  echo "applied $(basename "$patch")"
+done
+
 (cd "$SRC" && zig build -Demit-lib-vt=true -Doptimize=ReleaseFast -Dtarget="$TARGET")
 
 mkdir -p "$ROOT/native/$ARCH" "$ROOT/native/include"
