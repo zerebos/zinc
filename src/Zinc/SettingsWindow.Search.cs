@@ -34,15 +34,35 @@ internal sealed partial class SettingsWindow
         static bool All(string text, IEnumerable<string> words) => words.All(w => text.Contains(w, StringComparison.OrdinalIgnoreCase));
         static string Text(SettingDef s) => $"{s.Label} {s.Description} {s.Key} {s.Group} {SectionTitle(s.Section)}";
 
-        // Settings, under the section they live in.
-        foreach (var section in ShownSettings.Where(s => All(Text(s), words)).GroupBy(s => s.Section))
+        // Matching folds with a title of their own (like "Pane style") show whole, and matching settings show on their
+        // own, each under the section it lives in. A setting inside a matching fold shows only in that fold.
+        static string SectionOf(SettingFold fold) => SettingsCatalog.Find(fold.Children[0])!.Section;
+        var folds = SettingsCatalog.Folds
+            .Where(f => f.Title != null && FoldFor(f.Children[0]) == f && All($"{f.Title} {f.Description} {SectionTitle(SectionOf(f))}", words))
+            .ToList();
+        var inFolds = folds.SelectMany(f => f.Children).ToHashSet();
+        var matching = ShownSettings.Where(s => !inFolds.Contains(s.Key) && All(Text(s), words)).ToList();
+        foreach (var section in SettingsCatalog.Sections)
         {
-            var where = SectionTitle(section.Key);
+            var id = section.Id;
+            var (sectionFolds, sectionSettings) = (folds.Where(f => SectionOf(f) == id).ToList(), matching.Where(s => s.Section == id).ToList());
+            if (sectionFolds.Count == 0 && sectionSettings.Count == 0)
+            {
+                continue;
+            }
+
+            var where = section.Title;
             _page.Children.Add(GroupTitle(where));
-            foreach (var setting in section)
+            foreach (var fold in sectionFolds)
+            {
+                var card = SettingFoldCard(fold);
+                _page.Children.Add(card);
+                AddGoTo(card, $"Show in {where}", () => GoTo(id, null, FoldKey(fold)));
+            }
+
+            foreach (var setting in sectionSettings)
             {
                 var card = AddSettingCards(setting, null);
-                var id = section.Key;
                 AddGoTo(card, $"Show in {where}", () => GoTo(id, null, setting.Key));
             }
         }
@@ -124,7 +144,14 @@ internal sealed partial class SettingsWindow
     private void AddGoTo(Border card, string label, Action go)
     {
         _jumps.Add(go);
-        if (card.Child is Grid { Children: [StackPanel text, ..] })
+        var text = card.Child switch
+        {
+            Grid { Children: [StackPanel t, ..] } => t, // a setting's card
+            StackPanel { Children: [Grid { Children: [StackPanel t, ..] }, ..] } => t, // a fold with a title of its own
+            StackPanel { Children: [Grid { Children: [Grid { Children: [StackPanel t, ..] }, ..] }, ..] } => t, // a fold headed by a card (Pane style)
+            _ => null,
+        };
+        if (text != null)
         {
             var link = new HyperlinkButton { Content = label, FontSize = 12, Padding = new Thickness(0, 2, 0, 0) };
             link.Click += (_, _) => go();

@@ -198,19 +198,29 @@ internal sealed partial class SettingsWindow
             return folded;
         }
 
+        // Search finds a fold with a title of its own by that title, so the fold is kept among the page's cards, where
+        // "Show in" can go to it the same way it goes to a setting's card.
+        Border bundle;
         if (fold == PaneStyle.Fold)
         {
-            return Fold($"fold:{fold.Children[0]}", fold.Title!, PaneStyleHeader(), rows);
+            bundle = Fold(FoldKey(fold), fold.Title!, PaneStyleHeader(), rows);
+        }
+        else
+        {
+            var (title, summary) = FoldHeader(fold.Title!, fold.Description);
+            bundle = Fold(FoldKey(fold), fold.Title!, title, rows);
+            void Refresh() => SetText(summary, Summary(fold.Description,
+                fold.Children.Select(SettingsCatalog.Find).Where(s => s != null && IsChanged(s, null)).Select(s => s!.Label)));
+            _refreshers.Add(Refresh);
+            Refresh();
         }
 
-        var (title, summary) = FoldHeader(fold.Title!, fold.Description);
-        var bundle = Fold($"fold:{fold.Children[0]}", fold.Title!, title, rows);
-        void Refresh() => SetText(summary, Summary(fold.Description,
-            fold.Children.Select(SettingsCatalog.Find).Where(s => s != null && IsChanged(s, null)).Select(s => s!.Label)));
-        _refreshers.Add(Refresh);
-        Refresh();
+        _cards[(null, FoldKey(fold))] = (bundle, bundle);
         return bundle;
     }
+
+    /// <summary>A fold's id, and its key among the cards on a page.</summary>
+    private static string FoldKey(SettingFold fold) => $"fold:{fold.Children[0]}";
 
     /// <summary>A profile page's group as one fold, summarizing which of its settings the profile changes.</summary>
     private Border ProfileGroupFold(string group, string id, IReadOnlyList<SettingDef> settings, IReadOnlyList<FrameworkElement> rows)
