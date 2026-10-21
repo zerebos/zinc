@@ -65,14 +65,14 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ### New
 - Ligatures, for fonts that have them (Cascadia Code, JetBrains Mono, Fira Code): `=>` `!=` `->` `===` and the like
-  drawn as one shape, each character still in its own cell. Turn them on in Appearance > Font > Ligatures.
+  drawn as one shape, each character still in its own cell. Turn them on in `Appearance > Font > Ligatures`.
 - Duplicate workspace (the workspace's menu) copies the whole workspace now: its splits and tabs, each where its shell
   is, with its folder, icon, color and name.
 
 ### Changed
 - New tabs and splits start in the folder you're in (the focused terminal's, with shell integration), instead of the
   profile's. In a workspace with its own folder, new tabs still start there, and splits start where you are. To get
-  the old behavior back, set Layout > Panes > New tabs and splits start to "In the profile's folder".
+  the old behavior back, set `Layout > Panes > New tabs and splits start` to "In the profile's folder".
 - Duplicate tab and Duplicate pane start where the original is now, not where it started.
 - With Tabs inside panes off, "New tab" is called "New workspace" in menus, the command palette and Settings, since
   that's what it opens.
@@ -95,13 +95,13 @@ is the version it builds, and hands it to the installer as the release notes).
   command center and tabs follow its folder. (cmd can't report exit codes, so failed commands get no red bar.)
 - Shell integration for elvish (your `rc.elv` still runs first) and OSH (Oils) in WSL: prompts, commands with their
   exit codes, folders.
-- Font weight and bold weight, from thin to black (Appearance > Font). A font without that weight shows its nearest.
+- Font weight and bold weight, from thin to black (`Appearance > Font`). A font without that weight shows its nearest.
 - Fallback fonts: pick the fonts for characters yours lacks (Japanese, symbols, icons), tried in order before
-  Windows chooses (Appearance > Font).
+  Windows chooses (`Appearance > Font`).
 
 ### Changed
 - Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set
-  Terminal > Mouse > Right-click to "Copy or paste" (or "Paste").
+  `Terminal > Mouse > Right-click` to "Copy or paste" (or "Paste").
 
 ### Fixed
 - Developer PowerShell for Visual Studio (and any PowerShell profile that runs a command and stays open) gets shell
@@ -112,23 +112,22 @@ is the version it builds, and hands it to the installer as the release notes).
 ## 0.1.0-dev.306 (2026-10-05)
 
 ### New
-- New tabs pick up environment changes: a PATH an installer changed works without restarting Zinc, as in
-  Windows Terminal (Terminal > Shell > Pick up environment changes).
-- Environment variables of your own, for every program (Terminal > Shell) or per profile (on its page), in
+- New tabs pick up environment changes: a PATH an installer changed works without restarting Zinc (`Terminal > Shell > Pick up environment changes`).
+- Environment variables of your own, for every program (`Terminal > Shell`) or per profile (on its page), in
   config.toml's `[environment]`. `%PATH%` and the like work in values; an empty value removes a variable.
-- Open links with Alt+click, or a plain click, instead of Ctrl+click (Terminal > Mouse > Open links with).
-- Middle-click pastes, if you turn it on (Terminal > Mouse).
+- Open links with Alt+click, or a plain click, instead of Ctrl+click (`Terminal > Mouse > Open links with`).
+- Middle-click pastes, if you turn it on (`Terminal > Mouse`).
 - A sound when a long command finishes out of view: Windows' notification sound or its beep (Notifications).
-- Turn off the question before closing or quitting while a command runs (Layout > Closing).
-- How far a resize key moves a pane's divider (Layout > Panes > Resize step).
-- Line height: more room between lines, as a percentage or in pixels (Appearance > Font). Box drawing still joins up.
+- Turn off the question before closing or quitting while a command runs (`Layout > Closing`).
+- How far a resize key moves a pane's divider (`Layout > Panes > Resize step`).
+- Line height: more room between lines, as a percentage or in pixels (`Appearance > Font`). Box drawing still joins up.
 - Match 256 colors to the scheme: programs using the extended palette get shades made from your scheme's colors
-  (Appearance > Colors).
-- Open in Zinc from File Explorer: right-click a folder or a drive (Layout > When you come back; off by default).
+  (`Appearance > Colors`).
+- Open in Zinc from File Explorer: right-click a folder or a drive (`Layout > When you come back`; off by default).
 
 ### Changed
 - Settings: pages inside a page (a profile, color schemes, shaders, the scheme editor) show where you are in their
-  heading (Profiles > PowerShell); click any part to go back up, or use the back arrow in the title bar.
+  heading (`Profiles > PowerShell`); click any part to go back up, or use the back arrow in the title bar.
 - Settings: in a narrower window the sidebar folds to icons, and to a menu button when narrower still.
 - Settings: headings and text use Windows' own text styles.
 - The welcome window's page dots slide from page to page.
@@ -155,18 +154,17 @@ is the version it builds, and hands it to the installer as the release notes).
   terminal, Settings, and reopening what you closed. Each item opens in the window you used last. The same things
   work from the command line: `zinc --profile <id>`, `--folder <path>`, `--new-window`, `--quick-terminal`,
   `--settings`, `--reopen-workspace`, `--reopen-window`.
-- Shaders have their own settings page (Appearance > Shaders > Edit shaders): your list, and a library of
+- Shaders have their own settings page (`Appearance > Shaders > Edit shaders`): your list, and a library of
   Zinc's shaders, yours and the folders you add (a collection you cloned, say), each with a line about it.
   Click one to see it in the preview (and whether it compiles), again to take it back; Add puts it in your list.
-- Color schemes have their own page too (Appearance > Color scheme): the scheme in use (or your light and dark
+- Color schemes have their own page too (`Appearance > Color scheme`): the scheme in use (or your light and dark
   pair) with Edit and New scheme, and all ~650 schemes as cards you can filter by Dark, Light or Yours and search.
   Click one to see it in the preview, again to take it back; Use puts it in place.
 
 ### Changed
 - Settings: the search box is in the title bar now (Ctrl+F or F3 goes there, Esc clears it), and pages use more of
   a wide window (up to 1000 px, as Windows Settings).
-- Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, Terminal > Troubleshooting
-  > Input methods turns it off.
+- Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, `Terminal > Troubleshooting > Input methods` turns it off.
 - Clearer wording across the app (settings, menus, notices, the palette). Some names changed:
   - "Window glass" is now Window background (Mica, Acrylic, Clear), with Window tint and Window tint color.
   - Palette: "Color scheme for this tab…", "Default color scheme…", "Workspace folder…", "Save tab text…",
@@ -182,13 +180,13 @@ is the version it builds, and hands it to the installer as the release notes).
 ### New
 - Zinc comes with six shaders of its own: `scanlines`, `crt`, `glow`, `phosphor` (in Lit Cell's green),
   `cursor-glow` and `cursor-trail`. Use them by name (`[shaders] files = ["crt", "glow"]`), or pick them from
-  Settings > Appearance > Shaders > Add. Only `crt` and `cursor-trail` move on their own; the others cost nothing
+  `Settings > Appearance > Shaders > Add`. Only `crt` and `cursor-trail` move on their own; the others cost nothing
   while the terminal is idle.
-- A downloaded update says what's new in it: Settings > About > "What's new in …" (this file's entry for it).
+- A downloaded update says what's new in it: `Settings > About > "What's new in …"` (this file's entry for it).
 
 ### Changed
 - The quick terminal (Win+`) is just the terminal now: no title bar, frame or tab strip, centered on the screen,
-  fading and growing into place (Settings > Quick terminal > Animation). It's one terminal: splits yes, tabs and
+  fading and growing into place (`Settings > Quick terminal > Animation`). It's one terminal: splits yes, tabs and
   workspaces no. Dismissing it gives the foreground back to the window you came from, and closing it only hides
   it, so its shells and scrollback are still there next time.
 - Resize the quick terminal by dragging its edges. Each monitor remembers its size; double-click an edge (or run
@@ -211,7 +209,7 @@ is the version it builds, and hands it to the installer as the release notes).
 ### Less graphics memory
 - Terminals with the same font share their drawn letters instead of each keeping a copy.
 - A tab left in the background for a minute gives its graphics memory back (tens of MB for a maximized tab on a
-  high-resolution screen) and makes it anew when you come back. Settings > Terminal > Troubleshooting has the
+  high-resolution screen) and makes it anew when you come back. `Settings > Terminal > Troubleshooting` has the
   switch and the delay.
 - A terminal showing thousands of different characters no longer keeps growing its memory.
 
@@ -226,7 +224,7 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ### New
 - Custom shaders, as in Ghostty: effects drawn over the terminal (CRT screens, glow, cursor trails), from GLSL
-  files written for Ghostty or Shadertoy. Settings > Appearance > Shaders, or `[shaders]` in config.toml; a
+  files written for Ghostty or Shadertoy. `Settings > Appearance > Shaders`, or `[shaders]` in config.toml; a
   profile can have its own. A shader that doesn't compile is left out and a notice says why; saving a shader file
   applies it at once.
 
@@ -251,7 +249,7 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ### New
 - `zn`, a command-line tool for controlling Zinc from its terminals and scripts (off until you turn on
-  Settings > Terminal > Command line).
+  `Settings > Terminal > Command line`).
 - Tabs show the folder at the prompt, and the command while one runs (`shell-titles`).
 
 ### Changed
@@ -283,6 +281,6 @@ is the version it builds, and hands it to the installer as the release notes).
 ## 0.1.0-dev.198 (2026-10-02)
 
 The first release with an installer: Zinc installs per user, keeps itself up to date (it checks once a day,
-downloads in the background, and installs on restart or when you quit), and appears in Settings > Apps.
+downloads in the background, and installs on restart or when you quit), and appears in `Settings > Apps`.
 
 Before this, testers got zip builds.
