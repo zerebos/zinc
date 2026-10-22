@@ -101,6 +101,24 @@ public class KittyGraphicsTests
     }
 
     [Fact]
+    public void AnImageSentAgainIsUnplacedUntilItHasArrived()
+    {
+        // The renderer keeps the placements from when a hold began (CaptureHeldFrame) because terminal-browser sends
+        // its whole page as image 1 again on every frame, in chunks, and the live placements have no image until the
+        // last chunk arrives.
+        using var session = NewSession();
+        var pixels = new byte[2 * 3 * 4];
+        session.WriteToScreen(Apc("a=T,f=32,s=2,v=3,i=1,p=1,q=2", pixels));
+        Assert.Single(Collect(session));
+
+        session.WriteToScreen(Apc("a=T,f=32,s=2,v=3,i=1,p=1,q=2,m=1", pixels[..12]));
+        Assert.Empty(Collect(session));
+
+        session.WriteToScreen(Apc("m=0", pixels[12..]));
+        Assert.Single(Collect(session));
+    }
+
+    [Fact]
     public void PremultipliesEveryFormat()
     {
         Assert.Equal([1, 2, 3, 255], KittyImages.ToPremultipliedRgba(KittyImageFormat.Rgb, [1, 2, 3], 1));

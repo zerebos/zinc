@@ -384,7 +384,14 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 session.EndRenderHold();
             }
 
-            if (!session.RenderHeld)
+            if (session.RenderHeld)
+            {
+                lock (_stateLock)
+                {
+                    _images.AddRange(_heldImages);
+                }
+            }
+            else
             {
                 lock (_stateLock)
                 {
@@ -393,10 +400,10 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                         return false;
                     }
                 }
-            }
 
-            // Under the same lock, so images and text come from the same terminal state.
-            session.CollectImages(_images, _needsPixels);
+                // Under the same lock, so images and text come from the same terminal state.
+                session.CollectImages(_images, _needsPixels);
+            }
             GhosttyTerminalScrollbar scrollbar;
             Native.TerminalGet(session.Handle, TerminalData.Scrollbar, &scrollbar);
             _viewportTop = scrollbar.Offset;
@@ -426,8 +433,18 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         lock (_stateLock)
         {
             Native.RenderStateUpdate(_renderState, session.Handle);
+
+            // The image placements are kept too, because a program that sends an image again under the same id
+            // unplaces the old image until the new one has fully arrived (terminal-browser does this with its page on
+            // every frame), so drawing the live placements would make the image flash away. Pixels aren't copied
+            // here, because the renderer's own cache, which only the UI thread touches, already holds what was drawn.
+            _heldImages.Clear();
+            session.CollectImages(_heldImages, static (_, _) => false);
         }
     }
+
+    /// <summary>The image placements when the current hold began (guarded by <see cref="_stateLock"/>).</summary>
+    private readonly List<ImagePlacement> _heldImages = [];
 
     private bool DrawSnapshot(CanvasDrawingSession ds, int rows, CursorPresentation presentation)
     {

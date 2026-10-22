@@ -18,6 +18,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - A prompt that spans the window, like powerlevel10k's frame, no longer leaves copies of itself above the new one when a pane or window gets narrower. Zinc now clears the old prompt for your shell to draw again. It clears the whole prompt in zsh, fish, nushell and elvish, and only the last line in bash, since bash draws only that line again.
 - The scrollbar's marks at each prompt, and the bars beside failed commands, all went away once a full-screen app like `btm` or `vim` had run, and never came back, because Zinc took the app clearing its own screen for a clear of yours. Now they stay.
 - Searching settings now finds "Pane style", "Programs using the clipboard", and "Background, text, cursor and selection", which group several settings under a title of their own.
+- Apps that draw their whole screen as one image, like `terminal-browser`, no longer flash while you move the pointer over them. Zinc showed the screen without the image while each new one arrived.
 
 ## 0.1.0-dev.393 (2026-10-15)
 
