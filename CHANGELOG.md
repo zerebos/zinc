@@ -185,7 +185,7 @@ is the version it builds, and hands it to the installer as the release notes).
 - A downloaded update says what's new in it: `Settings > About > "What's new in …"` (this file's entry for it).
 
 ### Changed
-- The quick terminal (Win+`) is just the terminal now: no title bar, frame or tab strip, centered on the screen,
+- The quick terminal (``Win+` ``) is just the terminal now: no title bar, frame or tab strip, centered on the screen,
   fading and growing into place (`Settings > Quick terminal > Animation`). It's one terminal: splits yes, tabs and
   workspaces no. Dismissing it gives the foreground back to the window you came from, and closing it only hides
   it, so its shells and scrollback are still there next time.
