@@ -6,6 +6,8 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+## 0.1.0-dev.428 (2026-10-22)
+
 ### New
 - Panes now move instead of jumping! They slide into place when you split, close, maximize or restore them, and when you drop one beside another, into its tabs, or into another window. Turn the animations off with `Settings > Layout > Panes > Pane animations` (`pane-animations` in `[window]`). While Windows' Animation effects are off, panes jump into place as before.
 
