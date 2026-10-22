@@ -1,6 +1,6 @@
 # Zinc — Brand Guidelines
 
-This is the source of truth for Zinc's name, identity, in-app branding and bundled colour schemes. It is written for implementation: wherever a value matters, the exact value is given.
+This is the source of truth for Zinc's name, identity, in-app branding and bundled color schemes. It is written for implementation: wherever a value matters, the exact value is given.
 
 ## 1. The idea
 
@@ -10,8 +10,9 @@ The name ties in quietly. Copper-doped zinc sulfide is the classic phosphor, and
 
 ## 2. Name
 
-- **Zinc**, capitalised, in prose. The wordmark is always lowercase: `zinc`.
+- **Zinc**, capitalized, in prose. The wordmark is always lowercase: `zinc`.
 - App executable: `Zinc.exe`. CLI: **`zn`**. Zn is zinc's chemical symbol, so the command echoes the same story as the name and the icon. (Windows can't give one GUI executable a console, so the two are separate binaries, the same split as VS Code's `Code.exe` and `code`.)
+- Website: **zincterminal.dev**. The domain needs "terminal" to be findable; the product name doesn't.
 - Never "Zinc Terminal" as the product name. Where context is needed, use the descriptor: "Zinc, a precise, native terminal for Windows."
 - Ghostty lineage line (About page, README): *"Zinc: what makes ghosts glow in the dark."* This is a story nod to libghostty, never a visual one.
 
@@ -47,7 +48,7 @@ Claims come in a fixed order. Lead with the first; never lead with the last two.
 **Ghostty lineage**
 - Say: "built on libghostty", "uses Ghostty's terminal engine", "the same core that powers Ghostty". Credit it in the About page, README and docs.
 - Never say "Ghostty for Windows", "a Ghostty port", or anything implying an official Ghostty project.
-- Never borrow Ghostty's visuals: no ghosts, its icon style or its colours.
+- Never borrow Ghostty's visuals: no ghosts, its icon style or its colors.
 - In the interface, don't compare Zinc to other terminals at all (see `ux-writing.md`).
 
 ## 5. The mark: Quadrant
@@ -62,7 +63,7 @@ Two square blocks that share exactly one corner point, like the ▚ "legacy comp
 **Lit cell (pixel) geometry**
 - A rounded square **86% of the grid pitch** (so the gap is 14%), with corner radius **12% of the pitch**.
 - Rich treatment: vertical gradient `#C6FFD0` (top) to `#2FE07A` (bottom), spanning the whole mark's height.
-- Flat treatment: solid `#3DF2A0` on dark; `#0B7A4B` on light. Ink `#0F1311` is for one-colour reproduction only.
+- Flat treatment: solid `#3DF2A0` on dark; `#0B7A4B` on light. Ink `#0F1311` is for one-color reproduction only.
 - Optional glow, on lit cells only: a rounded square 1.5× the pitch, radius 50% of the pitch, `#3DF2A0` at ~6% opacity.
 
 **Unlit dot (screen texture):** a circle with radius **20% of the pitch**, `#3DF2A0` at **10%**, in every grid cell not occupied by a lit cell. The grid must align with the mark.
@@ -76,7 +77,7 @@ The tile *is* the phosphor screen. There is no bezel. Master geometry in a 240 �
 | Tile | Rounded rect, full size, `rx = 52`; clips everything inside |
 | Screen | Radial gradient at `cx 0.35, cy 0.28, r 0.95`: `#113623` (0) → `#07180F` (0.55) → `#020805` (1) |
 | Dot grid | Edge to edge, pitch 10, aligned to the mark |
-| Mark | Centred, about 50% of the tile, 6 × 6 cells per block at pitch 10 |
+| Mark | Centered, about 50% of the tile, 6 × 6 cells per block at pitch 10 |
 | Top sheen | Vertical: white 16% (top) → 2% (40%) → 0% (bottom) |
 | Edge | 3 px stroke inset 1.5 px, `rx 50.5`; vertical gradient `#BDF5D3` 35% → 6% |
 
@@ -102,31 +103,34 @@ Every frame from 16 to 64 px is a **hand-placed, whole-pixel master**, not a dow
 - The Windows 11 taskbar uses the **32 px** frame at 100% scaling, so treat 32 as the most important size.
 - For MSIX packaging, the same masters feed the scale-specific PNG assets.
 
-## 8. Colour
+## 8. Color
 
 ### Brand palette
 | Name | Hex | Role |
 |---|---|---|
-| Phosphor green | `#3DF2A0` | Signature colour; the mark and accents on dark |
+| Phosphor green | `#3DF2A0` | Signature color; the mark and accents on dark |
 | Lit gradient | `#C6FFD0` → `#2FE07A` | Rich lit cells only |
 | Screen | `#0F1311` | Dark ground; ink for the mark on light |
 | Paper | `#EDEFEA` | Light ground; wordmark on dark |
 | Amber | `#FFB000` | Caution only. Never in the mark |
 
 ### UI tokens (app chrome)
-Brand colours apply to the **app chrome only**. They never touch terminal content: the user's colour scheme always wins. Contrast ratios are measured against Mica (≈ `#202020` dark, ≈ `#F3F3F3` light).
+Brand colors apply to the **app chrome only**. They never touch terminal content: the user's color scheme always wins. Contrast ratios are measured against Mica (≈ `#202020` dark, ≈ `#F3F3F3` light).
 
 | Token | Dark | Light | Use |
 |---|---|---|---|
-| `accent` | `#3DF2A0` (11.2:1) | `#0B7A4B` (4.9:1) | Focus, selected tab, active workspace, primary buttons, links |
+| `accent` | `#3DF2A0` (11.2:1) | `#0B7A4B` (4.9:1) | Fills: focus, selected tab, active workspace, primary buttons, switches |
+| `accent-text` | `#86FFC6` (15.0:1) | `#09663F` (6.9:1) | Accent text and links (WinUI's `AccentTextFillColorPrimary`) |
 | `accent-subtle` | accent @16% | accent @12% | Hover and selected backgrounds |
 | `attention` | `#3DF2A0` | `#0B7A4B` | Attention dot, workspace counts |
 | `caution` | `#FFB000` (8.9:1) | `#9A5B00` (4.9:1) | Needs-you states: close-while-running, awaiting input, bell |
 | `error` | `#FF6B6B` (5.9:1) | `#B42A28` (5.7:1) | Failed-command marks, errors (red, never amber) |
 | `on-accent` | `#0F1311` | `#FFFFFF` | Text and icons on filled accent |
 
-- Offer a setting to follow the Windows accent colour; the brand green is the default.
-- Chrome is nearly colourless unless something is focused, selected or asking for attention.
+- Offer a setting to follow the Windows accent color; the brand green is the default (`[window] accent`).
+- `accent-text` is Lit Cell's bright green on dark and Lit Cell Light's green on light, so accent text matches terminal output.
+- The website's design tokens carry the full set, including WinUI's own surface and text colors for app mock-ups. When they disagree with this table, this table wins and the tokens get fixed.
+- Chrome is nearly colorless unless something is focused, selected or asking for attention.
 - Everything text-bearing meets WCAG AA (4.5:1). Recheck any new surface.
 
 ## 9. Brand inside the app
@@ -134,7 +138,7 @@ Brand colours apply to the **app chrome only**. They never touch terminal conten
 **The attention dot is a lit cell.**
 - Shape: rounded square, corner radius 12% of its size. Never a circle.
 - Size: 6 epx on tabs; 8 epx next to workspace counts.
-- Colour: `attention` when work finished out of view or a program sends a notification; `caution` when a program is waiting on the user; `error` when the command that finished out of view failed.
+- Color: `attention` when work finished out of view or a program sends a notification; `caution` when a program is waiting on the user; `error` when the command that finished out of view failed.
 - Pulse: opacity 100% → 35% → 100% over 1.6 s, ease-in-out, until the item is viewed. Hold steady when Windows "Show animations" is off. Never scale, bounce or flash.
 - Counts: `on-accent` text on an `attention` pill, monospace, capped at `9+`.
 
@@ -155,70 +159,54 @@ Brand colours apply to the **app chrome only**. They never touch terminal conten
 - Clear space is 25% of the ascender height on every side, measured from visible ink.
 - **Dark lockup:** Paper wordmark, rich mark.
 - **Light lockup:** Screen-ink wordmark, mark in the light-theme accent `#0B7A4B` (bright block 100%, dim block 50%). The mark stays green on light grounds.
-- **Mono lockup** (`quadrant-zinc-mono.svg`): everything in ink, for one-colour print, embossing or stamps only. It reads as greyscale, so never use it as the everyday light version.
+- **Mono lockup** (`quadrant-zinc-mono.svg`): everything in ink, for one-color print, embossing or stamps only. It reads as grayscale, so never use it as the everyday light version.
 
-## 11. Bundled colour schemes: Lit Cell
+## 11. Bundled color schemes: Lit Cell
 
-Zinc ships two original schemes built from the identity. **Lit Cell is the default dark scheme and Lit Cell Light the default light scheme.** Users can switch to any other scheme, which is consistent with §8: these are content schemes users choose, not brand colours forced onto content.
+Zinc ships two original schemes built from the identity. **Lit Cell is the default dark scheme and Lit Cell Light the default light scheme.** Users can switch to any other scheme, which is consistent with §8: these are content schemes users choose, not brand colors forced onto content.
 
-Both were checked against all 658 schemes in iTerm2-Color-Schemes (CIEDE2000). Neither is a copy or near-copy; the closest are After Hours (6.1) for dark and Warm Burnout Light (6.8) for light.
+Lit Cell has its own repository, **[zerebos/lit-cell](https://github.com/zerebos/lit-cell)** (MIT), and that is the source of truth for every value: design tokens in `tokens/`, a spec of what each color is for (`SPEC.md`), and ports for other terminals. It is also in iTerm2-Color-Schemes. Don't copy scheme values into other documents; link to the repository, or generate from its tokens.
 
-### Lit Cell (dark)
-| Slot | Hex | | Slot | Hex |
-|---|---|---|---|---|
-| background | `#0C110E` | | foreground | `#CFDDD3` |
-| cursor | `#3DF2A0` | | cursor text | `#0C110E` |
-| selection bg | `#1E4533` | | selection fg | `#EDEFEA` |
-| 0 black | `#1C2420` | | 8 bright black | `#758679` |
-| 1 red | `#FF6B6B` | | 9 bright red | `#FF9494` |
-| 2 green | `#3DF2A0` | | 10 bright green | `#86FFC6` |
-| 3 yellow | `#FFB000` | | 11 bright yellow | `#FFCB5C` |
-| 4 blue | `#6FB3F2` | | 12 bright blue | `#9CCBFF` |
-| 5 magenta | `#C99AF2` | | 13 bright magenta | `#DDBCFF` |
-| 6 cyan | `#48D6CF` | | 14 bright cyan | `#86ECE6` |
-| 7 white | `#B9C7BE` | | 15 bright white | `#EDEFEA` |
+The anchors, for reference:
 
-### Lit Cell Light
-| Slot | Hex | | Slot | Hex |
-|---|---|---|---|---|
-| background | `#F1F4EF` | | foreground | `#1B2620` |
-| cursor | `#0B7A4B` | | cursor text | `#F1F4EF` |
-| selection bg | `#CBE6D6` | | selection fg | `#0F1311` |
-| 0 black | `#1B2620` | | 8 bright black | `#5F6E66` |
-| 1 red | `#AA2826` | | 9 bright red | `#C9382F` |
-| 2 green | `#09663F` | | 10 bright green | `#0C7E4F` |
-| 3 yellow | `#834D00` | | 11 bright yellow | `#9E5F00` |
-| 4 blue | `#225B9D` | | 12 bright blue | `#316FB7` |
-| 5 magenta | `#7E3E98` | | 13 bright magenta | `#9A4BB9` |
-| 6 cyan | `#096561` | | 14 bright cyan | `#0C7B75` |
-| 7 white | `#C3CEC7` | | 15 bright white | `#FFFFFF` |
+| | Lit Cell | Lit Cell Light |
+|---|---|---|
+| Background | `#0C110E` | `#F1F4EF` |
+| Foreground | `#CFDDD3` | `#1B2620` |
+| Cursor | `#3DF2A0` | `#0B7A4B` |
 
 **Scheme design notes**
 - Neutrals carry a slight green cast; that is what makes these schemes distinctive.
-- Dark: every colour except black is ≥ 4.5:1 against the background (bright black for comments is 4.9:1).
-- Light: normal colours are ~6.2:1 and bright colours ~4.6:1; whites stay low-contrast by design.
-- Red, green and yellow match the UI's `error`, `accent` and `caution` tokens, so a failure looks the same in the terminal and in the chrome.
+- Every text color meets WCAG AA (4.5:1) against its background, and the Lit Cell build checks it. In Light, white and bright white are fills only.
+- Red, green and yellow line up with the UI's `error`, `accent` and `caution` tokens, so a failure looks the same in the terminal and in the chrome.
+- Both were checked against every scheme in iTerm2-Color-Schemes (CIEDE2000). Neither is a copy or near-copy; the closest are After Hours (6.1) for dark and Warm Burnout Light (6.8) for light.
 
 ## 12. Assets
 
-In this repository: `assets/brand/icon/`, `assets/brand/mark/`, `assets/brand/lockups/`; the app's
-icon is `src/Zinc/Assets/Zinc.ico` (a copy of `quadrant.ico`); the schemes are bundled from
-`assets/zinc-themes/`.
-The repository's copies carry no C2PA provenance block (the exports do): after copying new exports in,
-run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the same).
+The exports live in the `zinc-brand` folder, laid out as below. Each carries a C2PA provenance block.
 
 | File | Use |
 |---|---|
-| `quadrant.ico` | Final app icon, 16–256 px, hand-placed small frames |
-| `quadrant-{16..256}.png` | Per-size masters (MSIX assets, title bar, tray) |
-| `quadrant-app-tile.svg` | Vector tile master (96 px and up) |
-| `quadrant-flat.svg`, `-glow.svg`, `-ink.svg`, `-rich.svg` | Mark treatments |
-| `quadrant-zinc-dark.svg`, `quadrant-zinc-light.svg` | Lockups (outlined); light uses the green accent |
-| `quadrant-zinc-mono.svg` | One-colour lockup for print only |
-| `quadrant-construction.png` | Construction sheet |
-| `Lit Cell`, `Lit Cell Light` | Ghostty-format scheme files |
-| `lit-cell*.windows-terminal.json` | The same schemes for Windows Terminal |
+| `icon/quadrant.ico` | Final app icon, 16–256 px, hand-placed small frames |
+| `icon/quadrant-{16..256}.png` | Per-size masters (MSIX assets, title bar, tray) |
+| `mark/quadrant-app-tile.svg` | Vector tile master (96 px and up) |
+| `mark/quadrant-flat.svg`, `-glow.svg`, `-ink.svg`, `-rich.svg` | Mark treatments |
+| `mark/quadrant-construction.png` | Construction sheet |
+| `lockups/quadrant-zinc-dark.svg` | Dark lockup: Paper wordmark, rich mark (outlined) |
+| `lockups/quadrant-zinc-light.svg` | Light lockup: ink wordmark, green mark (outlined) |
+| `lockups/quadrant-zinc-mono.svg` | One-color lockup, for print only |
+| `lockups/*@4x.png` | Raster copies of the lockups |
+| `web/favicon.ico` | Browser favicon: the exact 16, 32 and 48 px masters |
+| `web/favicon.svg` | Scalable favicon in the 16 px treatment (solid blocks, no grid), so it stays crisp at tab sizes |
+| `web/apple-touch-icon.png` | 180 px, full-bleed square; iOS rounds the corners itself |
+| `web/icon-192.png`, `web/icon-512.png` | Web app manifest icons (the rounded tile) |
+| `social/zinc-og.png` | Share image for zincterminal.dev, 1200 × 630 (`@2x` is 2400 × 1260) |
+| `social/lit-cell-og.png` | Share image for zincterminal.dev/lit-cell, same sizes |
 | `ux-writing.md` | How Zinc's interface is written |
+
+**In the Zinc repository:** `assets/brand/icon/`, `assets/brand/mark/` and `assets/brand/lockups/` hold copies without the C2PA block. After copying new exports in, run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the same). The app's icon is `src/Zinc/Assets/Zinc.ico`, a copy of `quadrant.ico`. The schemes are bundled from `assets/zinc-themes/`, copied from the Lit Cell repository.
+
+**Share images:** use the 1200 × 630 file for `og:image`, with `twitter:card` set to `summary_large_image`. Their text is set in Selawik, Microsoft's open-source stand-in for Segoe UI, because they're rendered outside Windows.
 
 ## 13. Don't
 
@@ -226,7 +214,7 @@ run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the s
 - Don't separate or overlap the Quadrant blocks, or swap which one is bright.
 - Don't put anything but lit cells in the mark: no smooth shapes, letterforms or diagonals.
 - Don't add glow to anything but lit cells, and use no bloom, blur, scanlines or CRT curvature.
-- Don't let brand colours touch terminal content (bundled schemes are fine; they're user-selectable).
+- Don't let brand colors touch terminal content (bundled schemes are fine; they're user-selectable).
 - Don't use amber in the mark or for failures.
 - Don't downscale the vector tile for 64 px and below; use the masters.
 - Don't set the wordmark in capitals or another typeface, or put the mark in front of it (OS-native icon-and-title layouts excepted; see §10).
