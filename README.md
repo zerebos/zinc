@@ -364,7 +364,7 @@ shaders written for Ghostty work unchanged
   is down). Positions are in pixels with y going down, as in Ghostty on macOS.
 
 **`[window]`**: `workspace-tabs`, `sidebar`, `title-bar`, `pane-tabs`, `pane-tabs-as`, `pane-headers`, `pane-header-buttons`,
-`pane-gap`, `pane-gap-edges`, `pane-focus`, `start-in`, `unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
+`pane-gap`, `pane-gap-edges`, `pane-focus`, `pane-animations`, `start-in`, `unfocused-pane-opacity`, `unfocused-pane-fill`, `save-state` and `quit-after-last-window-closed`, described with the
 features they control below (the old names `tab-groups`, `pane-tab-strip`, `group-tab-strip` and `unfocused-split-*` still work, and
 Settings writes the new ones); `pane-resize-step` (percent of the panes a divider splits, 1 to 50, default 5:
 how far a resize key moves it); `explorer-menu = true` (off by default) adds Open in Zinc to File Explorer's
@@ -900,6 +900,9 @@ color yourself) or `"cycle"` (each new workspace takes the next color).
   other panes. `unfocused-pane-opacity` (in `[window]`, 0.15–1, default 0.7 as in Ghostty; 1 = no dimming) sets how
   much, and `unfocused-pane-fill` what they fade toward (default: each pane's background).
   `divider-color` (in `[window]`, `"#rrggbb"`) colors the line between panes at a gap of 0.
+- Panes slide into place when you split, close, maximize or restore them, and when you drop one beside another, into
+  its tabs or into another window. `pane-animations = false` (in `[window]`; Settings > Layout > Panes) turns that
+  off, and so does turning off Windows' Animation effects (Settings > Accessibility > Visual effects).
 - `pane-headers` (in `[window]`) says which panes show a header: a row of their tabs, or with one tab its title
   (icon, title, dot) and the + for a new tab. `"with-tabs"` (default: panes with two or more tabs), `"auto"`
   (every pane once the workspace is split, and any pane with two or more tabs), `"always"` (every pane) or

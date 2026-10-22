@@ -196,7 +196,8 @@ public class SettingsWriterTests
     [Fact]
     public void PaneStylesSetAllFiveSettings()
     {
-        var keys = SettingsCatalog.All.Where(s => s.Key.StartsWith("window.pane-") && s.Key is not "window.pane-tabs" and not "window.pane-tabs-as" and not "window.pane-resize-step")
+        var keys = SettingsCatalog.All.Where(s => s.Key.StartsWith("window.pane-") && s.Key is not "window.pane-tabs" and not "window.pane-tabs-as" and not "window.pane-resize-step"
+                and not "window.pane-animations")
             .Select(s => s.Key);
         Assert.Equal(keys, PaneStyle.Keys);
         Assert.Equal(PaneStyle.Keys, PaneStyle.Fold.Children);

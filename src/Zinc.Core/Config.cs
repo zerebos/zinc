@@ -564,6 +564,12 @@ public sealed record Config
     /// <summary>The gap at the workspace's outer edges too, split or not. Config: <c>[window] pane-gap-edges</c>.</summary>
     public bool PaneGapEdges { get; init; }
 
+    /// <summary>
+    /// Panes slide into place when the layout changes (split, close, maximize, moves), unless Windows' Animation effects
+    /// are off. Config: <c>[window] pane-animations</c>.
+    /// </summary>
+    public bool PaneAnimations { get; init; } = true;
+
     /// <summary>How the focused pane is marked. Config: <c>[window] pane-focus = ring | tab-accent | none</c>.</summary>
     public PaneFocus PaneFocus { get; init; }
 
@@ -794,6 +800,7 @@ public sealed record Config
                 this with { PaneGap = gap },
             "pane-gap-edges" when bool.TryParse(value, out var gapEdges) => this with { PaneGapEdges = gapEdges },
             "pane-focus" when TryMode<PaneFocus>(value, out var focus) => this with { PaneFocus = focus },
+            "pane-animations" when bool.TryParse(value, out var animations) => this with { PaneAnimations = animations },
             "pane-tabs-as" when TryMode<PaneTabsAs>(value, out var tabsAs) => this with { PaneTabsAs = tabsAs },
             "pane-resize-step" when double.TryParse(value, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var step) && step is >= 1 and <= 50 =>

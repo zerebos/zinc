@@ -147,6 +147,13 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
+    public void PaneAnimationsAreOnUnlessTurnedOff()
+    {
+        Assert.True(Load("").PaneAnimations);
+        Assert.False(Load("[window]\npane-animations = false").PaneAnimations);
+    }
+
+    [Fact]
     public void UnfocusedPanesAreDimmedLikeGhosttyByDefault()
     {
         Assert.Equal(0.7, Load("").UnfocusedSplitOpacity);

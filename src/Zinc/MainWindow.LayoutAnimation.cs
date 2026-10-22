@@ -8,9 +8,8 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// EXPERIMENT (ZINC_TRY_LAYOUT_ANIM=1, or a duration in ms; ZINC_TRY_LAYOUT_ANIM_EASE="x1,y1,x2,y2" for the curve):
-// pane layout changes (split, close, maximize and restore, drops) move the split Grids' real sizes a step each frame,
-// the way a divider drag does, so cards, borders and headers are always really laid out. The terminals inside don't
+// Pane animations (`pane-animations` in [window], on by default). A pane layout change (split, close, maximize and
+// restore, drops) moves the split Grids' real sizes a step each frame, the way a divider drag does, so cards, borders and headers are always really laid out. The terminals inside don't
 // follow: each is held at one size for the whole animation, pinned to its card's edge that moves least, and its card
 // reveals or covers it ("covered": the pane gaining space sweeps over the one losing it). A terminal that grows takes
 // its new size at the start, one that shrinks at the end, one going to or coming from nothing never resizes; and that
@@ -18,18 +17,21 @@ namespace Zinc;
 // joins the tree for this (Win2D's Loaded/Unloaded counts).
 public sealed partial class MainWindow
 {
-    private static readonly TimeSpan? TweenLength = ReadTweenLength();
-    private static readonly (double X1, double Y1, double X2, double Y2) TweenEase = ReadTweenEase();
+    private static readonly TimeSpan TweenLength = TimeSpan.FromMilliseconds(250);
+
+    // Fluent's standard curve (a CSS cubic-bezier), picked over decelerate (0.2,0,0,1), which put about 80% of the
+    // motion in the first 50 ms and felt like a jump, then a drift.
+    private static readonly (double X1, double Y1, double X2, double Y2) TweenEase = (0.4, 0, 0.2, 1);
 
     private static readonly TimeSpan MaxStep = TimeSpan.FromMilliseconds(20);
 
     private static readonly Windows.UI.ViewManagement.UISettings WindowsSettings = new();
 
     /// <summary>
-    /// Whether layout changes should animate. It's false when the Windows "Animation effects" setting is off, which
-    /// is read on every change, so turning the setting off applies to the next change without a restart.
+    /// Whether layout changes should animate, which needs both <c>pane-animations</c> and Windows' "Animation effects"
+    /// on. Both are read on every change, so turning either off applies to the next change without a restart.
     /// </summary>
-    private static bool LayoutAnimationsEnabled => TweenLength != null && WindowsSettings.AnimationsEnabled;
+    private bool LayoutAnimationsEnabled => _config.Global.PaneAnimations && WindowsSettings.AnimationsEnabled;
 
     private readonly Dictionary<WorkspaceTab, LayoutTween> _tweens = new();
     private bool _tweenHooked;
@@ -97,31 +99,6 @@ public sealed partial class MainWindow
         public TimeSpan Last { get; set; }
 
         public TimeSpan Longest { get; set; }
-    }
-
-    private static TimeSpan? ReadTweenLength()
-    {
-        var value = Environment.GetEnvironmentVariable("ZINC_TRY_LAYOUT_ANIM");
-        if (string.IsNullOrEmpty(value) || value == "0" || !int.TryParse(value, out var ms))
-        {
-            return null;
-        }
-
-        return TimeSpan.FromMilliseconds(ms < 20 ? 250 : ms);
-    }
-
-    private static (double, double, double, double) ReadTweenEase()
-    {
-        var parts = (Environment.GetEnvironmentVariable("ZINC_TRY_LAYOUT_ANIM_EASE") ?? "").Split(',');
-        if (parts.Length == 4 && parts.All(p => double.TryParse(p, System.Globalization.CultureInfo.InvariantCulture, out _)))
-        {
-            var v = parts.Select(p => double.Parse(p, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
-            return (v[0], v[1], v[2], v[3]);
-        }
-
-        // Fluent's standard curve, picked over decelerate (0.2,0,0,1), which put about
-        // 80% of the motion in the first 50 ms and felt like a jump, then a drift.
-        return (0.4, 0, 0.2, 1);
     }
 
     /// <summary>Notes the split sizes and shown panes before a layout change; null when off or not on screen.</summary>
@@ -664,7 +641,7 @@ public sealed partial class MainWindow
             }
 
             tween.Played += step < MaxStep ? step : MaxStep;
-            var t = _windowClosed ? 1 : Math.Min(1, tween.Played / TweenLength!.Value);
+            var t = _windowClosed ? 1 : Math.Min(1, tween.Played / TweenLength);
             if (t >= 1)
             {
                 Finish(tween);

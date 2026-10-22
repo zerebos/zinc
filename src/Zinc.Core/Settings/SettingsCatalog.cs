@@ -351,6 +351,9 @@ public static class SettingsCatalog
                         "Only the dimming of other panes (\"Unfocused panes\") marks the focused pane. With \"Unfocused panes\" at 1, nothing does."),
                 ],
             },
+        new("layout", "Panes", "window.pane-animations", "Pane animations",
+            "Panes slide into place when you split, close, maximize or move them. They don't while Windows' Animation effects are off.",
+            SettingKind.Toggle, true),
         new("layout", "Panes", "window.pane-resize-step", "Resize step",
             "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number, 5L)
             { Unit = "%", Minimum = 1, Maximum = 50, Step = 1 },

@@ -6,6 +6,9 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 
+### New
+- Panes now move instead of jumping! They slide into place when you split, close, maximize or restore them, and when you drop one beside another, into its tabs, or into another window. Turn the animations off with `Settings > Layout > Panes > Pane animations` (`pane-animations` in `[window]`). While Windows' Animation effects are off, panes jump into place as before.
+
 ### Changed
 - Clearer wording in setting descriptions.
 - Quick commands like `ls` and `git status` no longer flash in tab labels (with `Folder and command as the title`) or the title bar. A command now shows there, and in pane headers, once it has run for 0.3 seconds. A title the program sets itself still shows right away.

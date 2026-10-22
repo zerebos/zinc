@@ -778,6 +778,7 @@ public sealed class ConfigFile
             ["window.pane-gap"] = ("pane-gap", v => Number(v)),
             ["window.pane-gap-edges"] = ("pane-gap-edges", v => Bool(v)),
             ["window.pane-focus"] = ("pane-focus", v => v as string),
+            ["window.pane-animations"] = ("pane-animations", v => Bool(v)),
             ["window.pane-tabs-as"] = ("pane-tabs-as", v => v as string),
             ["window.unfocused-pane-opacity"] = ("unfocused-split-opacity", v => Number(v)),
             ["window.unfocused-pane-fill"] = ("unfocused-split-fill", v => v as string),
