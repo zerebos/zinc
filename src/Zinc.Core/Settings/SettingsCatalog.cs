@@ -152,7 +152,7 @@ public static class SettingsCatalog
         new("appearance", "Colors", "colors.palette-generate", "Match 256 colors to the scheme",
             "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme's 16, not the standard ones.",
             SettingKind.Toggle, false),
-        new("appearance", "Colors", "colors.palette-harmonious", "Light schemes: shades from background to text",
+        new("appearance", "Colors", "colors.palette-harmonious", "Shades from background to text in light schemes",
             "When off, shades run from dark to light, which is what programs expect.", SettingKind.Toggle, false),
         new("appearance", "Colors", "colors.background", "Background", "", SettingKind.Color, null),
         new("appearance", "Colors", "colors.foreground", "Text", "", SettingKind.Color, null),
@@ -309,7 +309,7 @@ public static class SettingsCatalog
                 Choices =
                 [
                     new("Tabs", "tabs", "A row of tabs. When they don't fit, they shorten, then show only their icons, then fold into a menu."),
-                    new("A menu", "menu", "The shown tab, then a count (\"2 of 5\") that opens a menu of every tab. Switch with it or with keys."),
+                    new("A menu", "menu", "The shown tab, then a count (\"2 of 5\") that opens a menu of every tab. Switch tabs with the menu or with keys."),
                 ],
             },
         new("layout", "Panes", "window.pane-headers", "Pane headers", "The row above a pane. Its tabs, or its title when it has one tab.", SettingKind.Choice, "with-tabs")
@@ -352,7 +352,7 @@ public static class SettingsCatalog
                 ],
             },
         new("layout", "Panes", "window.pane-animations", "Pane animations",
-            "Panes slide into place when you split, close, maximize or move them. They don't while Windows' Animation effects are off.",
+            "Panes slide into place when you split, close, maximize or move them. They don't while \"Animation effects\" is off in Windows Settings.",
             SettingKind.Toggle, true),
         new("layout", "Panes", "window.pane-resize-step", "Resize step",
             "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number, 5L)
@@ -390,7 +390,7 @@ public static class SettingsCatalog
             "Adds \"Open in Zinc\" to the right-click menu of folders and drives. On Windows 11 it's under \"Show more options\".",
             SettingKind.Toggle, false),
         new("layout", "Closing", "window.confirm-close", "Ask before closing",
-            "When a tab, pane, workspace or window you close still runs a command (shell integration tells Zinc), or holds two or more tabs.",
+            "When a tab, pane, workspace or window you close still runs a command, or holds two or more tabs. Zinc knows a command is running through shell integration.",
             SettingKind.Toggle, true),
         new("layout", "Closing", "window.confirm-quit", "Ask before quitting with a running command",
             "When you quit Zinc (or restart it for an update) while a command still runs.", SettingKind.Toggle, true),
@@ -495,7 +495,7 @@ public static class SettingsCatalog
             },
         new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows' default sound too.", SettingKind.Toggle, false),
         new("terminal", "Bell", "terminal.screen-flash-bell", "Visual bell",
-            "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell instead, as set in \"Bell\".", SettingKind.Toggle, true),
+            "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell, as set in \"Bell\".", SettingKind.Toggle, true),
         new("terminal", "Command line", "cli.remote-control", "Remote control",
             "Lets zn, Zinc's command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
             SettingKind.Toggle, false),
@@ -548,7 +548,7 @@ public static class SettingsCatalog
             { NullLabel = "Use Zinc's red", Placeholder = "Zinc's red" },
 
         // ---- Quick terminal
-        new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides it from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text, "win+grave"),
+        new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides the quick terminal from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text, "win+grave"),
         new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice, "center")
             { Choices = [new("Top", "top"), new("Bottom", "bottom"), new("Left", "left"), new("Right", "right"), new("Center", "center")] },
         new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice, "mouse")
@@ -588,7 +588,7 @@ public static class SettingsCatalog
     public static IReadOnlyDictionary<string, string> FileOnly { get; } = new Dictionary<string, string>
     {
         ["colors.palette"] = "Palette colors by number (palette.1 = \"#AC4242\") are set in config.toml.",
-        ["shaders.folders"] = "Folders of shaders to choose from: added and taken out on the shaders page (the library's … menu).",
+        ["shaders.folders"] = "Folders of shaders to choose from. Add and remove them on the shaders page (the library's … menu).",
     };
 
     public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);
