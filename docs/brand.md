@@ -1,5 +1,7 @@
 # Zinc — Brand Guidelines
 
+> This is the Zinc repository's copy of the brand guide. The canonical copy, with the exported artwork, is `BRAND.md` in the `zinc-brand` folder. The two match except for section 12, which here lists this repository's files.
+
 This is the source of truth for Zinc's name, identity, in-app branding and bundled color schemes. It is written for implementation: wherever a value matters, the exact value is given.
 
 ## 1. The idea
@@ -183,30 +185,22 @@ The anchors, for reference:
 
 ## 12. Assets
 
-The exports live in the `zinc-brand` folder, laid out as below. Each carries a C2PA provenance block.
-
-| File | Use |
+| Path | Use |
 |---|---|
-| `icon/quadrant.ico` | Final app icon, 16–256 px, hand-placed small frames |
-| `icon/quadrant-{16..256}.png` | Per-size masters (MSIX assets, title bar, tray) |
-| `mark/quadrant-app-tile.svg` | Vector tile master (96 px and up) |
-| `mark/quadrant-flat.svg`, `-glow.svg`, `-ink.svg`, `-rich.svg` | Mark treatments |
-| `mark/quadrant-construction.png` | Construction sheet |
-| `lockups/quadrant-zinc-dark.svg` | Dark lockup: Paper wordmark, rich mark (outlined) |
-| `lockups/quadrant-zinc-light.svg` | Light lockup: ink wordmark, green mark (outlined) |
-| `lockups/quadrant-zinc-mono.svg` | One-color lockup, for print only |
-| `lockups/*@4x.png` | Raster copies of the lockups |
-| `web/favicon.ico` | Browser favicon: the exact 16, 32 and 48 px masters |
-| `web/favicon.svg` | Scalable favicon in the 16 px treatment (solid blocks, no grid), so it stays crisp at tab sizes |
-| `web/apple-touch-icon.png` | 180 px, full-bleed square; iOS rounds the corners itself |
-| `web/icon-192.png`, `web/icon-512.png` | Web app manifest icons (the rounded tile) |
-| `social/zinc-og.png` | Share image for zincterminal.dev, 1200 × 630 (`@2x` is 2400 × 1260) |
-| `social/lit-cell-og.png` | Share image for zincterminal.dev/lit-cell, same sizes |
-| `ux-writing.md` | How Zinc's interface is written |
+| `assets/brand/icon/quadrant.ico` | Final app icon, 16–256 px, hand-placed small frames |
+| `assets/brand/icon/quadrant-{16..256}.png` | Per-size masters (MSIX assets, title bar, tray) |
+| `assets/brand/mark/quadrant-app-tile.svg` | Vector tile master (96 px and up) |
+| `assets/brand/mark/quadrant-flat.svg`, `-glow.svg`, `-ink.svg`, `-rich.svg` | Mark treatments |
+| `assets/brand/mark/quadrant-construction.png` | Construction sheet |
+| `assets/brand/lockups/quadrant-zinc-dark.svg` | Dark lockup: Paper wordmark, rich mark (outlined) |
+| `assets/brand/lockups/quadrant-zinc-light.svg` | Light lockup: ink wordmark, green mark (outlined) |
+| `assets/brand/lockups/quadrant-zinc-mono.svg` | One-color lockup, for print only |
+| `assets/brand/lockups/*@4x.png` | Raster copies of the lockups |
+| `src/Zinc/Assets/Zinc.ico` | The app's icon: a copy of `quadrant.ico` |
+| `assets/zinc-themes/` | Lit Cell and Lit Cell Light, bundled with the app, copied from the Lit Cell repository |
+| `docs/ux-writing.md` | How Zinc's interface is written |
 
-**In the Zinc repository:** `assets/brand/icon/`, `assets/brand/mark/` and `assets/brand/lockups/` hold copies without the C2PA block. After copying new exports in, run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the same). The app's icon is `src/Zinc/Assets/Zinc.ico`, a copy of `quadrant.ico`. The schemes are bundled from `assets/zinc-themes/`, copied from the Lit Cell repository.
-
-**Share images:** use the 1200 × 630 file for `og:image`, with `twitter:card` set to `summary_large_image`. Their text is set in Selawik, Microsoft's open-source stand-in for Segoe UI, because they're rendered outside Windows.
+These are copies of the exports in `zinc-brand`, without their C2PA provenance block. After copying new exports in, run `python scripts/strip-c2pa.py` (lossless; it checks every file renders the same).
 
 ## 13. Don't
 
