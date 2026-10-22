@@ -1491,13 +1491,19 @@ internal sealed partial class SettingsWindow : Window
         block.Visibility = text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private static TextBlock KeyText(string key) => new()
+    private static TextBlock KeyText(string key)
     {
-        Text = key,
-        FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-        FontSize = 11,
-        Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
-    };
+        var text = new TextBlock
+        {
+            Text = key,
+            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+            FontSize = 11,
+            Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+            TextTrimming = TextTrimming.CharacterEllipsis,
+        };
+        text.IsTextTrimmedChanged += (_, _) => ToolTipService.SetToolTip(text, text.IsTextTrimmed ? key : null); // the whole key, once it's cut
+        return text;
+    }
 
     private static TextBlock ErrorText() => new()
     {

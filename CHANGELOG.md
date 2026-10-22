@@ -19,6 +19,9 @@ is the version it builds, and hands it to the installer as the release notes).
 - The scrollbar's marks at each prompt, and the bars beside failed commands, all went away once a full-screen app like `btm` or `vim` had run, and never came back, because Zinc took the app clearing its own screen for a clear of yours. Now they stay.
 - Searching settings now finds "Pane style", "Programs using the clipboard", and "Background, text, cursor and selection", which group several settings under a title of their own.
 - Apps that draw their whole screen as one image, like `terminal-browser`, no longer flash while you move the pointer over them. Zinc showed the screen without the image while each new one arrived.
+- The title bar and the tab switcher no longer show a terminal's folder twice ("~\dev\zinc  ·  C:\Users\you\dev\zinc"). The folder now reads the way pane headers show it, with your home folder as ~.
+- In Settings, a config key under a setting now ends with "…" when it doesn't fit, and its tooltip shows the whole key.
+- The prompt in the Settings preview is easier to read in light color schemes.
 
 ## 0.1.0-dev.393 (2026-10-15)
 

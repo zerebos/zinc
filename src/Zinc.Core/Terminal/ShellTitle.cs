@@ -102,9 +102,19 @@ public static partial class ShellTitle
             var said = detail == null || Says(lead, detail) || (detailIsFolder && Says(lead, folder));
             return new(lead, said ? null : detail, leadIsFolder, !said && detailIsFolder);
         }
-
-        static bool Says(string lead, string? text) => text is { Length: > 0 } && lead.Contains(text, StringComparison.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// The folder to show after a title ("npm test  ·  ~\dev\zinc" in the command center and the tab switcher), or
+    /// none when the title already names it, as written or in full.
+    /// </summary>
+    public static string? FolderAfter(string title, string folder, string? home)
+    {
+        var place = Folder(folder, home);
+        return Says(title, place) || Says(title, folder) ? null : place;
+    }
+
+    private static bool Says(string lead, string? text) => text is { Length: > 0 } && lead.Contains(text, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// A folder shortened from its start, longest first, as far as its last name: "…\dev\zinc", "…\zinc" for

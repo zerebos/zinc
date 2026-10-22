@@ -52,6 +52,13 @@ public class ShellTitleTests
         Assert.Equal(shown, ShellTitle.Folder(path, Home));
     }
 
+    [Theory]
+    [InlineData(@"~\dev\zinc", null)] // a shell's title, which is the folder itself
+    [InlineData(@"C:\Users\Zack\dev\zinc - vim", null)] // a program's title that names the folder in full
+    [InlineData("npm test", @"~\dev\zinc")]
+    public void TheFolderAfterATitleIsShortAndNotSaidTwice(string title, string? after) =>
+        Assert.Equal(after, ShellTitle.FolderAfter(title, @"C:\Users\Zack\dev\zinc", @"C:\Users\Zack"));
+
     [Fact]
     public void LongOrSeveralLineCommandsAreCut()
     {

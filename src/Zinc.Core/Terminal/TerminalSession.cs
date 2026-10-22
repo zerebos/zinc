@@ -208,10 +208,28 @@ public sealed unsafe partial class TerminalSession : IDisposable
         _pty.Begin();
     }
 
-    // Set ZINC_TRACE=<file> to record raw PTY output for debugging.
-    private readonly FileStream? _trace = Environment.GetEnvironmentVariable("ZINC_TRACE") is { Length: > 0 } path
-        ? new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read)
-        : null;
+    private readonly FileStream? _trace = OpenTrace();
+
+    private static int _traces;
+
+    /// <summary>
+    /// Set ZINC_TRACE=&lt;file&gt; to record raw PTY output for debugging. Terminals can't share a file, so each one after
+    /// the first records to a numbered file next to it (trace-2.bin, trace-3.bin).
+    /// </summary>
+    private static FileStream? OpenTrace()
+    {
+        if (Environment.GetEnvironmentVariable("ZINC_TRACE") is not { Length: > 0 } path)
+        {
+            return null;
+        }
+
+        if (Interlocked.Increment(ref _traces) is var n and > 1)
+        {
+            path = Path.Combine(Path.GetDirectoryName(path) ?? "", $"{Path.GetFileNameWithoutExtension(path)}-{n}{Path.GetExtension(path)}");
+        }
+
+        return new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+    }
 
     private void OnPtyOutput(ReadOnlySpan<byte> data)
     {

@@ -172,8 +172,7 @@ public sealed partial class MainWindow
             else
             {
                 var title = pane.Title;
-                var folder = pane.Control.CurrentFolder;
-                text = folder != null && !title.Contains(folder, StringComparison.OrdinalIgnoreCase) ? $"{title}  ·  {folder}" : title;
+                text = pane.Control.FolderAfter(title) is { } folder ? $"{title}  ·  {folder}" : title;
             }
         }
 

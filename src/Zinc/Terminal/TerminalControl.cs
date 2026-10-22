@@ -175,6 +175,9 @@ public sealed partial class TerminalControl : UserControl
     public HeaderTitle HeaderTitle(string profileName) => ShellTitle.Header(_config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
         RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand, UserHome, profileName);
 
+    /// <summary>The shell's folder to show after <paramref name="title"/> (<see cref="ShellTitle.FolderAfter"/>), if any.</summary>
+    public string? FolderAfter(string title) => CurrentFolder is { } folder ? ShellTitle.FolderAfter(title, folder, UserHome) : null;
+
     /// <summary><see cref="HeaderTitle"/> changed (an input, or a running command reaching the time it leads).</summary>
     public event Action? HeaderTitleChanged;
 
