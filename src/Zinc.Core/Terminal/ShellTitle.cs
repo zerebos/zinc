@@ -22,35 +22,54 @@ public static partial class ShellTitle
     /// <param name="atPrompt">From the marks: true at the prompt, false while a command runs, null if the shell marks nothing.</param>
     /// <param name="folder">The folder the shell last reported (decoded), if any.</param>
     /// <param name="command">The running command's text, if known.</param>
+    /// <param name="commandStarted">When the running command started, if one runs.</param>
     /// <param name="programTitle">The last title a program set ("" if none).</param>
     /// <param name="programTitleSinceCommand">That title was set after the running command started.</param>
     /// <param name="home">The user's Windows home folder (shown as ~).</param>
     /// <returns>The title; "" leaves it to the profile's name.</returns>
-    public static string Choose(bool shellTitles, bool programTitles, bool? atPrompt, string? folder, string? command, string programTitle,
-        bool programTitleSinceCommand, string? home)
+    /// <remarks>
+    /// A command names the tab once it has run <see cref="CommandLeadsAfter"/>, and until then the folder stays, as in
+    /// a pane header. A title the running program set (vim) names it at once.
+    /// </remarks>
+    public static string Choose(bool shellTitles, bool programTitles, bool? atPrompt, string? folder, string? command,
+        DateTime? commandStarted, DateTime now, string programTitle, bool programTitleSinceCommand, string? home) =>
+        Pick(shellTitles, programTitles, atPrompt, folder, command, commandStarted, now, programTitle, programTitleSinceCommand, home).Title;
+
+    /// <summary>Whether <see cref="Choose"/> names the tab by its folder (which then shortens from its start, as a header's).</summary>
+    public static bool ChoosesFolder(bool shellTitles, bool programTitles, bool? atPrompt, string? folder, string? command,
+        DateTime? commandStarted, DateTime now, string programTitle, bool programTitleSinceCommand) =>
+        Pick(shellTitles, programTitles, atPrompt, folder, command, commandStarted, now, programTitle, programTitleSinceCommand, null).IsFolder;
+
+    private static (string Title, bool IsFolder) Pick(bool shellTitles, bool programTitles, bool? atPrompt, string? folder, string? command,
+        DateTime? commandStarted, DateTime now, string programTitle, bool programTitleSinceCommand, string? home)
     {
         var program = programTitles ? programTitle : "";
         if (!shellTitles || atPrompt == null)
         {
-            return program;
+            return (program, false);
         }
 
         if (atPrompt == false)
         {
-            return programTitleSinceCommand && program.Length > 0 ? program
-                : FirstLine(command) is { Length: > 0 } text ? text
-                : program;
+            if (programTitleSinceCommand && program.Length > 0)
+            {
+                return (program, false);
+            }
+
+            if (UntilCommandLeads(commandStarted, now) == TimeSpan.Zero && FirstLine(command) is { Length: > 0 } text)
+            {
+                return (text, false);
+            }
         }
 
-        return folder != null ? Folder(folder, home) : program;
+        return folder != null ? (Folder(folder, home), true) : (program, false);
     }
 
-    /// <summary>Whether <see cref="Choose"/> names the tab by its folder (which then shortens from its start, as a header's).</summary>
-    public static bool ChoosesFolder(bool shellTitles, bool? atPrompt, string? folder) =>
-        shellTitles && atPrompt == true && folder != null;
-
-    /// <summary>How long a command runs before it leads a pane header's title: quick ones (ls, git status) never flash there.</summary>
-    public static readonly TimeSpan CommandLeadsAfter = TimeSpan.FromMilliseconds(80); // TODO: de-dup this logic with the command center? reconsider this threshold
+    /// <summary>
+    /// How long a command runs before it names the tab, leads a pane header's title and shows in the title bar, so quick
+    /// ones (ls, git status) never flash there.
+    /// </summary>
+    public static readonly TimeSpan CommandLeadsAfter = TimeSpan.FromMilliseconds(300);
 
     /// <summary>How long until a command started at <paramref name="started"/> leads a header (zero: it does); null if none runs.</summary>
     public static TimeSpan? UntilCommandLeads(DateTime? started, DateTime now)

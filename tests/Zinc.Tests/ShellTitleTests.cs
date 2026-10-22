@@ -7,8 +7,29 @@ public class ShellTitleTests
     private const string Home = @"C:\Users\Zack";
 
     private static string Title(bool? atPrompt, string? folder = null, string? command = null, string program = "",
-        bool programSinceCommand = false, bool shellTitles = true, bool programTitles = true) =>
-        ShellTitle.Choose(shellTitles, programTitles, atPrompt, folder, command, program, programSinceCommand, Home);
+        bool programSinceCommand = false, bool shellTitles = true, bool programTitles = true, double ranSeconds = 5) =>
+        ShellTitle.Choose(shellTitles, programTitles, atPrompt, folder, command, atPrompt == false ? Now.AddSeconds(-ranSeconds) : null,
+            Now, program, programSinceCommand, Home);
+
+    private static readonly double Leads = ShellTitle.CommandLeadsAfter.TotalSeconds;
+
+    [Fact]
+    public void AQuickCommandNeverNamesTheTab()
+    {
+        // For a quick command like ls or git status, the folder stays, as in a pane header, until the command has run
+        // long enough to lead.
+        Assert.Equal(@"~\dev\zinc", Title(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: Leads - 0.05));
+        Assert.True(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\Zack\dev\zinc", "git status", Now.AddSeconds(-(Leads - 0.05)),
+            Now, "", false));
+        Assert.Equal("npm test", Title(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: Leads + 0.01));
+        Assert.False(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\Zack\dev\zinc", "npm test", Now.AddSeconds(-(Leads + 0.01)),
+            Now, "", false));
+
+        // A program's own title still names it at once.
+        Assert.Equal("vim: notes.md", Title(false, @"C:\Users\Zack", "vim notes.md", "vim: notes.md", programSinceCommand: true, ranSeconds: 0.01));
+        Assert.False(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\Zack", "vim notes.md", Now.AddSeconds(-0.01), Now,
+            "vim: notes.md", true));
+    }
 
     [Fact]
     public void FolderAtThePromptCommandWhileItRuns()
@@ -83,13 +104,14 @@ public class ShellTitleTests
     }
 
     [Fact]
-    public void HeaderKeepsTheFolderUntilACommandHasRunEightyMilliseconds()
+    public void HeaderKeepsTheFolderUntilACommandHasRunLongEnough()
     {
         // git status, ls: never in the header.
         Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell", LeadIsFolder: true),
-            Header(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: 0.07));
-        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true), Header(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: 0.1));
-        Assert.Equal(TimeSpan.FromMilliseconds(30), ShellTitle.UntilCommandLeads(Now.AddMilliseconds(-50), Now));
+            Header(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: Leads - 0.01));
+        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true),
+            Header(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: Leads + 0.01));
+        Assert.Equal(ShellTitle.CommandLeadsAfter - TimeSpan.FromMilliseconds(50), ShellTitle.UntilCommandLeads(Now.AddMilliseconds(-50), Now));
         Assert.Equal(TimeSpan.Zero, ShellTitle.UntilCommandLeads(Now.AddSeconds(-3), Now));
         Assert.Null(ShellTitle.UntilCommandLeads(null, Now));
     }
@@ -133,13 +155,14 @@ public class ShellTitleTests
 
     [Theory]
     [InlineData(true, true, true)] // at the prompt, a folder reported: the label is the folder
-    [InlineData(true, false, false)] // a command runs
+    [InlineData(true, false, false)] // a command runs (for longer than CommandLeadsAfter)
     [InlineData(true, null, false)] // no marks: the program's title
     [InlineData(false, true, false)] // shell-titles off
     public void TabLabelsKnowWhenTheyAreAFolder(bool shellTitles, bool? atPrompt, bool folder)
     {
-        Assert.Equal(folder, ShellTitle.ChoosesFolder(shellTitles, atPrompt, @"C:\Users\Zack\dev"));
-        Assert.False(ShellTitle.ChoosesFolder(shellTitles, atPrompt, null));
+        var started = atPrompt == false ? Now.AddSeconds(-5) : (DateTime?)null;
+        Assert.Equal(folder, ShellTitle.ChoosesFolder(shellTitles, true, atPrompt, @"C:\Users\Zack\dev", "make", started, Now, "pwsh", false));
+        Assert.False(ShellTitle.ChoosesFolder(shellTitles, true, atPrompt, null, "make", started, Now, "pwsh", false));
         if (folder)
         {
             Assert.Equal(@"~\dev", Title(atPrompt, @"C:\Users\Zack\dev", shellTitles: shellTitles));

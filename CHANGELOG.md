@@ -8,6 +8,7 @@ is the version it builds, and hands it to the installer as the release notes).
 
 ### Changed
 - Clearer wording in setting descriptions.
+- Quick commands like `ls` and `git status` no longer flash in tab labels (with `Folder and command as the title`) or the title bar. A command now shows there, and in pane headers, once it has run for 0.3 seconds. A title the program sets itself still shows right away.
 
 ### Fixed
 - With an animated shader, the quick terminal kept using the graphics card after you dismissed it, and so did a minimized window. Hidden or minimized, terminals now draw nothing, and they give back their graphics memory after a minute, as background tabs do (`Free memory of hidden tabs`).

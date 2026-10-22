@@ -165,11 +165,12 @@ public sealed partial class TerminalControl : UserControl
     /// What the tab is called (<see cref="ShellTitle"/>): with <c>shell-titles</c>, the folder at the prompt and the command
     /// while one runs; else the title the program set; "" for the profile's name.
     /// </summary>
-    public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt,
-        CurrentFolder, RunningCommand?.Text, _programTitle, _programTitleSinceCommand, UserHome);
+    public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
+        RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand, UserHome);
 
     /// <summary><see cref="Title"/> is the shell's folder (a tab label then shortens from its start).</summary>
-    public bool TitleIsFolder => ShellTitle.ChoosesFolder(_config.ShellTitles, _session?.AtPrompt, CurrentFolder);
+    public bool TitleIsFolder => ShellTitle.ChoosesFolder(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
+        RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand);
 
     /// <summary>A one-tab pane header's title (<see cref="ShellTitle.Header"/>): what leads, and the quieter text after it.</summary>
     public HeaderTitle HeaderTitle(string profileName) => ShellTitle.Header(_config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
@@ -219,8 +220,9 @@ public sealed partial class TerminalControl : UserControl
     }
 
     /// <summary>
-    /// Tells the app when <see cref="HeaderTitle"/> changed, and checks again once a running command has run long enough
-    /// to lead it (compared without the profile's name, which only a config reload changes).
+    /// Tells the app when <see cref="HeaderTitle"/> changed. Once a running command has run long enough to lead, it
+    /// checks again through NoteTitle, so the tab's title and the header both update. Headers are compared without the
+    /// profile's name, which only a config reload changes.
     /// </summary>
     private void NoteHeaderTitle(DateTime? running)
     {

@@ -136,18 +136,35 @@ public sealed partial class MainWindow
     /// prompt reports its new folder, then sets the title (Git Bash's names the folder), and drawn
     /// in between, the center showed the new folder beside the old title for a moment.
     /// </summary>
-    private void UpdateCommandCenterSoon()
+    private void UpdateCommandCenterSoon() => UpdateCommandCenterIn(TimeSpan.FromMilliseconds(80));
+
+    private void UpdateCommandCenterIn(TimeSpan wait)
     {
         if (_commandSettle == null)
         {
             _commandSettle = DispatcherQueue.CreateTimer();
-            _commandSettle.Interval = TimeSpan.FromMilliseconds(80);
             _commandSettle.IsRepeating = false;
             _commandSettle.OnTick(_ => UpdateCommandCenter());
         }
 
         _commandSettle.Stop();
+        _commandSettle.Interval = wait;
         _commandSettle.Start();
+    }
+
+    /// <summary>
+    /// Whether a running command is still too new to show (<see cref="ShellTitle.CommandLeadsAfter"/>, as tab labels and
+    /// pane headers wait), and if so, updates the command center again once it isn't.
+    /// </summary>
+    private bool TooNewToShow(DateTime started)
+    {
+        if (ShellTitle.UntilCommandLeads(started, DateTime.UtcNow) is not { } left || left <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        UpdateCommandCenterIn(left + TimeSpan.FromMilliseconds(20)); // past the mark, not just short of it
+        return true;
     }
 
     /// <summary>What the focused tab of the shown workspace is doing: its title, and the folder its shell reported.</summary>
@@ -163,7 +180,7 @@ public sealed partial class MainWindow
         if (SelectedTab is { } tab)
         {
             var pane = tab.Active;
-            if (pane.Control.RunningCommand is { Text: { } command, Started: { } started })
+            if (pane.Control.RunningCommand is { Text: { } command, Started: { } started } && !TooNewToShow(started))
             {
                 // Shell integration: what's running, and for how long.
                 text = $"{command}  ·  {Elapsed(DateTime.UtcNow - started)}";
