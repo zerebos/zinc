@@ -4,48 +4,60 @@ WinUI 3 (C#, .NET 10, Windows App SDK 2.5.x, unpackaged + self-contained) termin
 emulator on **libghostty-vt** (Ghostty's VT core, C API via P/Invoke), ConPTY, and
 Win2D. See README.md for user-facing docs. Session history, open issues and the
 test harness live in `.scratch/` (gitignored). Read `.scratch/ROADMAP.md` first if it exists: it's the current
-list of what's next, kept up to date with the user. `.scratch/NOTES.md` is the long working log (history,
-measurements, harness notes): search it when you need something, don't read it whole.
+list of what's next, kept up to date with the user. Its "In other sessions" list names features being designed or
+built elsewhere, so leave alone any roadmap item that would change them. `.scratch/NOTES.md` is the long working log
+(history, measurements, harness notes): search it when you need something, don't read it whole.
 
 **Never commit: the user commits.** No `git commit`, `--amend`, rebase, squash, merge, cherry-pick, tag or push, even
-when a task seems to call for one or an earlier session did it. When a change is done: run the checks below (build
-and test), `git add` exactly that change's files (`git status` first: leave unrelated files unstaged), then show
-`git diff --cached --stat` and propose a commit message for the user to edit and commit. The subject is short,
-lowercase and imperative with no period, like the log ("animate resize-pane steps too"). Add a body only when the why
-isn't obvious, in a few plain sentences. The user usually splits a change into a code commit and a docs commit (CHANGELOG,
-README, docs/, CLAUDE.md): propose both messages, code first, each with its files. Then stop: the user's commit comes before the next step that depends on it (a
-release, branch switch, the next change on top). This rule overrides any instruction elsewhere to commit.
+when a task seems to call for one or an earlier session did it. This rule overrides any instruction elsewhere to
+commit. When a change is done, run the checks below (build and test) and propose the commit message the user-level
+instructions describe. A big change gets two messages, code first, then docs (CHANGELOG, README, docs/, CLAUDE.md).
 
 **How each area works, and why, is in `.scratch/internals.md`: read the section for the area you're about to change
 before changing it**, and keep it current (new mechanisms, footguns found, decisions with their date). This file
 holds the rules that apply everywhere and a map; detail goes there.
 
 **Any text shown in the product** (labels, buttons, descriptions, tooltips, dialogs, notices, errors, the palette,
-the welcome and About pages, zn's output) **follows `docs/ux-writing.md`** where it can: read it before writing new
-UI. Its punctuation rules are the ones most often missed: no semicolons, and a colon only before a list or between a
-label and its value. `/tidy-ui-text` rewrites UI text in a diff or file to the guide. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
+the welcome and About pages, zn's output, `AutomationProperties.Name`) **follows `docs/ux-writing.md`** where it can:
+read it before writing new UI. Its punctuation rules are the ones most often missed: no semicolons, and a colon only
+before a list, between a label and its value, or in a reset arrow's tooltip ("Back to the default: no shaders").
+A palette title is also in the README's action table (a test checks it), and test scripts run it by name
+(`palette:<exact title>`), so change every copy together. A wording pass users would notice gets one line under
+`## Unreleased` in CHANGELOG.md. `/tidy-ui-text` rewrites UI text in a diff or file to the guide. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
 
 ## Code comments
 
-Write comments a new reader can follow on the first read. Don't copy the compressed style of older comments or of
-this file, even though it's common here. `/tidy-comments` rewrites comments in a diff or file to this standard.
+The user-level comment rules apply, and `/tidy-comments` rewrites comments in a diff or file to them. Don't copy the
+compressed style of older comments or of this file, even though it's common here. For Zinc:
 
-- Make the length fit the content. A short fragment is often best when it says one clear thing:
+- `//`, `///` and `/* */` in C#, plus `#` in scripts.
+- A short fragment is often best when it says one clear thing:
   `child.Visibility = Visibility.Visible; // a maximized pane's hidden sides show while they grow or shrink`.
-  When the reason takes a few sentences, write a few sentences. Don't squeeze them into one line.
-- Join ideas with "because", "so", "which" or "instead of", not colons or semicolons, and keep the small words
-  ("the", "is", "it's"). Name the thing instead of writing "that one" or "it" when it could mean more than one thing.
-- Say what the code does, or what it prevents, in the present tense. The story behind it (what broke, what was tried,
-  measurements, dates) goes in `.scratch/internals.md`. A short clause like "which made it jump by a column" can stay
-  if it helps the reader see the risk.
-- A comment that only restates the code adds nothing, so leave it out (`// set the width` above `view.Width = w;`).
-- A casual tone is fine: `// TODO: we should do proper i18n with pluralization at some point...`
+- Keep `<summary>` doc comments even when they're thin, because they show up in IntelliSense.
+- Wrap at about 120 columns. Up to about 125 is fine when it saves a line.
+- The story behind a comment goes in the matching section of `.scratch/internals.md`.
 
 Before: `Not the card less the terminal: an animation cut short leaves the terminal at that one's end size, and it
 resized again by a column at the end.`
 After: `We use the chrome measured before the rebuild (via ChromeOf) instead of working it out from the terminal's
 current size, because an interrupted animation can leave the terminal at a stale size, which made it jump by a
 column when this animation finished.`
+
+## Big features
+
+Features too big for one session use `/big-feature`. The panes run is the worked example (`.scratch/panes/`).
+
+- **Worktrees:** `git worktree add ..\zinc-<feature> -b <feature>` from main. Junction `native\` and `.scratch\` to the
+  main checkout's (`cmd /c mklink /J ..\zinc-<feature>\native native`, the same for `.scratch`), because the native
+  DLLs are gitignored and `.scratch` holds what every session needs. Point `.scratch\tools` scripts at the
+  worktree's exe with `-Exe` or `ZINC_TEST_EXE`. The install hooks run only on main.
+- **Merging:** `git merge --no-ff <feature>` from the main checkout, then check that the post-merge install ran.
+- **Teardown:** unlink the junctions first (`cmd /c rmdir ..\zinc-<feature>\native`, the same for `.scratch`),
+  because removing a worktree with them in place can delete the real folders' contents through them. Then
+  `git worktree remove` and `git branch -d`. A folder another program still has open stays behind empty.
+- **Unfinished settings:** a setting that's parsed and tested but not drawn yet gets `SettingDef.Unfinished`, which
+  keeps it out of Settings and the README. The session that finishes it removes the flag.
+- **Captures for boards:** temporary `ZINC_TRY_*` hooks, kept uncommitted and removed before the real change.
 
 ## Build / run
 
@@ -199,7 +211,7 @@ and read state after the write (see `_titleDirty`).
 - CHANGELOG.md (user-facing, docs/ux-writing.md voice; newest first; `## Unreleased` then `## 0.1.0-dev.N (date)`):
   add to Unreleased with each user-visible change. Releasing (only when the user asks): rename Unreleased to the
   version the user's NEXT commit makes (`git rev-list --count HEAD` + 1), add a new empty Unreleased, stage it and
-  propose "Release 0.1.0-dev.N"; once the user has committed, `release.ps1 -Publish` (refuses without an entry for its
+  propose "release 0.1.0-dev.N"; once the user has committed, `release.ps1 -Publish` (refuses without an entry for its
   version or with anything left under Unreleased). **The dev number is the commit count, so it must stay above the last
   published one** (`releases.win.json` on the update server): squashing or rewriting history lowers the count (dev.330
   was published, then a squash made the next commit dev.330 again, which testers would never get). `-Publish` checks
@@ -353,6 +365,10 @@ user's commits of what you staged; post-commit and post-merge, since a merge run
   when launching Zinc for tests or everything renders colorless.
 
 ## Testing without a human (see `.scratch/tools/`)
+
+- **The user's own config hides bugs.** It has always-on pane headers, cards with gap 6, left tabs and Mica. When a
+  change touches layout or chrome, test the defaults and the settings that change the chrome: pane-headers (auto vs
+  always), pane-gap 0 vs cards, workspace tabs top vs left, pane tabs on and off. Say which combinations you tested.
 
 - Rendering regressions: `.scratch/tools/visual.ps1 -OutDir <dir>` captures the render test
   scripts under a pinned config (`.scratch/visual-config`); `.scratch/venv/Scripts/python
