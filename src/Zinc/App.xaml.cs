@@ -52,9 +52,13 @@ public partial class App : Application
         // One on the UI thread is survived: a crash would take every terminal with it, and
         // most such failures belong to one action (a menu item, a palette command). Background
         // threads and XAML's own fail-fasts can't be survived; they're at least recorded.
+        // A layout cycle stops part of a window repainting for good, and the exception alone doesn't say which elements
+        // kept resizing. XAML describes the cycle in the debug output, which `DebugOutput` keeps for the report.
+        DebugOutput.Start();
+        DebugSettings.LayoutCycleTracingLevel = LayoutCycleTracingLevel.High;
         UnhandledException += (_, e) =>
         {
-            Log.Crash("UI thread", e.Exception);
+            Log.Crash("UI thread", e.Exception, e.Exception is LayoutCycleException ? DebugOutput.Take() : null);
             e.Handled = true;
             ShowSurvivedError(e.Exception);
         };

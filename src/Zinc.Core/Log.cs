@@ -196,11 +196,18 @@ public static class Log
 
     /// <summary>
     /// Records an exception that escaped (or was caught only to be survived): where it happened,
-    /// and everything about it, in crash.log and, if on, the debug log.
+    /// and everything about it, in crash.log and, if on, the debug log. <paramref name="details"/> are lines that
+    /// explain it, such as XAML's description of a layout cycle.
     /// </summary>
-    public static void Crash(string where, Exception exception)
+    public static void Crash(string where, Exception exception, IReadOnlyList<string>? details = null)
     {
         var message = $"crash ({where}): {exception}";
+        if (details is { Count: > 0 })
+        {
+            message += $"{Environment.NewLine}  what led to it:{Environment.NewLine}    " +
+                string.Join($"{Environment.NewLine}    ", details);
+        }
+
         Write(message);
         Flush(); // the process may be about to end
         try

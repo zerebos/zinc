@@ -1542,6 +1542,18 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (chord == "test:layout-cycle")
+            {
+                // Checks that a layout cycle's report says what led to it, using an element that changes its width
+                // each time its size changes, so layout never settles. This window may stop repainting afterwards, as
+                // it does in a real cycle.
+                var flipper = new Border { Width = 100, Height = 10, HorizontalAlignment = HorizontalAlignment.Left };
+                flipper.SizeChanged += (_, _) => flipper.Width = flipper.Width == 100 ? 101 : 100;
+                Root.Children.Add(flipper);
+                Log.Write($"test {chord}: started");
+                return;
+            }
+
             if (chord == "test:chrome-hide")
             {
                 // What the pointer leaving does, for both auto-hidden bars.
