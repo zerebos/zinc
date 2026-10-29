@@ -80,6 +80,9 @@ internal sealed partial class GroupView : Grid
         _strip.Children.Add(_buttons);
         // The tabs (or the title) take what they need, up to the width the + and the buttons leave. Tabs that don't fit shorten, then fold.
         _strip.SizeChanged += (_, _) => ArrangeHeader();
+        // Refit when the pane resizes too, because a header held wide by a title capped for a wider pane keeps its size
+        // when the pane shrinks, so the header's own SizeChanged never fires.
+        SizeChanged += (_, _) => ArrangeHeader();
         // Buttons shown on hover come with the pointer over the header (decision 40).
         _strip.PointerEntered += (_, _) =>
         {

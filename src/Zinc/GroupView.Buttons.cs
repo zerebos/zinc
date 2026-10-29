@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Zinc.Input;
 using Zinc.Panes;
@@ -126,7 +127,11 @@ internal sealed partial class GroupView
     /// <summary>Lays out the header for its width: what folds when narrow, and how much the tabs or title may take.</summary>
     private void ArrangeHeader()
     {
-        var width = _strip.ActualWidth;
+        // Use the width the pane gives the header (its layout slot) instead of the header's own width. A header whose
+        // title was capped for a wider pane stays that wide until the title is capped again, so capping from its own
+        // width only takes 2 px off per layout round, and a big shrink would run out of rounds and end in a layout cycle.
+        var slot = LayoutInformation.GetLayoutSlot(_strip).Width;
+        var width = slot > 0 ? slot : _strip.ActualWidth;
         // The + (or the count folded tabs put in its place) and its 2 px margin is the room's - 2 below
         var add = _settings.PaneTabs ? AddWidth : 0;
         var buttons = _buttons.Visibility == Visibility.Visible;
