@@ -23,7 +23,10 @@ read it before writing new UI. Its punctuation rules are the ones most often mis
 before a list, between a label and its value, or in a reset arrow's tooltip ("Back to the default: no shaders").
 A palette title is also in the README's action table (a test checks it), and test scripts run it by name
 (`palette:<exact title>`), so change every copy together. A wording pass users would notice gets one line under
-`## Unreleased` in CHANGELOG.md. `/tidy-ui-text` rewrites UI text in a diff or file to the guide. README, docs, CHANGELOG and release notes follow the brand voice in `docs/brand.md` instead, as does the look.
+`## Unreleased` in CHANGELOG.md. `/tidy-ui-text` rewrites UI text in a diff or file to the guide. README, docs,
+CHANGELOG and release notes follow the guide's "Outside the app" section. The app's colors are in `src/Zinc/Brand.cs`.
+The brand guidelines and source artwork live in the brand repo, and this repo keeps only what the app ships
+(`src/Zinc/Assets`).
 
 ## Code comments
 
@@ -298,9 +301,9 @@ user's commits of what you staged; post-commit and post-merge, since a merge run
   Alt+Space (system menu) and a bare Alt tap are passed through.
 - Focus is the window's job (`FocusActive`, low-priority dispatch after layout); panes must
   not grab focus on Loaded, since every rebuild re-loads every pane.
-- App icon: `src/Zinc/Assets/Zinc.ico` = the brand's `assets/brand/icon/quadrant.ico` (docs/brand.md §7:
-  hand-placed whole-pixel frames 16-64, vector master 96+; every frame verified identical to its PNG master,
-  never resample them). The old SVG pipeline (gen-icon.py) is gone. `AppWindow.SetIcon` rescales one frame
+- App icon: `src/Zinc/Assets/Zinc.ico` = the brand repo's `quadrant.ico` (hand-placed whole-pixel frames 16-64,
+  vector master 96+; every frame verified identical to its PNG master, never resample them). A new icon comes from
+  the brand repo as a whole file. The old SVG pipeline (gen-icon.py) is gone. `AppWindow.SetIcon` rescales one frame
   (smeared at 16px); `WindowIcon.cs` uses LoadImage + WM_SETICON at the DPI's exact small/large sizes instead.
 - **An exception in a `DispatcherQueue` callback or a `DispatcherQueueTimer.Tick` ends the
   process on the spot, unlogged** — it bypasses `Application.UnhandledException` (found with

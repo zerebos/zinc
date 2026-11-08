@@ -2,7 +2,7 @@
 
 How Zinc talks to people inside the app: settings, menus, notices, the palette, the welcome page and the About page. These rules come from building the settings window and from studying Windows Terminal's (2026-09-30), where the good and the weak parts of its wording were easy to compare side by side. Zinc is a power tool; the aim is still to be easier to understand than the tools it competes with.
 
-**Scope.** This guide covers in-product copy. Marketing, the README, docs and release notes follow the brand voice in `BRAND.md`. The two agree on tone and differ on purpose: the interface helps someone do something right now, and the marketing explains why Zinc is worth switching to.
+**Scope.** This guide covers in-product copy. The README, docs and release notes keep the same tone, with the few differences in [Outside the app](#outside-the-app) at the end. They differ on purpose: the interface helps someone do something right now, and the README and docs explain why Zinc is worth switching to.
 
 ## Personality
 
@@ -59,13 +59,13 @@ When a situation isn't covered below (a new notice, a hint, a first-run moment),
 
 ## Attention and notifications
 
-The attention dot's colours and the words around it say the same thing. Use these verbs, matching the UI tokens in `BRAND.md`:
+The attention dot's colors and the words around it say the same thing. Use these verbs, matching the colors in `src/Zinc/Brand.cs`:
 
-| State | Colour token | Wording |
+| State | Color in `Brand.cs` | Wording |
 |---|---|---|
-| Work finished out of view | `attention` | "Finished": "Build finished in workspace 2" |
-| A program is waiting on the person | `caution` | "Needs you": *ssh needs you in "prod"* |
-| The command that finished out of view failed | `error` | "Failed": "Tests failed (exit 1) in workspace 2" |
+| Work finished out of view | `Attention` | "Finished": "Build finished in workspace 2" |
+| A program is waiting on the person | `CautionFor` | "Needs you": *ssh needs you in "prod"* |
+| The command that finished out of view failed | `ErrorFor` | "Failed": "Tests failed (exit 1) in workspace 2" |
 
 - Lead with the command or program, then what happened, then where.
 - Include the exit code when something fails; leave it out when it succeeds.
@@ -102,3 +102,14 @@ The attention dot's colours and the words around it say the same thing. Use thes
 4. Its config key shown on the card (the settings window does this).
 5. Where it's inherited from, if profiles can override it.
 6. Read it aloud: calm, no hype, no apology, and no comparison to another terminal.
+
+## Outside the app
+
+The README, the docs, the CHANGELOG and release notes keep the interface's tone, but their job is different: they explain what Zinc does and why someone might switch to it.
+
+- **Specific over superlative.** Name the detail: "Box drawing meets without seams in any font" beats "beautiful rendering". The interface names the familiar thing instead, and that difference is deliberate.
+- **Calm.** No exclamation marks, and no "blazing", "insanely" or "game-changing".
+- **Honest about limits.** Say plainly what isn't there yet. The interface leaves limits out, but docs and release notes don't.
+- **Short sentences, plain words.**
+- **Credit Ghostty, accurately.** Say "built on libghostty", "uses Ghostty's terminal engine" or "the same core that powers Ghostty". Never "Ghostty for Windows", "a Ghostty port", or anything that suggests an official Ghostty project.
+- **The name** follows [The product's name](#the-products-name): "Zinc" in prose, never "Zinc Terminal".

@@ -1,7 +1,6 @@
 # Zinc
 
 *Every cell, exactly right.* A precise, native terminal for Windows, built on Ghostty's core.
-Brand guidelines: [docs/brand.md](docs/brand.md).
 
 A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 **libghostty-vt**, the terminal emulation core extracted from
@@ -1018,9 +1017,9 @@ scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
 scripts/vt-bench.py               libghostty-vt's parse speed, before and after a Ghostty update
 scripts/install.ps1, release.ps1  local installs; releases (installer + update packages, Velopack)
 scripts/update-themes.sh          refresh the bundled color schemes
-assets/                           brand artwork, fonts, themes, shaders, shell-integration scripts, licenses
+assets/                           fonts, themes, shaders, shell-integration scripts, licenses
 native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
-docs/                             brand.md, ux-writing.md (how the interface talks), shell-integration.md
+docs/                             ux-writing.md (how the interface and docs talk), shell-integration.md
 src/Zinc.Native.targets        the native DLLs + bundled ConPTY for runnable projects
 src/Zinc.Core/                 everything testable without a window:
   Ghostty/                          P/Invoke bindings, the built-in glyphs
