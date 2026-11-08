@@ -1069,3 +1069,8 @@ standard library compiled in), z2d (in the built-in glyphs), glslang and SPIRV-C
 Cascadia Mono NF, iTerm2-Color-Schemes, the Windows App SDK, Win2D, Vortice.Windows, ConPTY/OpenConsole,
 .NET, Tomlyn, Velopack and a Heroicons shape. Settings > About
 lists them with their licenses; the texts are in `Licenses\` next to `zinc.exe`.
+
+## License
+
+Copyright 2026 Zerebos. Zinc is licensed under [Apache-2.0](LICENSE). The license doesn't cover the Zinc
+name or icon, so if you ship a fork, give it its own name and icon. Saying it's based on Zinc is fine.
