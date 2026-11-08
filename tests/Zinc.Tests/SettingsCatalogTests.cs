@@ -352,18 +352,18 @@ public class ProfileSettingsTests
     [Fact]
     public void AChangedProfileThatCantOpenSaysWhy()
     {
-        // The ssh search finds "homelab" only; "gone" was removed from ~/.ssh/config.
+        // The ssh search finds "buildbox" only; "gone" was removed from ~/.ssh/config.
         static IReadOnlyList<DiscoveredProfile> Ssh(DiscoverySettings s) =>
-            s.Ssh ? [new("ssh:homelab", "SSH - homelab", "ssh.exe homelab")] : [];
-        const string changes = "[profile.\"ssh:homelab\"]\nfont.size = 14\n\n[profile.\"ssh:gone\"]\nfont.size = 12\nhidden = false\n";
+            s.Ssh ? [new("ssh:buildbox", "SSH - buildbox", "ssh.exe buildbox")] : [];
+        const string changes = "[profile.\"ssh:buildbox\"]\nfont.size = 14\n\n[profile.\"ssh:gone\"]\nfont.size = 12\nhidden = false\n";
 
         var on = ConfigFile.Parse(changes, discover: Ssh);
-        Assert.Equal((ProfileMissing.None, false, "ssh"), Missing(on, "ssh:homelab"));
+        Assert.Equal((ProfileMissing.None, false, "ssh"), Missing(on, "ssh:buildbox"));
         Assert.Equal((ProfileMissing.NotFound, true, "ssh"), Missing(on, "ssh:gone")); // hidden even with hidden = false
 
         var off = ConfigFile.Parse("[discover]\nssh = false\n\n" + changes, discover: Ssh);
-        Assert.Equal((ProfileMissing.SearchOff, true, "ssh"), Missing(off, "ssh:homelab"));
-        Assert.Equal("SSH - homelab", off.Profiles.Single(p => p.Id == "ssh:homelab").Name); // the name the search gives it
+        Assert.Equal((ProfileMissing.SearchOff, true, "ssh"), Missing(off, "ssh:buildbox"));
+        Assert.Equal("SSH - buildbox", off.Profiles.Single(p => p.Id == "ssh:buildbox").Name); // the name the search gives it
 
         // A profile of your own belongs to no search.
         Assert.Null(ConfigFile.Parse("[profile.mine]\ncommand = \"x.exe\"\n").Profiles.Single(p => p.Id == "mine").Source);

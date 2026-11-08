@@ -13,9 +13,9 @@ public class PromptFreshLineTests
     public void AMidLinePromptMarkDoesNotMoveTheCursor()
     {
         using var session = new TerminalSession(40, 8, TerminalTheme.Default);
-        session.WriteToScreen("[C:\\Users\\Zack]>\e]133;A;aid=42\a\e]9;9;\"C:\\Users\\Zack\"\e\\ \e]133;B\a");
+        session.WriteToScreen("[C:\\Users\\JDoe]>\e]133;A;aid=42\a\e]9;9;\"C:\\Users\\JDoe\"\e\\ \e]133;B\a");
         Assert.Equal(0, session.CursorRow);
-        Assert.Equal("[C:\\Users\\Zack]>", session.ReadText().TrimEnd());
+        Assert.Equal("[C:\\Users\\JDoe]>", session.ReadText().TrimEnd());
 
         // Zinc's own tracking still saw a prompt (with its options) and marks the command that follows.
         session.WriteToScreen("ls\r\n\e]133;C\aout\r\n\e]133;D;0\a");

@@ -66,15 +66,15 @@ public class SessionStateTests
         var state = new SessionState(SessionState.CurrentVersion,
         [
             new WindowState(10, 20, 1100, 700, Maximized: false, Selected: 0,
-                [new WorkspaceState("Build", "#FF8800", SessionLayout.Capture(ws, t => new TabState("WSL", $"wsl.exe --cd \"/home/zack/café\" {t.Name}", @"C:\x", "/home/zack/café")))]),
+                [new WorkspaceState("Build", "#FF8800", SessionLayout.Capture(ws, t => new TabState("WSL", $"wsl.exe --cd \"/home/jdoe/café\" {t.Name}", @"C:\x", "/home/jdoe/café")))]),
         ]);
 
         var json = SessionStore.Serialize(state);
         Assert.Contains("\"orientation\": \"Vertical\"", json);
-        Assert.Contains("--cd \\\"/home/zack/café\\\"", json); // readable: no " / é escapes
+        Assert.Contains("--cd \\\"/home/jdoe/café\\\"", json); // readable: no " / é escapes
         var back = SessionStore.Deserialize(json)!;
         Assert.Equal(json, SessionStore.Serialize(back));
-        Assert.Equal("/home/zack/café", back.Windows[0].Workspaces[0].Layout.First!.Pane!.Tabs[0].Directory);
+        Assert.Equal("/home/jdoe/café", back.Windows[0].Workspaces[0].Layout.First!.Pane!.Tabs[0].Directory);
     }
 
     [Fact]
@@ -126,17 +126,17 @@ public class SessionStateTests
     }
 
     [Theory]
-    [InlineData("wsl.exe", "/home/zack", "wsl.exe --cd \"/home/zack\"", null)]
+    [InlineData("wsl.exe", "/home/jdoe", "wsl.exe --cd \"/home/jdoe\"", null)]
     [InlineData(@"C:\WINDOWS\system32\wsl.exe --distribution-id {1} --cd ~", "/srv/app",
         "C:\\WINDOWS\\system32\\wsl.exe --cd \"/srv/app\" --distribution-id {1}", null)]
     [InlineData("\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoLogo", @"C:\src", "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoLogo", @"C:\src")]
-    [InlineData(@"C:\Program Files\Git\bin\bash.exe", "/c/Users/Zack", @"C:\Program Files\Git\bin\bash.exe", @"C:\Users\Zack")]
+    [InlineData(@"C:\Program Files\Git\bin\bash.exe", "/c/Users/JDoe", @"C:\Program Files\Git\bin\bash.exe", @"C:\Users\JDoe")]
     [InlineData("bash.exe", "/d", "bash.exe", @"D:\")]
     public void LaunchesInTheReportedDirectory(string command, string dir, string expectedCommand, string? expectedCwd) =>
         Assert.Equal((expectedCommand, expectedCwd), ShellDirectory.LaunchIn(command, dir));
 
     [Theory]
     [InlineData("wsl.exe", @"C:\Users")]           // WSL reported a Windows path: use the tab's own start
-    [InlineData("pwsh.exe", "/home/zack")]          // a POSIX path means nothing to pwsh
+    [InlineData("pwsh.exe", "/home/jdoe")]          // a POSIX path means nothing to pwsh
     public void UnusableDirectoriesFallBack(string command, string dir) => Assert.Null(ShellDirectory.LaunchIn(command, dir));
 }

@@ -689,7 +689,7 @@ internal sealed partial class GroupView : Grid
         private HeaderTitle? _title;
 
         /// <summary>
-        /// The title as it fits: a folder loses its start, not its end ("…/BetterDiscord/betterdiscord.app"), dropping
+        /// The title as it fits: a folder loses its start, not its end ("…/ExampleLongName/examplelongname.org"), dropping
         /// leading folders only as far as the width needs. The lead first, the quieter text in what's left.
         /// </summary>
         private void ShowText()

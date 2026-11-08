@@ -84,7 +84,7 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
 
     /// <summary>
     /// A folder chosen in Windows (a folder dialog) for a shell: on <paramref name="distro"/>'s share
-    /// (<c>\\wsl.localhost\Fedora\home\zack</c>) it's that distro's own path (<c>/home/zack</c>);
+    /// (<c>\\wsl.localhost\Fedora\home\jdoe</c>) it's that distro's own path (<c>/home/jdoe</c>);
     /// otherwise the Windows path as is.
     /// </summary>
     public static WorkspaceFolder FromWindows(string path, string? distro)

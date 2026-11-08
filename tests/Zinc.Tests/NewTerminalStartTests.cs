@@ -35,7 +35,7 @@ public class NewTerminalStartTests
     [Fact]
     public void TheCurrentFolderBelongsToItsDistroOnlyWhenItsALinuxPath()
     {
-        Assert.Equal(new WorkspaceFolder("/home/zack/src", "Fedora"), NewTerminalStart.Current("file://localhost/home/zack/src", "Fedora"));
+        Assert.Equal(new WorkspaceFolder("/home/jdoe/src", "Fedora"), NewTerminalStart.Current("file://localhost/home/jdoe/src", "Fedora"));
         Assert.Equal(new WorkspaceFolder(@"C:\dev"), NewTerminalStart.Current("file:///C:/dev", "Fedora"));
         Assert.Equal(new WorkspaceFolder("/c/dev"), NewTerminalStart.Current("/c/dev", null));
         Assert.Null(NewTerminalStart.Current(null, null));

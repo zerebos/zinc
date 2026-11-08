@@ -237,6 +237,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void PowerShell()
     {
         var pwsh = ShellResolver.FindOnPath(Environment.GetEnvironmentVariable("PATH") ?? "", "pwsh.exe");
@@ -299,6 +300,7 @@ public class ShellInjectionTests : IDisposable
     public void ElvishThatRunsSomethingKeepsItsCommand(string command) => Assert.Equal(command, Prepare(command).CommandLine);
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void Elvish()
     {
         var elvish = Environment.GetEnvironmentVariable("PATH")!.Split(';').Select(d => Path.Combine(d, "elvish.exe")).FirstOrDefault(File.Exists);
@@ -314,6 +316,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void OshInWsl()
     {
         // OSH (Oils) runs the bash script from PROMPT_COMMAND but never shows PS0: its prompt asks for C on Enter.
@@ -351,6 +354,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void CmdUnderClink()
     {
         // Clink injected by hand with a throwaway profile (not the user's AutoRun: its history and settings stay
@@ -387,6 +391,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void GitBash()
     {
         const string bash = @"C:\Program Files\Git\bin\bash.exe";
@@ -397,6 +402,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void BashKeepsAPromptCommandItsStartupSets()
     {
         const string bash = @"C:\Program Files\Git\bin\bash.exe";
@@ -412,6 +418,7 @@ public class ShellInjectionTests : IDisposable
     [Theory]
     [InlineData("--noprofile -i")]
     [InlineData("--login -i")] // Git Bash's own profile: ~/.bash_profile, which sources ~/.bashrc
+    [Trait("Category", "LocalShells")]
     public void BashWhoseStartupReplacesPromptCommand(string args)
     {
         const string bash = @"C:\Program Files\Git\bin\bash.exe";
@@ -452,6 +459,7 @@ public class ShellInjectionTests : IDisposable
         """;
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void BashLeavesAHandWrittenIntegrationWorking()
     {
         const string bash = @"C:\Program Files\Git\bin\bash.exe";
@@ -464,6 +472,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void ZshLeavesAHandWrittenIntegrationWorking()
     {
         const string zsh = @"C:\msys64\usr\bin\zsh.exe";
@@ -475,6 +484,7 @@ public class ShellInjectionTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "LocalShells")]
     public void Zsh()
     {
         const string zsh = @"C:\msys64\usr\bin\zsh.exe";

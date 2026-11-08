@@ -7,7 +7,7 @@ namespace Zinc.Tests;
 public sealed class InstallTests : IDisposable
 {
     private const string Canary = "{A854D02A-F2FE-44A5-BB24-D03F4CF830D4}", CanaryTerminal = "{1706609C-A4CE-4C0D-B7D2-C19BF66398A5}";
-    private const string Installed = @"C:\Users\Someone\AppData\Local\Zinc";
+    private const string Installed = @"C:\Users\JDoe\AppData\Local\Zinc";
     private readonly string _path = $@"Software\Zinc.Tests\{Guid.NewGuid():N}";
     private readonly RegistryKey _root;
     private readonly string _temp = Path.Combine(Path.GetTempPath(), "zinc-tests-" + Guid.NewGuid().ToString("N"));
@@ -64,7 +64,7 @@ public sealed class InstallTests : IDisposable
     public void UninstallLeavesAnotherCopysRegistrationsAlone()
     {
         // The dev install (versioned folders under Programs\Zinc) owns them.
-        var exe = @"C:\Users\Someone\AppData\Local\Programs\Zinc\versions\20261002-0.1.0\zinc.exe";
+        var exe = @"C:\Users\JDoe\AppData\Local\Programs\Zinc\versions\20261002-0.1.0\zinc.exe";
         SetRun($"\"{exe}\" --at-login");
         MakeDefault(exe);
 
@@ -97,7 +97,7 @@ public sealed class InstallTests : IDisposable
     [Fact]
     public void UninstallTakesBackTheExplorerMenuOnlyWhenItStartsThisInstall()
     {
-        var other = @"C:\Users\Someone\AppData\Local\Programs\Zinc\versions\20261002-0.1.0\zinc.exe";
+        var other = @"C:\Users\JDoe\AppData\Local\Programs\Zinc\versions\20261002-0.1.0\zinc.exe";
         new Zinc.Shell.ExplorerMenu(_root).Apply(other);
         Assert.Empty(InstallCleanup.Uninstall(_root, Installed));
         Assert.Equal(other, new Zinc.Shell.ExplorerMenu(_root).RegisteredExe());
@@ -114,10 +114,10 @@ public sealed class InstallTests : IDisposable
     }
 
     [Theory]
-    [InlineData(@"C:\Users\Someone\AppData\Local\Zinc\current\zinc.exe", true)]
-    [InlineData(@"c:\users\someone\appdata\local\zinc\CURRENT\Zinc.exe", true)]
-    [InlineData(@"C:\Users\Someone\AppData\Local\Zinc.Test\current\zinc.exe", false)] // a sibling whose name starts the same
-    [InlineData(@"C:\Users\Someone\AppData\Local\Zinc", false)]                        // the folder itself isn't inside it
+    [InlineData(@"C:\Users\JDoe\AppData\Local\Zinc\current\zinc.exe", true)]
+    [InlineData(@"c:\users\jdoe\appdata\local\zinc\CURRENT\Zinc.exe", true)]
+    [InlineData(@"C:\Users\JDoe\AppData\Local\Zinc.Test\current\zinc.exe", false)] // a sibling whose name starts the same
+    [InlineData(@"C:\Users\JDoe\AppData\Local\Zinc", false)]                        // the folder itself isn't inside it
     [InlineData(null, false)]
     public void InsideMeansUnderTheWholeFolderName(string? path, bool inside)
     {

@@ -25,7 +25,7 @@ public class ProgramNotificationTests
     }
 
     [Theory]
-    [InlineData("\e]9;9;\"C:\\Users\\Zack\"\e\\")] // the PowerShell prompt's folder report
+    [InlineData("\e]9;9;\"C:\\Users\\JDoe\"\e\\")] // the PowerShell prompt's folder report
     [InlineData("\e]9;4;1;50\a")]                   // progress, not a message
     public void ConEmuSequencesAreNotNotifications(string text)
     {

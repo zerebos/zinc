@@ -439,7 +439,7 @@ Each `[profile.<id>]` section is a profile, starting from the settings above and
 ones found on this PC in the order they're found; `profile-order` (or dragging them in Settings)
 sets any order you like. The id is what
 `default-profile` and saved sessions refer to, so renaming a profile (`name`) breaks nothing;
-quote ids with spaces or colons: `[profile."ssh:homelab"]`.
+quote ids with spaces or colons: `[profile."ssh:buildbox"]`.
 
 ```toml
 [profile.git-bash]

@@ -122,14 +122,14 @@ public class ConfigFileTests : IDisposable
     public void QuotedIdsAndSubtables()
     {
         var config = Parse("""
-            [profile."ssh - homelab"]
-            command = "ssh.exe homelab"
+            [profile."ssh - buildbox"]
+            command = "ssh.exe buildbox"
 
-            [profile."ssh - homelab".terminal]
+            [profile."ssh - buildbox".terminal]
             padding-x = 3
             """);
         var profile = Assert.Single(config.Profiles);
-        Assert.Equal("ssh - homelab", profile.Id);
+        Assert.Equal("ssh - buildbox", profile.Id);
         Assert.Equal(4f, profile.Config.PaddingLeft);
         Assert.Empty(config.Warnings);
     }

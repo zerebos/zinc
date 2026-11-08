@@ -27,11 +27,11 @@ public class WslConfTests
         Assert.Equal(expected, WslConf.Hostname(conf));
 
     [Theory]
-    [InlineData("/mnt/c/Users/Zack", "/mnt/", @"C:\Users\Zack")]
+    [InlineData("/mnt/c/Users/JDoe", "/mnt/", @"C:\Users\JDoe")]
     [InlineData("/mnt/d", "/mnt/", @"D:\")]
     [InlineData("/c/Users", "/", @"C:\Users")]
     [InlineData("/mnt/wsl/x", "/mnt/", null)] // not a drive letter
-    [InlineData("/home/zack", "/", null)]
+    [InlineData("/home/jdoe", "/", null)]
     public void DriveFoldersMapBack(string linux, string root, string? windows) =>
         Assert.Equal(windows, WslConf.WindowsPath(linux, root));
 
@@ -39,9 +39,9 @@ public class WslConfTests
     public void DropsAndLinksUseTheDistrosRoot()
     {
         var context = new LinkContext("PC", WslDistro: "Ubuntu", WslMountRoot: "/");
-        Assert.Equal("/c/Users/Zack/a.txt", DroppedPaths.Translate(@"C:\Users\Zack\a.txt", context));
-        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify("file:///c/Users/Zack", context, out var target));
-        Assert.Equal(@"C:\Users\Zack", target);
+        Assert.Equal("/c/Users/JDoe/a.txt", DroppedPaths.Translate(@"C:\Users\JDoe\a.txt", context));
+        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify("file:///c/Users/JDoe", context, out var target));
+        Assert.Equal(@"C:\Users\JDoe", target);
 
         var unmounted = context with { WslMountRoot = null };
         Assert.Equal(@"C:\a.txt", DroppedPaths.Translate(@"C:\a.txt", unmounted)); // nothing better to give

@@ -37,7 +37,7 @@ public class KeysConfigTests
         Assert.Equal(new ActionInvocation(TerminalAction.SwitchToTab, -1), Actions.Parse("go-to-workspace last", out _));
         Assert.Equal(new ActionInvocation(TerminalAction.NewTabFromProfile, 0), Actions.Parse("new-tab 1", out _));
         Assert.Equal(new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: "wsl:Fedora"), Actions.Parse("new-tab wsl:Fedora", out _));
-        Assert.Equal(new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: "ssh - homelab"), Actions.Parse("new-tab ssh - homelab", out _));
+        Assert.Equal(new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: "ssh - buildbox"), Actions.Parse("new-tab ssh - buildbox", out _));
     }
 
     [Theory]

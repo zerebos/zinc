@@ -14,7 +14,7 @@ public class JumpListTests
         new("cmd", "Command Prompt", new(@"C:\Windows\System32\cmd.exe")),
         new("wsl:Fedora", "Fedora", new(@"C:\wsl\Fedora\shortcut.ico")),
         new("git-bash", "Git Bash", new(null)),
-        new("ssh:homelab", "homelab", new(null)),
+        new("ssh:buildbox", "buildbox", new(null)),
         new("msys2", "MSYS2", new(null)),
     ];
 
@@ -28,7 +28,7 @@ public class JumpListTests
     [Fact]
     public void RecentProfilesComeFirstAndTheProfileOrderFillsUp()
     {
-        Assert.Equal(["PowerShell", "Command Prompt", "Fedora", "Git Bash", "homelab"], Titles(Build(), JumpListPlan.RecentProfilesTitle));
+        Assert.Equal(["PowerShell", "Command Prompt", "Fedora", "Git Bash", "buildbox"], Titles(Build(), JumpListPlan.RecentProfilesTitle));
         Assert.Equal(["MSYS2", "Fedora", "PowerShell", "Command Prompt", "Git Bash"],
             Titles(Build(recent: ["msys2", "wsl:Fedora", "gone-profile"]), JumpListPlan.RecentProfilesTitle));
     }
@@ -47,16 +47,16 @@ public class JumpListTests
         var now = DateTimeOffset.UtcNow;
         var content = Build(folders:
         [
-            new("/home/zack/dev/zinc", "wsl:Fedora", "Fedora", now),
-            new(@"C:\Users\Zack\dev\zinc", "pwsh", null, now.AddMinutes(-1)),
-            new("/home/zack/dev/zinc", "msys2", null, now.AddMinutes(-2)), // the same path again: once, newest
+            new("/home/jdoe/dev/zinc", "wsl:Fedora", "Fedora", now),
+            new(@"C:\Users\JDoe\dev\zinc", "pwsh", null, now.AddMinutes(-1)),
+            new("/home/jdoe/dev/zinc", "msys2", null, now.AddMinutes(-2)), // the same path again: once, newest
             new("/tmp", "gone-profile", null, now.AddMinutes(-3)), // a profile that's gone: left out
         ]);
         var items = content.Categories.Single(c => c.Title == JumpListPlan.RecentFoldersTitle).Items;
         Assert.Equal(["zinc", "zinc"], items.Select(i => i.Title));
-        Assert.Equal("/home/zack/dev/zinc (Fedora)", items[0].Description);
+        Assert.Equal("/home/jdoe/dev/zinc (Fedora)", items[0].Description);
         var request = LaunchRequest.Parse(Split(items[0].Arguments));
-        Assert.Equal((LaunchAction.Folder, "wsl:Fedora", "/home/zack/dev/zinc"), (request.Action, request.Profile, request.Folder));
+        Assert.Equal((LaunchAction.Folder, "wsl:Fedora", "/home/jdoe/dev/zinc"), (request.Action, request.Profile, request.Folder));
         Assert.Equal(Folder, items[0].Icon);
     }
 
@@ -73,7 +73,7 @@ public class JumpListTests
     public void RemovedItemsStayOutAndTheNextMoveUp()
     {
         var removed = LaunchRequest.Arguments(LaunchAction.Profile, "cmd");
-        Assert.Equal(["PowerShell", "Fedora", "Git Bash", "homelab", "MSYS2"], Titles(Build(removed: [removed]), JumpListPlan.RecentProfilesTitle));
+        Assert.Equal(["PowerShell", "Fedora", "Git Bash", "buildbox", "MSYS2"], Titles(Build(removed: [removed]), JumpListPlan.RecentProfilesTitle));
     }
 
     [Fact]

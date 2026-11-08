@@ -15,7 +15,7 @@ public sealed record DiscoverySettings(
 /// <summary>
 /// Finds the shells installed here, as Windows Terminal does: WSL distros, PowerShell, cmd,
 /// Git Bash, MSYS2 (its UCRT64 environment), Visual Studio's developer shells, and the hosts in
-/// ~/.ssh/config. Ids name where each came from (<c>wsl:Fedora</c>, <c>ssh:homelab</c>), so a
+/// ~/.ssh/config. Ids name where each came from (<c>wsl:Fedora</c>, <c>ssh:buildbox</c>), so a
 /// <c>[profile."wsl:Fedora"]</c> section can change one; the sources run on every config load.
 /// </summary>
 public static class ProfileDiscovery
@@ -37,7 +37,7 @@ public static class ProfileDiscovery
     };
 
     /// <summary>
-    /// The name a search would give profile <paramref name="id"/> ("SSH - homelab", "Fedora"), for
+    /// The name a search would give profile <paramref name="id"/> ("SSH - buildbox", "Fedora"), for
     /// one it didn't find this time (not here any more, or its search is off).
     /// </summary>
     public static string NameFor(string id) => id switch

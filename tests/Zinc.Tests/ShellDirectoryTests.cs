@@ -5,11 +5,11 @@ namespace Zinc.Tests;
 public class ShellDirectoryTests
 {
     [Theory]
-    [InlineData("file://localhost/home/zack/my%20dir", "/home/zack/my dir")]     // percent-encoded
+    [InlineData("file://localhost/home/jdoe/my%20dir", "/home/jdoe/my dir")]     // percent-encoded
     [InlineData("file://127.0.0.1/srv", "/srv")]
-    [InlineData("file:///C:/Users/Zack", @"C:\Users\Zack")]                       // OSC 7, Windows path
-    [InlineData("file://localhost/c:/Users/Zack/", @"c:\Users\Zack\")]
-    [InlineData(@"C:\Users\Zack", @"C:\Users\Zack")]                              // OSC 9;9 from PowerShell
+    [InlineData("file:///C:/Users/JDoe", @"C:\Users\JDoe")]                       // OSC 7, Windows path
+    [InlineData("file://localhost/c:/Users/JDoe/", @"c:\Users\JDoe\")]
+    [InlineData(@"C:\Users\JDoe", @"C:\Users\JDoe")]                              // OSC 9;9 from PowerShell
     [InlineData("\"C:\\Program Files\"", @"C:\Program Files")]                     // quoted
     [InlineData("C:", @"C:\")]
     [InlineData(@"\\wsl.localhost\Ubuntu\home", @"\\wsl.localhost\Ubuntu\home")]
@@ -30,13 +30,13 @@ public class ShellDirectoryTests
     public void ThisPcByNameIsLocal()
     {
         // OSC 7 from zsh in WSL or Git Bash: the computer name, as the shell spells it.
-        Assert.Equal("/home/zack/src", ShellDirectory.Parse($"file://{Environment.MachineName.ToLowerInvariant()}/home/zack/src"));
+        Assert.Equal("/home/jdoe/src", ShellDirectory.Parse($"file://{Environment.MachineName.ToLowerInvariant()}/home/jdoe/src"));
         Assert.Equal(@"C:\Users", ShellDirectory.Parse($"file://{System.Net.Dns.GetHostName()}/C:/Users"));
     }
 
     [Theory]
     [InlineData("file://build-server/c/x")]           // ssh: its /c/x isn't C:\x
-    [InlineData("file://build-server/home/zack")]
+    [InlineData("file://build-server/home/jdoe")]
     [InlineData("file://build-server.example.com/C:/x")]
     [InlineData("file://localhost.localdomain/srv")]  // a fresh RHEL/Rocky server's name
     [InlineData("file://10.0.0.5/srv")]
@@ -58,24 +58,24 @@ public class ShellDirectoryTests
     {
         // LocalHosts is process-wide: a random name no other test (or real host) uses keeps this one to itself.
         var name = "zinc-test-distro-" + Guid.NewGuid().ToString("N")[..8];
-        Assert.Null(ShellDirectory.Parse($"file://{name}/home/zack"));
+        Assert.Null(ShellDirectory.Parse($"file://{name}/home/jdoe"));
         LocalHosts.Add(WslConf.Hostname($"[network]\nhostname = {name}\n"));
-        Assert.Equal("/home/zack", ShellDirectory.Parse($"file://{name.ToUpperInvariant()}/home/zack"));
-        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify($"file://{name}/home/zack/a.txt", new LinkContext("PC", WslDistro: "Ubuntu"), out _));
+        Assert.Equal("/home/jdoe", ShellDirectory.Parse($"file://{name.ToUpperInvariant()}/home/jdoe"));
+        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify($"file://{name}/home/jdoe/a.txt", new LinkContext("PC", WslDistro: "Ubuntu"), out _));
     }
 
     private const string Wsl = "wsl.exe -d Fedora";
     private const string Pwsh = "pwsh.exe";
-    private const string Home = @"C:\Users\Zack";
+    private const string Home = @"C:\Users\JDoe";
 
     [Theory]
-    [InlineData("~/src", Wsl, "/home/zack", "~/src")]                     // WSL expands ~ itself
-    [InlineData("~", Wsl, "/home/zack", "~")]
-    [InlineData("/etc", Wsl, "/home/zack", "/etc")]
-    [InlineData("src/../docs", Wsl, "/home/zack", "/home/zack/docs")]     // relative to where the shell is
-    [InlineData(@"C:\Users\Zack\src", Wsl, "/home/zack", "/mnt/c/Users/Zack/src")]
+    [InlineData("~/src", Wsl, "/home/jdoe", "~/src")]                     // WSL expands ~ itself
+    [InlineData("~", Wsl, "/home/jdoe", "~")]
+    [InlineData("/etc", Wsl, "/home/jdoe", "/etc")]
+    [InlineData("src/../docs", Wsl, "/home/jdoe", "/home/jdoe/docs")]     // relative to where the shell is
+    [InlineData(@"C:\Users\JDoe\src", Wsl, "/home/jdoe", "/mnt/c/Users/JDoe/src")]
     [InlineData("~", Pwsh, @"C:\x", Home)]
-    [InlineData("~/src", Pwsh, @"C:\x", @"C:\Users\Zack\src")]
+    [InlineData("~/src", Pwsh, @"C:\x", @"C:\Users\JDoe\src")]
     [InlineData(@"D:\work", Pwsh, @"C:\x", @"D:\work")]
     [InlineData("sub", Pwsh, @"C:\x", @"C:\x\sub")]
     [InlineData("..", Pwsh, @"C:\x\y", @"C:\x")]
@@ -101,11 +101,11 @@ public class ShellDirectoryTests
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         Assert.Null(session.ReportedDirectory);
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack\x07");
-        Assert.Equal("file://localhost/home/zack", session.ReportedDirectory);
+        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe\x07");
+        Assert.Equal("file://localhost/home/jdoe", session.ReportedDirectory);
 
-        session.WriteToScreen("\x1b]9;9;C:\\Users\\Zack\x1b\\");
-        Assert.Equal(@"C:\Users\Zack", ShellDirectory.Parse(session.ReportedDirectory));
+        session.WriteToScreen("\x1b]9;9;C:\\Users\\JDoe\x1b\\");
+        Assert.Equal(@"C:\Users\JDoe", ShellDirectory.Parse(session.ReportedDirectory));
     }
 
     [Fact]
@@ -115,8 +115,8 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack\x07");
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack\x07"); // every prompt re-reports it
+        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe\x07");
+        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe\x07"); // every prompt re-reports it
         Assert.Equal(1, changes);
 
         session.WriteToScreen("\x1b]7;file://localhost/tmp\x07");
@@ -130,16 +130,16 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07");
+        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe/src\x07");
         session.WriteToScreen("\x1b]7;file://build-server/c/x\x07"); // ssh build-server
-        Assert.Equal("file://localhost/home/zack/src", session.ReportedDirectory);
+        Assert.Equal("file://localhost/home/jdoe/src", session.ReportedDirectory);
         Assert.Equal("build-server", session.RemoteHost);
         Assert.Equal(2, changes); // what the tab shows changes
 
         session.WriteToScreen("\x1b]7;file://build-server/c/y\x07"); // moving around over there: nothing new here
         Assert.Equal(2, changes);
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07"); // back
+        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe/src\x07"); // back
         Assert.Null(session.RemoteHost);
         Assert.Equal(3, changes);
     }
@@ -155,8 +155,8 @@ public class ShellDirectoryTests
         session.DirectoryChanged += () => changes++;
         const string local = "\x1b]133;A;aid=1\x07$ \x1b]133;B\x07";
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/zack/src\x07" + local + "ssh box\r\n\x1b]133;C\x07");
-        session.WriteToScreen("\x1b]7;file://box/home/zack\x07");
+        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe/src\x07" + local + "ssh box\r\n\x1b]133;C\x07");
+        session.WriteToScreen("\x1b]7;file://box/home/jdoe\x07");
         if (remoteMarks)
         {
             // Its prompt isn't the local shell's: still over there.
@@ -170,7 +170,7 @@ public class ShellDirectoryTests
 
         session.WriteToScreen("logout\r\n\x1b]133;D;0\x07" + local);
         Assert.Null(session.RemoteHost);
-        Assert.Equal("file://localhost/home/zack/src", session.ReportedDirectory);
+        Assert.Equal("file://localhost/home/jdoe/src", session.ReportedDirectory);
         Assert.Equal(3, changes);
     }
 
@@ -183,7 +183,7 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen($"\x1b]7;file://{name}/home/zack\x07");
+        session.WriteToScreen($"\x1b]7;file://{name}/home/jdoe\x07");
         Assert.Equal(1, changes); // taken as another machine for now
         session.RecheckReportedDirectory(); // still unknown: nothing
         Assert.Null(session.ReportedDirectory);
@@ -191,7 +191,7 @@ public class ShellDirectoryTests
 
         LocalHosts.Add(name);
         session.RecheckReportedDirectory();
-        Assert.Equal($"file://{name}/home/zack", session.ReportedDirectory);
+        Assert.Equal($"file://{name}/home/jdoe", session.ReportedDirectory);
         Assert.Null(session.RemoteHost);
         Assert.Equal(2, changes);
     }

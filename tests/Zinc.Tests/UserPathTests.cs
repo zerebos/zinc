@@ -6,7 +6,7 @@ namespace Zinc.Tests;
 /// <summary>zn's folder on the user's PATH ([cli] path), against a scratch key standing in for HKCU.</summary>
 public sealed class UserPathTests : IDisposable
 {
-    private const string Installed = @"C:\Users\Someone\AppData\Local\Zinc";
+    private const string Installed = @"C:\Users\JDoe\AppData\Local\Zinc";
     private readonly string _path = $@"Software\Zinc.Tests\{Guid.NewGuid():N}";
     private readonly RegistryKey _root;
 
@@ -77,7 +77,7 @@ public sealed class UserPathTests : IDisposable
         Assert.Contains("took zn off PATH", InstallCleanup.Uninstall(_root, Installed));
         Assert.Equal(@"C:\Tools", Path());
 
-        path.Apply(@"C:\Users\Someone\AppData\Local\Programs\Zinc\versions\20261003-0.1.0\bin"); // the dev install's
+        path.Apply(@"C:\Users\JDoe\AppData\Local\Programs\Zinc\versions\20261003-0.1.0\bin"); // the dev install's
         Assert.Empty(InstallCleanup.Uninstall(_root, Installed));
         Assert.EndsWith(@"20261003-0.1.0\bin", Path());
     }

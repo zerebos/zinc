@@ -36,8 +36,8 @@ public partial class LaunchRequestTests
         Assert.Equal(new LaunchRequest(LaunchAction.Profile, "wsl:Fedora", null, []).Profile, LaunchRequest.Parse(["--profile", "wsl:Fedora"]).Profile);
         Assert.Equal(LaunchAction.Profile, LaunchRequest.Parse(["--profile", "pwsh"]).Action);
 
-        var folder = LaunchRequest.Parse(["--profile", "wsl:Fedora", "--folder", "/home/zack/dev"]);
-        Assert.Equal((LaunchAction.Folder, "wsl:Fedora", "/home/zack/dev"), (folder.Action, folder.Profile, folder.Folder));
+        var folder = LaunchRequest.Parse(["--profile", "wsl:Fedora", "--folder", "/home/jdoe/dev"]);
+        Assert.Equal((LaunchAction.Folder, "wsl:Fedora", "/home/jdoe/dev"), (folder.Action, folder.Profile, folder.Folder));
         Assert.Equal((LaunchAction.Folder, (string?)null), (LaunchRequest.Parse(["--folder", @"C:\dev"]).Action, LaunchRequest.Parse(["--folder", @"C:\dev"]).Profile));
 
         // Without its value a flag asks for nothing (not for a program called "--profile").
@@ -48,10 +48,10 @@ public partial class LaunchRequestTests
     [Theory]
     [InlineData(LaunchAction.Profile, "pwsh", null)]
     [InlineData(LaunchAction.Profile, "ssh:git.example.com", null)]
-    [InlineData(LaunchAction.Folder, "pwsh", @"C:\Users\Zack\dev\my project")]
+    [InlineData(LaunchAction.Folder, "pwsh", @"C:\Users\JDoe\dev\my project")]
     [InlineData(LaunchAction.Folder, "cmd", @"C:\trailing slash\")]
-    [InlineData(LaunchAction.Folder, "wsl:Fedora", "/home/zack/odd \"quoted\" dir")]
-    [InlineData(LaunchAction.Folder, null, @"\\wsl.localhost\Fedora\home\zack")]
+    [InlineData(LaunchAction.Folder, "wsl:Fedora", "/home/jdoe/odd \"quoted\" dir")]
+    [InlineData(LaunchAction.Folder, null, @"\\wsl.localhost\Fedora\home\jdoe")]
     [InlineData(LaunchAction.NewWindow, null, null)]
     [InlineData(LaunchAction.ReopenWindow, null, null)]
     public void ArgumentsComeBackAsWritten(LaunchAction action, string? profile, string? folder)

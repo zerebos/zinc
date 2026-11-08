@@ -115,7 +115,7 @@ public static partial class ShellTitle
             : Make(program.Length > 0 ? program : profileName, profileName);
 
         // No quieter text the title already says: a program's title often names the folder itself (as the command
-        // center skips it), as written (~/dev/x) or in full (/home/zack/dev/x).
+        // center skips it), as written (~/dev/x) or in full (/home/jdoe/dev/x).
         HeaderTitle Make(string lead, string? detail, bool leadIsFolder = false, bool detailIsFolder = false)
         {
             var said = detail == null || Says(lead, detail) || (detailIsFolder && Says(lead, folder));

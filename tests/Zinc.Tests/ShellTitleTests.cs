@@ -4,7 +4,7 @@ namespace Zinc.Tests;
 
 public class ShellTitleTests
 {
-    private const string Home = @"C:\Users\Zack";
+    private const string Home = @"C:\Users\JDoe";
 
     private static string Title(bool? atPrompt, string? folder = null, string? command = null, string program = "",
         bool programSinceCommand = false, bool shellTitles = true, bool programTitles = true, double ranSeconds = 5) =>
@@ -18,24 +18,24 @@ public class ShellTitleTests
     {
         // For a quick command like ls or git status, the folder stays, as in a pane header, until the command has run
         // long enough to lead.
-        Assert.Equal(@"~\dev\zinc", Title(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: Leads - 0.05));
-        Assert.True(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\Zack\dev\zinc", "git status", Now.AddSeconds(-(Leads - 0.05)),
+        Assert.Equal(@"~\dev\zinc", Title(false, @"C:\Users\JDoe\dev\zinc", "git status", ranSeconds: Leads - 0.05));
+        Assert.True(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\JDoe\dev\zinc", "git status", Now.AddSeconds(-(Leads - 0.05)),
             Now, "", false));
-        Assert.Equal("npm test", Title(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: Leads + 0.01));
-        Assert.False(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\Zack\dev\zinc", "npm test", Now.AddSeconds(-(Leads + 0.01)),
+        Assert.Equal("npm test", Title(false, @"C:\Users\JDoe\dev\zinc", "npm test", ranSeconds: Leads + 0.01));
+        Assert.False(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\JDoe\dev\zinc", "npm test", Now.AddSeconds(-(Leads + 0.01)),
             Now, "", false));
 
         // A program's own title still names it at once.
-        Assert.Equal("vim: notes.md", Title(false, @"C:\Users\Zack", "vim notes.md", "vim: notes.md", programSinceCommand: true, ranSeconds: 0.01));
-        Assert.False(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\Zack", "vim notes.md", Now.AddSeconds(-0.01), Now,
+        Assert.Equal("vim: notes.md", Title(false, @"C:\Users\JDoe", "vim notes.md", "vim: notes.md", programSinceCommand: true, ranSeconds: 0.01));
+        Assert.False(ShellTitle.ChoosesFolder(true, true, false, @"C:\Users\JDoe", "vim notes.md", Now.AddSeconds(-0.01), Now,
             "vim: notes.md", true));
     }
 
     [Fact]
     public void FolderAtThePromptCommandWhileItRuns()
     {
-        Assert.Equal(@"~\dev\zinc", Title(true, @"C:\Users\Zack\dev\zinc", program: "zn.exe"));
-        Assert.Equal("git log --oneline", Title(false, @"C:\Users\Zack", "git log --oneline", "old title"));
+        Assert.Equal(@"~\dev\zinc", Title(true, @"C:\Users\JDoe\dev\zinc", program: "zn.exe"));
+        Assert.Equal("git log --oneline", Title(false, @"C:\Users\JDoe", "git log --oneline", "old title"));
     }
 
     [Fact]
@@ -43,7 +43,7 @@ public class ShellTitleTests
     {
         Assert.Equal("vim: notes.md", Title(false, command: "vim notes.md", program: "vim: notes.md", programSinceCommand: true));
         // Set before the command (by the shell's prompt): the command's text instead.
-        Assert.Equal("vim notes.md", Title(false, command: "vim notes.md", program: "zack@fedora:~"));
+        Assert.Equal("vim notes.md", Title(false, command: "vim notes.md", program: "jdoe@fedora:~"));
         Assert.Equal("vim notes.md", Title(false, command: "vim notes.md", program: "vim: x", programSinceCommand: true, programTitles: false));
     }
 
@@ -58,12 +58,12 @@ public class ShellTitleTests
     }
 
     [Theory]
-    [InlineData(@"C:\Users\Zack", "~")]
-    [InlineData(@"c:\users\zack\src\", @"~\src")]
-    [InlineData(@"C:\Users\Zack2", @"C:\Users\Zack2")]      // a sibling isn't home
-    [InlineData("/c/Users/Zack/src", "~/src")]              // Git Bash, MSYS2
-    [InlineData("/home/zack", "~")]                         // WSL
-    [InlineData("/home/zack/dev/zinc", "~/dev/zinc")]
+    [InlineData(@"C:\Users\JDoe", "~")]
+    [InlineData(@"c:\users\jdoe\src\", @"~\src")]
+    [InlineData(@"C:\Users\JDoe2", @"C:\Users\JDoe2")]      // a sibling isn't home
+    [InlineData("/c/Users/JDoe/src", "~/src")]              // Git Bash, MSYS2
+    [InlineData("/home/jdoe", "~")]                         // WSL
+    [InlineData("/home/jdoe/dev/zinc", "~/dev/zinc")]
     [InlineData("/root/x", "~/x")]
     [InlineData("/homeless", "/homeless")]
     [InlineData("/etc/nginx", "/etc/nginx")]
@@ -75,10 +75,10 @@ public class ShellTitleTests
 
     [Theory]
     [InlineData(@"~\dev\zinc", null)] // a shell's title, which is the folder itself
-    [InlineData(@"C:\Users\Zack\dev\zinc - vim", null)] // a program's title that names the folder in full
+    [InlineData(@"C:\Users\JDoe\dev\zinc - vim", null)] // a program's title that names the folder in full
     [InlineData("npm test", @"~\dev\zinc")]
     public void TheFolderAfterATitleIsShortAndNotSaidTwice(string title, string? after) =>
-        Assert.Equal(after, ShellTitle.FolderAfter(title, @"C:\Users\Zack\dev\zinc", @"C:\Users\Zack"));
+        Assert.Equal(after, ShellTitle.FolderAfter(title, @"C:\Users\JDoe\dev\zinc", @"C:\Users\JDoe"));
 
     [Fact]
     public void LongOrSeveralLineCommandsAreCut()
@@ -99,8 +99,8 @@ public class ShellTitleTests
     [Fact]
     public void HeaderLeadsWithTheFolderAtThePromptAndTheCommandWhileItRuns()
     {
-        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell", LeadIsFolder: true), Header(true, @"C:\Users\Zack\dev\zinc"));
-        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true), Header(false, @"C:\Users\Zack\dev\zinc", "npm test"));
+        Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell", LeadIsFolder: true), Header(true, @"C:\Users\JDoe\dev\zinc"));
+        Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true), Header(false, @"C:\Users\JDoe\dev\zinc", "npm test"));
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public class ShellTitleTests
     {
         // git status, ls: never in the header.
         Assert.Equal(new HeaderTitle(@"~\dev\zinc", "PowerShell", LeadIsFolder: true),
-            Header(false, @"C:\Users\Zack\dev\zinc", "git status", ranSeconds: Leads - 0.01));
+            Header(false, @"C:\Users\JDoe\dev\zinc", "git status", ranSeconds: Leads - 0.01));
         Assert.Equal(new HeaderTitle("npm test", @"~\dev\zinc", DetailIsFolder: true),
-            Header(false, @"C:\Users\Zack\dev\zinc", "npm test", ranSeconds: Leads + 0.01));
+            Header(false, @"C:\Users\JDoe\dev\zinc", "npm test", ranSeconds: Leads + 0.01));
         Assert.Equal(ShellTitle.CommandLeadsAfter - TimeSpan.FromMilliseconds(50), ShellTitle.UntilCommandLeads(Now.AddMilliseconds(-50), Now));
         Assert.Equal(TimeSpan.Zero, ShellTitle.UntilCommandLeads(Now.AddSeconds(-3), Now));
         Assert.Null(ShellTitle.UntilCommandLeads(null, Now));
@@ -120,9 +120,9 @@ public class ShellTitleTests
     public void HeaderLetsAProgramsOwnTitleLeadAtOnce()
     {
         Assert.Equal(new HeaderTitle("vim: notes.md", @"~\dev", DetailIsFolder: true),
-            Header(false, @"C:\Users\Zack\dev", "vim notes.md", ranSeconds: 0.01, program: "vim: notes.md", programSinceCommand: true));
+            Header(false, @"C:\Users\JDoe\dev", "vim notes.md", ranSeconds: 0.01, program: "vim: notes.md", programSinceCommand: true));
         // A title the shell set before the command doesn't count; with program-titles off no program names it.
-        Assert.Equal(new HeaderTitle("vim notes.md", null), Header(false, null, "vim notes.md", program: "zack@fedora:~"));
+        Assert.Equal(new HeaderTitle("vim notes.md", null), Header(false, null, "vim notes.md", program: "jdoe@fedora:~"));
         Assert.Equal(new HeaderTitle("vim notes.md", null),
             Header(false, null, "vim notes.md", program: "vim: x", programSinceCommand: true, programTitles: false));
     }
@@ -141,14 +141,14 @@ public class ShellTitleTests
     public void HeaderSaysTheFolderOnce()
     {
         // A program's title that names the folder already, as written or in full: no quieter folder after it.
-        Assert.Equal(new HeaderTitle(@"config.toml ~\dev\BetterDiscord\betterdiscord.app flow", null),
-            Header(false, @"C:\Users\Zack\dev\BetterDiscord\betterdiscord.app", "flow config.toml",
-                program: @"config.toml ~\dev\BetterDiscord\betterdiscord.app flow", programSinceCommand: true));
-        Assert.Equal(new HeaderTitle(@"vim C:\Users\Zack\dev\zinc\notes.md", null),
-            Header(false, @"C:\Users\Zack\dev\zinc", "vim notes.md", program: @"vim C:\Users\Zack\dev\zinc\notes.md", programSinceCommand: true));
+        Assert.Equal(new HeaderTitle(@"config.toml ~\dev\ExampleLongName\examplelongname.org flow", null),
+            Header(false, @"C:\Users\JDoe\dev\ExampleLongName\examplelongname.org", "flow config.toml",
+                program: @"config.toml ~\dev\ExampleLongName\examplelongname.org flow", programSinceCommand: true));
+        Assert.Equal(new HeaderTitle(@"vim C:\Users\JDoe\dev\zinc\notes.md", null),
+            Header(false, @"C:\Users\JDoe\dev\zinc", "vim notes.md", program: @"vim C:\Users\JDoe\dev\zinc\notes.md", programSinceCommand: true));
         // Only the whole folder counts: its last name alone isn't enough.
         Assert.Equal(new HeaderTitle("zinc: build", @"~\dev\zinc", DetailIsFolder: true),
-            Header(false, @"C:\Users\Zack\dev\zinc", "make", program: "zinc: build", programSinceCommand: true));
+            Header(false, @"C:\Users\JDoe\dev\zinc", "make", program: "zinc: build", programSinceCommand: true));
         // The profile likewise.
         Assert.Equal(new HeaderTitle("Windows PowerShell", null), Header(null, program: "Windows PowerShell"));
     }
@@ -161,19 +161,19 @@ public class ShellTitleTests
     public void TabLabelsKnowWhenTheyAreAFolder(bool shellTitles, bool? atPrompt, bool folder)
     {
         var started = atPrompt == false ? Now.AddSeconds(-5) : (DateTime?)null;
-        Assert.Equal(folder, ShellTitle.ChoosesFolder(shellTitles, true, atPrompt, @"C:\Users\Zack\dev", "make", started, Now, "pwsh", false));
+        Assert.Equal(folder, ShellTitle.ChoosesFolder(shellTitles, true, atPrompt, @"C:\Users\JDoe\dev", "make", started, Now, "pwsh", false));
         Assert.False(ShellTitle.ChoosesFolder(shellTitles, true, atPrompt, null, "make", started, Now, "pwsh", false));
         if (folder)
         {
-            Assert.Equal(@"~\dev", Title(atPrompt, @"C:\Users\Zack\dev", shellTitles: shellTitles));
+            Assert.Equal(@"~\dev", Title(atPrompt, @"C:\Users\JDoe\dev", shellTitles: shellTitles));
         }
     }
 
     [Fact]
     public void FoldersShortenFromTheirStart()
     {
-        Assert.Equal([@"…\BetterDiscord\betterdiscord.app", @"…\betterdiscord.app"],
-            ShellTitle.FolderShortenings(@"~\dev\BetterDiscord\betterdiscord.app"));
+        Assert.Equal([@"…\ExampleLongName\examplelongname.org", @"…\examplelongname.org"],
+            ShellTitle.FolderShortenings(@"~\dev\ExampleLongName\examplelongname.org"));
         Assert.Equal(["…/x"], ShellTitle.FolderShortenings("/home/x"));
         Assert.Equal([@"…\share\x", @"…\x"], ShellTitle.FolderShortenings(@"\\server\share\x"));
         Assert.Equal([@"…\x"], ShellTitle.FolderShortenings(@"C:\x\"));
@@ -187,11 +187,12 @@ public class ShellTitleTests
     public void AFolderDropsOnlyWhatDoesntFit()
     {
         static double Chars(string text) => text.Length; // a character a pixel
-        const string folder = @"~\dev\BetterDiscord\betterdiscord.app";
+        const string folder = @"~\dev\ExampleLongName\examplelongname.org";
+        const string lastTwo = @"…\ExampleLongName\examplelongname.org", lastOne = @"…\examplelongname.org";
         Assert.Equal(folder, ShellTitle.FitFolder(folder, folder.Length, Chars));
-        Assert.Equal(@"…\BetterDiscord\betterdiscord.app", ShellTitle.FitFolder(folder, 33, Chars));
-        Assert.Equal(@"…\betterdiscord.app", ShellTitle.FitFolder(folder, 32, Chars));
-        Assert.Equal(@"…\betterdiscord.app", ShellTitle.FitFolder(folder, 5, Chars)); // then trimmed at its end
+        Assert.Equal(lastTwo, ShellTitle.FitFolder(folder, lastTwo.Length, Chars));
+        Assert.Equal(lastOne, ShellTitle.FitFolder(folder, lastTwo.Length - 1, Chars));
+        Assert.Equal(lastOne, ShellTitle.FitFolder(folder, 5, Chars)); // then trimmed at its end
         Assert.Equal("~", ShellTitle.FitFolder("~", 0, Chars));
     }
 }

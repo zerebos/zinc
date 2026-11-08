@@ -18,11 +18,11 @@ public class WorkspaceLookTests
     public void AFolderAlwaysGetsTheSameColor()
     {
         Assert.Equal(WorkspaceColors.ForFolder(@"C:\Src\app"), WorkspaceColors.ForFolder(@"c:\src\app\"));
-        Assert.Equal(WorkspaceColors.ForFolder("/home/zack/src/ghostty"), WorkspaceColors.ForFolder("/home/zack/src/ghostty/"));
+        Assert.Equal(WorkspaceColors.ForFolder("/home/jdoe/src/ghostty"), WorkspaceColors.ForFolder("/home/jdoe/src/ghostty/"));
         Assert.InRange(WorkspaceColors.ForFolder("/tmp"), 0, WorkspaceColors.All.Count - 1);
 
         // Different folders spread over the colors (not all on one).
-        var used = Enumerable.Range(0, 40).Select(i => WorkspaceColors.ForFolder($"/home/zack/src/project{i}")).Distinct().Count();
+        var used = Enumerable.Range(0, 40).Select(i => WorkspaceColors.ForFolder($"/home/jdoe/src/project{i}")).Distinct().Count();
         Assert.True(used >= 6, $"only {used} colors for 40 folders");
     }
 }

@@ -9,16 +9,16 @@ public class DroppedPathsTests
     private static readonly LinkContext GitBash = new("PC", PosixRoot: @"C:\Program Files\Git");
 
     [Theory]
-    [InlineData(@"C:\Users\Zack\notes.txt", "/mnt/c/Users/Zack/notes.txt")]
+    [InlineData(@"C:\Users\JDoe\notes.txt", "/mnt/c/Users/JDoe/notes.txt")]
     [InlineData(@"D:\", "/mnt/d/")]
-    [InlineData(@"\\wsl.localhost\Ubuntu\home\zack\src", "/home/zack/src")] // its own files
+    [InlineData(@"\\wsl.localhost\Ubuntu\home\jdoe\src", "/home/jdoe/src")] // its own files
     [InlineData(@"\\wsl$\ubuntu\etc\hosts", "/etc/hosts")]
-    [InlineData(@"\\wsl.localhost\Fedora\home\zack", @"\\wsl.localhost\Fedora\home\zack")] // another distro's: not mounted
+    [InlineData(@"\\wsl.localhost\Fedora\home\jdoe", @"\\wsl.localhost\Fedora\home\jdoe")] // another distro's: not mounted
     public void WslSeesDrivesUnderMnt(string path, string expected) =>
         Assert.Equal(expected, DroppedPaths.Translate(path, Wsl));
 
     [Theory]
-    [InlineData(@"C:\Users\Zack\notes.txt", "/c/Users/Zack/notes.txt")]
+    [InlineData(@"C:\Users\JDoe\notes.txt", "/c/Users/JDoe/notes.txt")]
     [InlineData(@"C:\Program Files\Git\usr\bin\ls.exe", "/usr/bin/ls.exe")] // under its root
     [InlineData(@"C:\Program Files\Git", "/")]
     [InlineData(@"\\server\share\f.txt", "//server/share/f.txt")]

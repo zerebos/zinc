@@ -9,14 +9,14 @@ public class DiscoveryTests
             # comment
             Host *
                 ServerAliveInterval 30
-            Host homelab contabo
-                User zack
-            Host=bd
-            host "git.zerebos.com" *.internal !bastion
+            Host buildbox vps
+                User jdoe
+            Host=pi
+            host "git.example.com" *.internal !bastion
             Match host foo
-            Host homelab
+            Host buildbox
             """, _ => []);
-        Assert.Equal(["homelab", "contabo", "bd", "git.zerebos.com"], hosts);
+        Assert.Equal(["buildbox", "vps", "pi", "git.example.com"], hosts);
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class DiscoveryTests
     [
         new("wsl:Fedora", "Fedora", "wsl.exe --distribution-id {2} --cd ~"),
         new("pwsh", "PowerShell", "pwsh.exe"),
-        new("ssh:homelab", "SSH - homelab", "ssh.exe homelab"),
+        new("ssh:buildbox", "SSH - buildbox", "ssh.exe buildbox"),
     ];
 
     private static ConfigFile Parse(string text, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover = null) =>
@@ -74,9 +74,9 @@ public class DiscoveryTests
             [profile.work]
             command = "cmd.exe"
             """);
-        Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:homelab"], config.Profiles.Select(p => p.Id));
-        Assert.Equal("SSH - homelab", config.Profiles[3].Name);
-        Assert.Equal("ssh.exe homelab", config.Profiles[3].Config.Command);
+        Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:buildbox"], config.Profiles.Select(p => p.Id));
+        Assert.Equal("SSH - buildbox", config.Profiles[3].Name);
+        Assert.Equal("ssh.exe buildbox", config.Profiles[3].Config.Command);
         Assert.Empty(config.Warnings);
     }
 
@@ -91,12 +91,12 @@ public class DiscoveryTests
             name = "Fedora 42"
             colors.background = "#101010"
 
-            [profile."ssh:homelab"]
+            [profile."ssh:buildbox"]
             hidden = true
             """);
 
         // Changes don't move a found profile: they stay in the order the searches found them.
-        Assert.Equal(["wsl:Fedora", "pwsh", "ssh:homelab"], config.Profiles.Select(p => p.Id));
+        Assert.Equal(["wsl:Fedora", "pwsh", "ssh:buildbox"], config.Profiles.Select(p => p.Id));
         var pwsh = config.Profiles[1];
         Assert.Equal("PowerShell", pwsh.Name);                 // from discovery
         Assert.Equal("pwsh.exe", pwsh.Config.Command);
@@ -112,7 +112,7 @@ public class DiscoveryTests
     public void YourOwnProfilesComeFirstThenFoundOnesInSearchOrder()
     {
         var config = Parse("""
-            [profile."ssh:homelab"]
+            [profile."ssh:buildbox"]
 
             [profile.work]
             command = "cmd.exe"
@@ -120,16 +120,16 @@ public class DiscoveryTests
             [profile.pwsh]
             """);
         // Empty sections no longer place found profiles (profile-order does that).
-        Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:homelab"], config.Profiles.Select(p => p.Id));
-        Assert.Equal("ssh.exe homelab", config.Profiles.Single(p => p.Id == "ssh:homelab").Config.Command);
+        Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:buildbox"], config.Profiles.Select(p => p.Id));
+        Assert.Equal("ssh.exe buildbox", config.Profiles.Single(p => p.Id == "ssh:buildbox").Config.Command);
         Assert.Empty(config.Warnings);
     }
 
     [Fact]
     public void AnExplicitCommandWinsOverTheFoundOne()
     {
-        var config = Parse("[profile.\"ssh:homelab\"]\ncommand = \"ssh.exe -p 2222 homelab\"");
-        Assert.Equal("ssh.exe -p 2222 homelab", config.Profiles.Single(p => p.Id == "ssh:homelab").Config.Command);
+        var config = Parse("[profile.\"ssh:buildbox\"]\ncommand = \"ssh.exe -p 2222 buildbox\"");
+        Assert.Equal("ssh.exe -p 2222 buildbox", config.Profiles.Single(p => p.Id == "ssh:buildbox").Config.Command);
     }
 
     [Fact]

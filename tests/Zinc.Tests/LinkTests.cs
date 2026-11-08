@@ -11,7 +11,7 @@ public class LinkTests
     [InlineData("https://en.wikipedia.org/wiki/A_(b)", 5, "https://en.wikipedia.org/wiki/A_(b)")]
     [InlineData("\"http://q.io/?a=1&b=2\",", 5, "http://q.io/?a=1&b=2")]
     [InlineData("mailto:me@example.com", 0, "mailto:me@example.com")]
-    [InlineData("file:///C:/Users/me/notes.txt", 9, "file:///C:/Users/me/notes.txt")]
+    [InlineData("file:///C:/Users/JDoe/notes.txt", 9, "file:///C:/Users/JDoe/notes.txt")]
     public void FindsUrls(string text, int index, string expected)
     {
         var found = UrlDetector.Find(text, index);
@@ -34,7 +34,7 @@ public class LinkTests
     [InlineData("HTTP://ghostty.org", LinkAction.Open)]
     [InlineData("mailto:me@example.com", LinkAction.Open)]
     [InlineData("file:///C:/Windows/notepad.exe", LinkAction.Reveal)]
-    [InlineData("file://otherbox/home/me/x.txt", LinkAction.Reject)] // another machine
+    [InlineData("file://otherbox/home/jdoe/x.txt", LinkAction.Reject)] // another machine
     [InlineData("file:///usr/bin/ls", LinkAction.Reject)] // a POSIX path with no known root
     [InlineData("ms-settings:privacy", LinkAction.Reject)]
     [InlineData("javascript:alert(1)", LinkAction.Reject)]
@@ -44,14 +44,14 @@ public class LinkTests
         Assert.Equal(expected, LinkTarget.Classify(uri, Plain, out _));
     }
 
-    private static readonly LinkContext Plain = new("Aetherion");
+    private static readonly LinkContext Plain = new("Devbox");
 
     // ls --hyperlink output as seen in each shell (the host is the Windows machine name).
     [Theory]
-    [InlineData("file:///C:/Users/me/My%20Notes.txt", @"C:\Users\me\My Notes.txt")]
+    [InlineData("file:///C:/Users/JDoe/My%20Notes.txt", @"C:\Users\JDoe\My Notes.txt")]
     [InlineData("file://localhost/C:/tmp/a.txt", @"C:\tmp\a.txt")]
-    [InlineData("file://Aetherion/c/Users/Zack/dev", @"C:\Users\Zack\dev")] // Git Bash
-    [InlineData("file://aetherion/d", @"D:\")]
+    [InlineData("file://Devbox/c/Users/JDoe/dev", @"C:\Users\JDoe\dev")] // Git Bash
+    [InlineData("file://devbox/d", @"D:\")]
     [InlineData("file:///cygdrive/c/x", @"C:\x")]
     public void WindowsAndMsysPaths(string uri, string expected)
     {
@@ -63,16 +63,16 @@ public class LinkTests
     public void MsysRootPaths()
     {
         var git = Plain with { PosixRoot = @"C:\Program Files\Git" };
-        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify("file://Aetherion/usr/bin/ls.exe", git, out var path));
+        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify("file://Devbox/usr/bin/ls.exe", git, out var path));
         Assert.Equal(@"C:\Program Files\Git\usr\bin\ls.exe", path);
-        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify("file://Aetherion/c/x", git, out path));
+        Assert.Equal(LinkAction.Reveal, LinkTarget.Classify("file://Devbox/c/x", git, out path));
         Assert.Equal(@"C:\x", path); // drives still win
     }
 
     [Theory]
-    [InlineData("file://Aetherion/home/zack/My%20Dir", @"\\wsl.localhost\Fedora\home\zack\My Dir")]
-    [InlineData("file://Aetherion/mnt/c/Users/Zack", @"C:\Users\Zack")]
-    [InlineData("file://Aetherion/c/notadrive", @"\\wsl.localhost\Fedora\c\notadrive")]
+    [InlineData("file://Devbox/home/jdoe/My%20Dir", @"\\wsl.localhost\Fedora\home\jdoe\My Dir")]
+    [InlineData("file://Devbox/mnt/c/Users/JDoe", @"C:\Users\JDoe")]
+    [InlineData("file://Devbox/c/notadrive", @"\\wsl.localhost\Fedora\c\notadrive")]
     public void WslPaths(string uri, string expected)
     {
         Assert.Equal(LinkAction.Reveal, LinkTarget.Classify(uri, Plain with { WslDistro = "Fedora" }, out var path));
