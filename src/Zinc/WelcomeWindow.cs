@@ -133,8 +133,7 @@ internal sealed partial class WelcomeWindow : Window
     }
 
     /// <summary>
-    /// The page's title after the app icon (the tile you just clicked; docs/brand.md section 9 has the mark
-    /// large here: the user chose the icon over the mark, 2026-10-01). One tile works on light and dark.
+    /// The page's title after the app icon, which is the tile you just clicked. One tile works on light and dark.
     /// </summary>
     private static FrameworkElement Header() => new StackPanel
     {

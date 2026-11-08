@@ -478,13 +478,13 @@ internal sealed partial class SettingsWindow : Window
 
     private void AboutPage()
     {
-        // The lockup (wordmark, then mark; docs/brand.md section 10) stands in for the page's heading, centered.
+        // The lockup (wordmark, then mark) stands in for the page's heading, centered.
         var lockup = Path.Combine(AppContext.BaseDirectory, "Brand",
             Brand.IsDark(_page) ? "quadrant-zinc-dark.svg" : "quadrant-zinc-light.svg");
         var image = new Image
         {
             Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(lockup)), // vector: the cells stay crisp at any scale
-            // The mark's cells show from 64 px up (docs/brand.md section 7; smaller, they blur together).
+            // The mark's cells only show apart from 64 px up, and blur together when smaller.
             Height = 100,
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 12, 0, 18),

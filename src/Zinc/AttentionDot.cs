@@ -72,8 +72,8 @@ internal static class AttentionWords
 }
 
 /// <summary>
-/// A tab's status mark: the <see cref="Attention"/> dot, a lit cell (a rounded square, docs/brand.md
-/// §9: green finished or a program's notification, amber the bell, red failed), else a small ring
+/// A tab's status mark: the <see cref="Attention"/> dot, a lit cell (a rounded square: green finished or a
+/// program's notification, amber the bell, red failed, in <see cref="Brand"/>'s colors), else a small ring
 /// while a program reports progress (OSC 9;4). After a tab's title, or on its icon's corner (ringed
 /// in the background color) where there's no title. It fades 100% → 35% → 100% every 1.6 s until
 /// you look (still when Windows' animations are off). A workspace with two or more tabs to look

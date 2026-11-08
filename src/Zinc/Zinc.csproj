@@ -21,7 +21,7 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- Embedded in the exe: Explorer, Start Menu shortcut, Raycast. The brand's icon (docs/brand.md), hand-placed frames. -->
+    <!-- Embedded in the exe: Explorer, Start Menu shortcut, Raycast. The brand's icon, with hand-placed frames. -->
     <ApplicationIcon>Assets\Zinc.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -55,9 +55,9 @@
     <!-- The default font, Cascadia Mono NF (Microsoft's Nerd Font build), used without installing it. -->
     <Content Include="..\..\assets\fonts\*" Link="Fonts\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <!-- Brand artwork shown in the app: About's lockup, the welcome page's app tile (docs/brand.md). -->
-    <Content Include="..\..\assets\brand\lockups\quadrant-zinc-dark.svg;..\..\assets\brand\lockups\quadrant-zinc-light.svg;..\..\assets\brand\mark\quadrant-app-tile.svg"
-             Link="Brand\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Brand artwork shown in the app: About's lockup, the welcome page's app tile. -->
+    <Content Include="Assets\Brand\*.svg" Link="Brand\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- License texts of the open-source software Zinc ships (Settings > About; OpenSourceNotices.cs). -->
     <Content Include="..\..\assets\licenses\*" Link="Licenses\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

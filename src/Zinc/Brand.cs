@@ -5,10 +5,9 @@ using Windows.UI;
 namespace Zinc;
 
 /// <summary>
-/// Zinc's look in the app's chrome (docs/brand.md §8-9): the UI color tokens for dark and light
-/// themes and the accent that replaces Windows' (<c>[window] accent</c>). The UI keeps Segoe UI
-/// (Geist Mono was tried for the wordmark, counts and command names: not native enough, too subtle
-/// to matter). Never terminal content: the color scheme always wins there.
+/// Zinc's colors in the app's chrome, for dark and light themes, and the accent that replaces Windows'
+/// (<c>[window] accent</c>). This is where the app's colors are defined. They never apply to terminal content,
+/// where the color scheme always wins. The UI keeps Segoe UI.
 /// </summary>
 internal static class Brand
 {
