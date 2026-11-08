@@ -91,14 +91,15 @@
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
   </ItemGroup>
 
-  <!-- Where release builds look for updates (scripts/release.ps1 -UpdateUrl); dev builds have none (Updater.Source). -->
+  <!-- Where release builds look for updates (scripts/release/release.ps1 -UpdateUrl); dev builds have none
+       (Updater.Source). -->
   <ItemGroup Condition="'$(ZincUpdateUrl)' != ''">
     <AssemblyMetadata Include="ZincUpdateUrl" Value="$(ZincUpdateUrl)" />
   </ItemGroup>
 
   <!-- zn, the command-line tool, in bin\ next to zinc.exe (a folder of its own, so putting it on PATH exposes nothing
        else; terminals get it appended to theirs: CliServer). Builds copy its framework-dependent build (dev machines have .NET);
-       publishes (install.ps1, release.ps1) publish it ahead of time: one self-contained zn.exe. -->
+       publishes (release.ps1's, for one) publish it ahead of time: one self-contained zn.exe. -->
   <PropertyGroup>
     <ZnProject>$(MSBuildThisFileDirectory)..\Zinc.Cli\Zinc.Cli.csproj</ZnProject>
   </PropertyGroup>

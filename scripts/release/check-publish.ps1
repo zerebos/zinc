@@ -5,11 +5,11 @@
 .DESCRIPTION
   .NET loads only the assemblies zinc.deps.json lists. Trimming can leave one out that an untrimmed assembly (ours)
   still needs: dev.342's settings import failed on System.IO.Compression.ZipFile, copied into the folder but not
-  listed, which bin\ builds and the tests never show. release.ps1 and install.ps1 refuse a build this finds anything in.
+  listed, which bin\ builds and the tests never show. release.ps1 refuses a build this finds anything in.
   Prints nothing when every reference is listed.
 
 .EXAMPLE
-  pwsh scripts/check-publish.ps1 dist\publish-Zinc
+  pwsh scripts/release/check-publish.ps1 dist\publish-Zinc
 #>
 #Requires -Version 7 # System.Reflection.Metadata, which Windows PowerShell doesn't load
 param([Parameter(Mandatory)][string]$Folder)

@@ -1,8 +1,8 @@
 # Changelog
 
 What changed in each version testers got, newest first. Versions are `0.1.0-dev.N`, where N counts the commits
-it was built from. Each release's notes are this file's entry for it (`scripts/release.ps1` checks the newest entry
-is the version it builds, and hands it to the installer as the release notes).
+it was built from. Each release's notes are this file's entry for it (`scripts/release/release.ps1` checks the newest
+entry is the version it builds, and hands it to the installer as the release notes).
 
 ## Unreleased
 

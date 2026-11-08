@@ -200,7 +200,7 @@ and read state after the write (see `_titleDirty`).
 - `dotnet publish` of an unpackaged WinUI app omits `Zinc.pri`/`.xbf` unless
   `EnableMsixTooling=true` → the published exe dies at startup with 0xC000027B in
   Microsoft.UI.Xaml.dll. `bin/` builds don't show this; smoke-test a *publish* after
-  csproj changes (scripts/install.ps1 publishes).
+  csproj changes (`.scratch/tools/install.ps1` publishes).
 - Reference the WinAppSDK component packages (WinUI/Foundation/InteractiveExperiences),
   not the `Microsoft.WindowsAppSDK` metapackage: 2.x's metapackage adds AI/ML/Search/Widgets
   (onnxruntime, DirectML) — 165 MB vs 105 MB published. Keep versions in step with the
@@ -219,9 +219,10 @@ and read state after the write (see `_titleDirty`).
   published one** (`releases.win.json` on the update server): squashing or rewriting history lowers the count (dev.330
   was published, then a squash made the next commit dev.330 again, which testers would never get). `-Publish` checks
   and refuses, saying how many more commits it needs: tell the user, don't work around it.
-- Tester builds and the installer: `scripts/release.ps1` (self-contained publish, Velopack pack, refuses a dirty tree
-  unless -AllowDirty). **install.ps1 and release.ps1 take the `Local\ZincPublish` mutex (they share obj\).** Smoke-test
-  a publish with ZINC_CONFIG set to a fresh path. How it all works, and what went wrong before: internals, Release.
+- Tester builds and the installer: `scripts/release/release.ps1` (self-contained publish, Velopack pack, refuses a
+  dirty tree unless -AllowDirty). **`.scratch/tools/install.ps1` and release.ps1 take the `Local\ZincPublish` mutex
+  (they share obj\).** Smoke-test a publish with ZINC_CONFIG set to a fresh path. How it all works, and what went
+  wrong before: internals, Release.
 - **Never install a `Zinc`-id package on this machine** (it would take the dev install's Start Menu shortcut, sign-in
   entry and default terminal), and run every Setup/Update.exe with ZINC_CONFIG set: the installer starts Zinc, which
   would otherwise hand itself to the user's running Zinc. Update tests use the `Zinc.Test` id

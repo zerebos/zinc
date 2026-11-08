@@ -29,14 +29,14 @@
   It builds into a fresh dist\release with -UpdateUrl and -From set to updateUrl, then uploads over FTPS (curl,
   your login from %USERPROFILE%\.netrc, the server's certificate checked as usual; with ftpPin, that key instead,
   so an expired or self-signed certificate still gives an encrypted connection to that server only. A pin breaks
-  at every renewal: use it only while a host's certificate is broken): .htaccess (scripts/release-htaccess), the new files,
-  then releases.win.json last, under another name and renamed, so a copy checking mid-upload never sees a
-  release whose files aren't there yet. Packages the new list doesn't mention are deleted from the server.
+  at every renewal: use it only while a host's certificate is broken): .htaccess (release-htaccess, next to this
+  script), the new files, then releases.win.json last, under another name and renamed, so a copy checking
+  mid-upload never sees a release whose files aren't there yet. Packages the new list doesn't mention are deleted from the server.
 
 .EXAMPLE
-  pwsh scripts/release.ps1 -Publish                                                            # the real thing
-  pwsh scripts/release.ps1 -UpdateUrl https://example.com/zinc/ -From https://example.com/zinc/ # build only
-  pwsh scripts/release.ps1 -PackId Zinc.Test -Version 0.1.0-test.1 -AllowDirty -Out C:\Temp\feed   # tests
+  pwsh scripts/release/release.ps1 -Publish                                                             # the real thing
+  pwsh scripts/release/release.ps1 -UpdateUrl https://example.com/zinc/ -From https://example.com/zinc/ # build only
+  pwsh scripts/release/release.ps1 -PackId Zinc.Test -Version 0.1.0-test.1 -AllowDirty -Out C:\Temp\feed  # tests
 #>
 param(
     [string]$Out,
@@ -53,7 +53,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$repo = Split-Path -Parent $PSScriptRoot
+$repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if (-not $Out) { $Out = Join-Path $repo 'dist\release' }
 
 if ($Publish) {
@@ -141,7 +141,7 @@ if ($From) {
 $publishDir = Join-Path $repo "dist\publish-$PackId"
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 Write-Host "Publishing $Version ..."
-# One publish at a time with install.ps1 (they share obj\), and a full rebuild: an
+# One publish at a time (any script that publishes into obj\ takes the same mutex), and a full rebuild: an
 # incremental publish after a framework-dependent one reused a zinc.deps.json naming no runtime.
 $inheritedPath = $env:PATH
 $lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')

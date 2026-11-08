@@ -52,25 +52,15 @@ The app is unpackaged and Windows App SDK self-contained, so
 `src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`
 runs directly.
 
-## Installing locally
+## Sharing a build
 
-```bash
-pwsh scripts/install.ps1                  # Release build -> Start Menu "Zinc" (Raycast finds it)
-pwsh scripts/install.ps1 -InstallGitHook  # also reinstall in the background after each commit on main
-pwsh scripts/install.ps1 -Uninstall       # remove install, shortcut and hook (keeps config)
-```
-
-Each install publishes to a new folder under `%LOCALAPPDATA%\Programs\Zinc\versions\`
-and repoints the Start Menu shortcut, so open windows are never disturbed; the three
-newest versions are kept (`-Keep N`). Each carries its own .NET runtime, as the tester zip does.
-
-**Sharing a build.** `pwsh scripts/release.ps1 -UpdateUrl <address>` makes a release in
+`pwsh scripts/release/release.ps1 -UpdateUrl <address>` makes a release in
 `dist\release` with [Velopack](https://velopack.io): `Zinc-win-Setup.exe` (a per-user install, no admin
 prompt), the update packages, `releases.win.json` (what installed copies check daily) and
 `Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are inside (about 77 MB). Put the
 folder's contents at the address; installed copies then update themselves (Settings > About > Updates).
 `-From <address>` fetches the previous release first so the new one also gets a small delta package.
-`README.txt` (from `scripts/package-readme.txt`) tells testers how to install past SmartScreen (the
+`README.txt` (from `scripts/release/package-readme.txt`) tells testers how to install past SmartScreen (the
 build isn't signed), how updates work, where settings and logs go, how to send a debug log and
 benchmark results with feedback, and how to remove it.
 
@@ -78,7 +68,7 @@ benchmark results with feedback, and how to remove it.
 of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
 build numbered by the repository's commit count (`0.1.0-dev.812+a1b2c3d`). It's shown in Settings >
 About, answered to programs asking the terminal's version (XTVERSION: `zinc 0.1.0-dev.812+a1b2c3d`),
-in the exe's file properties, and in install folder names (after a timestamp, which keeps them in order).
+and in the exe's file properties.
 
 ## Configuration
 
@@ -408,7 +398,7 @@ switches and buttons) or `"windows"` (your Windows accent color). Restart Zinc t
 **`[updates]`**: `check = true` (default) lets a Zinc installed with its installer look for a new
 version once a day and download it in the background; a notice then offers to restart into it, or it
 installs the next time you quit; Settings > About shows what's new in it (from [CHANGELOG.md](CHANGELOG.md)). `false`: only Settings > About > Check for updates looks. Copies not
-installed by the installer (a dev build, `scripts/install.ps1`'s) never update.
+installed by the installer (a dev build, or a folder you published yourself) never update.
 
 **`[cli]`**: `remote-control = true` lets `zn` (below) control this Zinc; off by default, when only
 `zn version` answers. `path = true` puts `zn` on your user PATH for other terminals. Settings > Terminal >
@@ -1015,7 +1005,7 @@ scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit
 scripts/copy-vcruntime.sh         the Visual C++ runtime the native DLLs need, next to them
 scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
 scripts/vt-bench.py               libghostty-vt's parse speed, before and after a Ghostty update
-scripts/install.ps1, release.ps1  local installs; releases (installer + update packages, Velopack)
+scripts/release/                  releases (installer + update packages, Velopack) and their checks
 scripts/update-themes.sh          refresh the bundled color schemes
 assets/                           fonts, themes, shaders, shell-integration scripts, licenses
 native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
