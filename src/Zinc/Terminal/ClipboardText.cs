@@ -60,19 +60,6 @@ public static partial class ClipboardText
         }
     }
 
-    /// <summary>The same paste with given text (<c>test:paste:</c>, so tests never touch the real clipboard).</summary>
-    public static async void PasteForTest(TerminalSession session, Config config, Microsoft.UI.Xaml.XamlRoot? root, string text)
-    {
-        try
-        {
-            await Paste(session, config, root, text);
-        }
-        catch (Exception ex)
-        {
-            Log.Write($"test paste failed: {ex.Message}");
-        }
-    }
-
     private static async Task Paste(TerminalSession session, Config config, Microsoft.UI.Xaml.XamlRoot? root, string? text)
     {
         if (string.IsNullOrEmpty(text))

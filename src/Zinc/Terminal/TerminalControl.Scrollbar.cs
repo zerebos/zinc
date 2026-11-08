@@ -123,13 +123,6 @@ public sealed partial class TerminalControl
         SetScrollBarExpanded(_nearScrollBar);
     }
 
-    /// <summary>Test hook: expanded, and kept so whatever the pointer does.</summary>
-    internal void PinScrollBarExpandedForTest()
-    {
-        _scrollBarPinned = true;
-        SetScrollBarExpanded(true);
-    }
-
     /// <summary>
     /// Switches the bar between its thin and full looks via the visual states a
     /// ScrollViewer uses. (IndicatorMode.None does not mean "full bar": it hides it.)

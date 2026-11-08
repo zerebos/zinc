@@ -50,10 +50,6 @@ public sealed partial class TerminalControl
         return step;
     }
 
-    /// <summary>Test hook (ZINC_TEST_KEYS): a chord pressed here, as far as sequences go.</summary>
-    internal KeyStep PressForTest(KeyChord pressed) =>
-        _session is { } session ? HandleSequenceKey(pressed, repeat: false, session) : KeyStep.NotMine;
-
     /// <summary>Focus went elsewhere: a waiting sequence is over.</summary>
     private void CancelSequence()
     {

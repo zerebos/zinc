@@ -94,11 +94,11 @@ public sealed partial class MainWindow
         /// <summary>How far the animation has got: real time, but at most <see cref="MaxStep"/> a frame.</summary>
         public TimeSpan Played { get; set; }
 
+        /// <summary>Frames run so far. Held panes take their end size on the second one.</summary>
         public int Frames { get; set; }
 
+        /// <summary>When the last frame ran, on <see cref="Clock"/>.</summary>
         public TimeSpan Last { get; set; }
-
-        public TimeSpan Longest { get; set; }
     }
 
     /// <summary>Notes the split sizes and shown panes before a layout change; null when off or not on screen.</summary>
@@ -625,7 +625,6 @@ public sealed partial class MainWindow
             // A slow frame (a new pane starting its shell takes 50-70 ms) delays the motion instead of skipping it.
             var now = tween.Clock.Elapsed;
             var step = now - tween.Last;
-            tween.Longest = step > tween.Longest ? step : tween.Longest;
             tween.Last = now;
             tween.Frames++;
             if (tween.Frames == 2)
@@ -676,7 +675,6 @@ public sealed partial class MainWindow
     private void Finish(LayoutTween tween)
     {
         _tweens.Remove(tween.Tab);
-        Log.Write($"layout: animation done: {tween.Frames} frames in {tween.Clock.ElapsedMilliseconds} ms, longest {tween.Longest.TotalMilliseconds:0} ms");
         Release(tween);
         tween.Always?.Invoke();
         if (_windowClosed)
