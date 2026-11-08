@@ -9,7 +9,7 @@ public sealed record SpriteImage(byte[] Coverage, int Width, int Height, int X, 
 
 /// <summary>
 /// Ghostty's sprite rasterizer (zinc-sprite.dll, built from the pinned Ghostty by
-/// scripts/build-sprites.sh): box drawing, block elements, Symbols for Legacy Computing,
+/// scripts/build/sprites.ps1): box drawing, block elements, Symbols for Legacy Computing,
 /// Powerline and Braille, drawn pixel-exact for a cell size instead of taken from a font, so
 /// they meet their neighbours in any font. Thread-safe: each call draws on its own canvas.
 /// </summary>

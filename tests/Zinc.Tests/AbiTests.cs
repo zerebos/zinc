@@ -123,7 +123,7 @@ public unsafe partial class AbiTests
     [Fact]
     public void GhosttyKeyCoversEveryCKey()
     {
-        // GhosttyKey.g.cs is generated; this catches forgetting to rerun gen-keys.py.
+        // GhosttyKey.g.cs is generated, so this catches forgetting to rerun gen-keys.ps1.
         var values = Types.GetProperty("GhosttyKey").GetProperty("values").EnumerateObject()
             .Where(p => p.Name != "MAX_VALUE");
         Assert.Equal(values.Count(), Enum.GetValues<GhosttyKey>().Length);

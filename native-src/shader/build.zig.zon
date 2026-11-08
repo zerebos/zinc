@@ -4,7 +4,7 @@
     .fingerprint = 0xb91cf9af2734351,
     .minimum_zig_version = "0.16.0",
     .dependencies = .{
-        // Ghostty's own package, at the pinned checkout (scripts/build-libghostty.sh clones it).
+        // Ghostty's own package, at the pinned checkout (scripts/build/libghostty.ps1 clones it).
         .glslang = .{ .path = "../../external/ghostty/pkg/glslang", .lazy = true },
         // KhronosGroup/SPIRV-Cross, the same source as Ghostty's pkg/spirv-cross/build.zig.zon.
         .spirv_cross = .{

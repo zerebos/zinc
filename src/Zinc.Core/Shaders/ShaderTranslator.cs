@@ -4,7 +4,7 @@ namespace Zinc.Shaders;
 
 /// <summary>
 /// GLSL to HLSL (shader model 5) for custom shaders, through zinc-shader.dll (glslang + SPIRV-Cross, as Ghostty does
-/// for Metal; scripts/build-shader.sh). The DLL is loaded on the first call only, so terminals without shaders never
+/// for Metal; scripts/build/shader.ps1). The DLL is loaded on the first call only, so terminals without shaders never
 /// load it. Takes ~30 ms a shader: call it off the UI thread.
 /// </summary>
 public static partial class ShaderTranslator

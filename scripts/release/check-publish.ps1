@@ -4,8 +4,9 @@
 
 .DESCRIPTION
   .NET loads only the assemblies zinc.deps.json lists. Trimming can leave one out that an untrimmed assembly (ours)
-  still needs: dev.342's settings import failed on System.IO.Compression.ZipFile, copied into the folder but not
-  listed, which bin\ builds and the tests never show. release.ps1 refuses a build this finds anything in.
+  still needs. That assembly is copied into the folder but not listed, so the feature using it fails with "Could not
+  load file or assembly", which bin\ builds and the tests never show because they don't trim. release.ps1 refuses a
+  build this finds anything in.
   Prints nothing when every reference is listed.
 
 .EXAMPLE

@@ -71,7 +71,7 @@ New-Item -ItemType Directory -Force $Out | Out-Null
 if ($PackId -eq 'Zinc' -and -not $UpdateUrl) { throw 'A release needs -UpdateUrl: where it will look for updates.' }
 
 if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
-    throw 'native\x64\ghostty-vt.dll missing: run scripts/build-libghostty.sh x64 first.'
+    throw 'native\x64\ghostty-vt.dll missing: run scripts/build/libghostty.ps1 first.'
 }
 
 # ---- version (as Directory.Build.props computes it) ----
@@ -87,8 +87,7 @@ if (-not $Version) {
 }
 
 # ---- a release testers would never get: not above the one already published ----
-# dev.N is the commit count, and squashing or rewriting history lowers it (2026-10-07: dev.330 was published, then a
-# squash made the next commit dev.330 again). Velopack only updates to a higher version.
+# dev.N is the commit count, and squashing or rewriting history lowers it. Velopack only updates to a higher version.
 if ($Publish -and $Version -match '^(.+)-dev\.(\d+)') {
     $base, $number = $Matches[1], [int]$Matches[2]
     $published = (Invoke-RestMethod "$($UpdateUrl.TrimEnd('/'))/releases.win.json").Assets |
@@ -149,9 +148,9 @@ try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
 try {
     $state = Join-Path $repo 'src\Zinc\obj\x64\Release'
     if (Test-Path $state) { Remove-Item $state -Recurse -Force }
-    # The publish gets PATH as a fresh terminal has it (from the registry): under Claude Code's Git Bash, VS's
-    # vcvarsall.bat failed on the inherited PATH ("\NVIDIA was unexpected at this time"), so zn's Native AOT link
-    # found no MSVC link.exe, or Git's coreutils `link` (2026-10-07). The rest keeps the inherited PATH (curl).
+    # The publish gets PATH as a fresh terminal has it (from the registry), because an inherited PATH can break VS's
+    # vcvarsall.bat or put another `link` ahead of MSVC's, and zn's Native AOT link then fails. The rest of the script
+    # keeps the inherited PATH (curl).
     $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
     $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateUrl" 2>&1
     $failed = $LASTEXITCODE -ne 0
@@ -210,7 +209,7 @@ function Ftp {
 
 Write-Host "Uploading to $ftp ..."
 $there = @(Ftp --list-only $ftp | ForEach-Object { "$_".Trim() } | Where-Object { $_ -and $_ -notin '.', '..' })
-# Every time: its rules change now and then (2026-10-03: packages sent uncompressed, so downloads show progress).
+# Every time, because its rules change now and then.
 Ftp -T (Join-Path $PSScriptRoot 'release-htaccess') "$($ftp).htaccess" | Out-Null
 Write-Host '  .htaccess'
 

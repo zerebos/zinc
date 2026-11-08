@@ -1,5 +1,5 @@
 //! Builds zinc-sprite.dll: Ghostty's sprite rasterizer behind zinc_sprite.zig's C API.
-//! Run by scripts/build-sprites.sh, which puts zinc_sprite.zig into the Ghostty checkout
+//! Run by scripts/build/sprites.ps1, which puts zinc_sprite.zig into the Ghostty checkout
 //! first (-Dghostty=<checkout>).
 const std = @import("std");
 

@@ -12,7 +12,7 @@ flag over the row it joined, losing the prompt's start.
 
 Not upstream yet (pinned 6301810a4; still present on main 73e4ff10f,
 2026-10-17). Drop this patch once a commit bump includes a fix. Applied by
-scripts/build-libghostty.sh after checkout. Includes tests; run them with
+scripts/build/libghostty.ps1 after checkout. Includes tests; run them with
 `zig build test-lib-vt -Dtest-filter=prompt` in external/ghostty.
 
 diff --git a/src/terminal/PageList.zig b/src/terminal/PageList.zig

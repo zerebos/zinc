@@ -111,8 +111,8 @@ public class OpenSourceNoticesTests
     [Fact]
     public void GhosttyIsThePinnedCommit()
     {
-        var script = File.ReadAllText(Path.Combine(Root, "scripts", "build-libghostty.sh"));
-        var commit = Regex.Match(script, "COMMIT=\"\\$\\{2:-([0-9a-f]+)\\}\"").Groups[1].Value;
+        var script = File.ReadAllText(Path.Combine(Root, "scripts", "build", "libghostty.ps1"));
+        var commit = Regex.Match(script, @"\[string\]\$Commit = '([0-9a-f]{40})'").Groups[1].Value;
         Assert.NotEmpty(commit);
         Assert.Equal(commit[..7], OpenSourceNotices.Components.Single(c => c.Name.StartsWith("Ghostty")).Version);
     }

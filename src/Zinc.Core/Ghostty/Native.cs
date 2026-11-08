@@ -6,7 +6,7 @@ namespace Zinc.Ghostty;
 //
 // The C API is explicitly unstable. Struct layouts here use explicit offsets
 // taken from the library's own ABI manifest (`ghostty_type_json()`), so when
-// bumping the pinned commit in scripts/build-libghostty.sh, re-check them.
+// bumping the pinned commit in scripts/build/libghostty.ps1, re-check them.
 // C `bool` is mapped to `byte` everywhere to keep every signature blittable.
 
 /// <summary>

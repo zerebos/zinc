@@ -33,13 +33,13 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
   (used by Zig to link the DLL; its redistributable Visual C++ runtime, `vcruntime140.dll`, ships
   beside the DLLs, since a fresh Windows doesn't have it)
 - [Zig](https://ziglang.org) **0.16.x** on `PATH` (Ghostty's minimum)
-- Git Bash (or any POSIX shell) for the build script
+- PowerShell 7.4 or later (`pwsh`) for the build scripts
 
 ## Build and run
 
-```bash
+```powershell
 # 1. Build libghostty-vt at the pinned Ghostty commit -> native/x64/ghostty-vt.dll
-scripts/build-libghostty.sh x64
+pwsh scripts/build/libghostty.ps1
 
 # 2. Build and run the app
 dotnet run --project src/Zinc
@@ -1000,13 +1000,13 @@ off, or on uninstall). With the debug log on, each command is logged, never the 
 ## Layout
 
 ```
-scripts/build-libghostty.sh       fetch + build libghostty-vt at a pinned commit (and, through
-                                  build-sprites.sh and build-shader.sh, zinc-sprite.dll and zinc-shader.dll)
-scripts/copy-vcruntime.sh         the Visual C++ runtime the native DLLs need, next to them
-scripts/gen-keys.py               regenerate GhosttyKey.g.cs from the C header
+scripts/build/libghostty.ps1      fetch + build libghostty-vt at a pinned commit (and, through
+                                  sprites.ps1 and shader.ps1, zinc-sprite.dll and zinc-shader.dll)
+scripts/build/copy-vcruntime.ps1  the Visual C++ runtime the native DLLs need, next to them
+scripts/build/gen-keys.ps1        regenerate GhosttyKey.g.cs from the C header
 scripts/vt-bench.py               libghostty-vt's parse speed, before and after a Ghostty update
 scripts/release/                  releases (installer + update packages, Velopack) and their checks
-scripts/update-themes.sh          refresh the bundled color schemes
+scripts/dev/update-themes.ps1     refresh the bundled color schemes
 assets/                           fonts, themes, shaders, shell-integration scripts, licenses
 native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
 docs/                             ux-writing.md (how the interface and docs talk), shell-integration.md
@@ -1030,9 +1030,9 @@ tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions (real shel
 The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 
 1. Run `python scripts/vt-bench.py --save before` (the current DLL's parse speed).
-2. Change `COMMIT` in `scripts/build-libghostty.sh` and run it. It also rebuilds zinc-sprite.dll
+2. Change `$Commit` in `scripts/build/libghostty.ps1` and run it. It also rebuilds zinc-sprite.dll
    from Ghostty's sprite code, which isn't part of its API: `SpriteTests` pin what Zinc relies on.
-3. Run `python scripts/gen-keys.py`.
+3. Run `pwsh scripts/build/gen-keys.ps1`.
 4. Run `dotnet test`. `AbiTests` compares every binding struct, enum and imported
    function against the library's own ABI manifest (`ghostty_type_json()`).
 5. Run `python scripts/vt-bench.py --compare before`: more than 10% slower is worth a look.

@@ -1,6 +1,6 @@
 # Ghostty patches
 
-Fixes to Ghostty that Zinc needs and that aren't upstream yet. `scripts/build-libghostty.sh` resets the Ghostty
+Fixes to Ghostty that Zinc needs and that aren't upstream yet. `scripts/build/libghostty.ps1` resets the Ghostty
 checkout and applies every `*.patch` here before it builds. Each patch's header says what upstream change makes it
 unnecessary.
 

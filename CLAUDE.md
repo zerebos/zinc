@@ -64,13 +64,13 @@ Features too big for one session use `/big-feature`. The panes run is the worked
 
 ## Build / run
 
-- `scripts/build-libghostty.sh x64` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit), plus zinc-sprite.dll
+- `pwsh scripts/build/libghostty.ps1` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit), plus zinc-sprite.dll
   and zinc-shader.dll. It applies **`patches/ghostty/*.patch`** (our fixes not upstream yet) to the checkout first,
   after resetting its sources, so edits left in `external/ghostty` never reach a build. `external/` (ghostty clone)
-  and `native/` are gitignored build products. The native DLLs
-  import **`vcruntime140.dll`, which a fresh Windows lacks**: `scripts/copy-vcruntime.sh` (run by the build) copies
-  VS's into native/<arch>/, Zinc.Native.targets ships it app-local, release.ps1 checks it. Check new native
-  dependencies with pefile (`.scratch/vcdeps.py <folder>`).
+  and `native/` are gitignored build products. The native DLLs import **`vcruntime140.dll`, which a fresh Windows
+  lacks**: `scripts/build/copy-vcruntime.ps1` (run by the build) copies VS's into native/<arch>/,
+  Zinc.Native.targets ships it app-local, release.ps1 checks it. Check new native dependencies with pefile
+  (`.scratch/vcdeps.py <folder>`).
 - `dotnet build` (Zinc.slnx; add `-c Release` for perf work). App output:
   `src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
@@ -109,7 +109,8 @@ Features too big for one session use `/big-feature`. The panes run is the worked
 Section names in brackets are `.scratch/internals.md`'s.
 
 `src/Zinc.Core` (no WinUI; what the tests load):
-- `Ghostty/` — bindings (`Native.cs`; `GhosttyKey.g.cs` from `scripts/gen-keys.py`), Ghostty's sprites (`Sprites.cs`).
+- `Ghostty/` — bindings (`Native.cs`; `GhosttyKey.g.cs` from `scripts/build/gen-keys.ps1`), Ghostty's sprites
+  (`Sprites.cs`).
 - `Pty/` — `ConPty.cs` (pseudoconsole, child, reader thread), child environment, default terminal, user PATH,
   install cleanup. [Terminal core; System integration]
 - `Terminal/TerminalSession*.cs` — owns the libghostty terminal, encoders and ConPty: callbacks, themes, find, links,
@@ -155,9 +156,9 @@ and read state after the write (see `_titleDirty`).
   look for), and fix up any other that no longer applies. Their tests run in the checkout with
   `zig build test-lib-vt -Dtest-filter=<name>` (plain `zig build test` needs POSIX headers on Windows).
 - Bumping the commit also rebuilds zinc-sprite.dll (Ghostty's sprite code is internal, not
-  API: if build-sprites.sh fails, look at the sprite Face/canvas/Metrics changes; SpriteTests pin
+  API: if sprites.ps1 fails, look at the sprite Face/canvas/Metrics changes; SpriteTests pin
   the behavior we rely on).
-- The C API is unstable. After bumping the commit: rerun gen-keys.py, then `dotnet test`
+- The C API is unstable. After bumping the commit: rerun `scripts/build/gen-keys.ps1`, then `dotnet test`
   (AbiTests checks every struct/enum/export against `ghostty_type_json()`). Structs use
   explicit offsets; C `bool` is mapped to `byte` to stay blittable. A struct field that
   flattens a C union needs `[AbiField("value.coordinate.x")]` so the check can find it.

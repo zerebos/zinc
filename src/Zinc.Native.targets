@@ -16,30 +16,30 @@
   </PropertyGroup>
 
   <!-- libghostty-vt and Ghostty's sprite rasterizer (zinc-sprite: box drawing, blocks,
-       Legacy Computing, Powerline) are built by scripts/build-libghostty.sh into native/<arch>/. -->
+       Legacy Computing, Powerline) are built by scripts/build/libghostty.ps1 into native/<arch>/. -->
   <ItemGroup>
     <None Include="$(GhosttyNativeDir)ghostty-vt.dll" Link="ghostty-vt.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.dll" Link="zinc-sprite.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.pdb" Link="zinc-sprite.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-sprite.pdb')" />
-    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build-shader.sh; static C runtime: imports only KERNEL32).
+    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build/shader.ps1; static C runtime: imports only KERNEL32).
          Loaded only when a shader is configured. -->
     <None Include="$(GhosttyNativeDir)zinc-shader.dll" Link="zinc-shader.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-shader.pdb" Link="zinc-shader.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-shader.pdb')" />
     <!-- Both import the Visual C++ runtime, which isn't part of Windows (a fresh PC lacks it: "Unable to load
-         DLL 'ghostty-vt'"); it ships beside them, app-local (scripts/copy-vcruntime.sh). -->
+         DLL 'ghostty-vt'"); it ships beside them, app-local (scripts/build/copy-vcruntime.ps1). -->
     <None Include="$(GhosttyNativeDir)vcruntime140.dll" Link="vcruntime140.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
   <Target Name="CheckGhostty" BeforeTargets="Build">
     <Error Condition="!Exists('$(GhosttyNativeDir)ghostty-vt.dll')"
-           Text="ghostty-vt.dll not found in $(GhosttyNativeDir). Run: scripts/build-libghostty.sh $(GhosttyArch)" />
+           Text="ghostty-vt.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/libghostty.ps1 -Arch $(GhosttyArch)" />
     <Error Condition="!Exists('$(GhosttyNativeDir)zinc-sprite.dll')"
-           Text="zinc-sprite.dll not found in $(GhosttyNativeDir). Run: scripts/build-sprites.sh $(GhosttyArch)" />
+           Text="zinc-sprite.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/sprites.ps1 -Arch $(GhosttyArch)" />
     <Error Condition="!Exists('$(GhosttyNativeDir)zinc-shader.dll')"
-           Text="zinc-shader.dll not found in $(GhosttyNativeDir). Run: scripts/build-shader.sh $(GhosttyArch)" />
+           Text="zinc-shader.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/shader.ps1 -Arch $(GhosttyArch)" />
     <Error Condition="!Exists('$(GhosttyNativeDir)vcruntime140.dll')"
-           Text="vcruntime140.dll not found in $(GhosttyNativeDir). Run: scripts/copy-vcruntime.sh $(GhosttyArch)" />
+           Text="vcruntime140.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/copy-vcruntime.ps1 -Arch $(GhosttyArch)" />
   </Target>
 
   <ItemGroup>
