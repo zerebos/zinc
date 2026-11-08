@@ -106,8 +106,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     private CanvasBitmap? _bgBitmap;
 
     // Text through the glyph atlas: each frame's glyphs (and box-drawing sprites) are collected while the rows
-    // are drawn, then copied in one sprite batch. ZINC_GLYPH_ATLAS=0 keeps the glyph runs (for comparisons).
-    private static readonly bool AtlasEnabled = Environment.GetEnvironmentVariable("ZINC_GLYPH_ATLAS") != "0";
+    // are drawn, then copied in one sprite batch. A device that can't batch sprites draws glyph runs instead.
     // The shared atlas this pane draws from (GlyphAtlases), and what it was picked by; null until the first frame.
     private GlyphAtlas _atlas = new();
     private GlyphAtlases.Key? _atlasKey;
@@ -516,9 +515,9 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         DrawBackgrounds(ds, read, cols);
         if (perf != null) t = perf.Mark(1, t);
 
-        // ...then each row's highlights and text (into the frame's sprite batch where the atlas is on), the batch,
+        // ...then each row's highlights and text (into the frame's sprite batch where the device can batch sprites), the batch,
         // and each row's decorations and cursor on top.
-        _batching = AtlasEnabled && _spriteBatchSupported;
+        _batching = _spriteBatchSupported;
         // Left over only if a frame failed halfway (OnDraw catches): its sprites may point into pages since disposed
         // (a device lost), which would fail every frame after.
         _frameSprites.Clear();

@@ -120,9 +120,9 @@ public sealed unsafe partial class ConPty : IDisposable
     /// <summary>
     /// A console handed over to Zinc as the default terminal (ITerminalHandoff3, from Windows
     /// Terminal's OpenConsole): its handles become a pseudoconsole as one Zinc started would be
-    /// (ConptyPackPseudoConsole), with one duplex pipe. The handles given are the caller's (COM
+    /// (ConptyPackPseudoConsole), with an input pipe and an output pipe. The handles given are the caller's (COM
     /// closes them after the call): they're duplicated. <paramref name="theirInput"/> and
-    /// <paramref name="theirOutput"/> are the pipe's other end, to hand back.
+    /// <paramref name="theirOutput"/> are the pipes' other ends, to hand back.
     /// </summary>
     public static ConPty FromHandoff(nint server, nint reference, nint signal, nint client, out nint theirInput, out nint theirOutput)
     {
@@ -131,9 +131,9 @@ public sealed unsafe partial class ConPty : IDisposable
             throw new NotSupportedException("A handed-over console needs the bundled ConPTY (conpty.dll + OpenConsole.exe).");
         }
 
-        // Two pipes, as a pseudoconsole Zinc creates has (Windows Terminal uses one duplex pipe
-        // with overlapped I/O; a synchronous handle serializes its reads and writes, so a read waiting
-        // for output held up the reply to the console's first query, and both sides waited).
+        // Two pipes, like a pseudoconsole Zinc creates, instead of Windows Terminal's one duplex pipe. A synchronous
+        // duplex handle serializes its reads and writes, so a read waiting for output would block the reply to the
+        // console's first query and deadlock both sides.
         if (!CreatePipe(out var inputRead, out var inputWrite, 0, 0) || !CreatePipe(out var outputRead, out var outputWrite, 0, 0))
         {
             throw new Win32Exception();

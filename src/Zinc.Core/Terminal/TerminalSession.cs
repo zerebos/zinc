@@ -415,10 +415,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         OutputProcessed?.Invoke();
     }
 
-    /// <summary>
-    /// Changes the terminal's colors while it runs (a config reload): the default foreground,
-    /// background, cursor and palette. Colors a program set itself (OSC 4/10/11) stay.
-    /// </summary>
+    /// <summary>Whether programs are told the colors are dark (<see cref="SetColorScheme"/>).</summary>
     private bool _dark = true;
 
     /// <summary>How many lines are kept above the screen (fewer prunes the oldest at the next write).</summary>
@@ -507,6 +504,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
         return 1;
     }
 
+    /// <summary>
+    /// Changes the terminal's colors while it runs (a config reload): the default foreground,
+    /// background, cursor and palette. Colors a program set itself (OSC 4/10/11) stay.
+    /// </summary>
     public void SetTheme(TerminalTheme theme, PaletteGeneration generation = default)
     {
         lock (Lock)
@@ -1050,7 +1051,6 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    /// <summary>Formats the whole screen (including scrollback) as plain text.</summary>
     /// <summary>Test hook: the cursor's row in the active screen.</summary>
     internal int CursorRow
     {
@@ -1069,6 +1069,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>Formats the whole screen (including scrollback) as plain text.</summary>
     public string ReadScreenText()
     {
         lock (Lock)

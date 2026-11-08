@@ -68,7 +68,6 @@ public enum WorkspaceTabs
     Left,
 }
 
-/// <summary>Whether Zinc loads its shell integration into the shells it starts. Config: <c>shell-integration</c>.</summary>
 /// <summary>What opens a link under the pointer. Config: <c>link-click = ctrl | alt | click</c>.</summary>
 public enum LinkClick
 {
@@ -95,6 +94,7 @@ public enum RightClick
     Paste,
 }
 
+/// <summary>Whether Zinc loads its shell integration into the shells it starts. Config: <c>shell-integration</c>.</summary>
 public enum ShellIntegrationMode
 {
     /// <summary>PowerShell, bash and zsh get it (after the user's own startup files).</summary>
