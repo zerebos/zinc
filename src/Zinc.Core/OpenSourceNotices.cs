@@ -19,6 +19,13 @@ public sealed record OpenSourceComponent(
 /// </summary>
 public static class OpenSourceNotices
 {
+    /// <summary>
+    /// Zinc's own license, which About lists before the others. The build ships the repository's LICENSE as
+    /// <c>Licenses\Zinc.txt</c>.
+    /// </summary>
+    public static OpenSourceComponent Zinc { get; } =
+        new("Zinc", "", "This app", "Apache-2.0", "https://zincterminal.dev", @"Licenses\Zinc.txt", []);
+
     public static IReadOnlyList<OpenSourceComponent> Components { get; } =
     [
         new(".NET", Environment.Version.ToString(), "The runtime Zinc is written for, shipped with it",

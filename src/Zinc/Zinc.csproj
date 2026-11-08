@@ -61,6 +61,9 @@
     <!-- License texts of the open-source software Zinc ships (Settings > About; OpenSourceNotices.cs). -->
     <Content Include="..\..\assets\licenses\*" Link="Licenses\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Zinc's own license -->
+    <Content Include="..\..\LICENSE" Link="Licenses\Zinc.txt"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <!-- Shell integration scripts, loaded into the shells Zinc starts (ShellIntegration.cs). -->
     <Content Include="..\..\assets\shell-integration\**\*" Link="ShellIntegration\%(RecursiveDir)%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

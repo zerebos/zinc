@@ -18,9 +18,14 @@ public class OpenSourceNoticesTests
         return dir!.FullName;
     }
 
-    /// <summary>Where a shipped file comes from in the repository (the app's csproj links these folders).</summary>
+    /// <summary>Where a shipped file comes from in the repository (the app's csproj links these folders, plus the repository's LICENSE).</summary>
     private static string Source(string shipped)
     {
+        if (shipped == OpenSourceNotices.Zinc.LicenseFile)
+        {
+            return Path.Combine(Root, "LICENSE");
+        }
+
         var parts = shipped.Split('\\', 2);
         var folder = parts[0] switch
         {
@@ -62,7 +67,7 @@ public class OpenSourceNoticesTests
     [Fact]
     public void EveryLicenseTextExists()
     {
-        foreach (var component in OpenSourceNotices.Components)
+        foreach (var component in OpenSourceNotices.Components.Prepend(OpenSourceNotices.Zinc))
         {
             Assert.True(File.Exists(Source(component.LicenseFile)), $"{component.Name}: {component.LicenseFile}");
         }
@@ -76,6 +81,14 @@ public class OpenSourceNoticesTests
         {
             Assert.Contains(Path.GetFullPath(file), listed);
         }
+    }
+
+    [Fact]
+    public void ZincShipsItsOwnLicense()
+    {
+        var project = File.ReadAllText(Path.Combine(Root, "src", "Zinc", "Zinc.csproj"));
+        Assert.Contains(@"<Content Include=""..\..\LICENSE"" Link=""Licenses\Zinc.txt""", project);
+        Assert.Contains("Apache License", File.ReadAllText(Path.Combine(Root, "LICENSE")));
     }
 
     [Fact]

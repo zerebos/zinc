@@ -7,23 +7,24 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Zinc;
 
-/// <summary>About's list of the open-source software Zinc ships (<see cref="OpenSourceNotices"/>), each with its license.</summary>
+/// <summary>
+/// About's list of licenses: Zinc's own, then the open-source software Zinc ships (<see cref="OpenSourceNotices"/>).
+/// </summary>
 internal sealed partial class SettingsWindow
 {
     private void OpenSourceList()
     {
-        var folder = Path.Combine(AppContext.BaseDirectory, "Licenses");
         var header = new Grid { Margin = new Thickness(0, 18, 0, 0) };
         header.Children.Add(new TextBlock { Text = "Open-source software", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
         var open = new Button { Content = "Open folder", HorizontalAlignment = HorizontalAlignment.Right };
         AutomationProperties.SetName(open, "Open the licenses folder");
-        open.Click += (_, _) => Reveal(Path.Combine(folder, "Ghostty.txt"));
+        open.Click += (_, _) => Reveal(Path.Combine(AppContext.BaseDirectory, OpenSourceNotices.Zinc.LicenseFile));
         header.Children.Add(open);
         _page.Children.Add(header);
-        _page.Children.Add(Note("Zinc is built with these projects and ships them. Select a license to read it."));
+        _page.Children.Add(Note("Zinc's own license comes first, then the projects Zinc is built with and ships. Select a license to read it."));
 
         var list = new StackPanel { Margin = new Thickness(0, 6, 0, 0) };
-        var components = OpenSourceNotices.Components;
+        List<OpenSourceComponent> components = [OpenSourceNotices.Zinc, .. OpenSourceNotices.Components];
         for (var i = 0; i < components.Count; i++)
         {
             list.Children.Add(ComponentRow(components[i], first: i == 0));
