@@ -166,6 +166,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>The raw GhosttyTerminal handle. Only use while holding <see cref="Lock"/>.</summary>
     public nint Handle => _terminal;
 
+    /// <summary>
+    /// True once <see cref="Dispose"/> has freed the terminal, after which <see cref="Handle"/> must not be used. Read
+    /// it under <see cref="Lock"/>, in the same lock as the call it guards.
+    /// </summary>
+    public bool IsDisposed => _disposed;
+
     public bool HasExited { get; private set; }
 
     /// <summary>The child's process id, or 0 before <see cref="Start"/>.</summary>
@@ -756,6 +762,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (Lock)
         {
+            // Returning here also keeps a closed session from starting a new PTY resize timer.
+            if (_disposed)
+            {
+                return;
+            }
+
             _size = new GhosttySizeReportSize { Columns = cols, Rows = rows, CellWidth = cellWidthPx, CellHeight = cellHeightPx };
             Native.TerminalResize(_terminal, cols, rows, cellWidthPx, cellHeightPx);
             _commandSnapshot = null; // reflow moves rows
@@ -814,7 +826,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (Lock)
         {
-            Native.TerminalScrollViewport(_terminal, behavior);
+            if (!_disposed)
+            {
+                Native.TerminalScrollViewport(_terminal, behavior);
+            }
         }
     }
 
@@ -832,6 +847,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
         ushort y = 0;
         lock (Lock)
         {
+            if (_disposed)
+            {
+                return 0;
+            }
+
             Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
             Native.TerminalGet(_terminal, TerminalData.CursorY, &y);
         }
@@ -839,12 +859,16 @@ public sealed unsafe partial class TerminalSession : IDisposable
         return (int)(sb.Total - sb.Len) + y + 1;
     }
 
+    /// <summary>The scrollbar's position, or all zeros once the session is closed.</summary>
     public GhosttyTerminalScrollbar GetScrollbar()
     {
-        GhosttyTerminalScrollbar sb;
+        GhosttyTerminalScrollbar sb = default;
         lock (Lock)
         {
-            Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
+            if (!_disposed)
+            {
+                Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
+            }
         }
 
         return sb;
@@ -855,7 +879,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
         var cfg = new GhosttyTerminalModeConfig { Mode = mode };
         lock (Lock)
         {
-            Native.TerminalGet(_terminal, TerminalData.Mode, &cfg);
+            if (!_disposed)
+            {
+                Native.TerminalGet(_terminal, TerminalData.Mode, &cfg);
+            }
         }
 
         return cfg.Value != 0;
@@ -865,10 +892,13 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         get
         {
-            byte tracking;
+            byte tracking = 0;
             lock (Lock)
             {
-                Native.TerminalGet(_terminal, TerminalData.MouseTracking, &tracking);
+                if (!_disposed)
+                {
+                    Native.TerminalGet(_terminal, TerminalData.MouseTracking, &tracking);
+                }
             }
 
             return tracking != 0;
@@ -879,10 +909,13 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         get
         {
-            byte flags;
+            byte flags = 0;
             lock (Lock)
             {
-                Native.TerminalGet(_terminal, TerminalData.KittyKeyboardFlags, &flags);
+                if (!_disposed)
+                {
+                    Native.TerminalGet(_terminal, TerminalData.KittyKeyboardFlags, &flags);
+                }
             }
 
             return flags;
@@ -909,6 +942,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
         GhosttyResult result;
         lock (Lock)
         {
+            if (_disposed)
+            {
+                return [];
+            }
+
             Native.KeyEncoderSetoptFromTerminal(_keyEncoder, _terminal);
             Native.KeyEventSetAction(_keyEvent, action);
             Native.KeyEventSetKey(_keyEvent, key);
@@ -938,6 +976,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
         GhosttyResult result;
         lock (Lock)
         {
+            if (_disposed)
+            {
+                return [];
+            }
+
             Native.MouseEncoderSetoptFromTerminal(_mouseEncoder, _terminal);
             size.Size = (nuint)sizeof(GhosttyMouseEncoderSize);
             Native.MouseEncoderSetopt(_mouseEncoder, MouseEncoderOption.Size, &size);
@@ -1016,7 +1059,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
             lock (Lock)
             {
                 ushort y = 0;
-                Native.TerminalGet(_terminal, TerminalData.CursorY, &y);
+                if (!_disposed)
+                {
+                    Native.TerminalGet(_terminal, TerminalData.CursorY, &y);
+                }
+
                 return y;
             }
         }
@@ -1039,6 +1086,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (Lock)
         {
+            if (_disposed)
+            {
+                return "";
+            }
+
             var options = GhosttyFormatterTerminalOptions.Init();
             options.Emit = styled ? 1 : 0; // GHOSTTY_FORMATTER_FORMAT_VT : _PLAIN
             options.Trim = 1;
@@ -1238,6 +1290,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (Lock)
         {
+            if (_disposed)
+            {
+                return null;
+            }
+
             var opts = new GhosttyTerminalSelectionFormatOptions
             {
                 Size = (nuint)sizeof(GhosttyTerminalSelectionFormatOptions),
@@ -1478,7 +1535,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (Lock)
         {
-            Native.TerminalSet(_terminal, TerminalOption.Selection, null);
+            if (!_disposed)
+            {
+                Native.TerminalSet(_terminal, TerminalOption.Selection, null);
+            }
         }
     }
 
@@ -1588,8 +1648,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// </summary>
     public void EndRenderHold()
     {
-        var mode = new GhosttyTerminalModeConfig { Mode = GhosttyMode.SyncOutput, Value = 0 };
-        Native.TerminalSet(_terminal, TerminalOption.Mode, &mode);
+        if (!_disposed)
+        {
+            var mode = new GhosttyTerminalModeConfig { Mode = GhosttyMode.SyncOutput, Value = 0 };
+            Native.TerminalSet(_terminal, TerminalOption.Mode, &mode);
+        }
+
         RenderHeld = false;
     }
 

@@ -80,7 +80,7 @@ public sealed unsafe class SelectionGesture : IDisposable
 
         lock (_session.Lock)
         {
-            if (_disposed)
+            if (_disposed || _session.IsDisposed)
             {
                 return;
             }

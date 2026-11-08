@@ -80,6 +80,11 @@ public sealed unsafe partial class TerminalSession
     {
         lock (Lock)
         {
+            if (_disposed)
+            {
+                return null;
+            }
+
             int screen = 0;
             Native.TerminalGet(_terminal, TerminalData.ActiveScreen, &screen);
             if (screen != 0 || _promptState is not (PromptState.Prompt or PromptState.Input))

@@ -237,6 +237,11 @@ public sealed partial class TerminalControl
         bool alternateScreen;
         lock (session.Lock)
         {
+            if (session.IsDisposed)
+            {
+                return;
+            }
+
             int screen;
             Native.TerminalGet(session.Handle, TerminalData.ActiveScreen, &screen);
             alternateScreen = screen == 1;

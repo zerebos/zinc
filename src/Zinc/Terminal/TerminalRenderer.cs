@@ -376,6 +376,11 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         _pendingImages.Clear();
         lock (session.Lock)
         {
+            if (session.IsDisposed)
+            {
+                return false;
+            }
+
             // Synchronized output: while a program holds the screen, draw the frame captured when
             // the hold began (CaptureHeldFrame); give up on a hold that lasts over a second.
             if (session.RenderHeld && Environment.TickCount64 - session.RenderHeldSince >= RenderHoldTimeoutMs)
@@ -432,6 +437,11 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     {
         lock (_stateLock)
         {
+            if (session.IsDisposed)
+            {
+                return;
+            }
+
             Native.RenderStateUpdate(_renderState, session.Handle);
 
             // The image placements are kept too, because a program that sends an image again under the same id
