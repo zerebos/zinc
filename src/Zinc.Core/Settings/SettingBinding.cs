@@ -11,10 +11,10 @@ public sealed class SettingBinding
 {
     private static readonly Config Defaults = new();
 
-    private readonly Func<SettingDef, Config, object, Config?> _read;
+    private readonly Func<SettingDef, Config, object, string, Config?> _read;
     private readonly Func<SettingDef, Config, object?>? _default;
 
-    internal SettingBinding(Func<SettingDef, Config, object, Config?> read, Func<SettingDef, Config, object?>? @default)
+    internal SettingBinding(Func<SettingDef, Config, object, string, Config?> read, Func<SettingDef, Config, object?>? @default)
     {
         _read = read;
         _default = @default;
@@ -22,8 +22,10 @@ public sealed class SettingBinding
 
     /// <summary>
     /// <paramref name="config"/> with <paramref name="value"/> applied, or null when the value doesn't fit.
+    /// <paramref name="file"/> is the config file that holds it, which relative paths are resolved from.
     /// </summary>
-    public Config? Read(SettingDef setting, Config config, object value) => _read(setting, config, value);
+    public Config? Read(SettingDef setting, Config config, object value, string file = "config.toml") =>
+        _read(setting, config, value, file);
 
     /// <summary>
     /// The TOML value that matches <c>new Config()</c>, or null when none is written. A choice setting's default is the
@@ -47,16 +49,17 @@ public static class Bind
 {
     /// <summary>true or false.</summary>
     public static SettingBinding Bool(Func<Config, bool> get, Func<Config, bool, Config> set) =>
-        new((_, config, value) => value is bool b ? set(config, b) : null, (_, config) => get(config));
+        new((_, config, value, _) => value is bool b ? set(config, b) : null, (_, config) => get(config));
 
     /// <summary>
     /// A number in the setting's <see cref="SettingDef.Minimum"/> to <see cref="SettingDef.Maximum"/>. A number outside
     /// that range is refused, or moved to the nearer end when <paramref name="clamp"/> is set (as Ghostty does for some
-    /// settings).
+    /// settings). With <paramref name="whole"/>, a number with a fraction is refused too.
     /// </summary>
-    public static SettingBinding Number(Func<Config, double> get, Func<Config, double, Config> set, bool clamp = false) =>
-        new((setting, config, value) => AsNumber(value) switch
+    public static SettingBinding Number(Func<Config, double> get, Func<Config, double, Config> set, bool clamp = false, bool whole = false) =>
+        new((setting, config, value, _) => AsNumber(value) switch
         {
+            { } n when whole && n != Math.Floor(n) => null,
             { } n when clamp => set(config, Math.Clamp(n, setting.Minimum, setting.Maximum)),
             { } n when n >= setting.Minimum && n <= setting.Maximum => set(config, n),
             _ => null,
@@ -64,19 +67,19 @@ public static class Bind
 
     /// <summary>Any text except an empty string. An empty default means none is written.</summary>
     public static SettingBinding Text(Func<Config, string> get, Func<Config, string, Config> set) =>
-        new((_, config, value) => value is string { Length: > 0 } s ? set(config, s) : null,
+        new((_, config, value, _) => value is string { Length: > 0 } s ? set(config, s) : null,
             (_, config) => get(config) is { Length: > 0 } s ? s : null);
 
     /// <summary>"#rrggbb" or "rrggbb". No default is written, so the color comes from the scheme or the app.</summary>
     public static SettingBinding Color(Func<Config, GhosttyColorRgb, Config> set) =>
-        new((_, config, value) => value is string s && Config.TryColor(s, out var color) ? set(config, color) : null, null);
+        new((_, config, value, _) => value is string s && Config.TryColor(s, out var color) ? set(config, color) : null, null);
 
     /// <summary>
     /// A kebab-case name of <typeparamref name="T"/> ("tab-accent" for TabAccent). The default is the choice that
     /// matches <c>new Config()</c>.
     /// </summary>
     public static SettingBinding Enum<T>(Func<Config, T, Config> set) where T : struct, System.Enum =>
-        new((_, config, value) => value is string s && Config.TryMode<T>(s, out var mode) ? set(config, mode) : null, null);
+        new((_, config, value, _) => value is string s && Config.TryMode<T>(s, out var mode) ? set(config, mode) : null, null);
 
     /// <summary>
     /// Any other kind of setting. <paramref name="read"/> takes the TOML value as it is, and <paramref name="default"/>
@@ -84,7 +87,29 @@ public static class Bind
     /// returns null.
     /// </summary>
     public static SettingBinding Custom(Func<Config, object, Config?> read, Func<Config, object?>? @default = null) =>
-        new((_, config, value) => read(config, value), @default == null ? null : (_, config) => @default(config));
+        new((_, config, value, _) => read(config, value), @default == null ? null : (_, config) => @default(config));
+
+    /// <summary>
+    /// One path or a list of them, with relative ones resolved by <paramref name="resolve"/> from the config file that
+    /// names them. None is written by default.
+    /// </summary>
+    public static SettingBinding Paths(Func<string, string, string> resolve, Func<Config, ValueList<string>, Config> set) =>
+        new((_, config, value, file) => PathList(value, file, resolve) is { } paths ? set(config, paths) : null, null);
+
+    /// <summary>
+    /// One path or a list of them from config.toml, blank ones left out and the rest resolved from
+    /// <paramref name="file"/>. Null when the value is neither a string nor a list of strings.
+    /// </summary>
+    public static ValueList<string>? PathList(object value, string file, Func<string, string, string> resolve)
+    {
+        IEnumerable<string>? written = value switch
+        {
+            string one => [one],
+            List<object> list when list.All(x => x is string) => list.Cast<string>(),
+            _ => null,
+        };
+        return written == null ? null : new(written.Select(p => p.Trim()).Where(p => p.Length > 0).Select(p => resolve(p, file)));
+    }
 
     /// <summary>A number as a double, because Tomlyn gives a long or a double and code may pass an int or a float.</summary>
     public static double? AsNumber(object value) => value switch
@@ -105,7 +130,7 @@ public static class Bind
     /// A number in the form config.toml writes it, with whole numbers as integers and the float noise of a conversion
     /// rounded off.
     /// </summary>
-    private static object Tidy(double value)
+    internal static object Tidy(double value)
     {
         var rounded = Math.Round(value, 9);
         return rounded == Math.Floor(rounded) && Math.Abs(rounded) < long.MaxValue ? (object)(long)rounded : rounded;

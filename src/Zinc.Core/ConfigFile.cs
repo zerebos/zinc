@@ -159,6 +159,7 @@ public sealed class ConfigFile
         .. Reader.Mappings.Keys,
         "colors.theme",
         "colors.palette",
+        "shaders.folders",
     ];
 
     /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page); may be a light/dark pair.</summary>
@@ -719,32 +720,6 @@ public sealed class ConfigFile
         /// </summary>
         public static readonly Dictionary<string, (string Key, Func<object, string?> Convert)> Mappings = new()
         {
-            ["terminal.cursor-style"] = ("cursor-style", v => v as string),
-            ["terminal.cursor-style-at-prompt"] = ("cursor-style-at-prompt", v => v as string),
-            ["terminal.cursor-blink"] = ("cursor-blink", v => Bool(v)),
-            ["terminal.scrollback-lines"] = ("scrollback-lines", v => Number(v)),
-            ["terminal.close-on-exit"] = ("close-on-exit", v => v as string),
-            ["terminal.bell"] = ("bell", v => v as string),
-            ["terminal.bell-sound"] = ("bell-sound", v => Bool(v)),
-            ["terminal.reload-environment"] = ("reload-environment", v => Bool(v)),
-            ["terminal.link-click"] = ("link-click", v => v as string),
-            ["terminal.right-click"] = ("right-click", v => v as string),
-            ["terminal.middle-click-paste"] = ("middle-click-paste", v => Bool(v)),
-            ["terminal.screen-flash-bell"] = ("screen-flash-bell", v => Bool(v)),
-            ["terminal.program-titles"] = ("program-titles", v => Bool(v)),
-            ["terminal.shell-titles"] = ("shell-titles", v => Bool(v)),
-            ["terminal.input-method"] = ("input-method", v => Bool(v)),
-            ["terminal.padding-x"] = ("window-padding-x", v => Pair(v)),
-            ["terminal.padding-y"] = ("window-padding-y", v => Pair(v)),
-            ["terminal.padding-balance"] = ("window-padding-balance", v => Bool(v)),
-            ["terminal.mouse-pointer"] = ("mouse-pointer", v => v as string),
-            ["terminal.clipboard-read"] = ("clipboard-read", v => Permission(v)),
-            ["terminal.clipboard-write"] = ("clipboard-write", v => Permission(v)),
-            ["terminal.command-marks"] = ("command-marks", v => v as string),
-            ["terminal.shell-integration"] = ("shell-integration", v => v as string),
-            ["shaders.files"] = ("custom-shader", v => v as string), // paths: ApplySetting resolves them
-            ["shaders.folders"] = ("shader-folders", v => v as string), // paths: ApplySetting resolves them
-            ["shaders.animation"] = ("custom-shader-animation", v => v is bool b ? (b ? "true" : "false") : v as string),
             ["window.workspace-tabs"] = ("workspace-tabs", v => v as string),
             ["window.title-bar"] = ("title-bar", v => v as string),
             ["window.sidebar"] = ("sidebar", v => v as string),
@@ -758,12 +733,6 @@ public sealed class ConfigFile
             ["window.explorer-menu"] = ("explorer-menu", v => Bool(v)),
             ["window.pane-resize-step"] = ("pane-resize-step", v => Number(v)),
             ["window.confirm-quit"] = ("confirm-quit", v => Bool(v)),
-            ["terminal.copy-on-select"] = ("copy-on-select", v => Bool(v)),
-            ["terminal.copy-formatting"] = ("copy-formatting", v => Bool(v)),
-            ["terminal.click-to-move"] = ("cursor-click-to-move", v => Bool(v)),
-            ["terminal.paste-warning"] = ("paste-warning", v => v as string),
-            ["terminal.large-paste-warning"] = ("large-paste-warning", v => Bool(v)),
-            ["terminal.word-boundaries"] = ("word-boundaries", v => v as string),
             ["window.pane-headers"] = ("pane-headers", v => v as string),
             ["window.pane-header-buttons"] = ("pane-header-buttons", v => v as string),
             ["window.pane-gap"] = ("pane-gap", v => Number(v)),
@@ -809,7 +778,7 @@ public sealed class ConfigFile
             // When the setting's catalog entry has a binding, the binding reads the TOML value.
             if (e.Path is [var g, var n] && Zinc.Settings.SettingsCatalog.Find($"{g}.{n}") is { Binding: { } binding } setting)
             {
-                return binding.Read(setting, config, e.Value) ?? Warn(config, e, null);
+                return binding.Read(setting, config, e.Value, e.File) ?? Warn(config, e, setting.Expected);
             }
 
             // One palette entry by number (palette = 1="#ac4242"), as a scheme file writes it.
@@ -840,32 +809,13 @@ public sealed class ConfigFile
                 _ => null,
             };
 
-            // Shader folders (for Settings' picker): the same, as folders.
+            // Shader folders for Settings' picker, as one folder or a list. Relative ones are resolved from the file that
+            // names them.
             if (e.Path is ["shaders", "folders"])
             {
-                var folders = e.Value switch
-                {
-                    string one => [one],
-                    List<object> list when list.All(x => x is string) => list.Cast<string>().ToList(),
-                    _ => null,
-                };
-                return folders == null
-                    ? Warn(config, e, "a folder or a list of them")
-                    : config.Apply("shader-folders", string.Join('\n', folders.Select(f => Zinc.Shaders.ShaderPaths.ResolveFolder(f, e.File)))) ?? config;
-            }
-
-            // Shader files: one path or a list, relative ones from the folder of the file that names them.
-            if (e.Path is ["shaders", "files"])
-            {
-                var files = e.Value switch
-                {
-                    string one => [one],
-                    List<object> list when list.All(x => x is string) => list.Cast<string>().ToList(),
-                    _ => null,
-                };
-                return files == null
-                    ? Warn(config, e, "a file path or a list of them")
-                    : config.Apply("custom-shader", string.Join('\n', files.Select(f => Zinc.Shaders.ShaderPaths.Resolve(f, e.File)))) ?? config;
+                return Zinc.Settings.Bind.PathList(e.Value, e.File, Zinc.Shaders.ShaderPaths.ResolveFolder) is { } folders
+                    ? config with { ShaderFolders = folders }
+                    : Warn(config, e, "a folder or a list of them");
             }
 
             if (legacy is not { } l)
@@ -926,14 +876,6 @@ public sealed class ConfigFile
             : null;
 
         private static string? Bool(object value) => value is bool b ? (b ? "true" : "false") : null;
-
-        /// <summary>true/false or "allow"/"deny".</summary>
-        private static string? Permission(object value) => value switch
-        {
-            bool b => b ? "allow" : "deny",
-            string s => s,
-            _ => null,
-        };
 
         /// <summary>One value or two (<c>[a, b]</c>), as Config.Apply's "a,b" form.</summary>
         private static string? Pair(object value) => value switch

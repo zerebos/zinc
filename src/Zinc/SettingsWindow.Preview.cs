@@ -206,7 +206,7 @@ internal sealed partial class SettingsWindow
     {
         if (_preview != null && _pinned.Visibility == Visibility.Visible && PreviewConfig() is { } shown)
         {
-            _preview.ApplyConfig(shown with { Shaders = string.Join('\n', files) });
+            _preview.ApplyConfig(shown with { ShaderFiles = new(files) });
         }
     }
 

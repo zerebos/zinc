@@ -309,7 +309,7 @@ public static partial class SettingsBackup
         var folder = Path.GetDirectoryName(Path.GetFullPath(config.Path))!;
         var configs = new[] { config.Global }.Concat(config.Profiles.Select(p => p.Config)).ToList();
         var files = config.Files.Concat(configs.SelectMany(c => c.ShaderFiles).Where(s => !Zinc.Shaders.ShaderPaths.IsBundled(s)));
-        var folders = configs.SelectMany(c => c.ShaderFolders.Split('\n', StringSplitOptions.RemoveEmptyEntries));
+        var folders = configs.SelectMany(c => c.ShaderFolders);
 
         // In the backup: what Gather takes (a folder: what's in it, as "<folder>/x" would be).
         bool Kept(string path, string suffix)

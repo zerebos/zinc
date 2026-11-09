@@ -290,7 +290,7 @@ internal sealed partial class SettingsWindow
 
     /// <summary>The folders the library lists ([shaders] folders, with any just added or taken out), full paths.</summary>
     private IReadOnlyList<string> ShaderFolders() =>
-        [.. _config.Global.ShaderFolders.Split('\n', StringSplitOptions.RemoveEmptyEntries).Concat(_addedShaderFolders).Distinct(StringComparer.OrdinalIgnoreCase)
+        [.. _config.Global.ShaderFolders.Concat(_addedShaderFolders).Distinct(StringComparer.OrdinalIgnoreCase)
             .Where(f => !_hiddenShaderFolders.Contains(f, StringComparer.OrdinalIgnoreCase))];
 
     private IReadOnlyList<string> WrittenShaderFolders() => ShaderPaths.Listed(_config.ValueOf("shaders.folders"));

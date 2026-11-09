@@ -145,7 +145,7 @@ public class TerminalSettingTests
     [InlineData("block_hollow", Zinc.Ghostty.TerminalCursorStyle.BlockHollow)] // Ghostty's spelling
     [InlineData("Bar", Zinc.Ghostty.TerminalCursorStyle.Bar)]
     public void CursorStylesRead(string value, Zinc.Ghostty.TerminalCursorStyle style) =>
-        Assert.Equal(style, new Config().Apply("cursor-style", value)!.CursorStyle);
+        Assert.Equal(style, new Config().With("terminal.cursor-style", value)!.CursorStyle);
 
     [Fact]
     public void CursorTextComesFromConfigOrScheme()
@@ -171,11 +171,11 @@ public class TerminalSettingTests
     [Fact]
     public void ValuesOutsideTheirRangeAreRejected()
     {
-        Assert.Null(new Config().Apply("cursor-style", "3"));
-        Assert.Null(new Config().Apply("scrollback-lines", "-1"));
-        Assert.Null(new Config().Apply("scrollback-lines", (Config.MaxScrollbackLines + 1).ToString()));
-        Assert.Null(new Config().Apply("bell", "loud"));
-        Assert.Equal(0, new Config().Apply("scrollback-lines", "0")!.ScrollbackLines);
+        Assert.Null(new Config().With("terminal.cursor-style", "3"));
+        Assert.Null(new Config().With("terminal.scrollback-lines", -1));
+        Assert.Null(new Config().With("terminal.scrollback-lines", Config.MaxScrollbackLines + 1));
+        Assert.Null(new Config().With("terminal.bell", "loud"));
+        Assert.Equal(0, new Config().With("terminal.scrollback-lines", 0)!.ScrollbackLines);
     }
 
     [Fact]

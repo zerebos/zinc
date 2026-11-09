@@ -134,7 +134,6 @@ public class ShaderTests : IDisposable
     {
         var config = Parse("");
         Assert.Empty(config.Global.ShaderFiles);
-        Assert.Equal("", config.Global.Shaders);
     }
 
     [Theory]

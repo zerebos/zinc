@@ -76,7 +76,7 @@ public class ShaderLibraryTests : IDisposable
     {
         var file = ConfigFile.Parse("[shaders]\nfolders = [\"~/dev/ghostty-shaders\", \"C:/packs\"]", Config);
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        Assert.Equal([Path.Combine(home, "dev", "ghostty-shaders"), @"C:\packs"], file.Global.ShaderFolders.Split('\n'));
+        Assert.Equal([Path.Combine(home, "dev", "ghostty-shaders"), @"C:\packs"], file.Global.ShaderFolders);
         Assert.Empty(file.Warnings);
     }
 }

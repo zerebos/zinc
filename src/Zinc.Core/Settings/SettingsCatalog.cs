@@ -51,6 +51,11 @@ public sealed record SettingDef(string Section, string Group, string Key, string
     public SettingBinding? Binding { get; init; }
 
     /// <summary>
+    /// What a valid value looks like, for the reader's warning when one isn't ("a file path or a list of them").
+    /// </summary>
+    public string? Expected { get; init; }
+
+    /// <summary>
     /// The value an empty config amounts to, or null when none is written and the app's own behavior applies.
     /// </summary>
     public object? Default => Binding != null ? Binding.DefaultFor(this) : DeclaredDefault;
@@ -119,6 +124,25 @@ public static class SettingsCatalog
         new("Medium", "medium"), new("Semibold", "semibold"), new("Bold", "bold"), new("Extra bold", "extra-bold"),
         new("Black", "black"),
     ];
+
+    /// <summary>A cursor shape's name, with "block_hollow" taken as "block-hollow" (Ghostty's spelling).</summary>
+    private static Ghostty.TerminalCursorStyle? CursorStyle(object value) =>
+        value is string s && Config.TryMode<Ghostty.TerminalCursorStyle>(s.Replace('_', '-'), out var style) ? style : null;
+
+    /// <summary>
+    /// Padding in points: one number for both sides, or two (<c>[left, right]</c>), each from 0 to the setting's
+    /// maximum of 100. The config holds DIPs.
+    /// </summary>
+    private static SettingBinding Padding(Func<Config, float> first, Func<Config, float, float, Config> set) =>
+        Bind.Custom((c, v) =>
+        {
+            var text = v is List<object> { Count: 1 or 2 } pair ? string.Join(",", pair.Select(Bind.AsText)) : Bind.AsText(v);
+            return text != null && Config.TryPadding(text, out var a, out var b) && Math.Max(a, b) * 72 / 96 <= MaxPadding
+                ? set(c, a, b)
+                : null;
+        }, c => Bind.Tidy(first(c) * 72 / 96));
+
+    private const double MaxPadding = 100;
 
     private static readonly SettingChoice[] NotifyChoices =
     [
@@ -242,23 +266,31 @@ public static class SettingsCatalog
         new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Behind the match Find is on.", SettingKind.Color)
             { Placeholder = "Zinc's orange", Binding = Bind.Color((c, v) => c with { SearchSelectedBackground = v }) },
         new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim's insert mode often does).",
-            SettingKind.Choice, "block")
+            SettingKind.Choice)
             {
                 Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
+                Binding = Bind.Custom((c, v) => CursorStyle(v) is { } style ? c with { CursorStyle = style } : null),
             },
-        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Until a program says otherwise.", SettingKind.Toggle, false),
+        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Until a program says otherwise.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.CursorBlink, (c, v) => c with { CursorBlink = v }) },
         new("appearance", "Cursor", "colors.cursor-opacity", "Cursor opacity",
             "1: solid. Lower lets the character under a block cursor show in its own color.", SettingKind.Number)
             { Minimum = 0.1, Maximum = 1, Step = 0.05, Binding = Bind.Number(c => c.CursorOpacity, (c, v) => c with { CursorOpacity = v }) },
         new("appearance", "Cursor", "terminal.cursor-style-at-prompt", "Cursor at the prompt",
             "While the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
-            SettingKind.Choice, "same")
+            SettingKind.Choice)
             {
                 Choices =
                 [
                     new("Same as above", "same"), new("Bar", "bar", "Like a text box."), new("Block", "block"),
                     new("Underline", "underline"), new("Hollow block", "block-hollow"),
                 ],
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    string s when s.Equals("same", StringComparison.OrdinalIgnoreCase) => c with { CursorStyleAtPrompt = null },
+                    _ when CursorStyle(v) is { } style => c with { CursorStyleAtPrompt = style },
+                    _ => null,
+                }),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
             "Windows, menus and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice, "system")
@@ -302,9 +334,13 @@ public static class SettingsCatalog
             { Minimum = 0, Maximum = 1, Step = 0.05, Binding = Bind.Number(c => c.BackgroundOpacity, (c, v) => c with { BackgroundOpacity = v }) },
         new("appearance", "Shaders", "shaders.files", "Custom shaders",
             "Effects drawn over the terminal, such as CRT screens, glow and cursor trails. They're GLSL files written for Ghostty or Shadertoy, and they run in order.",
-            SettingKind.Files, null),
+            SettingKind.Files)
+            {
+                Expected = "a file path or a list of them",
+                Binding = Bind.Paths(Shaders.ShaderPaths.Resolve, (c, v) => c with { ShaderFiles = v }),
+            },
         new("appearance", "Shaders", "shaders.animation", "Animation",
-            "For animated shaders. The others redraw only when the terminal changes.", SettingKind.Choice, true)
+            "For animated shaders. The others redraw only when the terminal changes.", SettingKind.Choice)
         {
             Choices =
             [
@@ -312,14 +348,28 @@ public static class SettingsCatalog
                 new("Always", "always", "Every terminal with shaders keeps redrawing, focused or not."),
                 new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
             ],
+            // true and false as booleans or as text, and "always" as text.
+            Binding = Bind.Custom((c, v) => (v is string s ? s.ToLowerInvariant() : v) switch
+            {
+                true or "true" => c with { ShaderAnimation = ShaderAnimation.Focused },
+                false or "false" => c with { ShaderAnimation = ShaderAnimation.Never },
+                "always" => c with { ShaderAnimation = ShaderAnimation.Always },
+                _ => null,
+            }),
         },
-        new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number, 6L)
-            { Unit = "pt", Maximum = 100 },
-        new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number, 6L)
-            { Unit = "pt", Maximum = 100 },
+        new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number)
+        {
+            Unit = "pt", Maximum = MaxPadding,
+            Binding = Padding(c => c.PaddingLeft, (c, a, b) => c with { PaddingLeft = a, PaddingRight = b }),
+        },
+        new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number)
+        {
+            Unit = "pt", Maximum = MaxPadding,
+            Binding = Padding(c => c.PaddingTop, (c, a, b) => c with { PaddingTop = a, PaddingBottom = b }),
+        },
         new("appearance", "Spacing", "terminal.padding-balance", "Even padding",
             "Splits the leftover space between both sides. When off, all of it goes to the right and bottom.",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.PaddingBalance, (c, v) => c with { PaddingBalance = v }) },
 
         // ---- Layout
         new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice, "top")
@@ -445,11 +495,17 @@ public static class SettingsCatalog
         // ---- Terminal
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
             "Marks prompts and commands in PowerShell, bash and zsh (WSL too), so you can jump between prompts, copy a command's output and see which commands failed.",
-            SettingKind.Choice, "auto")
-            { Choices = [new("On", "auto"), new("Off", "off")] },
-        new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command's output.", SettingKind.Choice, "failures")
-            { Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")] },
-        new("terminal", "Shell", "terminal.close-on-exit", "When the program ends", "", SettingKind.Choice, "success")
+            SettingKind.Choice)
+            {
+                Choices = [new("On", "auto"), new("Off", "off")],
+                Binding = Bind.Enum<ShellIntegrationMode>((c, v) => c with { ShellIntegration = v }),
+            },
+        new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command's output.", SettingKind.Choice)
+            {
+                Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")],
+                Binding = Bind.Enum<CommandMarks>((c, v) => c with { CommandMarks = v }),
+            },
+        new("terminal", "Shell", "terminal.close-on-exit", "When the program ends", "", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -457,29 +513,44 @@ public static class SettingsCatalog
                     new("Always close", "always"),
                     new("Keep it open", "never", "Any key closes it."),
                 ],
+                Binding = Bind.Enum<CloseOnExit>((c, v) => c with { CloseOnExit = v }),
             },
         new("terminal", "Shell", "terminal.reload-environment", "Pick up environment changes",
             "New tabs read PATH and other variables from Windows as they start, so an installer's changes work without restarting Zinc.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.ReloadEnvironment, (c, v) => c with { ReloadEnvironment = v }) },
         new("terminal", "Shell", "terminal.program-titles", "Program titles",
             "Shells and programs set the tab's title (often the folder or the running command). When off, tabs show the profile's name.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.ProgramTitles, (c, v) => c with { ProgramTitles = v }) },
         new("terminal", "Shell", "terminal.shell-titles", "Folder and command as the title",
             "The folder at the prompt, the running command otherwise. A program's own title still wins. Needs shell integration.",
-            SettingKind.Toggle, true),
-        new("terminal", "Scrollback", "terminal.scrollback-lines", "Scrollback lines", "How far back you can scroll.",
-            SettingKind.Number, (long)Config.DefaultScrollbackLines)
-            { Minimum = 0, Maximum = Config.MaxScrollbackLines, Step = 1000 },
-        new("terminal", "Mouse", "terminal.mouse-pointer", "Pointer over text", "", SettingKind.Choice, "arrow")
-            { Choices = [new("Arrow", "arrow"), new("I-beam", "text")] },
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.ShellTitles, (c, v) => c with { ShellTitles = v }) },
+        new("terminal", "Scrollback", "terminal.scrollback-lines", "Scrollback lines", "How far back you can scroll.", SettingKind.Number)
+        {
+            Minimum = 0, Maximum = Config.MaxScrollbackLines, Step = 1000,
+            Binding = Bind.Number(c => c.ScrollbackLines, (c, v) => c with { ScrollbackLines = (int)v }, whole: true),
+        },
+        new("terminal", "Mouse", "terminal.mouse-pointer", "Pointer over text", "", SettingKind.Choice)
+            {
+                Choices = [new("Arrow", "arrow"), new("I-beam", "text")],
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    "arrow" => c with { TextPointer = false },
+                    "text" => c with { TextPointer = true },
+                    _ => null,
+                }),
+            },
         new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
-            "Characters that end a word when you double-click (space and tab always do). Empty: the ones shown.", SettingKind.Text, null)
-            { Placeholder = "'\"│`|:;,()[]{}<>$" },
+            "Characters that end a word when you double-click (space and tab always do). Empty: the ones shown.", SettingKind.Text)
+            {
+                Placeholder = "'\"│`|:;,()[]{}<>$",
+                // Empty means the built-in set, so it's accepted too.
+                Binding = Bind.Custom((c, v) => v is string s ? c with { WordBoundaries = s.Length > 0 ? s : null } : null),
+            },
         new("terminal", "Mouse", "terminal.click-to-move", "Click to move the cursor",
             "At a shell prompt, clicking in the command you're typing moves the cursor there. Needs shell integration.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.ClickToMove, (c, v) => c with { ClickToMove = v }) },
         new("terminal", "Mouse", "terminal.right-click", "Right-click", "Shift+F10 or the Menu key opens the menu anywhere.",
-            SettingKind.Choice, "menu")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -487,9 +558,10 @@ public static class SettingsCatalog
                     new("Copy or paste", "copy-paste", "Copies a selection, or pastes when there's none."),
                     new("Paste", "paste"),
                 ],
+                Binding = Bind.Enum<RightClick>((c, v) => c with { RightClick = v }),
             },
         new("terminal", "Mouse", "terminal.link-click", "Open links with", "Web links and files shown in the terminal.",
-            SettingKind.Choice, "ctrl")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -497,18 +569,23 @@ public static class SettingsCatalog
                     new("Alt+click", "alt", "Holding Alt underlines the links."),
                     new("A click", "click", "Dragging across a link still selects it. A program using the mouse still gets the click."),
                 ],
+                Binding = Bind.Enum<LinkClick>((c, v) => c with { LinkClick = v }),
             },
         new("terminal", "Mouse", "terminal.middle-click-paste", "Middle-click pastes",
-            "Unless the program uses the mouse.", SettingKind.Toggle, false),
+            "Unless the program uses the mouse.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.MiddleClickPaste, (c, v) => c with { MiddleClickPaste = v }) },
         new("terminal", "Mouse", "window.focus-follows-mouse", "Focus follows mouse",
             "Moving the pointer into a pane focuses it.", SettingKind.Toggle, false),
         new("terminal", "Clipboard", "terminal.copy-on-select", "Copy on select",
-            "Copies text as soon as you select it. The selection stays.", SettingKind.Toggle, false),
+            "Copies text as soon as you select it. The selection stays.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.CopyOnSelect, (c, v) => c with { CopyOnSelect = v }) },
         new("terminal", "Clipboard", "terminal.copy-formatting", "Copy with formatting",
-            "Copies colors and styles too, for documents and email. Apps that take plain text still get plain text.", SettingKind.Toggle, false),
+            "Copies colors and styles too, for documents and email. Apps that take plain text still get plain text.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.CopyFormatting, (c, v) => c with { CopyFormatting = v }) },
         new("terminal", "Clipboard", "terminal.paste-warning", "Paste warning", "Ask before pasting text with more than one line.",
-            SettingKind.Choice, "auto")
+            SettingKind.Choice)
             {
+                Binding = Bind.Enum<Terminal.PasteWarning>((c, v) => c with { PasteWarning = v }),
                 Choices =
                 [
                     new("Automatic", "auto", "When the program would take each line as Enter and run it. A program that marks pastes (bracketed paste) gets no warning."),
@@ -517,11 +594,20 @@ public static class SettingsCatalog
                 ],
             },
         new("terminal", "Clipboard", "terminal.large-paste-warning", "Large pastes", "Ask before pasting more than 5 KB.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.LargePasteWarning, (c, v) => c with { LargePasteWarning = v }) },
         new("terminal", "Clipboard", "terminal.clipboard-write", "Programs may copy",
-            "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle, true),
+            "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle)
+            {
+                // true or false, or "allow" or "deny" as the read setting takes them.
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    true or "allow" => c with { ClipboardWrite = true },
+                    false or "deny" => c with { ClipboardWrite = false },
+                    _ => null,
+                }, c => c.ClipboardWrite),
+            },
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs reading the clipboard",
-            "Anything running, including a remote host, could read it.", SettingKind.Choice, "ask")
+            "Anything running, including a remote host, could read it.", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -529,9 +615,17 @@ public static class SettingsCatalog
                     new("Allow", "allow"),
                     new("Deny", "deny"),
                 ],
+                // "ask", "allow" or "deny", or true and false for the last two.
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    true => c with { ClipboardRead = ClipboardAccess.Allow },
+                    false => c with { ClipboardRead = ClipboardAccess.Deny },
+                    string s when Config.TryMode<ClipboardAccess>(s, out var access) => c with { ClipboardRead = access },
+                    _ => null,
+                }),
             },
         new("terminal", "Bell", "terminal.bell", "Bell", "When a program rings it, e.g. at a failed tab completion.",
-            SettingKind.Choice, "attention")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -539,10 +633,13 @@ public static class SettingsCatalog
                     new("Flash the pane", "flash", "Marks the tab too."),
                     new("None", "none"),
                 ],
+                Binding = Bind.Enum<BellMode>((c, v) => c with { Bell = v }),
             },
-        new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows' default sound too.", SettingKind.Toggle, false),
+        new("terminal", "Bell", "terminal.bell-sound", "Bell sound", "Plays Windows' default sound too.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.BellSound, (c, v) => c with { BellSound = v }) },
         new("terminal", "Bell", "terminal.screen-flash-bell", "Visual bell",
-            "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell, as set in \"Bell\".", SettingKind.Toggle, true),
+            "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell, as set in \"Bell\".", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.ScreenFlashBell, (c, v) => c with { ScreenFlashBell = v }) },
         new("terminal", "Command line", "cli.remote-control", "Remote control",
             "Lets zn, Zinc's command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
             SettingKind.Toggle, false),
@@ -551,7 +648,7 @@ public static class SettingsCatalog
             SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
             "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). Turn it off if keys behave oddly.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle) { Binding = Bind.Bool(c => c.InputMethod, (c, v) => c with { InputMethod = v }) },
         new("about", "Updates", "updates.check", "Check for updates automatically",
             "Once a day. New versions download in the background, and you choose when to restart. Only for Zinc installed with its installer.",
             SettingKind.Toggle, true),

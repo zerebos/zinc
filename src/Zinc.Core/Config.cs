@@ -546,20 +546,17 @@ public sealed record Config
     public TimeSpan FreeHiddenAfter { get; init; } = TimeSpan.FromSeconds(60);
 
     /// <summary>
-    /// Custom shaders (Ghostty/Shadertoy GLSL) run over the terminal's picture, in order: full paths, one per line, ""
-    /// for none (a string, so configs compare by value). Relative paths in the file are from the config file's folder.
-    /// Needs low-latency drawing. Config: <c>[shaders] files = ["crt.glsl"]</c>.
+    /// Custom shaders (Ghostty/Shadertoy GLSL) run over the terminal's picture, in order, as full paths. Relative paths
+    /// in the file are from the config file's folder. Needs low-latency drawing. Config: <c>[shaders] files =
+    /// ["crt.glsl"]</c>.
     /// </summary>
-    public string Shaders { get; init; } = "";
-
-    /// <summary><see cref="Shaders"/> as a list.</summary>
-    public IReadOnlyList<string> ShaderFiles => Shaders.Length == 0 ? [] : Shaders.Split('\n');
+    public ValueList<string> ShaderFiles { get; init; } = ValueList<string>.Empty;
 
     /// <summary>
-    /// Folders of shaders the picker in Settings lists (full paths, one per line, "" for none): a collection you cloned,
-    /// say. Config: <c>[shaders] folders = ["~/dev/ghostty-shaders"]</c>, relative ones from the config file's folder.
+    /// Folders of shaders the picker in Settings lists, such as a collection you cloned, as full paths. Relative paths
+    /// in the file are from the config file's folder. Config: <c>[shaders] folders = ["~/dev/ghostty-shaders"]</c>.
     /// </summary>
-    public string ShaderFolders { get; init; } = "";
+    public ValueList<string> ShaderFolders { get; init; } = ValueList<string>.Empty;
 
     /// <summary>When time-based shaders redraw on their own. Config: <c>[shaders] animation</c>.</summary>
     public ShaderAnimation ShaderAnimation { get; init; }
@@ -781,7 +778,6 @@ public sealed record Config
             "command" when value.Length > 0 => this with { Command = value },
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
-            "mouse-pointer" when value is "arrow" or "text" => this with { TextPointer = value == "text" },
             "confirm-close" when bool.TryParse(value, out var confirmClose) => this with { ConfirmClose = confirmClose },
             "notify-command-finished-sound" when TryMode<FinishedSound>(value, out var finishedSound) => this with { CommandFinishedSound = finishedSound },
             "confirm-quit" when bool.TryParse(value, out var confirmQuit) => this with { ConfirmQuit = confirmQuit },
@@ -793,12 +789,6 @@ public sealed record Config
             "free-hidden-memory" when bool.TryParse(value, out var freeHidden) => this with { FreeHiddenMemory = freeHidden },
             "free-hidden-after" when TryDuration(value, out var hiddenFor) && hiddenFor >= TimeSpan.FromSeconds(1) =>
                 this with { FreeHiddenAfter = hiddenFor },
-            "custom-shader" => this with { Shaders = string.Join('\n', value.Split('\n').Select(f => f.Trim()).Where(f => f.Length > 0)) },
-            "shader-folders" => this with { ShaderFolders = string.Join('\n', value.Split('\n').Select(f => f.Trim()).Where(f => f.Length > 0)) },
-            "custom-shader-animation" when bool.TryParse(value, out var animate) =>
-                this with { ShaderAnimation = animate ? ShaderAnimation.Focused : ShaderAnimation.Never },
-            "custom-shader-animation" when value.Equals("always", StringComparison.OrdinalIgnoreCase) =>
-                this with { ShaderAnimation = ShaderAnimation.Always },
             "pane-headers" when TryMode<PaneHeaders>(value, out var headers) => this with { PaneHeaders = headers },
             "pane-header-buttons" when TryMode<PaneHeaderButtons>(value, out var buttons) => this with { PaneHeaderButtons = buttons },
             "pane-gap" when int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var gap) && gap <= 32 =>
@@ -837,40 +827,10 @@ public sealed record Config
                 this with { WorkspaceTabs = tabs },
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
             "sidebar" when TryMode<SidebarMode>(value, out var sidebar) => this with { Sidebar = sidebar },
-            "command-marks" when TryMode<CommandMarks>(value, out var marks) => this with { CommandMarks = marks },
-            "shell-integration" when TryMode<ShellIntegrationMode>(value, out var integration) => this with { ShellIntegration = integration },
-            "link-click" when TryMode<LinkClick>(value, out var linkClick) => this with { LinkClick = linkClick },
-            "right-click" when TryMode<RightClick>(value, out var rightClick) => this with { RightClick = rightClick },
-            "middle-click-paste" when bool.TryParse(value, out var middle) => this with { MiddleClickPaste = middle },
             "notify-command-finished" when TryMode<NotifyMode>(value, out var notify) => this with { NotifyCommandFinished = notify },
             "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },
             "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
-            "clipboard-write" when value is "allow" or "deny" => this with { ClipboardWrite = value == "allow" },
-            "copy-on-select" when bool.TryParse(value, out var copyOnSelect) => this with { CopyOnSelect = copyOnSelect },
-            "copy-formatting" when bool.TryParse(value, out var copyFormatting) => this with { CopyFormatting = copyFormatting },
-            "cursor-click-to-move" when bool.TryParse(value, out var clickToMove) => this with { ClickToMove = clickToMove },
-            "paste-warning" when Enum.TryParse<Zinc.Terminal.PasteWarning>(value, true, out var paste) && !int.TryParse(value, out _) =>
-                this with { PasteWarning = paste },
-            "large-paste-warning" when bool.TryParse(value, out var large) => this with { LargePasteWarning = large },
-            "word-boundaries" => this with { WordBoundaries = value.Length > 0 ? value : null },
             "focus-follows-mouse" when bool.TryParse(value, out var follows) => this with { FocusFollowsMouse = follows },
-            "cursor-style" when TryMode<Zinc.Ghostty.TerminalCursorStyle>(value.Replace('_', '-'), out var cursorStyle) =>
-                this with { CursorStyle = cursorStyle },
-            "cursor-blink" when bool.TryParse(value, out var blink) => this with { CursorBlink = blink },
-            "cursor-style-at-prompt" when value.Equals("same", StringComparison.OrdinalIgnoreCase) => this with { CursorStyleAtPrompt = null },
-            "cursor-style-at-prompt" when TryMode<Zinc.Ghostty.TerminalCursorStyle>(value.Replace('_', '-'), out var promptStyle) =>
-                this with { CursorStyleAtPrompt = promptStyle },
-            "scrollback-lines" when int.TryParse(value, out var lines) && lines is >= 0 and <= MaxScrollbackLines =>
-                this with { ScrollbackLines = lines },
-            "close-on-exit" when TryMode<CloseOnExit>(value, out var close) => this with { CloseOnExit = close },
-            "bell" when TryMode<BellMode>(value, out var bell) => this with { Bell = bell },
-            "bell-sound" when bool.TryParse(value, out var sound) => this with { BellSound = sound },
-            "reload-environment" when bool.TryParse(value, out var reload) => this with { ReloadEnvironment = reload },
-            "screen-flash-bell" when bool.TryParse(value, out var screenFlash) => this with { ScreenFlashBell = screenFlash },
-            "input-method" when bool.TryParse(value, out var ime) => this with { InputMethod = ime },
-            "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
-            "shell-titles" when bool.TryParse(value, out var shellTitles) => this with { ShellTitles = shellTitles },
-            "clipboard-read" when TryMode<ClipboardAccess>(value, out var read) => this with { ClipboardRead = read },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
                 this with { QuickTerminal = QuickTerminal with { Position = position } },
             "quick-terminal-screen" when Enum.TryParse<QuickTerminalScreen>(value, true, out var screen) =>
@@ -883,11 +843,6 @@ public sealed record Config
                 this with { QuickTerminal = QuickTerminal with { AnimationDuration = slide } },
             "quick-terminal-hotkey" when TryHotkey(value) =>
                 this with { QuickTerminal = QuickTerminal with { Hotkey = value } },
-            "window-padding-x" when TryPadding(value, out var left, out var right) =>
-                this with { PaddingLeft = left, PaddingRight = right },
-            "window-padding-y" when TryPadding(value, out var top, out var bottom) =>
-                this with { PaddingTop = top, PaddingBottom = bottom },
-            "window-padding-balance" when bool.TryParse(value, out var balance) => this with { PaddingBalance = balance },
             _ => null,
         };
     }
@@ -1021,7 +976,7 @@ public sealed record Config
     }
 
     /// <summary>Parses Ghostty padding in points: <c>N</c> (both sides) or <c>A,B</c>; returns DIPs.</summary>
-    private static bool TryPadding(string s, out float first, out float second)
+    public static bool TryPadding(string s, out float first, out float second)
     {
         first = second = 0;
         var parts = s.Split(',', StringSplitOptions.TrimEntries);
