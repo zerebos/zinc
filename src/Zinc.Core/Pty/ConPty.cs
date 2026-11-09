@@ -121,7 +121,7 @@ public sealed unsafe partial class ConPty : IDisposable
     /// A console handed over to Zinc as the default terminal (ITerminalHandoff3, from Windows
     /// Terminal's OpenConsole): its handles become a pseudoconsole as one Zinc started would be
     /// (ConptyPackPseudoConsole), with an input pipe and an output pipe. The handles given are the caller's (COM
-    /// closes them after the call): they're duplicated. <paramref name="theirInput"/> and
+    /// closes them after the call), so they're duplicated. <paramref name="theirInput"/> and
     /// <paramref name="theirOutput"/> are the pipes' other ends, to hand back.
     /// </summary>
     public static ConPty FromHandoff(nint server, nint reference, nint signal, nint client, out nint theirInput, out nint theirOutput)

@@ -8,30 +8,32 @@
   the previous release is there, a delta package with only what changed, releases.win.json (the list a
   running Zinc checks for updates) and Zinc-win-Portable.zip.
 
-  -UpdateUrl is built into the release: where it checks for updates (the folder testers download from).
-  A Zinc release needs one; test packages (-PackId Zinc.Test) find theirs through ZINC_UPDATE_URL.
+  -UpdateUrl is built into the release as the address it checks for updates (the folder testers download from).
+  A Zinc release needs one. Test packages (-PackId Zinc.Test) find theirs through ZINC_UPDATE_URL.
 
-  Deltas need the previous release in -Out. -From fetches it first: the address testers update from (an
-  https URL) or a local folder.
+  Deltas need the previous release in -Out. -From fetches it first, from the address testers update from (an
+  https URL) or from a local folder.
 
-  A release is a commit: a working tree with uncommitted changes is refused (-AllowDirty is for tests),
+  A release is a commit, so a working tree with uncommitted changes is refused (-AllowDirty is for tests),
   and its version (computed as Directory.Build.props does) only ever goes up.
 
   Its notes are CHANGELOG.md's entry for its version ("## 0.1.0-dev.N (date)"), handed to the installer (a downloaded
   update shows them under "What's new" in About). -Publish refuses without one, or with anything left under
-  "## Unreleased". Before publishing: rename "## Unreleased" to the version the next commit makes (N = commits + 1:
+  "## Unreleased". Before publishing, rename "## Unreleased" to the version the next commit makes (N is
   `git rev-list --count HEAD` plus one), start a new empty "## Unreleased" above it, and commit that.
 
-  -Publish does the whole thing from release.local.json (next to this repo's root; not in git):
+  -Publish does the whole thing from release.local.json, in the repo's root and not in git:
     { "updateUrl": "https://example.com/zinc/",
       "ftp": "ftp://host/path/to/zinc/",
       "ftpPin": "sha256//<base64 of the server's public key>" }   (optional, see below)
-  It builds into a fresh dist\release with -UpdateUrl and -From set to updateUrl, then uploads over FTPS (curl,
-  your login from %USERPROFILE%\.netrc, the server's certificate checked as usual; with ftpPin, that key instead,
-  so an expired or self-signed certificate still gives an encrypted connection to that server only. A pin breaks
-  at every renewal: use it only while a host's certificate is broken): .htaccess (release-htaccess, next to this
-  script), the new files, then releases.win.json last, under another name and renamed, so a copy checking
-  mid-upload never sees a release whose files aren't there yet. Packages the new list doesn't mention are deleted from the server.
+  It builds into a fresh dist\release with -UpdateUrl and -From set to updateUrl, then uploads over FTPS with curl,
+  using your login from %USERPROFILE%\.netrc. The server's certificate is checked as usual. With ftpPin, the
+  server's key is checked against the pin instead, so an expired or self-signed certificate still gives an encrypted
+  connection to that server only. A pin breaks at every renewal, so use it only while a host's certificate is broken.
+
+  The upload sends .htaccess (release-htaccess, next to this script), then the new files, then releases.win.json
+  last, under another name and then renamed, so a copy checking mid-upload never sees a release whose files aren't
+  there yet. Packages the new list doesn't mention are deleted from the server.
 
 .EXAMPLE
   pwsh scripts/release/release.ps1 -Publish                                                             # the real thing
@@ -45,7 +47,7 @@ param(
     [string]$UpdateUrl,
     [string]$Version,
     [switch]$AllowDirty,
-    # Where shortcuts go at install ('' = none: test packages must not touch the Start Menu).
+    # Where shortcuts go at install ('' for none, because test packages must not touch the Start Menu).
     [string]$Shortcuts = 'StartMenuRoot',
     [switch]$Publish,
     # The changelog the release notes come from (tests give their own).
@@ -86,7 +88,7 @@ if (-not $Version) {
     $Version = if ($LASTEXITCODE -eq 0) { "$base+$rev" } else { "$base-dev.$commits+$rev" }
 }
 
-# ---- a release testers would never get: not above the one already published ----
+# ---- a release testers would never get, because it isn't above the one already published ----
 # dev.N is the commit count, and squashing or rewriting history lowers it. Velopack only updates to a higher version.
 if ($Publish -and $Version -match '^(.+)-dev\.(\d+)') {
     $base, $number = $Matches[1], [int]$Matches[2]
@@ -98,7 +100,7 @@ if ($Publish -and $Version -match '^(.+)-dev\.(\d+)') {
     }
 }
 
-# ---- release notes: the changelog's entry for this version ----
+# ---- release notes, from the changelog's entry for this version ----
 $notesArgs = @()
 if (-not $Changelog) { $Changelog = Join-Path $repo 'CHANGELOG.md' }
 if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
@@ -121,7 +123,7 @@ if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
         if ($Publish) { throw "CHANGELOG.md has no entry for $plain (see this script's help)." }
         Write-Warning "CHANGELOG.md has no entry for ${plain}: this build has no release notes."
     } else {
-        $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out: everything there is uploaded
+        $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out, because everything there is uploaded
         [IO.File]::WriteAllText($notesFile, $notes + "`n", [Text.UTF8Encoding]::new($false))
         $notesArgs = '--releaseNotes', $notesFile
         Write-Host "Release notes: CHANGELOG.md's entry for $plain"
@@ -140,8 +142,8 @@ if ($From) {
 $publishDir = Join-Path $repo "dist\publish-$PackId"
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
 Write-Host "Publishing $Version ..."
-# One publish at a time (any script that publishes into obj\ takes the same mutex), and a full rebuild: an
-# incremental publish after a framework-dependent one reused a zinc.deps.json naming no runtime.
+# One publish at a time (any script that publishes into obj\ takes the same mutex), and a full rebuild, because an
+# incremental publish after a framework-dependent one can reuse a zinc.deps.json that names no runtime.
 $inheritedPath = $env:PATH
 $lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
 try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
@@ -173,7 +175,7 @@ if ($deps -notmatch 'runtimepack\.Microsoft\.NETCore\.App\.Runtime' -or $deps -n
     throw 'zinc.deps.json lists no .NET runtime, so zinc.exe would not start: not releasing it.'
 }
 
-# Every assembly something here references must be in zinc.deps.json (trimming can leave one out: check-publish.ps1).
+# Every assembly something here references must be in zinc.deps.json (trimming can leave one out, which check-publish.ps1 finds).
 $missing = & (Join-Path $PSScriptRoot 'check-publish.ps1') $publishDir
 if ($missing) {
     throw "zinc.deps.json doesn't list assemblies these need, so they'd fail to load when used: $($missing -join ', '). Not releasing it."
@@ -185,7 +187,7 @@ if ($missing) {
 
 # ---- pack ----
 Write-Host "Packing $PackId $Version ..."
-# The title is what Settings > Apps shows: a test package says so, never a second "Zinc".
+# The title is what Settings > Apps shows, so a test package shows its own id instead of a second "Zinc".
 $title = if ($PackId -eq 'Zinc') { 'Zinc' } else { $PackId }
 dotnet vpk pack --packId $PackId --packVersion $Version --packTitle $title --packAuthors Zinc --runtime win-x64 `
     --packDir $publishDir --mainExe zinc.exe --icon (Join-Path $repo 'src\Zinc\Assets\Zinc.ico') `
@@ -213,7 +215,7 @@ $there = @(Ftp --list-only $ftp | ForEach-Object { "$_".Trim() } | Where-Object 
 Ftp -T (Join-Path $PSScriptRoot 'release-htaccess') "$($ftp).htaccess" | Out-Null
 Write-Host '  .htaccess'
 
-# Same names every release: always replaced. Packages: only the new ones.
+# Files with the same name in every release are always replaced, and packages are uploaded only when they're new.
 $replace = "$PackId-win-Setup.exe", "$PackId-win-Portable.zip", 'assets.win.json', 'RELEASES'
 foreach ($file in Get-ChildItem $Out -File | Where-Object Name -ne 'releases.win.json') {
     if ($there -contains $file.Name -and $replace -notcontains $file.Name) { continue }
@@ -221,7 +223,7 @@ foreach ($file in Get-ChildItem $Out -File | Where-Object Name -ne 'releases.win
     Write-Host ("  {0} ({1:N1} MB)" -f $file.Name, ($file.Length / 1MB))
 }
 
-# The list last, appearing in one step.
+# The list goes last, and the rename makes it appear in one step.
 Ftp -T (Join-Path $Out 'releases.win.json') "$($ftp)releases.win.json.new" -Q '-RNFR releases.win.json.new' -Q '-RNTO releases.win.json' | Out-Null
 Write-Host '  releases.win.json'
 

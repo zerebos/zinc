@@ -21,7 +21,8 @@
     <EnableMsixTooling>true</EnableMsixTooling>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- Embedded in the exe: Explorer, Start Menu shortcut, Raycast. The brand's icon, with hand-placed frames. -->
+    <!-- Embedded in the exe, where Explorer, the Start Menu shortcut and Raycast find it. The brand's icon, with
+         hand-placed frames. -->
     <ApplicationIcon>Assets\Zinc.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -99,7 +100,7 @@
 
   <!-- zn, the command-line tool, in bin\ next to zinc.exe (a folder of its own, so putting it on PATH exposes nothing
        else; terminals get it appended to theirs: CliServer). Builds copy its framework-dependent build (dev machines have .NET);
-       publishes (release.ps1's, for one) publish it ahead of time: one self-contained zn.exe. -->
+       publishes (release.ps1's, for one) publish it ahead of time as one self-contained zn.exe. -->
   <PropertyGroup>
     <ZnProject>$(MSBuildThisFileDirectory)..\Zinc.Cli\Zinc.Cli.csproj</ZnProject>
   </PropertyGroup>

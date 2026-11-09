@@ -7,7 +7,10 @@ namespace Zinc;
 /// <summary>What the updater is doing, for About's card and the windows' notice.</summary>
 internal enum UpdateStatus
 {
-    /// <summary>This copy can't update: not installed by the installer (a dev build, or a folder published by hand), or no update address.</summary>
+    /// <summary>
+    /// This copy can't update, because the installer didn't install it (a dev build, or a folder published by hand) or
+    /// it has no update address.
+    /// </summary>
     NotInstalled,
 
     /// <summary>Hasn't checked yet.</summary>

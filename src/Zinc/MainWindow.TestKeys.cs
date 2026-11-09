@@ -6,7 +6,7 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// The test harness: ZINC_TEST_KEYS replays keys and `test:` commands in a running window, so scripts can drive what
+// The test harness. ZINC_TEST_KEYS replays keys and `test:` commands in a running window, so scripts can drive what
 // posted input can't (modifier chords, drags, menus). It ships in every build, because the update tests drive a
 // published build with it, but it's for development only.
 public sealed partial class MainWindow
@@ -31,7 +31,7 @@ public sealed partial class MainWindow
         var queue = new Queue<string>(keys.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             .Where(k => !System.Text.RegularExpressions.Regex.IsMatch(k, @"^w\d+:") || k.StartsWith(window))
             .Select(k => k.StartsWith(window) ? k[window.Length..] : k));
-        // Held in a field: an unreferenced DispatcherQueueTimer is collected and stops firing.
+        // Held in a field, because an unreferenced DispatcherQueueTimer is collected and stops firing.
         var timer = _replayTimer = DispatcherQueue.CreateTimer();
         timer.Interval = TimeSpan.FromSeconds(1);
         timer.Tick += (_, _) =>
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
                 return;
             }
 
-            // On the new-workspace page: a key goes to the page's own shortcuts, as a real press would.
+            // On the new-workspace page, a key goes to the page's own shortcuts, as a real press would.
             if (SelectedTab == null && StartPageItem() is { } page && ReferenceEquals(Tabs.SelectedItem, page) && !chord.Contains(':'))
             {
                 var handled = _keybindings.TryGet(KeyChord.Parse(chord), out var onPage) && HandlePageAction(onPage, page);
@@ -50,7 +50,8 @@ public sealed partial class MainWindow
                 return;
             }
 
-            // The palette on the page: its commands, and opening it with a query typed.
+            // On the page, `palette:` runs one of the page's own commands, and `test:palette-open:` opens the palette
+            // with a query typed.
             if (SelectedTab == null && StartPageItem() is { } shownPage && ReferenceEquals(Tabs.SelectedItem, shownPage) &&
                 (chord.StartsWith("palette:") || chord.StartsWith("test:palette-open:")))
             {
@@ -79,8 +80,8 @@ public sealed partial class MainWindow
 
             if (chord.StartsWith("test:drop-middle:") || chord.StartsWith("test:drop-right:"))
             {
-                // "test:drop-middle:1" drops workspace 1 into the focused pane, as a drag onto
-                // its middle would ("drop-right": onto its right edge). Drags can't be posted.
+                // "test:drop-middle:1" drops workspace 1 into the focused pane, as a drag onto its middle would, and
+                // "test:drop-right:1" drops it onto the pane's right edge. Drags can't be posted.
                 var from = AllTabs().ElementAtOrDefault(int.Parse(chord[(chord.LastIndexOf(':') + 1)..]));
                 Log.Write($"test {chord}: {(from != null && from != tab ? "dropping" : "no such workspace")}");
                 if (from != null && from != tab && tab.Workspace.GroupOf(tab.Active) is { } target)
@@ -93,7 +94,7 @@ public sealed partial class MainWindow
 
             if (chord == "test:throw")
             {
-                // Checks the safety net: this should be logged to crash.log, shown, and survived.
+                // Checks the safety net, which should log this to crash.log, show it, and survive it.
                 DispatcherQueue.SafeEnqueue(() => throw new InvalidOperationException("test:throw, on purpose"));
                 return;
             }
@@ -145,7 +146,7 @@ public sealed partial class MainWindow
 
             if (chord == "test:scrollbar-expand")
             {
-                // The focused pane's scrollbar, expanded and kept so (hover can't be posted).
+                // Expands the focused pane's scrollbar and keeps it expanded, because hover can't be posted.
                 tab.Active.Control.PinScrollBarExpandedForTest();
                 Log.Write($"test {chord}: done");
                 return;
@@ -212,9 +213,9 @@ public sealed partial class MainWindow
 
             if (chord.StartsWith("test:tab-"))
             {
-                // What dragging the focused pane's shown tab would do: "test:tab-to:1" drops it
-                // into the pane 1 (layout order) of this workspace ("tab-right:1" onto its right
-                // edge), "test:tab-at:0" at position 0 of its own strip. Drags can't be posted.
+                // What dragging the focused pane's shown tab would do. "test:tab-to:1" drops it into pane 1 (in layout
+                // order) of this workspace, "test:tab-right:1" onto that pane's right edge, and "test:tab-at:0" at
+                // position 0 of its own strip. Drags can't be posted.
                 var arg = int.Parse(chord[(chord.LastIndexOf(':') + 1)..]);
                 var pane = tab.Active;
                 var target = chord.StartsWith("test:tab-at:") ? tab.Workspace.ActiveGroup : tab.Workspace.Groups.ElementAtOrDefault(arg);
@@ -230,10 +231,10 @@ public sealed partial class MainWindow
 
             if (chord.StartsWith("test:pane-"))
             {
-                // What dragging the focused pane by its header would do... `test:pane-to:1` drops it into pane 1 (layout
-                // order) of this workspace, `test:pane-right:1` / `test:pane-down:1` onto that pane's edge. With a
-                // workspace first, another workspace's pane: `test:pane-to:0:1` into pane 1 of workspace 0.
-                // `test:pane-title:0` drops it on the title bar at position 0.
+                // What dragging the focused pane by its header would do. `test:pane-to:1` drops it into pane 1 (in layout
+                // order) of this workspace, and `test:pane-right:1` or `test:pane-down:1` onto that pane's edge. A
+                // workspace number before the pane picks another workspace, so `test:pane-to:0:1` drops it into pane 1
+                // of workspace 0. `test:pane-title:0` drops it on the title bar at position 0.
                 var args = chord[(chord.IndexOf(':', "test:pane-".Length) + 1)..].Split(':').Select(int.Parse).ToArray();
                 var group = tab.Workspace.ActiveGroup;
                 if (chord.StartsWith("test:pane-title:"))
@@ -281,7 +282,7 @@ public sealed partial class MainWindow
                 Log.Write($"test {chord}: {(command != null ? "found" : "missing")}");
                 if (command != null)
                 {
-                    RunPaletteCommand(command); // as if chosen: it becomes a recent command
+                    RunPaletteCommand(command); // as if chosen, so it becomes a recent command
                 }
 
                 return;
@@ -313,7 +314,7 @@ public sealed partial class MainWindow
 
             if (chord.StartsWith("test:menu:"))
             {
-                // The context menu as a right-click on viewport cell "col:row" of the focused pane opens it.
+                // Opens the context menu as a right-click on viewport cell "col:row" of the focused pane would.
                 var cell = chord["test:menu:".Length..].Split(':');
                 Log.Write($"test {chord}");
                 Ui.Guard("test:menu", () => tab.Active.Control.ShowContextMenuAtCell(int.Parse(cell[0]), int.Parse(cell[1])));
@@ -348,7 +349,7 @@ public sealed partial class MainWindow
             Log.Write($"test key {chord}: {(bound ? invocation.ToString() : "unbound")}");
             if (bound)
             {
-                // The pane first, like a real key press (pane actions: copy, find, ...).
+                // The pane gets it first, like a real key press, so pane actions such as copy and find run there.
                 tab.Active.Control.Invoke(invocation);
             }
         };

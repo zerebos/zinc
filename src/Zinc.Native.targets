@@ -22,8 +22,8 @@
     <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.dll" Link="zinc-sprite.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.pdb" Link="zinc-sprite.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-sprite.pdb')" />
-    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build/shader.ps1; static C runtime: imports only KERNEL32).
-         Loaded only when a shader is configured. -->
+    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build/shader.ps1). It uses the static C runtime, so it
+         imports only KERNEL32. Loaded only when a shader is configured. -->
     <None Include="$(GhosttyNativeDir)zinc-shader.dll" Link="zinc-shader.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-shader.pdb" Link="zinc-shader.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-shader.pdb')" />
     <!-- Both import the Visual C++ runtime, which isn't part of Windows (a fresh PC lacks it: "Unable to load
