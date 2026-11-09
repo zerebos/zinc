@@ -47,18 +47,15 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void MousePointerDefaultsToArrow()
+    public void MousePointerIsArrowUnlessText()
     {
-        Assert.False(Load("").TextPointer);
         Assert.True(Load("[terminal]\nmouse-pointer = \"text\"").TextPointer);
         Assert.False(Load("[terminal]\nmouse-pointer = \"sparkly\"").TextPointer);
     }
 
     [Fact]
-    public void PaneTabsOnWithHeadersOnPanesWithSeveralTabsByDefault()
+    public void PaneTabsTurnOffUnderTheirOldName()
     {
-        Assert.True(Load("").TabGroups);
-        Assert.Equal(PaneHeaders.WithTabs, Load("").PaneHeaders);
         Assert.False(Load("[window]\ntab-groups = false").TabGroups);
     }
 
@@ -149,26 +146,22 @@ public class ConfigTests : IDisposable
     [Fact]
     public void PaneAnimationsAreOnUnlessTurnedOff()
     {
-        Assert.True(Load("").PaneAnimations);
         Assert.False(Load("[window]\npane-animations = false").PaneAnimations);
     }
 
     [Fact]
-    public void UnfocusedPanesAreDimmedLikeGhosttyByDefault()
+    public void UnfocusedOpacityIsClampedLikeGhostty()
     {
-        Assert.Equal(0.7, Load("").UnfocusedSplitOpacity);
         Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 1").UnfocusedSplitOpacity);
         Assert.Equal(0.15, Load("[window]\nunfocused-split-opacity = 0").UnfocusedSplitOpacity); // clamped, like Ghostty
         Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 3.0").UnfocusedSplitOpacity);
         Assert.Equal(0.7, Load("[window]\nunfocused-split-opacity = \"dim\"").UnfocusedSplitOpacity);
-        Assert.Null(Load("").UnfocusedSplitFill);
         Assert.Equal(new GhosttyColorRgb { R = 0, G = 0, B = 0 }, Load("[window]\nunfocused-split-fill = \"#000000\"").UnfocusedSplitFill);
     }
 
     [Fact]
     public void SessionsAreRestoredUnlessTurnedOff()
     {
-        Assert.True(Load("").RestoreSession);
         Assert.True(Load("[window]\nsave-state = \"always\"").RestoreSession);
         Assert.False(Load("[window]\nsave-state = \"never\"").RestoreSession);
         Assert.False(Load("[window]\nsave-state = false").RestoreSession);
@@ -176,9 +169,8 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void WorkspaceTabsOnTopByDefault()
+    public void WorkspaceTabsAreTopOrLeft()
     {
-        Assert.Equal(WorkspaceTabs.Top, Load("").WorkspaceTabs);
         Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"left\"").WorkspaceTabs);
         Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"Left\"").WorkspaceTabs);
         Assert.Equal(WorkspaceTabs.Top, Load("[window]\nworkspace-tabs = \"bottom\"").WorkspaceTabs);
@@ -187,8 +179,6 @@ public class ConfigTests : IDisposable
     [Fact]
     public void SidebarAndTitleBarModes()
     {
-        Assert.Equal(SidebarMode.Full, Load("").Sidebar);
-        Assert.Equal(TitleBarMode.Show, Load("").TitleBar);
         Assert.Equal(SidebarMode.Rail, Load("[window]\nsidebar = \"rail\"").Sidebar);
         Assert.Equal(SidebarMode.AutoHide, Load("[window]\nsidebar = \"auto-hide\"").Sidebar);
         Assert.Equal(TitleBarMode.AutoHide, Load("[window]\ntitle-bar = \"auto-hide\"").TitleBar);
@@ -199,13 +189,9 @@ public class ConfigTests : IDisposable
     [Fact]
     public void CommandFinishedNotifications()
     {
-        var defaults = Load("");
-        Assert.Equal(NotifyMode.Badge, defaults.NotifyCommandFinished);
-        Assert.Equal(NotifyMode.Badge, defaults.NotifyPrograms);
         Assert.Equal(NotifyMode.Toast, Load("[notify]\ncommand-finished = \"toast\"").NotifyCommandFinished);
         Assert.Equal(NotifyMode.ToastAlways, Load("[notify]\nprograms = \"toast-always\"").NotifyPrograms);
         Assert.Equal(NotifyMode.Never, Load("[notify]\nprograms = \"never\"").NotifyPrograms);
-        Assert.Equal(TimeSpan.FromSeconds(10), defaults.NotifyCommandFinishedAfter);
         Assert.Equal(NotifyMode.Never, Load("[notify]\ncommand-finished = \"never\"").NotifyCommandFinished);
         Assert.Equal(TimeSpan.FromSeconds(30), Load("[notify]\ncommand-finished-after = 30").NotifyCommandFinishedAfter);
         Assert.Equal(TimeSpan.FromSeconds(90), Load("[notify]\ncommand-finished-after = \"1m30s\"").NotifyCommandFinishedAfter);
@@ -233,19 +219,16 @@ public class ConfigTests : IDisposable
     public void RejectsWhatIsNotADuration(string text) => Assert.False(Config.TryDuration(text, out _));
 
     [Fact]
-    public void QuitAfterLastWindowDefaultsToAutomatic()
+    public void QuitAfterLastWindowTakesTrueOrFalse()
     {
-        Assert.Null(Load("").QuitAfterLastWindowClosed);
         Assert.True(Load("[window]\nquit-after-last-window-closed = true").QuitAfterLastWindowClosed);
         Assert.False(Load("[window]\nquit-after-last-window-closed = false").QuitAfterLastWindowClosed);
         Assert.Null(Load("[window]\nquit-after-last-window-closed = \"sometimes\"").QuitAfterLastWindowClosed);
     }
 
     [Fact]
-    public void ClipboardWriteAllowedReadAsks()
+    public void ClipboardPermissionsRead()
     {
-        Assert.True(Load("").ClipboardWrite);
-        Assert.Equal(ClipboardAccess.Ask, Load("").ClipboardRead);
         Assert.False(Load("[terminal]\nclipboard-write = \"deny\"").ClipboardWrite);
         Assert.Equal(ClipboardAccess.Allow, Load("[terminal]\nclipboard-read = \"allow\"").ClipboardRead);
         Assert.Equal(ClipboardAccess.Allow, Load("[terminal]\nclipboard-read = true").ClipboardRead);

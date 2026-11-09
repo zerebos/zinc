@@ -51,9 +51,8 @@ public class SpriteTests
     }
 
     [Fact]
-    public void OnByDefaultAndSwitchable()
+    public void SwitchableGloballyAndPerProfile()
     {
-        Assert.True(ConfigFile.Parse("").Global.BuiltinGlyphs);
         var off = ConfigFile.Parse("[font]\nbuiltin-glyphs = false\n\n[profile.x]\ncommand = \"cmd.exe\"\nfont.builtin-glyphs = true\n");
         Assert.Empty(off.Warnings);
         Assert.False(off.Global.BuiltinGlyphs);

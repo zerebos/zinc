@@ -113,6 +113,82 @@ public class SettingsCatalogTests
     [InlineData(null, "x", false)]
     [InlineData(true, false, false)]
     public void SameValueNormalizes(object? a, object? b, bool same) => Assert.Equal(same, SettingsCatalog.Same(a, b));
+    [Fact]
+    public void EverySettingHasABinding() =>
+        Assert.Equal(["colors.theme"], SettingsCatalog.All.Where(s => s.Binding == null).Select(s => s.Key));
+
+    [Theory]
+    [MemberData(nameof(Keys))]
+    public void NumbersOutsideTheRangeAreRefusedOrClamped(string key)
+    {
+        var setting = SettingsCatalog.Find(key)!;
+        if (setting is not { Kind: SettingKind.Number, Binding: { } binding })
+        {
+            return;
+        }
+
+        var empty = new Config();
+        if (setting.Maximum < double.MaxValue)
+        {
+            var above = binding.Read(setting, empty, setting.Maximum + setting.Step);
+            Assert.True(above == null || above == binding.Read(setting, empty, setting.Maximum), $"{key} took {setting.Maximum + setting.Step}");
+        }
+
+        var below = binding.Read(setting, empty, setting.Minimum - setting.Step);
+        Assert.True(below == null || below == binding.Read(setting, empty, setting.Minimum), $"{key} took {setting.Minimum - setting.Step}");
+    }
+
+    /// <summary>
+    /// Config properties that no catalog setting sets: a profile's own fields, the color scheme's light/dark side, the
+    /// <c>[environment]</c> table and the file-only shader folders, which the reader handles itself.
+    /// </summary>
+    private static readonly string[] NotSettings =
+        ["Command", "WorkingDirectory", "Icon", "PairedDark", "EnvironmentVariables", "ShaderFolders"];
+
+    [Fact]
+    public void EveryConfigPropertyIsSetByASettingOrIsListed()
+    {
+        var properties = typeof(Config).GetProperties().Where(p => p.SetMethod?.IsPublic == true).ToList();
+        var empty = new Config();
+        var touched = new HashSet<string>();
+        foreach (var setting in SettingsCatalog.All.Where(s => s.Binding != null))
+        {
+            foreach (var value in Samples(setting))
+            {
+                var read = setting.Binding!.Read(setting, empty, value);
+                Assert.True(read != null, $"{setting.Key}'s sample {value} doesn't read");
+                touched.UnionWith(properties.Where(p => !Equals(p.GetValue(read), p.GetValue(empty))).Select(p => p.Name));
+            }
+        }
+
+        Assert.Equal(NotSettings.Order(), properties.Select(p => p.Name).Where(n => !touched.Contains(n)).Order());
+    }
+
+    /// <summary>
+    /// Sample values for <paramref name="setting"/>'s kind. At least one of them differs from the default, so the
+    /// setting's binding changes something.
+    /// </summary>
+    private static IEnumerable<object> Samples(SettingDef setting) => setting.Kind switch
+    {
+        SettingKind.Toggle => [true, false],
+        SettingKind.Choice => setting.Choices.Where(c => c.Value != null).Select(c => c.Value!),
+        SettingKind.Number => [setting.Minimum, Math.Min(setting.Maximum, setting.Minimum + setting.Step)],
+        SettingKind.Color => ["#123456", .. setting.Choices.Where(c => c.Value != null).Select(c => c.Value!)],
+        SettingKind.Font => ["Consolas"],
+        SettingKind.Files => ["a.glsl"],
+        _ => [TextSamples.TryGetValue(setting.Key, out var text) ? text : setting.Placeholder ?? "x"],
+    };
+
+    private static readonly Dictionary<string, object> TextSamples = new()
+    {
+        ["font.fallback"] = "Segoe UI Symbol, Noto Sans JP",
+        ["font.adjust-cell-height"] = "10%",
+        ["font.adjust-box-thickness"] = "1",
+        ["quick-terminal.hotkey"] = "ctrl+alt+t",
+        ["quick-terminal.size"] = "40%",
+        ["notify.command-finished-after"] = 30L,
+        ["window.free-hidden-after"] = 30L,
+    };
 }
 
 public class SettingsWriterTests
@@ -392,4 +468,5 @@ public class ProfileSettingsTests
         Assert.StartsWith("profile-order = [\"pwsh\", \"mine\"]", text);
         Assert.Equal(["pwsh", "mine", "wsl:Fedora", "cmd"], ConfigFile.Parse(text, discover: Three).Profiles.Select(p => p.Id));
     }
+
 }

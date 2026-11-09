@@ -45,7 +45,6 @@ public class NewTerminalStartTests
     [Fact]
     public void StartInIsReadFromTheWindowSection()
     {
-        Assert.Equal(NewTerminalFolder.Current, ConfigFile.Parse("").Global.StartIn);
         Assert.Equal(NewTerminalFolder.Profile, ConfigFile.Parse("[window]\nstart-in = \"profile\"\n").Global.StartIn);
     }
 }

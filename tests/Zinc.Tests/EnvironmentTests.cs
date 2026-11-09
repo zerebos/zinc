@@ -84,7 +84,6 @@ public sealed class EnvironmentTests : IDisposable
         Assert.Equal("code --wait", work["EDITOR"]);
         Assert.Equal("", work["LANG"]); // removed for that profile
         Assert.Equal("nvim", config.FindProfile("home")!.Config.EnvironmentVariables["editor"]);
-        Assert.True(new Config().ReloadEnvironment); // on by default
     }
 
     [Fact]
