@@ -147,11 +147,12 @@ and read state after the write (see `_titleDirty`).
 
 ## libghostty-vt footguns
 
-- Bumping the commit: `python scripts/vt-bench.py --save before` first (parse speed of the DLL Zinc ships: seeded
-  plain/UTF-8/styled data, Zinc's scrollback, warm-up + best of 7, runs vary ~±2%), then after rebuilding
-  `python scripts/vt-bench.py --compare before`: more than 10% slower is worth a look. Results in .scratch/bench/results
-  (`ghostty-<commit>.json` per commit; 6301810: ascii ~270, utf8 ~250, styled ~135 MB/s). Ghostty's own ghostty-bench
-  doesn't build for Windows; it builds for Linux and runs in WSL (.scratch/NOTES.md, GHOSTTY-BENCH).
+- Bumping the commit: `dotnet run scripts/dev/vt-bench.cs -- --save before` first (parse speed of the DLL Zinc
+  ships: seeded plain/UTF-8/styled data made on every run, Zinc's scrollback, warm-up + best of 7, runs vary ~±2% on
+  a quiet machine and ~±5% on a busy one), then after rebuilding `dotnet run scripts/dev/vt-bench.cs -- --compare
+  before`: more than 10% slower is worth a look. Results in `dist/bench` (`ghostty-<commit>.json` per commit; 6301810:
+  ascii ~300, utf8 ~280, styled ~125 MB/s on a quiet machine). Ghostty's own ghostty-bench doesn't build for
+  Windows; it builds for Linux and runs in WSL (.scratch/NOTES.md, GHOSTTY-BENCH).
 - Bumping the commit: delete each patch in `patches/ghostty` whose fix upstream now has (its header says what to
   look for), and fix up any other that no longer applies. Their tests run in the checkout with
   `zig build test-lib-vt -Dtest-filter=<name>` (plain `zig build test` needs POSIX headers on Windows).

@@ -1004,9 +1004,9 @@ scripts/build/libghostty.ps1      fetch + build libghostty-vt at a pinned commit
                                   sprites.ps1 and shader.ps1, zinc-sprite.dll and zinc-shader.dll)
 scripts/build/copy-vcruntime.ps1  the Visual C++ runtime the native DLLs need, next to them
 scripts/build/gen-keys.ps1        regenerate GhosttyKey.g.cs from the C header
-scripts/vt-bench.py               libghostty-vt's parse speed, before and after a Ghostty update
 scripts/release/                  releases (installer + update packages, Velopack) and their checks
 scripts/dev/update-themes.ps1     refresh the bundled color schemes
+scripts/dev/vt-bench.cs           libghostty-vt's parse speed, before and after a Ghostty update
 assets/                           fonts, themes, shaders, shell-integration scripts, licenses
 native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
 docs/                             ux-writing.md (how the interface and docs talk), shell-integration.md
@@ -1029,13 +1029,15 @@ tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions (real shel
 
 The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
 
-1. Run `python scripts/vt-bench.py --save before` (the current DLL's parse speed).
+1. Run `dotnet run scripts/dev/vt-bench.cs -- --save before` (the current DLL's parse speed). It needs only the .NET
+   SDK. `--help` lists its options.
 2. Change `$Commit` in `scripts/build/libghostty.ps1` and run it. It also rebuilds zinc-sprite.dll
    from Ghostty's sprite code, which isn't part of its API: `SpriteTests` pin what Zinc relies on.
 3. Run `pwsh scripts/build/gen-keys.ps1`.
 4. Run `dotnet test`. `AbiTests` compares every binding struct, enum and imported
    function against the library's own ABI manifest (`ghostty_type_json()`).
-5. Run `python scripts/vt-bench.py --compare before`: more than 10% slower is worth a look.
+5. Run `dotnet run scripts/dev/vt-bench.cs -- --compare before`. More than 10% slower is worth a look, but run it
+   again first, because a busy machine can move the numbers by about 5%.
 
 ## Known gaps
 
