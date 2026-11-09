@@ -87,7 +87,14 @@ public static class Bind
     /// returns null.
     /// </summary>
     public static SettingBinding Custom(Func<Config, object, Config?> read, Func<Config, object?>? @default = null) =>
-        new((_, config, value, _) => read(config, value), @default == null ? null : (_, config) => @default(config));
+        Custom((_, config, value) => read(config, value), @default);
+
+    /// <summary>
+    /// The same, for a <paramref name="read"/> that needs the setting itself, such as its
+    /// <see cref="SettingDef.Minimum"/> and <see cref="SettingDef.Maximum"/>.
+    /// </summary>
+    public static SettingBinding Custom(Func<SettingDef, Config, object, Config?> read, Func<Config, object?>? @default = null) =>
+        new((setting, config, value, _) => read(setting, config, value), @default == null ? null : (_, config) => @default(config));
 
     /// <summary>
     /// One path or a list of them, with relative ones resolved by <paramref name="resolve"/> from the config file that

@@ -63,8 +63,8 @@ public class SettingsCatalogTests
             Assert.Null(SettingsCatalog.Problem(setting, choice.Value!));
         }
 
-        // The default is one of the choices (so the window can show it selected).
-        if (setting.Kind == SettingKind.Choice)
+        // The default is one of the choices (so the window can show it selected), for a color with choices too.
+        if (setting.Choices.Count > 0)
         {
             Assert.Contains(setting.Choices, c => SettingsCatalog.Same(c.Value, setting.Default));
         }

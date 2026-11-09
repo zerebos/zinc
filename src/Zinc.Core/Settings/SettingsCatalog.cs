@@ -150,15 +150,14 @@ public static class SettingsCatalog
     /// maximum of 100. The config holds DIPs.
     /// </summary>
     private static SettingBinding Padding(Func<Config, float> first, Func<Config, float, float, Config> set) =>
-        Bind.Custom((c, v) =>
+        Bind.Custom((setting, c, v) =>
         {
             var text = v is List<object> { Count: 1 or 2 } pair ? string.Join(",", pair.Select(Bind.AsText)) : Bind.AsText(v);
-            return text != null && Config.TryPadding(text, out var a, out var b) && Math.Max(a, b) * 72 / 96 <= MaxPadding
+            return text != null && Config.TryPadding(text, out var a, out var b) &&
+                   Math.Min(a, b) * 72 / 96 >= setting.Minimum && Math.Max(a, b) * 72 / 96 <= setting.Maximum
                 ? set(c, a, b)
                 : null;
         }, c => Bind.Tidy(first(c) * 72 / 96));
-
-    private const double MaxPadding = 100;
 
     private static readonly SettingChoice[] NotifyChoices =
     [
@@ -404,12 +403,12 @@ public static class SettingsCatalog
         },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number)
         {
-            Unit = "pt", Maximum = MaxPadding,
+            Unit = "pt", Maximum = 100,
             Binding = Padding(c => c.PaddingLeft, (c, a, b) => c with { PaddingLeft = a, PaddingRight = b }),
         },
         new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number)
         {
-            Unit = "pt", Maximum = MaxPadding,
+            Unit = "pt", Maximum = 100,
             Binding = Padding(c => c.PaddingTop, (c, a, b) => c with { PaddingTop = a, PaddingBottom = b }),
         },
         new("appearance", "Spacing", "terminal.padding-balance", "Even padding",
@@ -882,7 +881,12 @@ public static class SettingsCatalog
         ["shaders.folders"] = "Folders of shaders to choose from. Add and remove them on the shaders page (the library's … menu).",
     };
 
-    public static SettingDef? Find(string key) => All.FirstOrDefault(s => s.Key == key);
+    /// <summary>The setting with config.toml path <paramref name="key"/> ("font.size"), if <see cref="All"/> has one.</summary>
+    public static SettingDef? Find(string key) => (_byKey ??= All.ToDictionary(s => s.Key)).GetValueOrDefault(key);
+
+    // Built on first use, so it doesn't depend on the order the static fields are initialized in. ToDictionary throws
+    // on a key listed twice.
+    private static Dictionary<string, SettingDef>? _byKey;
 
     /// <summary>
     /// <paramref name="config"/> with <paramref name="key"/> ("font.size") set to <paramref name="value"/>, a TOML
