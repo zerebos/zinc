@@ -29,10 +29,10 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 - Windows 10 version 2004 (build 19041) or later, or Windows 11 (developed on Windows 11 24H2); x64
   (ARM64 isn't built yet)
 - .NET SDK 10
-- Visual Studio Build Tools with the MSVC toolchain and a Windows 10/11 SDK
-  (used by Zig to link the DLL; its redistributable Visual C++ runtime, `vcruntime140.dll`, ships
-  beside the DLLs, since a fresh Windows doesn't have it)
-- [Zig](https://ziglang.org) **0.16.x** on `PATH` (Ghostty's minimum)
+- [Zig](https://ziglang.org) **0.16.x** on `PATH` (Ghostty's minimum). The native DLLs are built for
+  the GNU ABI, as libghostty's own Windows builds are, so they need only what Windows itself has.
+- For publishing only (a release, or `dotnet publish`): Visual Studio Build Tools with the C++
+  workload, because `zn` is compiled with Native AOT, which links with MSVC's linker
 - PowerShell 7.4 or later (`pwsh`) for the build scripts
 
 ## Build and run
@@ -1002,7 +1002,6 @@ off, or on uninstall). With the debug log on, each command is logged, never the 
 ```
 scripts/build/libghostty.ps1      fetch + build libghostty-vt at a pinned commit (and, through
                                   sprites.ps1 and shader.ps1, zinc-sprite.dll and zinc-shader.dll)
-scripts/build/copy-vcruntime.ps1  the Visual C++ runtime the native DLLs need, next to them
 scripts/build/gen-keys.ps1        regenerate GhosttyKey.g.cs from the C header
 scripts/release/                  releases (installer + update packages, Velopack) and their checks
 scripts/dev/update-themes.ps1     refresh the bundled color schemes

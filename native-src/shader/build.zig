@@ -1,6 +1,7 @@
-//! Builds zinc-shader.dll: GLSL -> HLSL for custom shaders (zinc_shader.zig). glslang comes from Ghostty's own
-//! package in the pinned checkout (external/ghostty/pkg/glslang); SPIRV-Cross is built here from the same upstream
-//! source Ghostty pins, because Ghostty's package leaves out the HLSL backend (it only needs Metal and GLSL).
+//! Builds zinc-shader.dll, which translates GLSL to HLSL for custom shaders (zinc_shader.zig). glslang comes from
+//! Ghostty's own package in the pinned checkout (external/ghostty/pkg/glslang). SPIRV-Cross is built here from the
+//! same upstream source Ghostty pins, because Ghostty's package leaves out the HLSL backend (Ghostty only needs Metal
+//! and GLSL).
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
@@ -24,8 +25,8 @@ pub fn build(b: *std.Build) void {
                 .target = target,
                 .optimize = optimize,
                 .link_libc = true,
-                // MSVC: its own C++ headers come with libc (Ghostty's packages note why not linkLibCpp).
-                .link_libcpp = target.result.abi != .msvc,
+                // Zig's own libc++, linked statically, so the windows-gnu build has no C++ runtime to ship.
+                .link_libcpp = true,
             }),
             .linkage = .static,
         });
@@ -38,18 +39,6 @@ pub fn build(b: *std.Build) void {
             },
         });
         module.linkLibrary(cross);
-    }
-
-    // glslang and SPIRV-Cross are C++: Microsoft's C and C++ runtimes, static (/MT), as Ghostty's packages compile
-    // them, so there's no runtime DLL for Zinc to carry. Zig's search paths miss these two folders: the build script
-    // passes them (found with vswhere).
-    if (target.result.abi == .msvc) {
-        if (b.option([]const u8, "ucrt-lib", "Windows SDK's ucrt lib folder")) |dir| module.addLibraryPath(.{ .cwd_relative = dir });
-        if (b.option([]const u8, "msvc-lib", "MSVC's lib folder")) |dir| module.addLibraryPath(.{ .cwd_relative = dir });
-        module.linkSystemLibrary("libucrt", .{});
-        module.linkSystemLibrary("libvcruntime", .{});
-        module.linkSystemLibrary("libcpmt", .{});
-        module.linkSystemLibrary("libcmt", .{});
     }
 
     const lib = b.addLibrary(.{

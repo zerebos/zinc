@@ -3,11 +3,11 @@
   Fetches Ghostty at a pinned commit and builds libghostty-vt as a Windows DLL, then the other native DLLs.
 
 .DESCRIPTION
-  Output: native\<arch>\ghostty-vt.dll (and its .pdb) and native\include\ghostty\. It then runs sprites.ps1,
-  shader.ps1 and copy-vcruntime.ps1, which build zinc-sprite.dll and zinc-shader.dll from the same checkout and copy
-  the Visual C++ runtime next to them.
+  Output: native\<arch>\ghostty-vt.dll (and its .pdb) and native\include\ghostty\. It then runs sprites.ps1 and
+  shader.ps1, which build zinc-sprite.dll and zinc-shader.dll from the same checkout. All three are built for the GNU
+  ABI (zig.ps1 says why).
 
-  Needs Zig 0.16.x on PATH, and Visual Studio or its Build Tools with the C++ workload.
+  Needs Zig 0.16.x on PATH.
 
 .EXAMPLE
   pwsh scripts/build/libghostty.ps1
@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $src = Join-Path $root 'external\ghostty'
-$target = @{ x64 = 'x86_64-windows-msvc'; arm64 = 'aarch64-windows-msvc' }[$Arch]
+. (Join-Path $PSScriptRoot 'zig.ps1')
 
 if (-not (Test-Path (Join-Path $src '.git'))) {
     git init -q $src
@@ -48,9 +48,7 @@ foreach ($patch in Get-ChildItem (Join-Path $root 'patches\ghostty') -Filter *.p
     Write-Host "applied $($patch.Name)"
 }
 
-Push-Location $src
-try { zig build -Demit-lib-vt=true -Doptimize=ReleaseFast "-Dtarget=$target" }
-finally { Pop-Location }
+Invoke-ZigBuild $src '-Demit-lib-vt=true', '-Doptimize=ReleaseFast', "-Dtarget=$($ZigTargets[$Arch])"
 
 $out = Join-Path $root "native\$Arch"
 $include = Join-Path $root 'native\include'
@@ -63,6 +61,3 @@ Write-Host "libghostty-vt ($Commit) -> native\$Arch\ghostty-vt.dll"
 # Ghostty's sprite rasterizer and the custom shader translator, from the same checkout.
 & (Join-Path $PSScriptRoot 'sprites.ps1') -Arch $Arch
 & (Join-Path $PSScriptRoot 'shader.ps1') -Arch $Arch
-
-# The Visual C++ runtime the DLLs import (not part of Windows), shipped beside them.
-& (Join-Path $PSScriptRoot 'copy-vcruntime.ps1') -Arch $Arch

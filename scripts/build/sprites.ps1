@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $true
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $src = Join-Path $root 'external\ghostty'
-$target = @{ x64 = 'x86_64-windows-msvc'; arm64 = 'aarch64-windows-msvc' }[$Arch]
+. (Join-Path $PSScriptRoot 'zig.ps1')
 $canvas = Join-Path $src 'src\font\sprite\canvas.zig'
 $wrapper = Join-Path $src 'src\zinc_sprite.zig'
 $project = Join-Path $root 'native-src\sprite'
@@ -40,9 +40,7 @@ if (-not $text.Contains('global.io()')) { throw 'canvas.zig no longer calls glob
 Copy-Item (Join-Path $project 'zinc_sprite.zig') $wrapper
 try {
     [IO.File]::WriteAllText($canvas, $text.Replace('global.io()', '@import("../../zinc_sprite.zig").io()'))
-    Push-Location $project
-    try { zig build "-Dghostty=$src" -Doptimize=ReleaseFast "-Dtarget=$target" }
-    finally { Pop-Location }
+    Invoke-ZigBuild $project "-Dghostty=$src", '-Doptimize=ReleaseFast', "-Dtarget=$($ZigTargets[$Arch])"
 } finally {
     [IO.File]::WriteAllBytes($canvas, $original)
     Remove-Item $wrapper -Force

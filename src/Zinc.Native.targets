@@ -9,7 +9,7 @@
     <GhosttyNativeDir>$(MSBuildThisFileDirectory)..\native\$(GhosttyArch)\</GhosttyNativeDir>
 
     <!-- The ConPTY package picks which OpenConsole hosts to ship from $(Platform) in its
-         .props, which run before the project sets Platform; choose them explicitly instead.
+         .props, which run before the project sets Platform, so they're chosen explicitly here.
          An x64 app may also run emulated on ARM64, so it ships both hosts. -->
     <ConptyRequiresx64Host Condition="'$(GhosttyArch)' == 'x64'">true</ConptyRequiresx64Host>
     <ConptyRequiresARM64Host>true</ConptyRequiresARM64Host>
@@ -22,13 +22,11 @@
     <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.dll" Link="zinc-sprite.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.pdb" Link="zinc-sprite.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-sprite.pdb')" />
-    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build/shader.ps1). It uses the static C runtime, so it
-         imports only KERNEL32. Loaded only when a shader is configured. -->
+    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build/shader.ps1), loaded only when a shader is configured.
+         All three DLLs are built for the GNU ABI and import only what Windows itself has (its Universal CRT), so no
+         C or C++ runtime ships with them. -->
     <None Include="$(GhosttyNativeDir)zinc-shader.dll" Link="zinc-shader.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-shader.pdb" Link="zinc-shader.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-shader.pdb')" />
-    <!-- Both import the Visual C++ runtime, which isn't part of Windows (a fresh PC lacks it: "Unable to load
-         DLL 'ghostty-vt'"); it ships beside them, app-local (scripts/build/copy-vcruntime.ps1). -->
-    <None Include="$(GhosttyNativeDir)vcruntime140.dll" Link="vcruntime140.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
   <Target Name="CheckGhostty" BeforeTargets="Build">
@@ -38,13 +36,11 @@
            Text="zinc-sprite.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/sprites.ps1 -Arch $(GhosttyArch)" />
     <Error Condition="!Exists('$(GhosttyNativeDir)zinc-shader.dll')"
            Text="zinc-shader.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/shader.ps1 -Arch $(GhosttyArch)" />
-    <Error Condition="!Exists('$(GhosttyNativeDir)vcruntime140.dll')"
-           Text="vcruntime140.dll not found in $(GhosttyNativeDir). Run: pwsh scripts/build/copy-vcruntime.ps1 -Arch $(GhosttyArch)" />
   </Target>
 
   <ItemGroup>
-    <!-- Windows Terminal's out-of-box ConPTY (conpty.dll + OpenConsole.exe): far higher
-         throughput than the inbox conhost, and grapheme-aware width measurement.
+    <!-- Windows Terminal's out-of-box ConPTY (conpty.dll + OpenConsole.exe), which has far
+         higher throughput than the inbox conhost and measures widths by grapheme.
          Referenced here, not in Zinc.Core, because its OpenConsole copy step lives in
          build/ (not buildTransitive/) and so only runs for direct references. -->
     <PackageReference Include="Microsoft.Windows.Console.ConPTY" Version="1.24.260710001" />

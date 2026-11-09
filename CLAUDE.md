@@ -67,10 +67,11 @@ Features too big for one session use `/big-feature`. The panes run is the worked
 - `pwsh scripts/build/libghostty.ps1` → `native/x64/ghostty-vt.dll` (Zig 0.16, pinned commit), plus zinc-sprite.dll
   and zinc-shader.dll. It applies **`patches/ghostty/*.patch`** (our fixes not upstream yet) to the checkout first,
   after resetting its sources, so edits left in `external/ghostty` never reach a build. `external/` (ghostty clone)
-  and `native/` are gitignored build products. The native DLLs import **`vcruntime140.dll`, which a fresh Windows
-  lacks**: `scripts/build/copy-vcruntime.ps1` (run by the build) copies VS's into native/<arch>/,
-  Zinc.Native.targets ships it app-local, release.ps1 checks it. Check new native dependencies with pefile
-  (`.scratch/vcdeps.py <folder>`).
+  and `native/` are gitignored build products. All three DLLs are built for **windows-gnu** (`scripts/build/zig.ps1`,
+  as libghostty's own Windows builds are), so they import only Windows' Universal CRT, kernel32 and ntdll, and ship
+  no runtime. A windows-msvc build would import `vcruntime140.dll`, which a fresh Windows lacks (dev.198 crashed
+  that way). Check new native dependencies with pefile (`.scratch/vcdeps.py <folder>`). Zig 0.16 on Windows sometimes
+  fails with "unable to load '<file>': Unexpected"; `zig.ps1` retries those.
 - `dotnet build` (Zinc.slnx; add `-c Release` for perf work). App output:
   `src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`.
 - `dotnet test` — run after any change to bindings, TerminalSession or ConPty, and
