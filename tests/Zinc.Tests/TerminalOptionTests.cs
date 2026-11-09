@@ -150,7 +150,7 @@ public class TerminalSettingTests
     [Fact]
     public void CursorTextComesFromConfigOrScheme()
     {
-        Assert.Equal(new Zinc.Ghostty.GhosttyColorRgb(0x11, 0x22, 0x33), new Config().Apply("cursor-text", "#112233")!.Theme.CursorText);
+        Assert.Equal(new Zinc.Ghostty.GhosttyColorRgb(0x11, 0x22, 0x33), new Config().With("colors.cursor-text", "#112233")!.Theme.CursorText);
 
         var scheme = Path.Combine(Path.GetTempPath(), $"zinc-scheme-{Guid.NewGuid():N}");
         try

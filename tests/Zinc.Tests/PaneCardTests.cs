@@ -49,11 +49,11 @@ public class PaneCardTests
     [Fact]
     public void PaneHeaderColorReplacesTheMadeFill()
     {
-        var config = new Config().Apply("pane-header-color", "#334455")!;
+        var config = new Config().With("colors.pane-header", "#334455")!;
         Assert.Equal("334455", Hex(PaneCard.HeaderFill(config)));
         Assert.Equal(PaneCard.HeaderFill(new Config().Theme.Background), PaneCard.HeaderFill(new Config()));
-        Assert.Null(new Config().Apply("pane-header-color", "blue-ish"));
-        Assert.Null(new Config().Apply("pane-header-color", "standard")); // auto is Standard's name in the file
+        Assert.Null(new Config().With("colors.pane-header", "blue-ish"));
+        Assert.Null(new Config().With("colors.pane-header", "standard")); // auto is Standard's name in the file
     }
 
     [Theory]
@@ -63,7 +63,7 @@ public class PaneCardTests
     [InlineData("strong", HeaderLevel.Strong)]
     public void PaneHeaderLevelsByName(string value, HeaderLevel level)
     {
-        var config = new Config().Apply("pane-header-color", "#334455")!.Apply("pane-header-color", value)!;
+        var config = new Config().With("colors.pane-header", "#334455")!.With("colors.pane-header", value)!;
         Assert.Equal(level, config.PaneHeaderLevel);
         Assert.Null(config.PaneHeaderColor); // the last one set wins
         Assert.Equal(PaneCard.HeaderFill(config.Theme.Background, level), PaneCard.HeaderFill(config));
@@ -101,7 +101,7 @@ public class PaneCardTests
     [Fact]
     public void ASeamlessHeaderHasNoBorderAndFlipsTheTabs()
     {
-        var config = new Config().Apply("pane-header-color", "terminal")!;
+        var config = new Config().With("colors.pane-header", "terminal")!;
         Assert.Equal(config.Theme.Background, PaneCard.EdgeFill(config));
         Assert.Equal(PaneCard.HeaderFill(config.Theme.Background), PaneCard.HiddenTabFill(config));
         Assert.Null(PaneCard.HiddenTabFill(new Config())); // a made fill: hidden tabs show the header
@@ -112,7 +112,7 @@ public class PaneCardTests
     {
         var background = new Config().Theme.Background;
         var near = new GhosttyColorRgb((byte)(background.R + 1), background.G, background.B);
-        var config = new Config().Apply("pane-header-color", $"#{Hex(near)}")!;
+        var config = new Config().With("colors.pane-header", $"#{Hex(near)}")!;
         Assert.NotNull(PaneCard.HiddenTabFill(config));
         Assert.Equal(background, PaneCard.EdgeFill(config));
     }

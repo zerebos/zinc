@@ -27,22 +27,22 @@ public class ColorSettingsTests
     public void TheyReadFromConfigAndRejectWhatIsOutOfRange()
     {
         var config = new Config()
-            .Apply("minimum-contrast", "4.5")!
-            .Apply("bold-color", "#ffffff")!
-            .Apply("bold-is-bright", "true")!
-            .Apply("faint-opacity", "0.7")!
-            .Apply("cursor-opacity", "0.5")!
-            .Apply("search-background", "#334455")!
+            .With("colors.minimum-contrast", 4.5)!
+            .With("colors.bold", "#ffffff")!
+            .With("colors.bold-is-bright", true)!
+            .With("colors.faint-opacity", 0.7)!
+            .With("colors.cursor-opacity", 0.5)!
+            .With("colors.find-highlight", "#334455")!
             .Apply("split-divider-color", "#101010")!;
         Assert.Equal((4.5, true, 0.7, 0.5), (config.MinimumContrast, config.BoldIsBright, Math.Round(config.FaintOpacity, 2), config.CursorOpacity));
         Assert.Equal(new GhosttyColorRgb(0xFF, 0xFF, 0xFF), config.BoldColor);
         Assert.Equal(new GhosttyColorRgb(0x33, 0x44, 0x55), config.SearchBackground);
         Assert.Equal(new GhosttyColorRgb(0x10, 0x10, 0x10), config.SplitDividerColor);
 
-        Assert.Null(new Config().Apply("minimum-contrast", "0.5"));
-        Assert.Null(new Config().Apply("minimum-contrast", "22"));
-        Assert.Null(new Config().Apply("faint-opacity", "0"));
-        Assert.Null(new Config().Apply("cursor-opacity", "1.5"));
+        Assert.Null(new Config().With("colors.minimum-contrast", 0.5));
+        Assert.Null(new Config().With("colors.minimum-contrast", 22));
+        Assert.Null(new Config().With("colors.faint-opacity", 0));
+        Assert.Null(new Config().With("colors.cursor-opacity", 1.5));
 
         var none = new Config(); // today's looks
         Assert.Equal((1.0, false, 0.5, 1.0), (none.MinimumContrast, none.BoldIsBright, none.FaintOpacity, none.CursorOpacity));
@@ -57,7 +57,7 @@ public class ColorSettingsTests
         try
         {
             File.WriteAllText(file, "background = #000000\nminimum-contrast = 7\nbold-color = #ff0000\n");
-            var themed = ThemeLibrary.ApplyFile(new Config().Apply("minimum-contrast", "3")!, file);
+            var themed = ThemeLibrary.ApplyFile(new Config().With("colors.minimum-contrast", 3)!, file);
             Assert.Equal(3, themed.MinimumContrast);
             Assert.Null(themed.BoldColor);
         }

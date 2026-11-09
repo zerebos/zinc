@@ -268,14 +268,43 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
                 continue;
             }
 
-            var key = line[..eq].Trim();
-            if (key is "background" or "foreground" or "cursor-color" or "cursor-text" or "palette" or "selection-background" or "selection-foreground" &&
-                config.Apply(key, line[(eq + 1)..].Trim()) is { } next)
+            if (ApplySchemeKey(config, line[..eq].Trim(), line[(eq + 1)..].Trim()) is { } next)
             {
                 config = next;
             }
         }
 
         return config;
+    }
+
+    /// <summary>
+    /// One color of a Ghostty-format scheme (<c>background = #1e1e2e</c>, <c>palette = 1=#ac4242</c>) applied to
+    /// <paramref name="config"/>'s theme. Null for any other key, or a value that doesn't parse.
+    /// </summary>
+    public static Config? ApplySchemeKey(Config config, string key, string value)
+    {
+        var theme = config.Theme;
+        if (key == "palette")
+        {
+            return Config.TryPaletteEntry(value, out var index, out var entry)
+                ? config with { Theme = theme with { Palette = new Dictionary<int, Zinc.Ghostty.GhosttyColorRgb>(theme.Palette) { [index] = entry } } }
+                : null;
+        }
+
+        if (!Config.TryColor(value, out var c))
+        {
+            return null;
+        }
+
+        return key switch
+        {
+            "background" => config with { Theme = theme with { Background = c } },
+            "foreground" => config with { Theme = theme with { Foreground = c } },
+            "cursor-color" => config with { Theme = theme with { Cursor = c } },
+            "cursor-text" => config with { Theme = theme with { CursorText = c } },
+            "selection-background" => config with { Theme = theme with { SelectionBackground = c } },
+            "selection-foreground" => config with { Theme = theme with { SelectionForeground = c } },
+            _ => null,
+        };
     }
 }

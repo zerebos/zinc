@@ -2,7 +2,7 @@ namespace Zinc.Tests;
 
 public sealed class CellHeightTests
 {
-    private static Config With(string value) => new Config().Apply("adjust-cell-height", value)!;
+    private static Config With(string value) => new Config().With("font.adjust-cell-height", value)!;
 
     [Fact]
     public void NothingSetKeepsTheFontsHeight() => Assert.Equal(20u, new Config().AdjustedCellHeight(20, 1.5f));

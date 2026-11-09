@@ -283,6 +283,21 @@ public sealed record Config
     public IReadOnlyList<string> FontFallbacks =>
         FontFallback.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+    /// <summary>
+    /// <c>[font] fallback</c> in the form <see cref="FontFallback"/> keeps it ("A, B"), made from a list of names or from
+    /// one string with commas. Null when it's neither.
+    /// </summary>
+    public static string? FallbackList(object value)
+    {
+        var text = value switch
+        {
+            List<object> list when list.All(x => x is string) => string.Join(",", list),
+            string s => s,
+            _ => null,
+        };
+        return text == null ? null : string.Join(", ", text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
     /// <summary>Font weights by name (CSS's, as DirectWrite's): "semibold" = 600; also "semi-bold" and the numbers.</summary>
     public static bool TryWeight(string value, out int weight)
     {
@@ -761,18 +776,8 @@ public sealed record Config
     /// </summary>
     public Config? Apply(string key, string value)
     {
-        var theme = Theme;
         return key switch
         {
-            "font-family" when value.Length > 0 => this with { FontFamily = value },
-            "font-weight" when TryWeight(value, out var weight) => this with { FontWeight = weight },
-            "font-ligatures" when bool.TryParse(value, out var ligatures) => this with { FontLigatures = ligatures },
-            "font-bold-weight" when TryWeight(value, out var boldWeight) => this with { BoldWeight = boldWeight },
-            "font-fallback" => this with { FontFallback = string.Join(", ", value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) },
-            "builtin-glyphs" when bool.TryParse(value, out var builtin) => this with { BuiltinGlyphs = builtin },
-            "adjust-box-thickness" when TryAdjustment(value, out var adjust) => this with { AdjustBoxThickness = adjust },
-            "adjust-cell-height" when TryAdjustment(value, out var cellHeight) => this with { AdjustCellHeight = cellHeight },
-            "font-size" when TryFloat(value, out var size) && size > 0 => this with { FontSize = size },
             "command" when value.Length > 0 => this with { Command = value },
             "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
             "icon" when value.Length > 0 => this with { Icon = value },
@@ -816,18 +821,6 @@ public sealed record Config
             "window-save-state" when value is "default" or "always" or "never" => this with { RestoreSession = value != "never" },
             "unfocused-split-fill" when TryColor(value, out var fill) => this with { UnfocusedSplitFill = fill },
             "split-divider-color" when TryColor(value, out var divider) => this with { SplitDividerColor = divider },
-            "minimum-contrast" when TryDouble(value, out var contrast) && contrast is >= 1 and <= 21 => this with { MinimumContrast = contrast },
-            "bold-color" when TryColor(value, out var bold) => this with { BoldColor = bold },
-            "pane-header-color" when Zinc.Panes.PaneCard.TryLevel(value, out var level) =>
-                this with { PaneHeaderColor = null, PaneHeaderLevel = level },
-            "pane-header-color" when TryColor(value, out var header) =>
-                this with { PaneHeaderColor = header, PaneHeaderLevel = Zinc.Panes.HeaderLevel.Standard },
-            "bold-is-bright" when bool.TryParse(value, out var bright) => this with { BoldIsBright = bright },
-            "palette-generate" when bool.TryParse(value, out var generate) => this with { PaletteGeneration = PaletteGeneration with { Generate = generate } },
-            "palette-harmonious" when bool.TryParse(value, out var harmonious) => this with { PaletteGeneration = PaletteGeneration with { Harmonious = harmonious } },
-            "faint-opacity" when TryDouble(value, out var faint) && faint is >= 0.1 and <= 1 => this with { FaintOpacity = faint },
-            "background-opacity" when TryDouble(value, out var backgroundOpacity) && backgroundOpacity is >= 0 and <= 1 =>
-                this with { BackgroundOpacity = backgroundOpacity },
             "backdrop" when TryMode<WindowBackdrop>(value, out var backdrop) => this with { Backdrop = backdrop },
             "backdrop-tint" when TryDouble(value, out var tint) && tint is >= 0 and <= 1 => this with { BackdropTint = tint },
             "backdrop-color" when TryColor(value, out var glass) => this with { BackdropColor = glass },
@@ -840,10 +833,6 @@ public sealed record Config
             "update-check" when bool.TryParse(value, out var check) => this with { UpdateCheck = check },
             "remote-control" when bool.TryParse(value, out var remote) => this with { RemoteControl = remote },
             "zn-path" when bool.TryParse(value, out var znPath) => this with { ZnOnPath = znPath },
-            "cursor-opacity" when TryDouble(value, out var cursorOpacity) && cursorOpacity is >= 0.1 and <= 1 =>
-                this with { CursorOpacity = cursorOpacity },
-            "search-background" when TryColor(value, out var match) => this with { SearchBackground = match },
-            "search-selected-background" when TryColor(value, out var current) => this with { SearchSelectedBackground = current },
             "workspace-tabs" when Enum.TryParse<WorkspaceTabs>(value, true, out var tabs) && !int.TryParse(value, out _) =>
                 this with { WorkspaceTabs = tabs },
             "title-bar" when TryMode<TitleBarMode>(value, out var titleBar) => this with { TitleBar = titleBar },
@@ -881,8 +870,6 @@ public sealed record Config
             "input-method" when bool.TryParse(value, out var ime) => this with { InputMethod = ime },
             "program-titles" when bool.TryParse(value, out var titles) => this with { ProgramTitles = titles },
             "shell-titles" when bool.TryParse(value, out var shellTitles) => this with { ShellTitles = shellTitles },
-            "selection-background" when TryColor(value, out var c) => this with { Theme = theme with { SelectionBackground = c } },
-            "selection-foreground" when TryColor(value, out var c) => this with { Theme = theme with { SelectionForeground = c } },
             "clipboard-read" when TryMode<ClipboardAccess>(value, out var read) => this with { ClipboardRead = read },
             "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
                 this with { QuickTerminal = QuickTerminal with { Position = position } },
@@ -896,12 +883,6 @@ public sealed record Config
                 this with { QuickTerminal = QuickTerminal with { AnimationDuration = slide } },
             "quick-terminal-hotkey" when TryHotkey(value) =>
                 this with { QuickTerminal = QuickTerminal with { Hotkey = value } },
-            "background" when TryColor(value, out var c) => this with { Theme = theme with { Background = c } },
-            "foreground" when TryColor(value, out var c) => this with { Theme = theme with { Foreground = c } },
-            "cursor-color" when TryColor(value, out var c) => this with { Theme = theme with { Cursor = c } },
-            "cursor-text" when TryColor(value, out var c) => this with { Theme = theme with { CursorText = c } },
-            "palette" when TryPaletteEntry(value, out var index, out var c) =>
-                this with { Theme = theme with { Palette = new Dictionary<int, GhosttyColorRgb>(theme.Palette) { [index] = c } } },
             "window-padding-x" when TryPadding(value, out var left, out var right) =>
                 this with { PaddingLeft = left, PaddingRight = right },
             "window-padding-y" when TryPadding(value, out var top, out var bottom) =>
@@ -975,9 +956,8 @@ public sealed record Config
         return true;
     }
 
-    /// <summary>Parses a kebab-case mode name ("auto-hide" → AutoHide).</summary>
     /// <summary>A metric adjustment as Ghostty writes one: whole pixels ("1", "-1", "1px") or a percentage ("20%").</summary>
-    private static bool TryAdjustment(string value, out (double Amount, bool Percent) adjustment)
+    public static bool TryAdjustment(string value, out (double Amount, bool Percent) adjustment)
     {
         var s = value.Trim();
         var percent = s.EndsWith('%');
@@ -987,6 +967,7 @@ public sealed record Config
         return ok;
     }
 
+    /// <summary>Parses a kebab-case mode name ("auto-hide" → AutoHide).</summary>
     public static bool TryMode<T>(string value, out T mode) where T : struct, Enum
     {
         mode = default;
@@ -1028,7 +1009,7 @@ public sealed record Config
     }
 
     /// <summary>Parses Ghostty's <c>N=#rrggbb</c> palette entry.</summary>
-    private static bool TryPaletteEntry(string s, out int index, out GhosttyColorRgb color)
+    internal static bool TryPaletteEntry(string s, out int index, out GhosttyColorRgb color)
     {
         color = default;
         index = -1;

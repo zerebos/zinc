@@ -153,7 +153,13 @@ public sealed class ConfigFile
     }
 
     /// <summary>Every <c>[group] key</c> setting the reader knows, as "group.key" (plus colors.theme and colors.palette).</summary>
-    public static IReadOnlyCollection<string> SettingKeys => [.. Reader.Mappings.Keys, "colors.theme", "colors.palette"];
+    public static IReadOnlyCollection<string> SettingKeys =>
+    [
+        .. Zinc.Settings.SettingsCatalog.All.Where(s => s.Binding != null).Select(s => s.Key),
+        .. Reader.Mappings.Keys,
+        "colors.theme",
+        "colors.palette",
+    ];
 
     /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page); may be a light/dark pair.</summary>
     public string? SchemeName { get; private init; }
@@ -713,21 +719,6 @@ public sealed class ConfigFile
         /// </summary>
         public static readonly Dictionary<string, (string Key, Func<object, string?> Convert)> Mappings = new()
         {
-            ["font.family"] = ("font-family", v => v as string),
-            ["font.size"] = ("font-size", v => Number(v)),
-            ["font.weight"] = ("font-weight", v => v as string ?? Number(v)),
-            ["font.ligatures"] = ("font-ligatures", v => Bool(v)),
-            ["font.bold-weight"] = ("font-bold-weight", v => v as string ?? Number(v)),
-            ["font.fallback"] = ("font-fallback", v => v is List<object> l && l.All(x => x is string) ? string.Join(", ", l) : v as string),
-            ["font.builtin-glyphs"] = ("builtin-glyphs", v => Bool(v)),
-            ["font.adjust-box-thickness"] = ("adjust-box-thickness", v => v is string a ? a : Number(v)),
-            ["font.adjust-cell-height"] = ("adjust-cell-height", v => v is string a ? a : Number(v)),
-            ["colors.background"] = ("background", v => v as string),
-            ["colors.foreground"] = ("foreground", v => v as string),
-            ["colors.cursor"] = ("cursor-color", v => v as string),
-            ["colors.cursor-text"] = ("cursor-text", v => v as string),
-            ["colors.selection-background"] = ("selection-background", v => v as string),
-            ["colors.selection-foreground"] = ("selection-foreground", v => v as string),
             ["terminal.cursor-style"] = ("cursor-style", v => v as string),
             ["terminal.cursor-style-at-prompt"] = ("cursor-style-at-prompt", v => v as string),
             ["terminal.cursor-blink"] = ("cursor-blink", v => Bool(v)),
@@ -783,15 +774,6 @@ public sealed class ConfigFile
             ["window.unfocused-pane-opacity"] = ("unfocused-split-opacity", v => Number(v)),
             ["window.unfocused-pane-fill"] = ("unfocused-split-fill", v => v as string),
             ["window.divider-color"] = ("split-divider-color", v => v as string),
-            ["colors.minimum-contrast"] = ("minimum-contrast", v => Number(v)),
-            ["colors.bold"] = ("bold-color", v => v as string),
-            ["colors.pane-header"] = ("pane-header-color", v => v as string),
-            ["colors.bold-is-bright"] = ("bold-is-bright", v => Bool(v)),
-            ["colors.palette-generate"] = ("palette-generate", v => Bool(v)),
-            ["colors.palette-harmonious"] = ("palette-harmonious", v => Bool(v)),
-            ["colors.faint-opacity"] = ("faint-opacity", v => Number(v)),
-            ["colors.cursor-opacity"] = ("cursor-opacity", v => Number(v)),
-            ["colors.background-opacity"] = ("background-opacity", v => Number(v)),
             ["window.backdrop"] = ("backdrop", v => v as string),
             ["window.backdrop-tint"] = ("backdrop-tint", v => Number(v)),
             ["window.backdrop-color"] = ("backdrop-color", v => v as string),
@@ -801,8 +783,6 @@ public sealed class ConfigFile
             ["updates.check"] = ("update-check", v => Bool(v)),
             ["cli.remote-control"] = ("remote-control", v => Bool(v)),
             ["cli.path"] = ("zn-path", v => Bool(v)),
-            ["colors.find-highlight"] = ("search-background", v => v as string),
-            ["colors.find-highlight-current"] = ("search-selected-background", v => v as string),
             ["window.save-state"] = ("window-save-state", v => v is bool b ? (b ? "always" : "never") : v as string),
             ["window.quit-after-last-window-closed"] = ("quit-after-last-window-closed", v => Bool(v)),
             ["window.new-workspace-page"] = ("new-workspace-page", v => Bool(v)),
@@ -826,24 +806,39 @@ public sealed class ConfigFile
 
         private Config ApplySetting(Config config, Entry e)
         {
-            // Each setting maps onto the (tested) value parsing of Config.Apply.
-            (string Key, string? Value)? legacy = e.Path switch
+            // When the setting's catalog entry has a binding, the binding reads the TOML value.
+            if (e.Path is [var g, var n] && Zinc.Settings.SettingsCatalog.Find($"{g}.{n}") is { Binding: { } binding } setting)
             {
-                ["colors", "palette", var index] => ("palette", e.Value is string c ? $"{index}={c}" : null),
-                [var group, var name] when Mappings.TryGetValue($"{group}.{name}", out var m) => (m.Key, m.Convert(e.Value)),
-                _ => null,
-            };
+                return binding.Read(setting, config, e.Value) ?? Warn(config, e, null);
+            }
+
+            // One palette entry by number (palette = 1="#ac4242"), as a scheme file writes it.
+            if (e.Path is ["colors", "palette", var index])
+            {
+                return e.Value is string color && ThemeLibrary.ApplySchemeKey(config, "palette", $"{index}={color}") is { } entry
+                    ? entry
+                    : Warn(config, e, null);
+            }
 
             // The whole palette as an array: palette = ["#000000", "#aa0000", ...].
             if (e.Path is ["colors", "palette"] && e.Value is List<object> colors)
             {
                 for (var i = 0; i < colors.Count; i++)
                 {
-                    config = colors[i] is string c && config.Apply("palette", $"{i}={c}") is { } next ? next : Warn(config, e, "colors like \"#rrggbb\"");
+                    config = colors[i] is string c && ThemeLibrary.ApplySchemeKey(config, "palette", $"{i}={c}") is { } next
+                        ? next
+                        : Warn(config, e, "colors like \"#rrggbb\"");
                 }
 
                 return config;
             }
+
+            // The rest map onto the (tested) value parsing of Config.Apply, until each has a binding.
+            (string Key, string? Value)? legacy = e.Path switch
+            {
+                [var group, var name] when Mappings.TryGetValue($"{group}.{name}", out var m) => (m.Key, m.Convert(e.Value)),
+                _ => null,
+            };
 
             // Shader folders (for Settings' picker): the same, as folders.
             if (e.Path is ["shaders", "folders"])
