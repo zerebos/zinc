@@ -133,6 +133,14 @@ public static class SettingsCatalog
     private static SettingBinding Adjustment(Func<Config, (double Amount, bool Percent), Config> set) =>
         Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryAdjustment(s, out var adjustment) ? set(c, adjustment) : null);
 
+    /// <summary><paramref name="config"/> with its quick terminal settings changed.</summary>
+    private static Config Quick(Config config, Func<QuickTerminalSettings, QuickTerminalSettings> change) =>
+        config with { QuickTerminal = change(config.QuickTerminal) };
+
+    /// <summary>The quick terminal's size as text: "50%", "600px", one number, or two of them as a list.</summary>
+    private static string? QuickSize(object value) =>
+        value is List<object> { Count: 1 or 2 } pair ? string.Join(",", pair.Select(Bind.AsText)) : Bind.AsText(value);
+
     /// <summary>A cursor shape's name, with "block_hollow" taken as "block-hollow" (Ghostty's spelling).</summary>
     private static Ghostty.TerminalCursorStyle? CursorStyle(object value) =>
         value is string s && Config.TryMode<Ghostty.TerminalCursorStyle>(s.Replace('_', '-'), out var style) ? style : null;
@@ -727,19 +735,23 @@ public static class SettingsCatalog
             { Binding = Bind.Bool(c => c.ScreenFlashBell, (c, v) => c with { ScreenFlashBell = v }) },
         new("terminal", "Command line", "cli.remote-control", "Remote control",
             "Lets zn, Zinc's command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.RemoteControl, (c, v) => c with { RemoteControl = v }) },
         new("terminal", "Command line", "cli.path", "Use zn in other terminals",
             "Adds zn to your PATH, so other terminals find it too (Zinc's own terminals always do). Shells started from now on see it.",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.ZnOnPath, (c, v) => c with { ZnOnPath = v }) },
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
             "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). Turn it off if keys behave oddly.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.InputMethod, (c, v) => c with { InputMethod = v }) },
         new("about", "Updates", "updates.check", "Check for updates automatically",
             "Once a day. New versions download in the background, and you choose when to restart. Only for Zinc installed with its installer.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.UpdateCheck, (c, v) => c with { UpdateCheck = v }) },
         new("about", "Troubleshooting", "debug.logging", "Debug log",
             "Keeps a record of what Zinc does, to send with a bug report. Turn it on, make the problem happen, then copy the log.",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.Logging, (c, v) => c with { Logging = v }) },
         new("terminal", "Troubleshooting", "window.low-latency-drawing", "Low-latency drawing",
             "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
             SettingKind.Toggle)
@@ -765,39 +777,79 @@ public static class SettingsCatalog
 
         // ---- Notifications
         new("notifications", "Long commands", "notify.command-finished", "Long command finishes",
-            "In a pane you weren't looking at.", SettingKind.Choice, "badge")
-            { Choices = NotifyChoices },
+            "In a pane you weren't looking at.", SettingKind.Choice)
+            { Choices = NotifyChoices, Binding = Bind.Enum<NotifyMode>((c, v) => c with { NotifyCommandFinished = v }) },
         new("notifications", "Long commands", "notify.command-finished-after", "Counts as long after",
-            "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 10L)
-            { Placeholder = "10", NumbersAsNumbers = true },
+            "Seconds, or with a unit: 45s, 2m.", SettingKind.Text)
+            {
+                Placeholder = "10", NumbersAsNumbers = true,
+                Binding = Bind.Custom(
+                    (c, v) => Bind.AsText(v) is { } s && Config.TryDuration(s, out var d)
+                        ? c with { NotifyCommandFinishedAfter = d }
+                        : null,
+                    c => Bind.Tidy(c.NotifyCommandFinishedAfter.TotalSeconds)),
+            },
         new("notifications", "Long commands", "notify.command-finished-sound", "Sound",
-            "Plays when a long command finishes out of view (a Windows notification has its own).", SettingKind.Choice, "off")
+            "Plays when a long command finishes out of view (a Windows notification has its own).", SettingKind.Choice)
             {
                 Choices = [new("None", "off"), new("Windows' notification sound", "notification"), new("Windows' default beep", "beep")],
+                Binding = Bind.Enum<FinishedSound>((c, v) => c with { CommandFinishedSound = v }),
             },
         new("notifications", "Programs", "notify.programs", "Program notifications",
-            "When a program asks for one, e.g. a build script finishing (OSC 9 or 777).", SettingKind.Choice, "badge")
-            { Choices = NotifyChoices },
+            "When a program asks for one, e.g. a build script finishing (OSC 9 or 777).", SettingKind.Choice)
+            { Choices = NotifyChoices, Binding = Bind.Enum<NotifyMode>((c, v) => c with { NotifyPrograms = v }) },
         new("notifications", "Dot colors", "notify.finished-color", "Finished",
-            "A command finished, or a program sent a notification.", SettingKind.Color, null)
-            { NullLabel = "Use Zinc's green", Placeholder = "Zinc's green" },
-        new("notifications", "Dot colors", "notify.bell-color", "Bell", "A program rang the bell.", SettingKind.Color, null)
-            { NullLabel = "Use Zinc's amber", Placeholder = "Zinc's amber" },
-        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed, or a program exited with an error.", SettingKind.Color, null)
-            { NullLabel = "Use Zinc's red", Placeholder = "Zinc's red" },
+            "A command finished, or a program sent a notification.", SettingKind.Color)
+            {
+                NullLabel = "Use Zinc's green", Placeholder = "Zinc's green",
+                Binding = Bind.Color((c, v) => c with { DotFinishedColor = v }),
+            },
+        new("notifications", "Dot colors", "notify.bell-color", "Bell", "A program rang the bell.", SettingKind.Color)
+            {
+                NullLabel = "Use Zinc's amber", Placeholder = "Zinc's amber",
+                Binding = Bind.Color((c, v) => c with { DotBellColor = v }),
+            },
+        new("notifications", "Dot colors", "notify.failed-color", "Failed", "A command failed, or a program exited with an error.", SettingKind.Color)
+            {
+                NullLabel = "Use Zinc's red", Placeholder = "Zinc's red",
+                Binding = Bind.Color((c, v) => c with { DotFailedColor = v }),
+            },
 
         // ---- Quick terminal
-        new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides the quick terminal from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text, "win+grave"),
-        new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice, "center")
-            { Choices = [new("Top", "top"), new("Bottom", "bottom"), new("Left", "left"), new("Right", "right"), new("Center", "center")] },
-        new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice, "mouse")
-            { Choices = [new("With the pointer", "mouse", "Opens on the screen the pointer is on."), new("Main", "main", "Always opens on the main screen.")] },
+        new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides the quick terminal from anywhere, e.g. win+grave or ctrl+alt+t.", SettingKind.Text)
+            {
+                Binding = Bind.Custom(
+                    (c, v) => v is string s && Config.TryHotkey(s) ? Quick(c, q => q with { Hotkey = s }) : null,
+                    c => c.QuickTerminal.Hotkey),
+            },
+        new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice)
+            {
+                Choices = [new("Top", "top"), new("Bottom", "bottom"), new("Left", "left"), new("Right", "right"), new("Center", "center")],
+                Binding = Bind.Enum<QuickTerminalPosition>((c, v) => Quick(c, q => q with { Position = v })),
+            },
+        new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice)
+            {
+                Choices = [new("With the pointer", "mouse", "Opens on the screen the pointer is on."), new("Main", "main", "Always opens on the main screen.")],
+                Binding = Bind.Enum<QuickTerminalScreen>((c, v) => Quick(c, q => q with { Screen = v })),
+            },
         new("quick", "Placement", "quick-terminal.size", "Size",
-            "A percentage or pixels (50%, 600px) along its edge. Empty: 50%, or 70% by 60% at \"Center\".", SettingKind.Text, null)
-            { Placeholder = "50%" },
-        new("quick", "Behavior", "quick-terminal.autohide", "Hide when it loses focus", "", SettingKind.Toggle, true),
+            "A percentage or pixels (50%, 600px) along its edge. Empty: 50%, or 70% by 60% at \"Center\".", SettingKind.Text)
+            {
+                Placeholder = "50%",
+                Binding = Bind.Custom((c, v) => QuickSize(v) is { } s && Config.TryQuickSize(s, out var a, out var b)
+                    ? Quick(c, q => q with { Primary = a, Secondary = b })
+                    : null),
+            },
+        new("quick", "Behavior", "quick-terminal.autohide", "Hide when it loses focus", "", SettingKind.Toggle)
+            {
+                Binding = Bind.Bool(c => c.QuickTerminal.Autohide, (c, v) => Quick(c, q => q with { Autohide = v })),
+            },
         new("quick", "Behavior", "quick-terminal.animation-duration", "Animation", "How long the quick terminal takes to fade in and out. At 0 it appears at once.",
-            SettingKind.Number, 0.2) { Unit = "seconds", Minimum = 0, Maximum = 2, Step = 0.05 },
+            SettingKind.Number)
+            {
+                Unit = "seconds", Minimum = 0, Maximum = 2, Step = 0.05,
+                Binding = Bind.Number(c => c.QuickTerminal.AnimationDuration, (c, v) => Quick(c, q => q with { AnimationDuration = v })),
+            },
     ];
 
     /// <summary>A profile's own fields (keys relative to its <c>[profile.&lt;id&gt;]</c> section).</summary>

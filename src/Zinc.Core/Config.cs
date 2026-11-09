@@ -768,44 +768,6 @@ public sealed record Config
     public string? WorkingDirectory { get; init; }
 
     /// <summary>
-    /// Applies one <c>key = value</c> setting. Returns null when the key is unknown
-    /// or the value invalid, leaving the caller to report it.
-    /// </summary>
-    public Config? Apply(string key, string value)
-    {
-        return key switch
-        {
-            "command" when value.Length > 0 => this with { Command = value },
-            "working-directory" when value.Length > 0 => this with { WorkingDirectory = value },
-            "icon" when value.Length > 0 => this with { Icon = value },
-            "notify-command-finished-sound" when TryMode<FinishedSound>(value, out var finishedSound) => this with { CommandFinishedSound = finishedSound },
-            "notify-finished-color" when TryColor(value, out var finished) => this with { DotFinishedColor = finished },
-            "notify-bell-color" when TryColor(value, out var bell) => this with { DotBellColor = bell },
-            "notify-failed-color" when TryColor(value, out var failed) => this with { DotFailedColor = failed },
-            "logging" when bool.TryParse(value, out var logging) => this with { Logging = logging },
-            "update-check" when bool.TryParse(value, out var check) => this with { UpdateCheck = check },
-            "remote-control" when bool.TryParse(value, out var remote) => this with { RemoteControl = remote },
-            "zn-path" when bool.TryParse(value, out var znPath) => this with { ZnOnPath = znPath },
-            "notify-command-finished" when TryMode<NotifyMode>(value, out var notify) => this with { NotifyCommandFinished = notify },
-            "notify-programs" when TryMode<NotifyMode>(value, out var programs) => this with { NotifyPrograms = programs },
-            "notify-command-finished-after" when TryDuration(value, out var after) => this with { NotifyCommandFinishedAfter = after },
-            "quick-terminal-position" when Enum.TryParse<QuickTerminalPosition>(value, true, out var position) =>
-                this with { QuickTerminal = QuickTerminal with { Position = position } },
-            "quick-terminal-screen" when Enum.TryParse<QuickTerminalScreen>(value, true, out var screen) =>
-                this with { QuickTerminal = QuickTerminal with { Screen = screen } },
-            "quick-terminal-size" when TryQuickSize(value, out var primary, out var secondary) =>
-                this with { QuickTerminal = QuickTerminal with { Primary = primary, Secondary = secondary } },
-            "quick-terminal-autohide" when bool.TryParse(value, out var autohide) =>
-                this with { QuickTerminal = QuickTerminal with { Autohide = autohide } },
-            "quick-terminal-animation-duration" when TryDouble(value, out var slide) && slide is >= 0 and <= 2 =>
-                this with { QuickTerminal = QuickTerminal with { AnimationDuration = slide } },
-            "quick-terminal-hotkey" when TryHotkey(value) =>
-                this with { QuickTerminal = QuickTerminal with { Hotkey = value } },
-            _ => null,
-        };
-    }
-
-    /// <summary>
     /// The directory to start in: <see cref="WorkingDirectory"/> with <c>~</c> / <c>home</c>
     /// expanded, or the user's home.
     /// </summary>
@@ -820,7 +782,7 @@ public sealed record Config
         };
     }
 
-    private static bool TryQuickSize(string value, out QuickTerminalLength? primary, out QuickTerminalLength? secondary)
+    internal static bool TryQuickSize(string value, out QuickTerminalLength? primary, out QuickTerminalLength? secondary)
     {
         primary = secondary = null;
         var parts = value.Split(',');
@@ -888,7 +850,7 @@ public sealed record Config
         return name.Length > 0 && name.All(char.IsLetter) && Enum.TryParse(name, true, out mode);
     }
 
-    private static bool TryHotkey(string value)
+    internal static bool TryHotkey(string value)
     {
         try
         {
@@ -900,9 +862,6 @@ public sealed record Config
             return false;
         }
     }
-
-    private static bool TryDouble(string s, out double value) =>
-        double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
 
     private static bool TryFloat(string s, out float value) =>
         float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out value);

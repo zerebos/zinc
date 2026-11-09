@@ -13,7 +13,7 @@ public class QuickTerminalTests
         var settings = new QuickTerminalSettings { Position = position };
         if (size != null)
         {
-            var config = new Config().Apply("quick-terminal-size", size)!;
+            var config = new Config().With("quick-terminal.size", size)!;
             settings = settings with { Primary = config.QuickTerminal.Primary, Secondary = config.QuickTerminal.Secondary };
         }
 

@@ -156,7 +156,6 @@ public sealed class ConfigFile
     public static IReadOnlyCollection<string> SettingKeys =>
     [
         .. Zinc.Settings.SettingsCatalog.All.Where(s => s.Binding != null).Select(s => s.Key),
-        .. Reader.Mappings.Keys,
         "colors.theme",
         "colors.palette",
         "shaders.folders",
@@ -595,8 +594,14 @@ public sealed class ConfigFile
                     {
                         case ["name"] when e.Value is string n && n.Length > 0: name = n; break;
                         case ["hidden"] when e.Value is bool h: hidden = h; break;
-                        case ["command" or "working-directory" or "icon"] when e.Value is string s && s.Length > 0:
-                            config = config.Apply(e.Path[0], s)!;
+                        case ["command"] when e.Value is string { Length: > 0 } command:
+                            config = config with { Command = command };
+                            break;
+                        case ["working-directory"] when e.Value is string { Length: > 0 } folder:
+                            config = config with { WorkingDirectory = folder };
+                            break;
+                        case ["icon"] when e.Value is string { Length: > 0 } icon:
+                            config = config with { Icon = icon };
                             break;
                         case [var group, _, ..] when Groups.Contains(group):
                             break;
@@ -714,31 +719,6 @@ public sealed class ConfigFile
             return config;
         }
 
-        /// <summary>
-        /// Every grouped setting (<c>"font.size"</c>) and how its TOML value becomes the value
-        /// Config.Apply parses. The settings window's catalog is checked against these keys.
-        /// </summary>
-        public static readonly Dictionary<string, (string Key, Func<object, string?> Convert)> Mappings = new()
-        {
-            ["debug.logging"] = ("logging", v => Bool(v)),
-            ["updates.check"] = ("update-check", v => Bool(v)),
-            ["cli.remote-control"] = ("remote-control", v => Bool(v)),
-            ["cli.path"] = ("zn-path", v => Bool(v)),
-            ["notify.command-finished"] = ("notify-command-finished", v => v as string),
-            ["notify.programs"] = ("notify-programs", v => v as string),
-            ["notify.finished-color"] = ("notify-finished-color", v => v as string),
-            ["notify.bell-color"] = ("notify-bell-color", v => v as string),
-            ["notify.failed-color"] = ("notify-failed-color", v => v as string),
-            ["notify.command-finished-sound"] = ("notify-command-finished-sound", v => v as string),
-            ["notify.command-finished-after"] = ("notify-command-finished-after", v => v is string d ? d : Number(v)),
-            ["quick-terminal.position"] = ("quick-terminal-position", v => v as string),
-            ["quick-terminal.screen"] = ("quick-terminal-screen", v => v as string),
-            ["quick-terminal.size"] = ("quick-terminal-size", v => Pair(v)),
-            ["quick-terminal.autohide"] = ("quick-terminal-autohide", v => Bool(v)),
-            ["quick-terminal.animation-duration"] = ("quick-terminal-animation-duration", v => Number(v)),
-            ["quick-terminal.hotkey"] = ("quick-terminal-hotkey", v => v as string),
-        };
-
         private Config ApplySetting(Config config, Entry e)
         {
             // When the setting's catalog entry has a binding, the binding reads the TOML value.
@@ -768,13 +748,6 @@ public sealed class ConfigFile
                 return config;
             }
 
-            // The rest map onto the (tested) value parsing of Config.Apply, until each has a binding.
-            (string Key, string? Value)? legacy = e.Path switch
-            {
-                [var group, var name] when Mappings.TryGetValue($"{group}.{name}", out var m) => (m.Key, m.Convert(e.Value)),
-                _ => null,
-            };
-
             // Shader folders for Settings' picker, as one folder or a list. Relative ones are resolved from the file that
             // names them.
             if (e.Path is ["shaders", "folders"])
@@ -784,13 +757,8 @@ public sealed class ConfigFile
                     : Warn(config, e, "a folder or a list of them");
             }
 
-            if (legacy is not { } l)
-            {
-                _warnings.Add($"{e.Where}: unknown setting {e.Key}");
-                return config;
-            }
-
-            return l.Value != null && config.Apply(l.Key, l.Value) is { } applied ? applied : Warn(config, e, null);
+            _warnings.Add($"{e.Where}: unknown setting {e.Key}");
+            return config;
         }
 
         /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
@@ -835,22 +803,6 @@ public sealed class ConfigFile
             List<object> l => $"[{string.Join(", ", l.Select(Show))}]",
             IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
             _ => value.ToString() ?? "",
-        };
-
-        private static string? Number(object value) => value is long or double
-            ? Convert.ToString(value, CultureInfo.InvariantCulture)
-            : null;
-
-        private static string? Bool(object value) => value is bool b ? (b ? "true" : "false") : null;
-
-        /// <summary>One value or two (<c>[a, b]</c>), as Config.Apply's "a,b" form.</summary>
-        private static string? Pair(object value) => value switch
-        {
-            List<object> { Count: 1 or 2 } l when l.All(x => x is long or double or string) =>
-                string.Join(",", l.Select(x => Convert.ToString(x, CultureInfo.InvariantCulture))),
-            long or double => Convert.ToString(value, CultureInfo.InvariantCulture),
-            string s => s,
-            _ => null,
         };
     }
 }
