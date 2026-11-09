@@ -33,7 +33,7 @@ public class ColorSettingsTests
             .With("colors.faint-opacity", 0.7)!
             .With("colors.cursor-opacity", 0.5)!
             .With("colors.find-highlight", "#334455")!
-            .Apply("split-divider-color", "#101010")!;
+            .With("window.divider-color", "#101010")!;
         Assert.Equal((4.5, true, 0.7, 0.5), (config.MinimumContrast, config.BoldIsBright, Math.Round(config.FaintOpacity, 2), config.CursorOpacity));
         Assert.Equal(new GhosttyColorRgb(0xFF, 0xFF, 0xFF), config.BoldColor);
         Assert.Equal(new GhosttyColorRgb(0x33, 0x44, 0x55), config.SearchBackground);

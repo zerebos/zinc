@@ -125,6 +125,14 @@ public static class SettingsCatalog
         new("Black", "black"),
     ];
 
+    /// <summary>A font weight by name ("semibold") or number (600).</summary>
+    private static SettingBinding Weight(Func<Config, int, Config> set) =>
+        Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryWeight(s, out var weight) ? set(c, weight) : null);
+
+    /// <summary>A size adjustment in pixels (1, -1) or as a percentage ("20%").</summary>
+    private static SettingBinding Adjustment(Func<Config, (double Amount, bool Percent), Config> set) =>
+        Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryAdjustment(s, out var adjustment) ? set(c, adjustment) : null);
+
     /// <summary>A cursor shape's name, with "block_hollow" taken as "block-hollow" (Ghostty's spelling).</summary>
     private static Ghostty.TerminalCursorStyle? CursorStyle(object value) =>
         value is string s && Config.TryMode<Ghostty.TerminalCursorStyle>(s.Replace('_', '-'), out var style) ? style : null;
@@ -158,17 +166,20 @@ public static class SettingsCatalog
         new("appearance", "Font", "font.family", "Font", "Any monospace font. Nerd Fonts also show prompt icons.", SettingKind.Font)
             { Binding = Bind.Text(c => c.FontFamily, (c, v) => c with { FontFamily = v }) },
         new("appearance", "Font", "font.size", "Size", "Ctrl+0 returns to this size.", SettingKind.Number)
-            { Unit = "pt", Minimum = 4, Maximum = 72, Step = 0.5, Binding = Bind.Number(c => c.FontSize, (c, v) => c with { FontSize = (float)v }) },
+            {
+                Unit = "pt", Minimum = 4, Maximum = 72, Step = 0.5,
+                Binding = Bind.Number(c => c.FontSize, (c, v) => c with { FontSize = (float)v }),
+            },
         new("appearance", "Font", "font.weight", "Weight",
             "How heavy normal text is. A font without that weight shows its nearest one.", SettingKind.Choice)
             {
                 Choices = WeightChoices,
-                Binding = Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryWeight(s, out var w) ? c with { FontWeight = w } : null),
+                Binding = Weight((c, w) => c with { FontWeight = w }),
             },
         new("appearance", "Font", "font.bold-weight", "Bold weight", "How heavy bold text is.", SettingKind.Choice)
             {
                 Choices = WeightChoices,
-                Binding = Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryWeight(s, out var w) ? c with { BoldWeight = w } : null),
+                Binding = Weight((c, w) => c with { BoldWeight = w }),
             },
         new("appearance", "Font", "font.ligatures", "Ligatures",
             "Fonts that have them (Cascadia Code, JetBrains Mono, Fira Code) join => != -> and the like into one shape. Each character keeps its own cell, and the character under the cursor isn't joined.",
@@ -185,7 +196,7 @@ public static class SettingsCatalog
             "More room between lines, as a percentage (20%) or in pixels (2). A negative value gives less. Text stays centered.", SettingKind.Text)
             {
                 Placeholder = "0", NumbersAsNumbers = true,
-                Binding = Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryAdjustment(s, out var a) ? c with { AdjustCellHeight = a } : null),
+                Binding = Adjustment((c, a) => c with { AdjustCellHeight = a }),
             },
         new("appearance", "Font", "font.builtin-glyphs", "Built-in glyphs",
             "Zinc draws box lines, blocks and Powerline shapes itself, so they join up in any font.",
@@ -194,7 +205,7 @@ public static class SettingsCatalog
             "Thicker or thinner built-in lines, in pixels (1, -1) or as a percentage (20%).", SettingKind.Text)
             {
                 Placeholder = "0", NumbersAsNumbers = true,
-                Binding = Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryAdjustment(s, out var a) ? c with { AdjustBoxThickness = a } : null),
+                Binding = Adjustment((c, a) => c with { AdjustBoxThickness = a }),
             },
         new("appearance", "Colors", "colors.theme", "Color scheme",
             "About 650 are included. Add your own to the themes folder next to config.toml.", SettingKind.Scheme, null),
@@ -252,7 +263,10 @@ public static class SettingsCatalog
         new("appearance", "Readability", "colors.minimum-contrast", "Minimum contrast",
             "Text that reads poorly against its background turns black or white. 1 turns it off, 4.5 is the usual accessibility level, and 21 makes all text black or white.",
             SettingKind.Number)
-            { Minimum = 1, Maximum = 21, Step = 0.5, Binding = Bind.Number(c => c.MinimumContrast, (c, v) => c with { MinimumContrast = v }) },
+            {
+                Minimum = 1, Maximum = 21, Step = 0.5,
+                Binding = Bind.Number(c => c.MinimumContrast, (c, v) => c with { MinimumContrast = v }),
+            },
         new("appearance", "Readability", "colors.bold-is-bright", "Bold in bright colors",
             "Bold text in the first eight colors shows their bright versions, as older terminals did.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.BoldIsBright, (c, v) => c with { BoldIsBright = v }) },
@@ -260,7 +274,10 @@ public static class SettingsCatalog
             { Placeholder = "Same as the text", Binding = Bind.Color((c, v) => c with { BoldColor = v }) },
         new("appearance", "Readability", "colors.faint-opacity", "Faint text",
             "How bright dim text is (1: as bright as other text).", SettingKind.Number)
-            { Minimum = 0.1, Maximum = 1, Step = 0.05, Binding = Bind.Number(c => c.FaintOpacity, (c, v) => c with { FaintOpacity = v }) },
+            {
+                Minimum = 0.1, Maximum = 1, Step = 0.05,
+                Binding = Bind.Number(c => c.FaintOpacity, (c, v) => c with { FaintOpacity = v }),
+            },
         new("appearance", "Readability", "colors.find-highlight", "Find highlight", "Behind each match of Find.", SettingKind.Color)
             { Placeholder = "Zinc's yellow", Binding = Bind.Color((c, v) => c with { SearchBackground = v }) },
         new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Behind the match Find is on.", SettingKind.Color)
@@ -275,7 +292,10 @@ public static class SettingsCatalog
             { Binding = Bind.Bool(c => c.CursorBlink, (c, v) => c with { CursorBlink = v }) },
         new("appearance", "Cursor", "colors.cursor-opacity", "Cursor opacity",
             "1: solid. Lower lets the character under a block cursor show in its own color.", SettingKind.Number)
-            { Minimum = 0.1, Maximum = 1, Step = 0.05, Binding = Bind.Number(c => c.CursorOpacity, (c, v) => c with { CursorOpacity = v }) },
+            {
+                Minimum = 0.1, Maximum = 1, Step = 0.05,
+                Binding = Bind.Number(c => c.CursorOpacity, (c, v) => c with { CursorOpacity = v }),
+            },
         new("appearance", "Cursor", "terminal.cursor-style-at-prompt", "Cursor at the prompt",
             "While the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
             SettingKind.Choice)
@@ -293,7 +313,7 @@ public static class SettingsCatalog
                 }),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
-            "Windows, menus and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice, "system")
+            "Windows, menus and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -301,18 +321,25 @@ public static class SettingsCatalog
                     new("Light", "light"),
                     new("Dark", "dark"),
                 ],
+                Binding = Bind.Enum<ChromeAppearance>((c, v) => c with { Appearance = v }),
             },
         new("appearance", "Window", "window.accent", "Accent color",
-            "Selections, focus lines, switches and buttons. Restart Zinc to apply.", SettingKind.Choice, "zinc")
+            "Selections, focus lines, switches and buttons. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
                     new("Zinc green", "zinc"),
                     new("Windows' accent", "windows", "The one in Windows Settings > Personalization > Colors."),
                 ],
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    "zinc" => c with { ZincAccent = true },
+                    "windows" => c with { ZincAccent = false },
+                    _ => null,
+                }),
             },
         new("appearance", "Background", "window.backdrop", "Window background", "What's behind everything in the window: tabs, sidebar and terminal.",
-            SettingKind.Choice, "mica")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -320,18 +347,28 @@ public static class SettingsCatalog
                     new("Acrylic (frosted)", "acrylic", "The windows behind show, blurred."),
                     new("Clear", "none", "The windows behind show as they are."),
                 ],
+                Binding = Bind.Enum<WindowBackdrop>((c, v) => c with { Backdrop = v }),
             },
         new("appearance", "Background", "window.backdrop-tint", "Window tint",
             "How much color an acrylic or clear background carries. Lower is more see-through.",
-            SettingKind.Number, 0.3)
-            { Minimum = 0, Maximum = 1, Step = 0.05 },
+            SettingKind.Number)
+            {
+                Minimum = 0, Maximum = 1, Step = 0.05,
+                Binding = Bind.Number(c => c.BackdropTint, (c, v) => c with { BackdropTint = v }),
+            },
         new("appearance", "Background", "window.backdrop-color", "Window tint color",
-            "The color an acrylic or clear background is tinted with.", SettingKind.Color, null)
-            { NullLabel = "Use the terminal's background", Placeholder = "The terminal's background" },
+            "The color an acrylic or clear background is tinted with.", SettingKind.Color)
+            {
+                NullLabel = "Use the terminal's background", Placeholder = "The terminal's background",
+                Binding = Bind.Color((c, v) => c with { BackdropColor = v }),
+            },
         new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
             "Lower lets the window background show behind the text (1: solid). Colored cells stay solid.",
             SettingKind.Number)
-            { Minimum = 0, Maximum = 1, Step = 0.05, Binding = Bind.Number(c => c.BackgroundOpacity, (c, v) => c with { BackgroundOpacity = v }) },
+            {
+                Minimum = 0, Maximum = 1, Step = 0.05,
+                Binding = Bind.Number(c => c.BackgroundOpacity, (c, v) => c with { BackgroundOpacity = v }),
+            },
         new("appearance", "Shaders", "shaders.files", "Custom shaders",
             "Effects drawn over the terminal, such as CRT screens, glow and cursor trails. They're GLSL files written for Ghostty or Shadertoy, and they run in order.",
             SettingKind.Files)
@@ -372,16 +409,26 @@ public static class SettingsCatalog
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.PaddingBalance, (c, v) => c with { PaddingBalance = v }) },
 
         // ---- Layout
-        new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice, "top")
-            { Choices = [new("Along the top", "top"), new("In a sidebar", "left")] },
-        new("layout", "Workspaces", "window.sidebar", "Sidebar", "Only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice, "full")
-            { Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window's left edge.")] },
-        new("layout", "Workspaces", "window.title-bar", "Title bar", "Only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice, "show")
-            { Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window's top edge.")] },
+        new("layout", "Workspaces", "window.workspace-tabs", "Workspaces", "Tabs along the top, or a list in a sidebar. Applies to windows opened from now on.", SettingKind.Choice)
+            {
+                Choices = [new("Along the top", "top"), new("In a sidebar", "left")],
+                Binding = Bind.Enum<WorkspaceTabs>((c, v) => c with { WorkspaceTabs = v }),
+            },
+        new("layout", "Workspaces", "window.sidebar", "Sidebar", "Only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice)
+            {
+                Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window's left edge.")],
+                Binding = Bind.Enum<SidebarMode>((c, v) => c with { Sidebar = v }),
+            },
+        new("layout", "Workspaces", "window.title-bar", "Title bar", "Only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice)
+            {
+                Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window's top edge.")],
+                Binding = Bind.Enum<TitleBarMode>((c, v) => c with { TitleBar = v }),
+            },
         new("layout", "Workspaces", "window.new-workspace-page", "Start page for new workspaces",
-            "Choose a profile, a folder and a name when you open a workspace. Enter starts the default profile.", SettingKind.Toggle, true),
+            "Choose a profile, a folder and a name when you open a workspace. Enter starts the default profile.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.NewWorkspacePage, (c, v) => c with { NewWorkspacePage = v }) },
         new("layout", "Workspaces", "window.workspace-colors", "Colors for new workspaces", "For the ones you don't color yourself.",
-            SettingKind.Choice, "off")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -389,27 +436,31 @@ public static class SettingsCatalog
                     new("By folder", "folder", "A workspace with a folder gets that folder's color, the same one every time."),
                     new("One after another", "cycle", "Each new workspace takes the next color."),
                 ],
+                Binding = Bind.Enum<Panes.WorkspaceColorMode>((c, v) => c with { WorkspaceColors = v }),
             },
         new("layout", "Panes", "window.start-in", "New tabs and splits start",
             "New tabs in a workspace with its own folder start there. Without \"Tabs inside panes\", this is for splits only, because a new tab is a new workspace.",
-            SettingKind.Choice, "current")
+            SettingKind.Choice)
             {
                 Choices =
                 [
                     new("Where you are", "current", "In the focused terminal's current folder."),
                     new("In the profile's folder", "profile", "Or in the workspace's folder, when it has one."),
                 ],
+                Binding = Bind.Enum<Terminal.NewTerminalFolder>((c, v) => c with { StartIn = v }),
             },
-        new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle, true),
-        new("layout", "Panes", "window.pane-tabs-as", "Show pane tabs as", "Only with \"Tabs inside panes\" on.", SettingKind.Choice, "tabs")
+        new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.TabGroups, (c, v) => c with { TabGroups = v }) },
+        new("layout", "Panes", "window.pane-tabs-as", "Show pane tabs as", "Only with \"Tabs inside panes\" on.", SettingKind.Choice)
             {
                 Choices =
                 [
                     new("Tabs", "tabs", "A row of tabs. When they don't fit, they shorten, then show only their icons, then fold into a menu."),
                     new("A menu", "menu", "The shown tab, then a count (\"2 of 5\") that opens a menu of every tab. Switch tabs with the menu or with keys."),
                 ],
+                Binding = Bind.Enum<PaneTabsAs>((c, v) => c with { PaneTabsAs = v }),
             },
-        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row above a pane. Its tabs, or its title when it has one tab.", SettingKind.Choice, "with-tabs")
+        new("layout", "Panes", "window.pane-headers", "Pane headers", "The row above a pane. Its tabs, or its title when it has one tab.", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -418,9 +469,10 @@ public static class SettingsCatalog
                     new("Always", "always"),
                     new("Never", "never"),
                 ],
+                Binding = Bind.Enum<PaneHeaders>((c, v) => c with { PaneHeaders = v }),
             },
         new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more on the right of a pane's header, with a program's progress beside them.",
-            SettingKind.Choice, "hide")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -430,15 +482,20 @@ public static class SettingsCatalog
                         "On a pane while the pointer is over its header. Touch and pen have no hover. The command palette and a pane's right-click menu have every action."),
                     new("Hide", "hide"),
                 ],
+                Binding = Bind.Enum<PaneHeaderButtons>((c, v) => c with { PaneHeaderButtons = v }),
             },
         new("layout", "Panes", "window.pane-gap", "Gap between panes",
-            "Above 0, panes are rounded cards with space between them. At 0 they meet at a thin divider.", SettingKind.Number, 0L)
-            { Unit = "px", Minimum = 0, Maximum = 32, Step = 1 },
+            "Above 0, panes are rounded cards with space between them. At 0 they meet at a thin divider.", SettingKind.Number)
+            {
+                Unit = "px", Minimum = 0, Maximum = 32, Step = 1,
+                Binding = Bind.Number(c => c.PaneGap, (c, v) => c with { PaneGap = (int)v }, whole: true),
+            },
         new("layout", "Panes", "window.pane-gap-edges", "Gap at the workspace edges",
             "The same gap around the outside, split or not, so splitting never moves a pane's outer edges. Only with a \"Gap between panes\" above 0.",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.PaneGapEdges, (c, v) => c with { PaneGapEdges = v }) },
         new("layout", "Panes", "window.pane-focus", "Show focus with", "How the focused pane stands out from the others.",
-            SettingKind.Choice, "tab-accent")
+            SettingKind.Choice)
             {
                 Choices =
                 [
@@ -447,25 +504,41 @@ public static class SettingsCatalog
                     new("None", "none",
                         "Only the dimming of other panes (\"Unfocused panes\") marks the focused pane. With \"Unfocused panes\" at 1, nothing does."),
                 ],
+                Binding = Bind.Enum<PaneFocus>((c, v) => c with { PaneFocus = v }),
             },
         new("layout", "Panes", "window.pane-animations", "Pane animations",
             "Panes slide into place when you split, close, maximize or move them. They don't while \"Animation effects\" is off in Windows Settings.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.PaneAnimations, (c, v) => c with { PaneAnimations = v }) },
         new("layout", "Panes", "window.pane-resize-step", "Resize step",
-            "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number, 5L)
-            { Unit = "%", Minimum = 1, Maximum = 50, Step = 1 },
+            "How far a resize key moves the divider, as a share of the panes it splits.", SettingKind.Number)
+            {
+                Unit = "%", Minimum = 1, Maximum = 50, Step = 1,
+                Binding = Bind.Number(c => c.PaneResizeStep * 100, (c, v) => c with { PaneResizeStep = v / 100 }),
+            },
         new("layout", "Panes", "window.unfocused-pane-opacity", "Unfocused panes",
-            "How bright unfocused panes stay (1: not dimmed).", SettingKind.Number, 0.7)
-            { Minimum = 0.15, Maximum = 1, Step = 0.05 },
-        new("layout", "Panes", "window.unfocused-pane-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color, null)
-            { Placeholder = "The pane's background" },
-        new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes, when \"Gap between panes\" is 0.", SettingKind.Color, null)
-            { Placeholder = "Zinc's grey" },
+            "How bright unfocused panes stay (1: not dimmed).", SettingKind.Number)
+            {
+                Minimum = 0.15, Maximum = 1, Step = 0.05,
+                Binding = Bind.Number(c => c.UnfocusedSplitOpacity, (c, v) => c with { UnfocusedSplitOpacity = v }, clamp: true),
+            },
+        new("layout", "Panes", "window.unfocused-pane-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color)
+            { Placeholder = "The pane's background", Binding = Bind.Color((c, v) => c with { UnfocusedSplitFill = v }) },
+        new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes, when \"Gap between panes\" is 0.", SettingKind.Color)
+            { Placeholder = "Zinc's grey", Binding = Bind.Color((c, v) => c with { SplitDividerColor = v }) },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
-            "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice, "always")
-            { Choices = [new("Reopen them", "always"), new("Start fresh", "never")] },
+            "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice)
+            {
+                Choices = [new("Reopen them", "always"), new("Start fresh", "never")],
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    true or "always" or "default" => c with { RestoreSession = true },
+                    false or "never" => c with { RestoreSession = false },
+                    _ => null,
+                }),
+            },
         new("layout", "When you come back", "window.quit-after-last-window-closed", "When the last window closes",
-            "", SettingKind.Choice, null)
+            "", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -473,8 +546,9 @@ public static class SettingsCatalog
                     new("Quit", true),
                     new("Stay in the tray", false, "Click the tray icon to open a window again."),
                 ],
+                Binding = Bind.Custom((c, v) => v is bool b ? c with { QuitAfterLastWindowClosed = b } : null),
             },
-        new("layout", "When you come back", "window.launch-at-login", "When you sign in to Windows", "", SettingKind.Choice, "off")
+        new("layout", "When you come back", "window.launch-at-login", "When you sign in to Windows", "", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -482,15 +556,25 @@ public static class SettingsCatalog
                     new("Start in the tray", "tray", "No window opens. The quick terminal's hotkey works, and the tray icon opens your windows."),
                     new("Open my windows", "windows", "As they were when you left, or a new one."),
                 ],
+                Binding = Bind.Custom((c, v) => v switch
+                {
+                    true => c with { LaunchAtLogin = LaunchAtLogin.Windows },
+                    false => c with { LaunchAtLogin = LaunchAtLogin.Off },
+                    string s when Config.TryMode<LaunchAtLogin>(s, out var login) => c with { LaunchAtLogin = login },
+                    _ => null,
+                }),
             },
         new("layout", "When you come back", "window.explorer-menu", "Open in Zinc from File Explorer",
             "Adds \"Open in Zinc\" to the right-click menu of folders and drives. On Windows 11 it's under \"Show more options\".",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.ExplorerMenu, (c, v) => c with { ExplorerMenu = v }) },
         new("layout", "Closing", "window.confirm-close", "Ask before closing",
             "When a tab, pane, workspace or window you close still runs a command, or holds two or more tabs. Zinc knows a command is running through shell integration.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.ConfirmClose, (c, v) => c with { ConfirmClose = v }) },
         new("layout", "Closing", "window.confirm-quit", "Ask before quitting with a running command",
-            "When you quit Zinc (or restart it for an update) while a command still runs.", SettingKind.Toggle, true),
+            "When you quit Zinc (or restart it for an update) while a command still runs.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.ConfirmQuit, (c, v) => c with { ConfirmQuit = v }) },
 
         // ---- Terminal
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
@@ -575,7 +659,8 @@ public static class SettingsCatalog
             "Unless the program uses the mouse.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.MiddleClickPaste, (c, v) => c with { MiddleClickPaste = v }) },
         new("terminal", "Mouse", "window.focus-follows-mouse", "Focus follows mouse",
-            "Moving the pointer into a pane focuses it.", SettingKind.Toggle, false),
+            "Moving the pointer into a pane focuses it.", SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.FocusFollowsMouse, (c, v) => c with { FocusFollowsMouse = v }) },
         new("terminal", "Clipboard", "terminal.copy-on-select", "Copy on select",
             "Copies text as soon as you select it. The selection stays.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.CopyOnSelect, (c, v) => c with { CopyOnSelect = v }) },
@@ -657,16 +742,26 @@ public static class SettingsCatalog
             SettingKind.Toggle, false),
         new("terminal", "Troubleshooting", "window.low-latency-drawing", "Low-latency drawing",
             "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.LowLatencyDrawing, (c, v) => c with { LowLatencyDrawing = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free memory of hidden tabs",
             "Background tabs, minimized windows and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
-            SettingKind.Toggle, true),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.FreeHiddenMemory, (c, v) => c with { FreeHiddenMemory = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-after", "Free it after",
-            "Seconds, or with a unit: 45s, 2m.", SettingKind.Text, 60L)
-            { Placeholder = "60", NumbersAsNumbers = true },
+            "Seconds, or with a unit: 45s, 2m.", SettingKind.Text)
+            {
+                Placeholder = "60", NumbersAsNumbers = true,
+                Binding = Bind.Custom(
+                    (c, v) => Bind.AsText(v) is { } s && Config.TryDuration(s, out var d) && d >= TimeSpan.FromSeconds(1)
+                        ? c with { FreeHiddenAfter = d }
+                        : null,
+                    c => Bind.Tidy(c.FreeHiddenAfter.TotalSeconds)),
+            },
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
             "Draws with the processor instead of the graphics card, which is slower. Use it for broken graphics drivers, some virtual machines and remote desktop glitches. Applies to terminals opened from now on.",
-            SettingKind.Toggle, false),
+            SettingKind.Toggle)
+            { Binding = Bind.Bool(c => c.SoftwareRendering, (c, v) => c with { SoftwareRendering = v }) },
 
         // ---- Notifications
         new("notifications", "Long commands", "notify.command-finished", "Long command finishes",
