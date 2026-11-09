@@ -152,7 +152,10 @@ public sealed class ConfigFile
         return older.Concat(older.SelectMany(OldNames));
     }
 
-    /// <summary>Every <c>[group] key</c> setting the reader knows, as "group.key" (plus colors.theme and colors.palette).</summary>
+    /// <summary>
+    /// Every <c>[group] key</c> setting the reader knows, as "group.key". That's each bound catalog setting, plus the
+    /// three the reader handles itself (<c>colors.theme</c>, <c>colors.palette</c>, <c>shaders.folders</c>).
+    /// </summary>
     public static IReadOnlyCollection<string> SettingKeys =>
     [
         .. Zinc.Settings.SettingsCatalog.All.Where(s => s.Binding != null).Select(s => s.Key),

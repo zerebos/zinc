@@ -26,6 +26,10 @@ public sealed class ValueList<T> : IReadOnlyList<T>, IEquatable<ValueList<T>>
 
     public override bool Equals(object? obj) => Equals(obj as ValueList<T>);
 
+    public static bool operator ==(ValueList<T>? a, ValueList<T>? b) => a is null ? b is null : a.Equals(b);
+
+    public static bool operator !=(ValueList<T>? a, ValueList<T>? b) => !(a == b);
+
     public override int GetHashCode()
     {
         var hash = new HashCode();

@@ -33,6 +33,15 @@ public class ShaderTests : IDisposable
         """;
 
     [Fact]
+    public void ShaderListsCompareByValue()
+    {
+        ValueList<string> one = new(["a.glsl", "b.glsl"]), same = new(["a.glsl", "b.glsl"]), other = new(["b.glsl", "a.glsl"]);
+        Assert.True(one == same);
+        Assert.True(one != other);
+        Assert.Equal(new Config { ShaderFiles = one }, new Config { ShaderFiles = same });
+    }
+
+    [Fact]
     public void FilesResolveFromTheConfigFolder()
     {
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);

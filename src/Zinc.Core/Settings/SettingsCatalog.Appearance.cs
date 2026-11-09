@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Zinc.Settings;
 
 public static partial class SettingsCatalog
@@ -228,7 +230,7 @@ public static partial class SettingsCatalog
                 new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
             ],
             // true and false as booleans or as text, and "always" as text.
-            Binding = Bind.Custom((c, v) => (v is string s ? s.ToLowerInvariant() : v) switch
+            Binding = Bind.Custom((c, v) => (v is string s ? s.Trim().ToLowerInvariant() : v) switch
             {
                 true or "true" => c with { ShaderAnimation = ShaderAnimation.Focused },
                 false or "false" => c with { ShaderAnimation = ShaderAnimation.Never },
@@ -279,9 +281,11 @@ public static partial class SettingsCatalog
         Bind.Custom((setting, c, v) =>
         {
             var text = v is List<object> { Count: 1 or 2 } pair ? string.Join(",", pair.Select(Bind.AsText)) : Bind.AsText(v);
-            return text != null && Config.TryPadding(text, out var a, out var b) &&
-                   Math.Min(a, b) * 72 / 96 >= setting.Minimum && Math.Max(a, b) * 72 / 96 <= setting.Maximum
-                ? set(c, a, b)
-                : null;
+
+            // The range is checked in points, as written, because converting the DIPs back gives 100.0000076 for 100.
+            var inRange = text?.Split(',', StringSplitOptions.TrimEntries).All(p =>
+                double.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var points) &&
+                points >= setting.Minimum && points <= setting.Maximum) == true;
+            return inRange && Config.TryPadding(text!, out var a, out var b) ? set(c, a, b) : null;
         }, c => Bind.Tidy(first(c) * 72 / 96));
 }

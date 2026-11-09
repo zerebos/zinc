@@ -846,7 +846,7 @@ public sealed record Config
     public static bool TryMode<T>(string value, out T mode) where T : struct, Enum
     {
         mode = default;
-        var name = value.Replace("-", "");
+        var name = value.Trim().Replace("-", "");
         return name.Length > 0 && name.All(char.IsLetter) && Enum.TryParse(name, true, out mode);
     }
 

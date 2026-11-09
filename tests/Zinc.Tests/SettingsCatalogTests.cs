@@ -114,12 +114,17 @@ public class SettingsCatalogTests
     [InlineData(true, false, false)]
     public void SameValueNormalizes(object? a, object? b, bool same) => Assert.Equal(same, SettingsCatalog.Same(a, b));
     [Fact]
-    public void EverySettingHasABinding() =>
+    public void EverySettingHasABinding()
+    {
         Assert.Equal(["colors.theme"], SettingsCatalog.All.Where(s => s.Binding == null).Select(s => s.Key));
+
+        // A bound setting's default comes from Config, so a declared one would be ignored without a word.
+        Assert.Empty(SettingsCatalog.All.Where(s => s.Binding != null && s.DeclaredDefault != null).Select(s => s.Key));
+    }
 
     [Theory]
     [MemberData(nameof(Keys))]
-    public void NumbersOutsideTheRangeAreRefusedOrClamped(string key)
+    public void NumberRangesHoldAtBothEnds(string key)
     {
         var setting = SettingsCatalog.Find(key)!;
         if (setting is not { Kind: SettingKind.Number, Binding: { } binding })
@@ -127,9 +132,12 @@ public class SettingsCatalogTests
             return;
         }
 
+        // Both ends read, and one step past either is refused or clamped.
         var empty = new Config();
+        Assert.True(binding.Read(setting, empty, setting.Minimum) != null, $"{key} refused its minimum {setting.Minimum}");
         if (setting.Maximum < double.MaxValue)
         {
+            Assert.True(binding.Read(setting, empty, setting.Maximum) != null, $"{key} refused its maximum {setting.Maximum}");
             var above = binding.Read(setting, empty, setting.Maximum + setting.Step);
             Assert.True(above == null || above == binding.Read(setting, empty, setting.Maximum), $"{key} took {setting.Maximum + setting.Step}");
         }

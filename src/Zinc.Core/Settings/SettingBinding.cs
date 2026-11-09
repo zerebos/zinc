@@ -29,7 +29,9 @@ public sealed class SettingBinding
 
     /// <summary>
     /// The TOML value that matches <c>new Config()</c>, or null when none is written. A choice setting's default is the
-    /// choice that leaves an empty config as it is.
+    /// choice that leaves an empty config as it is. So is the default of any setting that has choices and no default
+    /// function, such as <c>colors.pane-header</c>, a color with named levels. A choice setting never uses a default
+    /// function.
     /// </summary>
     public object? DefaultFor(SettingDef setting)
     {
@@ -118,10 +120,10 @@ public static class Bind
         return written == null ? null : new(written.Select(p => p.Trim()).Where(p => p.Length > 0).Select(p => resolve(p, file)));
     }
 
-    /// <summary>A number as a double, because Tomlyn gives a long or a double and code may pass an int or a float.</summary>
+    /// <summary>A TOML number as a double. Tomlyn gives a long or a double, nothing else.</summary>
     public static double? AsNumber(object value) => value switch
     {
-        long or int or double or float => Convert.ToDouble(value, CultureInfo.InvariantCulture),
+        long or double => Convert.ToDouble(value, CultureInfo.InvariantCulture),
         _ => null,
     };
 
@@ -129,17 +131,17 @@ public static class Bind
     public static string? AsText(object value) => value switch
     {
         string s => s,
-        long or int or double or float => Convert.ToString(value, CultureInfo.InvariantCulture),
+        long or double => Convert.ToString(value, CultureInfo.InvariantCulture),
         _ => null,
     };
 
     /// <summary>
-    /// A number in the form config.toml writes it, with whole numbers as integers and the float noise of a conversion
-    /// rounded off.
+    /// A number in the form config.toml writes it, with whole numbers as integers and the noise of a conversion
+    /// rounded off. Six decimal places, because some properties are floats, which hold only about seven digits.
     /// </summary>
     internal static object Tidy(double value)
     {
-        var rounded = Math.Round(value, 9);
+        var rounded = Math.Round(value, 6);
         return rounded == Math.Floor(rounded) && Math.Abs(rounded) < long.MaxValue ? (object)(long)rounded : rounded;
     }
 }

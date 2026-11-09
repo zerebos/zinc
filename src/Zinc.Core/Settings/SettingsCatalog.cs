@@ -41,8 +41,9 @@ public sealed record SettingsSection(string Id, string Title, string Glyph);
 
 /// <summary>
 /// One setting as the settings window shows it: where it goes, what it's called, how it's edited, and how the reader
-/// applies it (<see cref="Binding"/>). <see cref="Key"/> is its config.toml path ("font.size"). A setting without a
-/// binding is still read the older way and gives its default as <paramref name="DeclaredDefault"/>.
+/// applies it (<see cref="Binding"/>). <see cref="Key"/> is its config.toml path ("font.size"). Only settings the
+/// reader handles with its own code have no binding (<c>colors.theme</c>, a profile's fields, <c>[discover]</c>). Their
+/// default is <paramref name="DeclaredDefault"/>, which a bound setting leaves out.
 /// </summary>
 public sealed record SettingDef(string Section, string Group, string Key, string Label, string Description, SettingKind Kind,
     object? DeclaredDefault = null)
