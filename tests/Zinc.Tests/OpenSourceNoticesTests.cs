@@ -5,7 +5,8 @@ namespace Zinc.Tests;
 /// <summary>Settings > About's list of open-source software stays complete as dependencies change.</summary>
 public class OpenSourceNoticesTests
 {
-    private static readonly string Root = FindRoot();
+    /// <summary>The repository's root folder (the one with Zinc.slnx).</summary>
+    internal static readonly string Root = FindRoot();
 
     private static string FindRoot()
     {
@@ -18,24 +19,7 @@ public class OpenSourceNoticesTests
         return dir!.FullName;
     }
 
-    /// <summary>Where a shipped file comes from in the repository (the app's csproj links these folders, plus the repository's LICENSE).</summary>
-    private static string Source(string shipped)
-    {
-        if (shipped == OpenSourceNotices.Zinc.LicenseFile)
-        {
-            return Path.Combine(Root, "LICENSE");
-        }
-
-        var parts = shipped.Split('\\', 2);
-        var folder = parts[0] switch
-        {
-            "Licenses" => "licenses",
-            "Fonts" => "fonts",
-            "Themes" => "themes",
-            _ => throw new InvalidOperationException($"unexpected folder in {shipped}"),
-        };
-        return Path.Combine(Root, "assets", folder, parts[1]);
-    }
+    private static string Source(string shipped) => OpenSourceNotices.SourceIn(Root, shipped);
 
     /// <summary>The NuGet packages the app ships: what its projects reference, minus build-time tools.</summary>
     private static Dictionary<string, string> ShippedPackages()

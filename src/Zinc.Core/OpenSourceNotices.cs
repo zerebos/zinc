@@ -69,4 +69,27 @@ public static class OpenSourceNotices
         new("Zig standard library", "0.16.0", "Compiled into libghostty-vt, the glyph library and the shader translator",
             "MIT", "https://ziglang.org", @"Licenses\Zig.txt", []),
     ];
+
+    /// <summary>
+    /// Where <paramref name="licenseFile"/> (relative to the exe's folder) comes from in the repository at
+    /// <paramref name="repo"/>. The app's project links assets\licenses, assets\fonts and assets\themes into the exe's
+    /// folder, and ships the repository's LICENSE as Zinc's.
+    /// </summary>
+    public static string SourceIn(string repo, string licenseFile)
+    {
+        if (licenseFile == Zinc.LicenseFile)
+        {
+            return Path.Combine(repo, "LICENSE");
+        }
+
+        var parts = licenseFile.Split('\\', 2);
+        var folder = parts[0] switch
+        {
+            "Licenses" => "licenses",
+            "Fonts" => "fonts",
+            "Themes" => "themes",
+            _ => throw new InvalidOperationException($"unexpected folder in {licenseFile}"),
+        };
+        return Path.Combine(repo, "assets", folder, parts[1]);
+    }
 }

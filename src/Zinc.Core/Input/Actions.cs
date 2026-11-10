@@ -103,6 +103,23 @@ public static class Actions
     /// <summary>Every action name, with what its argument is and does (for docs and errors).</summary>
     public static IEnumerable<(string Name, string Description)> All => Definitions.Select(d => (d.Name, d.Description));
 
+    /// <summary>
+    /// Every action in registry order, for the reference export: its name, title, description, category, and what its
+    /// argument is (null for none). An argument named "optional-…" can be left out.
+    /// </summary>
+    internal static IEnumerable<(string Name, string Title, string Description, string Category, string? Argument)> Families =>
+        Definitions.Select(d => (d.Name, d.Title, d.Description, CategoryOf.GetValueOrDefault(d.Name, "Zinc"), d.Arg switch
+        {
+            Arg.None => null,
+            Arg.Direction => "direction",
+            Arg.Workspace => "workspace",
+            Arg.OptionalProfile => "optional-profile",
+            Arg.CopyMode => "copy-mode",
+            Arg.OptionalSidebarMode => "optional-sidebar-mode",
+            Arg.PromptDirection => "prompt-direction",
+            _ => throw new InvalidOperationException($"{d.Name}: no export name for its argument"),
+        }));
+
     /// <summary>Every action that needs no argument, as an invocation (for the settings' key list).</summary>
     public static IEnumerable<ActionInvocation> WithoutArguments =>
         Definitions.Where(d => d.Arg is Arg.None or Arg.OptionalProfile or Arg.CopyMode or Arg.OptionalSidebarMode)
