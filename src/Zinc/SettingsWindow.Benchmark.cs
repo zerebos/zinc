@@ -6,7 +6,10 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-/// <summary>About's drawing benchmark: run it (<see cref="BenchmarkWindow"/>), see and copy the last results.</summary>
+/// <summary>
+/// About's drawing benchmark, which runs in a <see cref="BenchmarkWindow"/> and shows the last results with a button
+/// to copy them.
+/// </summary>
 internal sealed partial class SettingsWindow
 {
     /// <summary>The last run's results, for the app's life (shown again whenever About is).</summary>
@@ -56,7 +59,7 @@ internal sealed partial class SettingsWindow
         }
         catch (Exception ex)
         {
-            Log.Crash("drawing benchmark", ex); // after an await: nothing above catches it
+            Log.Crash("drawing benchmark", ex); // this runs after an await, so nothing above catches it
         }
         finally
         {

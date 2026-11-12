@@ -5,16 +5,16 @@ using Microsoft.UI.Xaml.Media;
 
 namespace Zinc;
 
-// Environment variables ([environment] for every program, [profile.x.environment] for one profile's): a card listing
-// them, each value editable in place, with a remove button, and a row to add one. In a profile, the ones every profile
-// gets are listed too, as inherited, until the profile sets its own.
+// Environment variables (`[environment]` for every program, `[profile.x.environment]` for one profile's) get a card
+// that lists them, each with a value editable in place and a remove button, plus a row to add one. In a profile, the
+// card also lists the ones every profile gets, as inherited, until the profile sets its own.
 internal sealed partial class SettingsWindow
 {
     private Border EnvironmentCard(string? profile)
     {
         IReadOnlyList<string> Path(string name) => profile == null ? ["environment", name] : ["profile", profile, "environment", name];
 
-        // As config.toml has them: this level's own, and (in a profile) every profile's.
+        // The variables config.toml sets at one level, which is every profile's (null) or one profile's own.
         Dictionary<string, string> Own(string? of)
         {
             IReadOnlyDictionary<string, object> values = of == null ? _config.GlobalValues
@@ -113,7 +113,7 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        // Adding one: a name and a value, written together.
+        // The row that adds a variable writes its name and value together.
         var newName = new TextBox { PlaceholderText = "Name", FontFamily = new FontFamily("Cascadia Mono, Consolas") };
         var newValue = new TextBox { PlaceholderText = "Value (%PATH% and the like work)", FontFamily = new FontFamily("Cascadia Mono, Consolas") };
         AutomationProperties.SetName(newName, "New variable's name");

@@ -20,11 +20,11 @@ namespace Zinc;
 
 /// <summary>
 /// The settings window: every setting in <see cref="SettingsCatalog"/>, grouped by section, each
-/// written to config.toml as soon as it changes (one key at a time, spliced in place; a default is
+/// written to config.toml as soon as it changes (one key at a time, spliced in place, and a default is
 /// written as nothing) and applied by the config watcher's live reload, so your terminals show it
 /// right away. "Undo changes" puts the file back as it was when the window opened. While
-/// config.toml has an error, nothing is written. Its own window, so fonts and colors are judged
-/// on the real terminals beside it.
+/// config.toml has an error, nothing is written. Settings is its own window, so fonts and colors are
+/// judged on the real terminals beside it.
 /// </summary>
 internal sealed partial class SettingsWindow : Window
 {
@@ -36,16 +36,19 @@ internal sealed partial class SettingsWindow : Window
     private readonly NavigationView _nav;
     private readonly AutoSuggestBox _search;
 
-    /// <summary>The page's widest (cards up to 1000 px, as Windows Settings' and the Community Toolkit's settings samples), with its margins.</summary>
+    /// <summary>
+    /// The widest the page gets: cards up to 1000 px wide (like the ones in Windows Settings and the Community Toolkit's
+    /// settings samples) plus the page's margins.
+    /// </summary>
     private const double PageWidth = 1000 + 2 * 40;
 
     // The bottom padding leaves room for the undo bar floating over the last card.
     private readonly StackPanel _page = new() { Spacing = 4, MaxWidth = PageWidth, Padding = new Thickness(40, 12, 40, 96) };
     private readonly ScrollViewer _scroller = new() { HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
 
-    // What the scroller holds: a plain stretching grid with the page centered in it. The page itself in the scroller
-    // (a StackPanel with MaxWidth) came out shifted right, off the window, on a page shorter than the window once the
-    // window was wide enough for MaxWidth to apply (a search for "blink" at 1228 px).
+    // The scroller holds this plain stretching grid, with the page centered in it. The page (a StackPanel with MaxWidth)
+    // placed directly in the scroller is shifted right, off the window, when the page is shorter than the window and
+    // the window is wide enough for MaxWidth to apply.
     private readonly Grid _pageHost = new();
     private readonly Border _snackbar;
     private readonly Button _undo = new() { Content = "Undo changes", IsEnabled = false };
@@ -76,8 +79,9 @@ internal sealed partial class SettingsWindow : Window
         Updater.Changed += ShowUpdateStatus;
         Closed += (_, _) => Updater.Changed -= ShowUpdateStatus;
 
-        // The search box: in the title bar (as the main window's command center, and as Store, Photos and WinUI Gallery
-        // have theirs). No suggestions: typing shows the results page, Enter goes to the first result, Esc clears it.
+        // The search box is in the title bar, like the main window's command center and like the search boxes in Store,
+        // Photos and WinUI Gallery. It shows no suggestions. Typing shows the results page, Enter goes to the first
+        // result and Esc clears the box.
         _search = new AutoSuggestBox
         {
             PlaceholderText = "Find a setting",
@@ -89,8 +93,9 @@ internal sealed partial class SettingsWindow : Window
         AutomationProperties.SetName(_search, "Find a setting");
         ToolTipService.SetToolTip(_search, "Find a setting (Ctrl+F)");
 
-        // Title bar: the app's mark, the window's name, and the search box in the middle. WinUI's TitleBar keeps the box
-        // clickable and the rest draggable; a box in it needs the tall caption (48 px), as in Windows Settings.
+        // The title bar holds the app's mark, the window's name, and the search box in the middle. WinUI's TitleBar keeps
+        // the box clickable and the rest draggable. A box in the title bar needs the tall caption (48 px), as in Windows
+        // Settings.
         var titleBar = new TitleBar
         {
             Title = "Zinc Settings",
@@ -101,16 +106,17 @@ internal sealed partial class SettingsWindow : Window
         };
         _titleBar = titleBar;
         titleBar.BackRequested += (_, _) => _backTo?.Invoke();
-        // WinUI centers the content at its own width (the box then fit its placeholder): stretched, the box grows to its
-        // MaxWidth, centered, and shrinks with the window.
+        // WinUI centers the content at its own width by default, which makes the box only as wide as its placeholder.
+        // Stretched, the box grows to its MaxWidth, stays centered, and shrinks with the window.
         titleBar.Resources["TitleBarContentHorizontalAlignment"] = HorizontalAlignment.Stretch;
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Tall;
-        // Typing searches; the window clearing the box itself (going to a result) doesn't.
+        // Typing searches, but the window clearing the box itself (when it goes to a result) doesn't.
         _search.TextChanged += (_, e) =>
         {
             if (e.Reason == AutoSuggestionBoxTextChangeReason.UserInput)
             {
-                // Results belong to no section: none selected, so any can be clicked (back with the box cleared).
+                // Results belong to no section, so no section is selected while they show and any section can be clicked.
+                // Clearing the box selects the section again.
                 SelectSection(_search.Text.Trim().Length > 0 ? null : _section);
                 Render();
             }
@@ -125,7 +131,7 @@ internal sealed partial class SettingsWindow : Window
             }
         };
 
-        // The undo bar: floats at the bottom while there are changes to undo.
+        // The undo bar floats at the bottom while there are changes to undo.
         ToolTipService.SetToolTip(_undo, "Puts config.toml back as it was when Settings opened");
         _undo.Click += (_, _) => Guard("undoing changes", () =>
         {
@@ -172,7 +178,7 @@ internal sealed partial class SettingsWindow : Window
 
         _nav = new NavigationView
         {
-            // Full sidebar when wide, icons when narrower, behind the title bar's hamburger when narrow (Windows Settings').
+            // Full sidebar when wide, icons when narrower, behind the title bar's hamburger when narrow, as in Windows Settings.
             PaneDisplayMode = NavigationViewPaneDisplayMode.Auto,
             IsBackButtonVisible = NavigationViewBackButtonVisible.Collapsed,
             IsSettingsVisible = false,
@@ -203,7 +209,7 @@ internal sealed partial class SettingsWindow : Window
             _scroller.ChangeView(null, 0, null, disableAnimation: true);
         }
 
-        // The sidebar folded (icons, or hidden in a narrow window): the title bar's hamburger opens it.
+        // When the sidebar is folded (to icons, or hidden in a narrow window), the title bar's hamburger opens it.
         _titleBar.PaneToggleRequested += (_, _) => _nav.IsPaneOpen = !_nav.IsPaneOpen;
         _nav.DisplayModeChanged += (_, e) => _titleBar.IsPaneToggleButtonVisible = e.DisplayMode != NavigationViewDisplayMode.Expanded;
         _nav.SelectionChanged += (_, e) =>
@@ -213,8 +219,9 @@ internal sealed partial class SettingsWindow : Window
                 Navigate(id);
             }
         };
-        // The section already selected, clicked while search results or a sub-page (a profile, a scheme) show: back to
-        // it. (No selection change, so SelectionChanged never came: the section stayed out of reach.)
+        // Clicking the section that's already selected while search results or a sub-page (a profile, a scheme) show goes
+        // back to that section. The selection doesn't change, so `SelectionChanged` doesn't fire, and without this
+        // handler the section would stay out of reach.
         _nav.ItemInvoked += (_, e) =>
         {
             if (!_navigating && e.InvokedItemContainer is NavigationViewItem { Tag: string id } item && ReferenceEquals(item, _nav.SelectedItem) &&
@@ -276,11 +283,11 @@ internal sealed partial class SettingsWindow : Window
         return area;
     }
 
-    /// <summary>The config was read again (after our write, or an edit elsewhere): show what's in force.</summary>
+    /// <summary>Shows what's in force once the config was read again (after our write, or an edit elsewhere).</summary>
     public void Refresh(ConfigFile config)
     {
-        // The profile being edited, as the page shows it: a change in whether it can open (its
-        // search turned back on), its name or where it came from rebuilds the page.
+        // The profile being edited, as the page shows it. A change in whether the profile can open (its
+        // search turned back on), in its name or in where it came from rebuilds the page.
         static object? Shape(Profile? p) => p is null ? null : (p.Name, p.Missing, p.Found, p.Source);
         var editedBefore = _editing is { } id ? Shape(_config.Profiles.FirstOrDefault(p => p.Id == id)) : null;
         _config = config;
@@ -379,7 +386,7 @@ internal sealed partial class SettingsWindow : Window
                 AddGroup(group.Key, group);
                 if (_section == "terminal" && group.Key == "Shell")
                 {
-                    _page.Children.Add(EnvironmentCard(null)); // [environment]: a table, not one value
+                    _page.Children.Add(EnvironmentCard(null)); // [environment] is a table, not one value
                 }
 
                 if (group.Key == "When you come back")
@@ -441,7 +448,7 @@ internal sealed partial class SettingsWindow : Window
         {
             if (FoldFor(setting.Key) is { } fold)
             {
-                // The fold goes where its first setting is; the rest are in it.
+                // The fold goes where its first setting is, and the rest of its settings are inside it.
                 if (setting.Key == (fold.Lead ?? fold.Children[0]))
                 {
                     _page.Children.Add(SettingFoldCard(fold));
@@ -462,7 +469,7 @@ internal sealed partial class SettingsWindow : Window
         }
     }
 
-    // Text in the theme's type ramp (WinUI Gallery: Typography), not hand-set sizes, so it follows Windows.
+    // Text uses the theme's type ramp (WinUI Gallery's Typography page) instead of hand-set sizes, so it follows Windows.
     private static Style TextStyle(string name) => (Style)Application.Current.Resources[name];
 
     private static TextBlock GroupTitle(string title) =>
@@ -483,7 +490,7 @@ internal sealed partial class SettingsWindow : Window
             Brand.IsDark(_page) ? "quadrant-zinc-dark.svg" : "quadrant-zinc-light.svg");
         var image = new Image
         {
-            Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(lockup)), // vector: the cells stay crisp at any scale
+            Source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(new Uri(lockup)), // a vector image, so the cells stay crisp at any scale
             // The mark's cells only show apart from 64 px up, and blur together when smaller.
             Height = 100,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -512,12 +519,12 @@ internal sealed partial class SettingsWindow : Window
         OpenSourceList();
     }
 
-    // The Updates card's live parts (replaced on every render; ShowUpdateStatus updates them in place).
+    // The Updates card's live parts (replaced on every render, and `ShowUpdateStatus` updates them in place).
     private TextBlock? _updateStatus;
     private Button? _updateCheck, _updateRestart;
     private HyperlinkButton? _updateNotes;
 
-    /// <summary>Updates: where things stand (live), Check for updates / Restart now, and the automatic-check switch.</summary>
+    /// <summary>Updates: where things stand (live), Check for updates / Restart Zinc, and the automatic-check switch.</summary>
     private void UpdatesGroup()
     {
         var at = _page.Children.Count;
@@ -604,7 +611,7 @@ internal sealed partial class SettingsWindow : Window
             }
             catch (Exception ex)
             {
-                Log.Crash("release notes", ex); // after an await: an escape would end the process
+                Log.Crash("release notes", ex); // after an await, an exception that escapes would end the process
             }
         }
     }
@@ -737,7 +744,7 @@ internal sealed partial class SettingsWindow : Window
         {
             if (e.DropResult == DataPackageOperation.Move)
             {
-                // Shown as dropped already: the reload that follows has nothing to re-render.
+                // The list already shows the dropped order, so the reload that follows has nothing to re-render.
                 var order = list.Items.OfType<ListViewItem>().Select(i => (string)i.Tag).ToList();
                 _profilesShown = [.. order.Select(id => _profilesShown.First(p => p.Id == id))];
                 WriteProfileOrder(order);
@@ -764,13 +771,16 @@ internal sealed partial class SettingsWindow : Window
     private static string SearchLabel(string? source) =>
         SettingsCatalog.Discovery.FirstOrDefault(d => d.Path[1] == source)?.Label ?? source ?? "";
 
-    /// <summary>What turns a profile that can't open back on: its search, or (gone for good) Delete, confirmed.</summary>
+    /// <summary>
+    /// The button that fixes a profile that can't open. It turns the profile's search back on or, when the profile is
+    /// gone for good, deletes the profile after a confirmation.
+    /// </summary>
     private Button? MissingFix(Profile profile)
     {
         if (profile.Missing == ProfileMissing.SearchOff && profile.Source is { } source)
         {
             var on = new Button { Content = $"Turn on \"{SearchLabel(source)}\"" };
-            on.Click += (_, _) => Write(["discover", source], null); // on is the default: the line goes
+            on.Click += (_, _) => Write(["discover", source], null); // on is the default, so the line is removed
             return on;
         }
 
@@ -850,7 +860,7 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>
     /// The profiles' order, as <c>profile-order</c> (every id, so profiles found later go after
     /// them). Without a default-profile the default is the first one, so moving profiles would
-    /// change it: the default in force is written first.
+    /// change it, so the default in force is written first.
     /// </summary>
     private void WriteProfileOrder(List<string> ids)
     {
@@ -890,7 +900,7 @@ internal sealed partial class SettingsWindow : Window
             _scroller.ChangeView(null, 0, null, disableAnimation: true);
         };
 
-        // Moving without a mouse (and for automation): the same order a drag writes.
+        // Moves the profile without a mouse (and for automation), writing the same order a drag writes.
         var at = order.IndexOf(profile.Id);
         void Move(int to)
         {
@@ -1026,7 +1036,7 @@ internal sealed partial class SettingsWindow : Window
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
 
-    /// <summary>A profile of your own, named "New profile", running what the default profile runs; opened in the editor.</summary>
+    /// <summary>A profile of your own, named "New profile", running what the default profile runs, and opened in the editor.</summary>
     private void NewProfile()
     {
         var n = 1;
@@ -1106,7 +1116,7 @@ internal sealed partial class SettingsWindow : Window
             _page.Children.Add(ProfileGroupFold(group.Key, id, [.. group], rows));
         }
 
-        // Found profiles go back to what was found; your own can be deleted.
+        // Found profiles go back to what was found, and your own can be deleted.
         var found = profile is { Found: true };
         var remove = new Button { Content = found ? "Undo all changes to this profile" : "Delete this profile", Margin = new Thickness(0, 24, 0, 0) };
         var confirm = new Button { Content = found ? "Undo all changes" : "Delete profile", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
@@ -1153,9 +1163,9 @@ internal sealed partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// A setting in a profile: shows the value in force for it, inherited ("Inherited: 11 pt")
-    /// until changed here, which writes it into the profile's section; the reset arrow removes it
-    /// again.
+    /// A setting in a profile. The card shows the value in force for the profile, which is inherited
+    /// ("Inherited: 11 pt") until it's changed here. A change writes the value into the profile's section, and the
+    /// reset arrow removes it again.
     /// </summary>
     private Border OverrideCard(SettingDef setting, string id)
     {
@@ -1184,8 +1194,8 @@ internal sealed partial class SettingsWindow : Window
                 return;
             }
 
-            // The control's "default" (the included font, a number's default) is a value of the
-            // profile's own here: without one, it inherits whatever the defaults say.
+            // Here the control's "default" (the included font, a number's default) is written as a value of the
+            // profile's own, because without one the profile inherits whatever the defaults say.
             value ??= setting.Kind == SettingKind.Font ? BundledFonts.Family : setting.Default;
             if (value != null && SettingsCatalog.Problem(setting, value) is { } problem)
             {
@@ -1328,7 +1338,8 @@ internal sealed partial class SettingsWindow : Window
 
     /// <summary>
     /// The color scheme as a card: the scheme in force (both of a light/dark pair) as tiles on a button that opens the color
-    /// schemes page (SettingsWindow.SchemesPage.cs). In a profile: inherited until changed there; the reset arrow inherits again.
+    /// schemes page (SettingsWindow.SchemesPage.cs). In a profile the scheme is inherited until it's changed there, and the
+    /// reset arrow makes the profile inherit it again.
     /// </summary>
     private Border SchemeCard(SettingDef setting, string? profile)
     {
@@ -1401,7 +1412,7 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>A value as words, for "Inherited: …".</summary>
     private static string Describe(SettingDef setting, object? value) => value switch
     {
-        // A color with named values (pane headers): its null is one of them ("Standard")
+        // A color with named values (pane headers), where null is one of those values ("Standard")
         _ when setting.Kind == SettingKind.Color && setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value)) is { } level =>
             level.Label,
         null => setting.Kind switch
@@ -1419,7 +1430,7 @@ internal sealed partial class SettingsWindow : Window
         _ => setting.Unit is { } unit ? $"{Format(value)} {unit}" : Format(value),
     };
 
-    /// <summary>The small arrow beside a setting's name that puts it back; shown while it's changed.</summary>
+    /// <summary>The small arrow beside a setting's name that puts the setting back, shown while the setting is changed.</summary>
     private static Button ResetArrow(string name, string tip)
     {
         var button = new Button
@@ -1438,8 +1449,8 @@ internal sealed partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// An arrow that goes left and turns back down (the shape of Heroicons' arrow-uturn-left, MIT):
-    /// "put it back". Drawn in a 24-unit box with a 1.5-unit stroke, like the original.
+    /// An arrow that goes left and turns back down (the shape of Heroicons' arrow-uturn-left, MIT),
+    /// which means "put it back". Drawn in a 24-unit box with a 1.5-unit stroke, like the original.
     /// </summary>
     private static Viewbox UTurnArrow()
     {
@@ -1513,7 +1524,7 @@ internal sealed partial class SettingsWindow : Window
         Margin = new Thickness(0, 6, 0, 0),
     };
 
-    /// <summary>A card: name (+ reset arrow), description, config key and error on the left; the control on the right.</summary>
+    /// <summary>A card with the name (and reset arrow), description, config key and error on the left, and the control on the right.</summary>
     private static Border CardLayout(TextBlock label, Button? reset, TextBlock? description, string? key, TextBlock? error, FrameworkElement control)
     {
         label.TextWrapping = TextWrapping.Wrap;
@@ -1543,13 +1554,13 @@ internal sealed partial class SettingsWindow : Window
         return CardBorder(TextAndControl(text, control));
     }
 
-    /// <summary>Below this width a card's control goes under its text (Windows Terminal's threshold for its cards, less their padding).</summary>
+    /// <summary>Below this width a card's control goes under its text (Windows Terminal's threshold for its cards, minus their padding).</summary>
     private const double NarrowCard = 440;
 
     /// <summary>One width for dropdowns, text boxes and pickers, so their left edges line up down the page.</summary>
     private const double ControlWidth = 280;
 
-    /// <summary>Text on the left, the control on the right; on a narrow card, the control under the text.</summary>
+    /// <summary>Text on the left and the control on the right. On a narrow card, the control goes under the text.</summary>
     private static Grid TextAndControl(FrameworkElement text, FrameworkElement control)
     {
         control.VerticalAlignment = VerticalAlignment.Center;
@@ -1588,7 +1599,7 @@ internal sealed partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// After a reset its arrow disappears, taking keyboard focus with it: hand focus to the
+    /// After a reset the reset arrow disappears and takes keyboard focus with it, so this hands focus to the
     /// setting's control instead (as Windows Terminal does).
     /// </summary>
     private static void FocusAfterReset(Button reset, FrameworkElement control)
@@ -1645,7 +1656,7 @@ internal sealed partial class SettingsWindow : Window
 
     /// <summary>
     /// The control for <paramref name="setting"/>, calling <paramref name="commit"/> with each new
-    /// value (null: the default), and how to show a value from the file in it.
+    /// value (null means the default), and how to show a value from the file in it.
     /// </summary>
     private (FrameworkElement Control, Action<object?> Show) Control(SettingDef setting, Action<object?> commit, string? profile = null) => setting.Kind switch
     {
@@ -1693,9 +1704,10 @@ internal sealed partial class SettingsWindow : Window
     }
 
     /// <summary>
-    /// A color that can also be one of a few named values (pane headers: how far the made fill stands from the
-    /// background): the names in a list with "Custom color" last, and the color control under it while that's chosen.
-    /// Choosing "Custom color" starts from the color the current choice makes, so the picker opens on it.
+    /// A color that can also be one of a few named values (for pane headers, a name says how far the made fill stands
+    /// from the background). The names are in a list with "Custom color" last, and the color control shows under the
+    /// list while "Custom color" is chosen. Choosing "Custom color" starts from the color the current choice makes, so
+    /// the picker opens on that color.
     /// </summary>
     private (FrameworkElement, Action<object?>) LevelOrColorControl(SettingDef setting, Action<object?> commit, string? profile)
     {
@@ -1709,7 +1721,7 @@ internal sealed partial class SettingsWindow : Window
         box.Items.Add("Custom color");
         var custom = setting.Choices.Count;
         var (color, showColor) = ColorControl(setting, commit, profile);
-        var showing = false; // (setting the list from the file isn't a choice)
+        var showing = false; // true while the list is set from the file, which isn't the user choosing
         object? current = null;
         box.SelectionChanged += (_, _) =>
         {
@@ -1770,7 +1782,7 @@ internal sealed partial class SettingsWindow : Window
 
         return (panel, value =>
         {
-            // Padding written as [left, right]: shown, edited in the file.
+            // Padding written as [left, right] is shown here as text and edited in the file.
             var list = value is List<object>;
             special.Text = list ? $"{ConfigEditor.FormatValue(value!)} in config.toml" : "";
             special.Visibility = list ? Visibility.Visible : Visibility.Collapsed;
@@ -1919,8 +1931,8 @@ internal sealed partial class SettingsWindow : Window
                 BorderThickness = new Thickness(2),
             };
 
-            // The chip keeps its color in every state (a button's hover and press fills would hide
-            // it); hovering shows a ring instead. One brush per chip, recolored for each scheme.
+            // The chip keeps its color in every state, because a button's hover and press fills would hide
+            // it, and hovering shows a ring instead. One brush per chip, recolored for each scheme.
             var fill = chipFills[i] = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
             chip.Background = fill;
             foreach (var key in new[] { "ButtonBackground", "ButtonBackgroundPointerOver", "ButtonBackgroundPressed" })
@@ -1967,7 +1979,7 @@ internal sealed partial class SettingsWindow : Window
 
         string? shown = null;
         var open = false;      // the flyout is open
-        var dragging = false;  // the full picker is out: its changes are written as they settle
+        var dragging = false;  // the full picker is out, so its changes are written as they settle
         void Paint(string? hex) => swatch.Background = new SolidColorBrush(hex != null && TryHex(hex, out var c) ? c : NullColor());
         void Apply(string text)
         {
@@ -1981,7 +1993,7 @@ internal sealed partial class SettingsWindow : Window
             Mark();
         }
 
-        // Which choice is current: a chip with the same color, or "use the scheme's".
+        // Marks the current choice, which is a chip with the same color or "use the scheme's".
         void Mark()
         {
             var has = TryHex(box.Text, out var current);
@@ -2035,8 +2047,8 @@ internal sealed partial class SettingsWindow : Window
             dragging = true;
         };
 
-        // While the full picker is out, each change is written once it settles for a moment:
-        // live, without a config reload per pixel of a drag.
+        // While the full picker is out, each change is written once it settles for a moment,
+        // which keeps the color live without a config reload per pixel of a drag.
         void Picked()
         {
             box.Text = SchemeTiles.Hex(picker.Color);
@@ -2110,7 +2122,7 @@ internal sealed partial class SettingsWindow : Window
         });
     }
 
-    /// <summary>The colors of the scheme in force for <paramref name="profile"/> (null: the defaults), on today's Windows mode.</summary>
+    /// <summary>The colors of the scheme in force for <paramref name="profile"/> (null means the defaults), under Windows' current light or dark mode.</summary>
     private TerminalTheme SchemeTheme(string? profile)
     {
         var name = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme");
@@ -2141,7 +2153,7 @@ internal sealed partial class SettingsWindow : Window
             var family = value as string;
             if (family != null && !family.Equals(BundledFonts.Family, StringComparison.OrdinalIgnoreCase) && !box.Items.Contains(family))
             {
-                box.Items.Add(family); // not installed, or not monospace: still shown as written
+                box.Items.Add(family); // not installed, or not monospace, but still shown as written
             }
 
             box.SelectedItem = family is null || family.Equals(BundledFonts.Family, StringComparison.OrdinalIgnoreCase) ? BundledFontLabel : family;

@@ -11,10 +11,10 @@ using Windows.UI.Core;
 
 namespace Zinc;
 
-// The Keyboard page: every action with its keys. Add a key by pressing it; click a key to take it
-// away; the reset arrow puts an action back to its default keys. An action that takes an argument
-// (split: a direction; new tab: a profile) is one card listing its variants that have keys, and
-// "Add a key for another …" binds any other. Written to [keys] (KeyBindingEditor).
+// The Keyboard page lists every action with its keys. Pressing a key adds it, clicking a key takes it away, and the
+// reset arrow puts an action back to its default keys. An action that takes an argument (a direction for split, a
+// profile for new tab) is one card listing its variants that have keys, and "Add a key for another …" binds any other
+// variant. `KeyBindingEditor` writes the changes to `[keys]`.
 internal sealed partial class SettingsWindow
 {
     private readonly StackPanel _keyRows = new() { Spacing = 4 };
@@ -59,7 +59,9 @@ internal sealed partial class SettingsWindow
     private List<KeyChord> ChordsOf(ActionInvocation action) =>
         [.. _config.Keybindings.All.Where(b => b.Action == action).Select(b => b.Chord)];
 
-    /// <summary>Tabs inside panes: without them a new tab is a new workspace, and its keys are titled so.</summary>
+    /// <summary>
+    /// Whether panes have tabs. Without them a new tab is a new workspace, and the titles of the tab actions say so.
+    /// </summary>
     private bool PaneTabs => _config.Global.PaneTabs;
 
     private List<KeySequence> SequencesOf(ActionInvocation action) =>
@@ -73,7 +75,7 @@ internal sealed partial class SettingsWindow
         var profiles = KeyProfiles();
         bool Matches(string text) => query.Length == 0 || text.Contains(query, StringComparison.OrdinalIgnoreCase);
 
-        // Grouped (Clipboard, Tabs, Panes…), each group in the registry's order; groups the
+        // The actions are grouped (Clipboard, Tabs, Panes…), each group in the registry's order, and groups the
         // filter leaves empty aren't shown.
         foreach (var group in KeyActions().GroupBy(Actions.Category).OrderBy(g => IndexOf(Actions.Categories, g.Key)))
         {
@@ -148,7 +150,7 @@ internal sealed partial class SettingsWindow
         };
     }
 
-    /// <summary>Two shares of the width to the keys, one to the name (never under 200 px).</summary>
+    /// <summary>Two shares of the width go to the name (never under 200 px) and three to the keys.</summary>
     private static Grid NameAndKeys(FrameworkElement name, FrameworkElement keys)
     {
         var grid = new Grid { ColumnSpacing = 24 };
@@ -177,7 +179,7 @@ internal sealed partial class SettingsWindow
         var argument = Actions.ArgumentName(family);
         var variants = Actions.Variants(family, profiles);
 
-        // In the variants' own order (Right, Down, Left, Up; 1-9, the last), others after them.
+        // Sorted in the variants' own order (Right, Down, Left, Up, or 1-9 and then the last), with others after them.
         int Rank(ActionInvocation a) => variants.ToList().FindIndex(v => v.Invocation == a) is var i and >= 0 ? i : int.MaxValue;
         actions = [.. actions.OrderBy(Rank).ThenBy(Actions.Format, StringComparer.Ordinal)];
         var name = ActionName(title, $"{family} <{argument}>", [.. actions.SelectMany(a => KeyBindingEditor.Reset(lines, a))]);
@@ -198,7 +200,7 @@ internal sealed partial class SettingsWindow
             body.Children.Add(NameAndKeys(label, KeysPanel(action, Actions.Title(action, PaneTabs), ChordsOf(action), SequencesOf(action), lines)));
         }
 
-        // Any other variant: pick it in the capture flyout (the first one without keys to start).
+        // Any other variant is picked in the capture flyout, which starts on the first variant without keys.
         var first = variants.FirstOrDefault(v => !actions.Contains(v.Invocation))?.Invocation ?? variants[0].Invocation;
         var another = new Button
         {
@@ -208,7 +210,7 @@ internal sealed partial class SettingsWindow
                 Spacing = 8,
                 Children = { new FontIcon { Glyph = AddGlyph, FontSize = 12 }, new TextBlock { Text = $"Add a key for another {argument}" } },
             },
-            Margin = new Thickness(folded ? -8 : 16, 2, 0, 0), // (its icon under the labels in a fold)
+            Margin = new Thickness(folded ? -8 : 16, 2, 0, 0), // in a fold, the icon sits under the labels
             Padding = new Thickness(8, 4, 10, 4),
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderThickness = new Thickness(0),
@@ -254,8 +256,8 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// A chord as keycaps, one per key ("Ctrl" "Shift" "C"), the way Windows shows shortcuts; a
-    /// sequence's steps ("Ctrl+A > C") separated by an arrow.
+    /// A chord as keycaps, one per key ("Ctrl" "Shift" "C"), the way Windows shows shortcuts. A
+    /// sequence's steps ("Ctrl+A > C") are separated by an arrow.
     /// </summary>
     private static StackPanel Keycaps(string label)
     {
@@ -286,7 +288,7 @@ internal sealed partial class SettingsWindow
         return caps;
     }
 
-    /// <summary>A key as a chip; clicking it removes the key.</summary>
+    /// <summary>A key as a chip that removes the key when clicked.</summary>
     private static Button KeyChip(string label, string removeName, Action remove)
     {
         var chip = new Button
@@ -310,9 +312,9 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// "Press the keys": captures a chord (modifiers held, then a key), says what it would do
+    /// The "Press the keys" flyout captures a chord (modifiers held, then a key), says what it would do
     /// (taken from another action, starts sequences, can't be written), and adds it on confirm.
-    /// With <paramref name="variants"/>, it first asks which one (split: which direction).
+    /// With <paramref name="variants"/>, it first asks which one (which direction, for split).
     /// </summary>
     private Flyout CaptureFlyout(ActionInvocation action, string title, IReadOnlyDictionary<string, string> lines,
         IReadOnlyList<ActionVariant>? variants = null)

@@ -34,7 +34,7 @@ internal sealed partial class SettingsWindow
     /// <summary>A page area shorter than this has no room for the preview (it would leave little for the settings).</summary>
     private const double PreviewRoom = 560;
 
-    /// <summary>Pinned above the scrolling page: the page's heading (and back link), then the preview.</summary>
+    /// <summary>The area pinned above the scrolling page, which holds the page's heading and then the preview.</summary>
     private readonly StackPanel _pinned = new() { MaxWidth = PageWidth, Padding = new Thickness(40, 12, 40, 4) };
 
     private TerminalControl? _preview;
@@ -51,8 +51,8 @@ internal sealed partial class SettingsWindow
         : null;
 
     /// <summary>
-    /// After a page is built: with a preview, its heading (and anything above it) moves into the
-    /// pinned area over the preview, so they stay put while the settings scroll.
+    /// Runs after a page is built. When the page has a preview, the page's heading (and anything above it) moves
+    /// into the pinned area over the preview, so they stay put while the settings scroll.
     /// </summary>
     private void PlacePreview(FrameworkElement heading)
     {
@@ -85,8 +85,8 @@ internal sealed partial class SettingsWindow
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_previewFrame, "Preview");
             Closed += (_, _) => _preview.Close();
-            // It can't scroll: taller rows or a narrow window make its script need more room, so the frame grows to fit
-            // it (and back), up to a cap past which the top of the script scrolls out of view.
+            // The preview can't scroll, and taller rows or a narrow window make its script need more room. So the frame
+            // grows to fit the script (and shrinks back), up to a cap past which the top of the script scrolls out of view.
             _preview.PreviewHeightNeeded += needed =>
             {
                 var height = Math.Clamp(Math.Ceiling(needed) + 2, PreviewHeight, PreviewMaxHeight); // + the frame's border
@@ -101,7 +101,7 @@ internal sealed partial class SettingsWindow
             _preview.ApplyConfig(config);
         }
 
-        // The heading gets the show/hide button on its right (built with it: headings are per page).
+        // The heading gets the show/hide button on its right (built with the heading, because headings are per page).
         var headingAt = _pinned.Children.IndexOf(heading);
         _pinned.Children.RemoveAt(headingAt);
         _previewToggle = PreviewToggle();
@@ -114,7 +114,9 @@ internal sealed partial class SettingsWindow
     private bool _previewHidden;
     private Button? _previewToggle;
 
-    /// <summary>The preview is hidden (the button beside the page heading); remembered with the session.</summary>
+    /// <summary>
+    /// Whether the preview is hidden (by the button beside the page heading), which is remembered with the session.
+    /// </summary>
     public bool PreviewHidden
     {
         get => _previewHidden;
@@ -135,7 +137,7 @@ internal sealed partial class SettingsWindow
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Center,
             Padding = new Thickness(8, 4, 10, 4),
-            Margin = new Thickness(0, 8, 0, 12), // the heading's own margins: centered on its text
+            Margin = new Thickness(0, 8, 0, 12), // the heading's own margins, which center the button on the heading's text
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
             BorderThickness = new Thickness(0),
         };
@@ -176,9 +178,9 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// Shows <paramref name="scheme"/> (null: none of its own, i.e. Zinc's own or inherited) in
-    /// the preview as if written at <paramref name="path"/>: config.toml read again with just that
-    /// changed, so colors it sets itself (background, a palette entry) still win, as after saving.
+    /// Shows <paramref name="scheme"/> in the preview as if it were written at <paramref name="path"/>. A null scheme
+    /// means none of its own, which is Zinc's own or the inherited one. config.toml is read again with just that
+    /// value changed, so colors the config sets itself (background, a palette entry) still win, as they do after saving.
     /// </summary>
     private void PreviewScheme(IReadOnlyList<string> path, string? scheme)
     {
@@ -191,7 +193,8 @@ internal sealed partial class SettingsWindow
         {
             var text = File.Exists(_config.Path) ? File.ReadAllText(_config.Path) : "";
             var edited = ConfigFile.Parse(scheme == null ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, scheme), _config.Path);
-            // (Read without looking for shells: a found profile without a section has the global colors.)
+            // The edited text is read without looking for shells, so a discovered profile that has no section isn't
+            // in it and gets the global colors.
             var colors = (_editing is { } id ? edited.FindProfile(id)?.Config ?? edited.Global : edited.Global).Theme;
             _preview.ApplyConfig(shown with { Theme = colors });
         }
@@ -201,7 +204,10 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>The preview runs <paramref name="files"/> (full paths) as its shaders: a shader previewed on the shaders page.</summary>
+    /// <summary>
+    /// Makes the preview run <paramref name="files"/> (full paths) as its shaders, for a shader previewed on the shaders
+    /// page.
+    /// </summary>
     private void PreviewShaders(IReadOnlyList<string> files)
     {
         if (_preview != null && _pinned.Visibility == Visibility.Visible && PreviewConfig() is { } shown)
@@ -210,7 +216,8 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    // Shown on the shaders and color schemes pages, though hidden (previewing from the library would show nothing otherwise).
+    // The preview is shown on the shaders and color schemes pages even though the user hid it, because previewing from
+    // the library would show nothing otherwise.
     private bool _previewShownForPicker;
 
     private void PreviewForLibrary(bool open)
@@ -229,12 +236,12 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>The config was read again: the preview shows what's in force now.</summary>
+    /// <summary>Called when the config was read again, so the preview shows what's in force now.</summary>
     private void RefreshPreview()
     {
         if (_preview != null && _pinned.Visibility == Visibility.Visible && PreviewConfig() is { } config)
         {
-            _preview.ApplyConfig(config); // (while hidden too: it's current when shown again)
+            _preview.ApplyConfig(config); // while hidden too, so the preview is current when shown again
         }
     }
 }

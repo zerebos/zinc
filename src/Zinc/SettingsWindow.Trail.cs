@@ -6,9 +6,9 @@ using Zinc.Settings;
 
 namespace Zinc;
 
-// Where the page is, as Windows Settings shows it: the heading is a breadcrumb ("Appearance › Color schemes",
-// "Profiles › Fedora › Shaders"), each earlier step a way back to it, and the title bar's back arrow goes one step up.
-// (Sub-pages had a "‹ Back" link each before.)
+// Shows where the page is, the way Windows Settings does. The heading is a breadcrumb ("Appearance › Color schemes",
+// "Profiles › Fedora › Shaders") in which each earlier step goes back to that step's page, and the title bar's back
+// arrow goes one step up.
 internal sealed partial class SettingsWindow
 {
     private TitleBar _titleBar = null!;
@@ -51,7 +51,10 @@ internal sealed partial class SettingsWindow
         return trail;
     }
 
-    /// <summary>Back to the section's page (or, <paramref name="keepProfile"/>, the profile's), leaving any sub-page.</summary>
+    /// <summary>
+    /// Goes back to the section's page (or to the profile's when <paramref name="keepProfile"/> is set), leaving any
+    /// sub-page.
+    /// </summary>
     private void GoUp(bool keepProfile)
     {
         _editingScheme = null;
@@ -73,7 +76,9 @@ internal sealed partial class SettingsWindow
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
 
-    /// <summary>The page's heading: the trail as a breadcrumb at the title's size (one step: just its name).</summary>
+    /// <summary>
+    /// The page's heading, which is the trail as a breadcrumb at the title's size. A trail of one step shows just its name.
+    /// </summary>
     private FrameworkElement Heading()
     {
         var trail = Trail();
@@ -83,12 +88,13 @@ internal sealed partial class SettingsWindow
             ItemsSource = trail.Select(t => t.Label).ToList(),
             Margin = new Thickness(0, 8, 0, 12),
         };
-        // The title's size and weight (Windows Settings' breadcrumbs are its page titles): set before the template applies.
+        // The breadcrumb gets the title's size and weight, because Windows Settings' breadcrumbs are its page titles.
+        // These resources are set before the template applies.
         var title = TextStyle("TitleTextBlockStyle");
         bar.Resources["BreadcrumbBarItemThemeFontSize"] = Setter(title, TextBlock.FontSizeProperty) ?? 28.0;
         bar.Resources["BreadcrumbBarItemFontWeight"] = FontWeights.SemiBold;
         bar.Resources["BreadcrumbBarChevronFontSize"] = 16.0;
-        // Room around the chevron at this size (WinUI's 2 px suits 14 px text; at 28 px the words crowded it).
+        // Room around the chevron at this size. WinUI's 2 px suits 14 px text, and at 28 px the words crowd the chevron.
         bar.Resources["BreadcrumbBarChevronPadding"] = new Thickness(10, 0, 10, 0);
         AutomationProperties.SetName(bar, string.Join(", ", trail.Select(t => t.Label)));
         bar.ItemClicked += (_, e) =>
@@ -101,7 +107,7 @@ internal sealed partial class SettingsWindow
         return bar;
     }
 
-    /// <summary>The title bar's back arrow: shown on a sub-page, going one step up the trail.</summary>
+    /// <summary>Updates the title bar's back arrow, which is shown on a sub-page and goes one step up the trail.</summary>
     private void UpdateBackButton(List<(string Label, Action? Go)> trail)
     {
         _titleBar.IsBackButtonVisible = trail.Count > 1;

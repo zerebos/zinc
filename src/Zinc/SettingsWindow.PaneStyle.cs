@@ -6,18 +6,19 @@ using Zinc.Settings;
 namespace Zinc;
 
 /// <summary>
-/// Layout > Panes' "Pane style": Compact or Cards sets the five pane settings at once (Core <see cref="PaneStyle"/>), and
-/// the fold under it holds the settings themselves; any one changed reads Custom. Settings the app doesn't honor yet
-/// (<see cref="SettingDef.Unfinished"/>) stay out of the window, and the style with them.
+/// Layout > Panes' "Pane style". Choosing Compact or Cards sets the five pane settings at once (Core's
+/// <see cref="PaneStyle"/>), and the fold under the style holds the settings themselves. When they match neither
+/// style, the style reads Custom. Settings the app doesn't honor yet (<see cref="SettingDef.Unfinished"/>) stay out of
+/// the window, and the style with them.
 /// </summary>
 internal sealed partial class SettingsWindow
 {
-    /// <summary>The catalog as this window shows it: without unfinished settings.</summary>
+    /// <summary>The catalog as this window shows it, which is without unfinished settings.</summary>
     private static IEnumerable<SettingDef> ShownSettings => SettingsCatalog.All.Where(Shown);
 
     private static bool Shown(SettingDef setting) => !setting.Unfinished || TestHooks.UnfinishedSettings;
 
-    /// <summary>The fold <paramref name="key"/> is shown in: none while any of its settings is hidden.</summary>
+    /// <summary>The fold <paramref name="key"/> is shown in, or null while any of that fold's settings is hidden.</summary>
     private static SettingFold? FoldFor(string key) =>
         SettingsCatalog.FoldOf(key) is { } fold && fold.Children.Append(fold.Lead ?? fold.Children[0]).All(k => Shown(SettingsCatalog.Find(k)!))
             ? fold

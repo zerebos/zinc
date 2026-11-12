@@ -7,11 +7,10 @@ using Windows.Foundation;
 
 namespace Zinc;
 
-// The sidebar's selection pill, drawn by us (a SlidingPill). NavigationView's own animation is
-// fixed at 600 ms: the old pill stretches toward the new item with a sharp ease-in (it sits
-// still, then leaps), its position jumps in one step, and the new one spends 400 ms shrinking
-// back; a click during it snaps. NavigationView's pill stays in place, made transparent, and
-// ours takes its size from it.
+// We draw the sidebar's selection pill ourselves (a `SlidingPill`), because NavigationView's own animation is fixed at
+// 600 ms. In that animation the old pill stretches toward the new item with a sharp ease-in (it sits still, then
+// leaps), its position jumps in one step, the new pill spends 400 ms shrinking back, and a click during the animation
+// snaps. NavigationView's pill stays in place, made transparent, and ours takes its size from it.
 internal sealed partial class SettingsWindow
 {
     private SlidingPill? _indicator;
@@ -23,10 +22,11 @@ internal sealed partial class SettingsWindow
         Grid.SetRow(_indicator.Layer, Grid.GetRow(_nav));
         root.Children.Add(_indicator.Layer);
 
-        // A selection slides there; anything else that moves the item (resizing) just follows.
+        // A selection slides the pill to the item, and anything else that moves the item (resizing) moves the pill with
+        // it at once.
         _nav.SelectionChanged += (_, _) => _indicator.SlideNext();
         _nav.LayoutUpdated += (_, _) => PlaceIndicator();
-        // A narrow window hides the sidebar behind the hamburger: the pill goes and comes with it.
+        // A narrow window hides the sidebar behind the hamburger, so the pill goes and comes with the sidebar.
         _nav.PaneOpened += (_, _) => PlaceIndicator();
         _nav.PaneClosed += (_, _) => PlaceIndicator();
         _nav.DisplayModeChanged += (_, _) => PlaceIndicator();
@@ -39,7 +39,8 @@ internal sealed partial class SettingsWindow
             return;
         }
 
-        // No section selected (search results), or the sidebar hidden (a narrow window, hamburger closed): no pill.
+        // There's no pill while no section is selected (search results) or while the sidebar is hidden (a narrow window
+        // with the hamburger closed).
         var hidden = _nav.SelectedItem == null || (_nav.DisplayMode == NavigationViewDisplayMode.Minimal && !_nav.IsPaneOpen);
         _indicator.Layer.Visibility = hidden ? Visibility.Collapsed : Visibility.Visible;
         if (hidden)
@@ -51,10 +52,10 @@ internal sealed partial class SettingsWindow
             return;
         }
 
-        // The size (and left edge) of NavigationView's own pill (its template's SelectionIndicator),
-        // centered on the item. Not its position: NavigationView's animation still runs on it,
-        // invisible, and starts the new item's pill at the old item's place, so reading it
-        // mid-animation put ours back on the item it came from.
+        // Our pill takes the size and left edge of NavigationView's own pill (its template's `SelectionIndicator`) and
+        // is centered on the item. It doesn't take that pill's vertical position, because NavigationView's animation
+        // still runs on its pill, invisible, and starts the new item's pill at the old item's place. A position read
+        // mid-animation would put ours back on the item it came from.
         var anchor = Descendant(item, "SelectionIndicator") is { ActualHeight: > 0 } found ? found : null;
         Point row, left;
         try

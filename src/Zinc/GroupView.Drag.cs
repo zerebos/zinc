@@ -7,10 +7,10 @@ using Windows.Graphics.Imaging;
 
 namespace Zinc;
 
-// Dragging the whole pane: from the header's empty part (a grip behind the tabs and buttons, so it only gets the pointer
-// where nothing else does). A one-tab pane's tab already moves its whole pane. Not the fold's count: it's a button, which
-// takes the pointer on press, and a folded header still leaves empty room beside it. The window decides where the pane
-// can go (MainWindow.Drag.cs).
+// The whole pane is dragged from the header's empty part, which is a grip behind the tabs and buttons, so the grip only
+// gets the pointer where nothing else does. A one-tab pane's tab already moves its whole pane. The fold's count doesn't
+// drag the pane, because it's a button, which takes the pointer on press, and a folded header still leaves empty room
+// beside it. The window decides where the pane can go (MainWindow.Drag.cs).
 internal sealed partial class GroupView
 {
     private readonly Border _grip = new() { Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent) };
@@ -24,7 +24,7 @@ internal sealed partial class GroupView
     private void AddGrip()
     {
         SetColumnSpan(_grip, 5);
-        _strip.Children.Add(_grip); // first: behind everything else in the header
+        _strip.Children.Add(_grip); // added first, so it's behind everything else in the header
         _grip.CanDrag = true;
         _grip.DragStarting += (_, e) =>
         {
@@ -36,7 +36,7 @@ internal sealed partial class GroupView
 
     /// <summary>
     /// The drag carries a picture of the header (the grip itself is see-through, so the default picture would be empty).
-    /// Not the terminal: its swap chain doesn't render into a bitmap.
+    /// The picture leaves out the terminal, because its swap chain doesn't render into a bitmap.
     /// </summary>
     private async void ShowDragPicture(DragStartingEventArgs e)
     {

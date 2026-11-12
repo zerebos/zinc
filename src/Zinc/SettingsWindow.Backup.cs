@@ -6,13 +6,13 @@ using Zinc.Terminal;
 namespace Zinc;
 
 /// <summary>
-/// About's "Settings backup" row: Export settings (config, color schemes, shaders, the session: one zip) and Import
-/// settings (asks first; Core <see cref="SettingsBackup"/> saves what's there into backups\ before writing). The
-/// config watcher applies an import; its session waits for the next start.
+/// About's "Settings backup" row. Export settings writes the config, color schemes, shaders and the session into one
+/// zip. Import settings asks first, and Core's <see cref="SettingsBackup"/> saves what's there into backups\ before
+/// writing. The config watcher applies an imported config, and an imported session waits for the next start.
 /// </summary>
 internal sealed partial class SettingsWindow
 {
-    // The last export/import's outcome: kept across renders (an import's config reload re-renders the page).
+    // The last export or import's outcome, kept across renders because an import's config reload re-renders the page.
     private string? _backupStatus;
     private string? _backupStatusFile;
 
@@ -67,7 +67,8 @@ internal sealed partial class SettingsWindow
                 count = SettingsBackup.Write(stream, ConfigFolder, App.Instance.SessionPath, BackupVersion, DateTimeOffset.Now);
             }
 
-            // Includes, shaders and shader folders the config names elsewhere: copy them yourself.
+            // Includes, shaders and shader folders that the config names outside its own folder aren't in the zip, so
+            // the status asks the user to copy them.
             var leftOut = SettingsBackup.LeftOut(_config);
             Log.Write($"backup: exported {count} files to {file.Path}; left out {leftOut.Count}: {string.Join(", ", leftOut)}");
             ShowBackupStatus($"Exported {Files(count)} to {file.Path}." + (leftOut.Count == 0 ? "" :
@@ -128,7 +129,7 @@ internal sealed partial class SettingsWindow
         }
         catch (ImportFailedException ex)
         {
-            // Stopped partway... some files are the backup's, the rest are not imported
+            // The import stopped partway, so some files are the backup's and the rest are not imported.
             Log.Write($"backup: import failed after {ex.Written} files: {ex}");
             ShowBackupStatus($"The import stopped partway: {ex.Message}. Your settings from before are in " + $"{Path.GetFileName(ex.SafetyCopy)}: import that file to go back.", ex.SafetyCopy);
         }
@@ -144,7 +145,7 @@ internal sealed partial class SettingsWindow
     /// <summary>What an import did, for the row's status.</summary>
     private static string ImportDone(ImportResult result)
     {
-        // TODO: we should do proper i18n with pluralization at some point...
+        // TODO: we should do proper i18n with pluralization at some point
         var done = result.Files > 0
             ? $"Imported {Files(result.Files)}." + (result.Session ? " The windows from the backup open the next time Zinc starts." : "")
             : result.Session ? "Imported the windows from the backup: they open the next time Zinc starts." : "Imported nothing: the backup has no settings.";

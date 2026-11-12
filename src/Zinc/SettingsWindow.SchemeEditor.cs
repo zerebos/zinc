@@ -10,9 +10,9 @@ using Windows.UI;
 namespace Zinc;
 
 /// <summary>
-/// Editing a color scheme ("Customize" on the scheme cards): its file in the themes folder next to
-/// config.toml (a bundled scheme is copied there first, and the copy stands in for it everywhere).
-/// Each change is written as it settles; the config watcher then reloads, so every pane using the
+/// Editing a color scheme ("Customize" on the scheme cards). The editor changes the scheme's file in the themes folder
+/// next to config.toml (a bundled scheme is copied there first, and the copy stands in for it everywhere).
+/// Each change is written as it settles, and the config watcher then reloads, so every pane using the
 /// scheme, and the preview pinned above, change as you edit. Undo puts back the file as it was.
 /// </summary>
 internal sealed partial class SettingsWindow
@@ -20,7 +20,7 @@ internal sealed partial class SettingsWindow
     /// <summary>The scheme being edited (a sub-page of whatever page opened it), or null.</summary>
     private string? _editingScheme;
 
-    /// <summary>Its file's text when the editor opened, for Undo.</summary>
+    /// <summary>The text of the edited scheme's file when the editor opened, for Undo.</summary>
     private string? _schemeOriginal;
 
     private static readonly (string Key, string Label, string Description)[] SchemeBaseColors =
@@ -34,8 +34,8 @@ internal sealed partial class SettingsWindow
     ];
 
     /// <summary>
-    /// Opens the editor for scheme <paramref name="name"/> (null: the default, which becomes "Lit
-    /// Cell", named in config.toml so the edited copy is the one used).
+    /// Opens the editor for scheme <paramref name="name"/>. Null means the default, which becomes "Lit
+    /// Cell" and is named in config.toml so the edited copy is the one used.
     /// </summary>
     private void CustomizeScheme(string? name, IReadOnlyList<string> themePath)
     {
@@ -177,9 +177,10 @@ internal sealed partial class SettingsWindow
     private IReadOnlyList<string> _schemeThemePath = ["colors", "theme"];
 
     /// <summary>
-    /// A name for a new scheme, copied from <paramref name="from"/> (the one being edited; with <paramref name="sources"/>,
-    /// the first choice of a "Start from" list); with "Use it now", it replaces <paramref name="replacing"/> (given the
-    /// scheme it starts from) where it's chosen. Then the editor opens on it.
+    /// Asks for a name for a new scheme, which is copied from <paramref name="from"/>. That is the scheme being edited,
+    /// or with <paramref name="sources"/> the first choice in a "Start from" list. With "Use it now" checked, the new
+    /// scheme replaces the one <paramref name="replacing"/> returns (given the scheme it starts from) where schemes are
+    /// chosen. Then the editor opens on the new scheme.
     /// </summary>
     private Flyout NewSchemeFlyout(Func<string> from, Func<string, string?> replacing, IReadOnlyList<string> themePath, Func<IReadOnlyList<string>>? sources = null)
     {
@@ -195,7 +196,8 @@ internal sealed partial class SettingsWindow
         var use = new CheckBox { Content = "Use it now", IsChecked = true };
         var create = new Button { Content = "Create", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         var intro = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
-        // "Start from" (when the caller lists schemes): a search box filled in with the suggested scheme; typing narrows the list.
+        // "Start from" is shown when the caller lists schemes. It's a search box filled in with the suggested scheme, and
+        // typing narrows the list.
         var start = new AutoSuggestBox
         {
             Header = "Start from",
@@ -294,8 +296,8 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// Scheme <paramref name="name"/> in <paramref name="replacing"/>'s place where schemes are chosen
-    /// (a light/dark pair keeps its other side); <paramref name="name"/> null: back to Zinc's own.
+    /// Puts scheme <paramref name="name"/> in <paramref name="replacing"/>'s place where schemes are chosen
+    /// (a light/dark pair keeps its other side). A null <paramref name="name"/> goes back to Zinc's own.
     /// </summary>
     private void UseScheme(IReadOnlyList<string> themePath, string? replacing, string? name)
     {
@@ -303,7 +305,8 @@ internal sealed partial class SettingsWindow
         var value = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme");
         if (value is string text && ThemeLibrary.TryParsePair(text, out var light, out var dark))
         {
-            // The side it replaces (else the dark one); gone (null), Lit Cell's side takes its place.
+            // The new scheme takes the side `replacing` is on, or else the dark side. When `name` is null, Lit Cell's
+            // scheme for that side takes its place.
             if (string.Equals(light, replacing, StringComparison.OrdinalIgnoreCase))
             {
                 light = name ?? "Lit Cell Light";
@@ -321,7 +324,9 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Deletes one of the user's own schemes, after asking; if it was in use, the default colors take its place.</summary>
+    /// <summary>
+    /// Deletes one of the user's own schemes, after asking. If it was in use, the default colors take its place.
+    /// </summary>
     private async void DeleteScheme(string name)
     {
         try
@@ -427,7 +432,7 @@ internal sealed partial class SettingsWindow
 
         chip.Resources["ButtonBorderBrushPointerOver"] = Application.Current.Resources["TextFillColorPrimaryBrush"];
 
-        // What the chip shows: the file's color, else what a terminal shows without one (libghostty's).
+        // The chip shows the file's color, or else what a terminal shows without one (libghostty's built-in color).
         Color Shown() => SchemeFile.Get(current(), key) is { } hex && TryHex(hex, out var c)
             ? c
             : SchemeTiles.ToColor(Zinc.Terminal.TerminalSession.BuiltinBaseColors[index]);
@@ -447,7 +452,7 @@ internal sealed partial class SettingsWindow
         var flyout = new Flyout { Content = new StackPanel { Spacing = 8, Children = { new TextBlock { Text = name, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold }, picker } } };
         chip.Flyout = flyout;
 
-        // Written once a drag settles: live, without a reload per pixel.
+        // The color is written once a drag settles, which keeps the edit live without a reload per pixel.
         var settle = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
         settle.Interval = TimeSpan.FromMilliseconds(150);
         settle.IsRepeating = false;

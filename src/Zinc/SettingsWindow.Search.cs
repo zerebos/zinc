@@ -9,9 +9,9 @@ using Windows.UI;
 
 namespace Zinc;
 
-// Search: settings, a profile's own settings ("font size ubuntu") and key bindings, each group
-// saying where it lives. Every result is a working card; "Show in …" (or Enter, for the first
-// result) goes to it in its own page, scrolls it into view, focuses it and flashes it.
+// Search finds settings, a profile's own settings ("font size ubuntu") and key bindings, and each group
+// of results says where it lives. Every result is a working card, and "Show in …" (or Enter, for the first
+// result) goes to that card in its own page, scrolls it into view, focuses it and flashes it.
 internal sealed partial class SettingsWindow
 {
     /// <summary>The cards on the page, by (profile, setting key), for going to one.</summary>
@@ -67,7 +67,8 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        // A profile named in the query: its page, or its own value of the rest ("font size ubuntu").
+        // A profile named in the query shows as the row that opens its page, or with its own values of the settings
+        // the rest of the query matches ("font size ubuntu").
         foreach (var profile in _config.Profiles)
         {
             var named = words.Where(w => w.Length >= 2 &&
@@ -130,7 +131,7 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Adds <paramref name="setting"/>'s card(s) to the page; returns its main card (the scheme's: the scheme itself).</summary>
+    /// <summary>Adds <paramref name="setting"/>'s card(s) to the page and returns its main card.</summary>
     private Border AddSettingCards(SettingDef setting, string? profile)
     {
         var card = setting.Kind == SettingKind.Scheme ? SchemeCard(setting, profile)
@@ -159,7 +160,7 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Marks <paramref name="section"/> in the sidebar (null: none), without navigating.</summary>
+    /// <summary>Marks <paramref name="section"/> in the sidebar (or no section when null), without navigating.</summary>
     private void SelectSection(string? section)
     {
         _navigating = true;
@@ -266,7 +267,7 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// A profile setting's description: where its inherited value is set, as a link there
+    /// A profile setting's description, which says where its inherited value is set, as a link there
     /// ("Inherited from Appearance: 11 pt."), or that the profile has its own.
     /// </summary>
     private void InheritedText(TextBlock block, SettingDef setting, string inherited, bool own)

@@ -8,14 +8,14 @@ using Zinc.Settings;
 namespace Zinc;
 
 /// <summary>
-/// Folds: one card with a header (a setting's own card, or a title and a summary of what's changed)
-/// that opens to show the settings under it. Used for related settings on a page
+/// A fold is one card with a header (a setting's own card, or a title and a summary of what's changed)
+/// that opens to show the settings under it. Folds hold related settings on a page
 /// (<see cref="SettingsCatalog.Folds"/>), each group of a profile's page and long key families.
 /// Search opens a fold before it jumps to a setting inside.
 /// </summary>
 internal sealed partial class SettingsWindow
 {
-    /// <summary>The folds open now, by id: they stay open as the page is rebuilt (for this window).</summary>
+    /// <summary>The ids of the folds open now, which stay open as the page is rebuilt (for this window).</summary>
     private readonly HashSet<string> _openFolds = [];
 
     /// <summary>A card inside a fold → how to open that fold.</summary>
@@ -24,7 +24,8 @@ internal sealed partial class SettingsWindow
     private const string ChevronGlyph = "";
 
     /// <summary>
-    /// A fold: <paramref name="header"/> and <paramref name="rows"/> under it. Setting cards among the rows become plain rows.
+    /// Builds a fold with <paramref name="header"/> on top and <paramref name="rows"/> under it. Setting cards among the
+    /// rows become plain rows.
     /// </summary>
     private Border Fold(string id, string name, FrameworkElement header, IReadOnlyList<FrameworkElement> rows,
         bool open = false)
@@ -84,7 +85,7 @@ internal sealed partial class SettingsWindow
             ToolTipService.SetToolTip(toggle, show ? "Show less" : "Show more");
             AutomationProperties.SetItemStatus(toggle, show ? "Open" : "Closed");
 
-            // From wherever it is now (a slide may be under way).
+            // The slide starts from the body's current height, because another slide may be under way.
             var from = bodyFrame.Visibility == Visibility.Visible ? bodyFrame.ActualHeight : 0;
             sliding?.Stop();
             sliding = null;
@@ -105,7 +106,7 @@ internal sealed partial class SettingsWindow
                 To = to,
                 Duration = TimeSpan.FromMilliseconds(show ? 250 : 180),
                 EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
-                EnableDependentAnimation = true, // (height: the page reflows as it goes)
+                EnableDependentAnimation = true, // needed to animate Height, which reflows the page as it goes
             };
             Storyboard.SetTarget(slide, bodyFrame);
             Storyboard.SetTargetProperty(slide, "Height");
@@ -130,7 +131,7 @@ internal sealed partial class SettingsWindow
         top.Tapped += (_, e) =>
         {
             // Controls in the header (its switch or dropdown, the reset arrow, the chevron) work as
-            // usual; a click anywhere else folds.
+            // usual, and a click anywhere else opens or closes the fold.
             if (e.OriginalSource is DependencyObject source && !InControl(source, top))
             {
                 Show(!isOpen);
@@ -140,7 +141,7 @@ internal sealed partial class SettingsWindow
         Show(open || _openFolds.Contains(id), animate: false);
         foreach (var row in rows.OfType<Border>())
         {
-            _foldOf[row] = () => Show(true, animate: false); // (search scrolls to it right away)
+            _foldOf[row] = () => Show(true, animate: false); // not animated, because search scrolls to the row right away
         }
 
         return fold;
@@ -170,7 +171,7 @@ internal sealed partial class SettingsWindow
         return false;
     }
 
-    /// <summary>A header of its own: a title, and a line under it (a summary; hidden while empty).</summary>
+    /// <summary>A header of its own, with a title and a summary line under it that's hidden while empty.</summary>
     private static (FrameworkElement Header, TextBlock Summary) FoldHeader(string title, string? description)
     {
         var summary = DescriptionText(description ?? "");
@@ -182,7 +183,9 @@ internal sealed partial class SettingsWindow
         }, summary);
     }
 
-    /// <summary>A catalog fold on a page: under its lead's card, or its own title with what's changed.</summary>
+    /// <summary>
+    /// A catalog fold on a page. Its header is its lead setting's card, or its own title with a summary of what's changed.
+    /// </summary>
     private Border SettingFoldCard(SettingFold fold)
     {
         var rows = fold.Children.Select(k => (FrameworkElement)Card(SettingsCatalog.Find(k)!)).ToList();
@@ -234,7 +237,7 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// Whether <paramref name="setting"/> is changed: from its default on a page, or at all in
+    /// Whether <paramref name="setting"/> is changed, which means changed from its default on a page, or set at all in
     /// <paramref name="profile"/>'s section.
     /// </summary>
     private bool IsChanged(SettingDef setting, string? profile) => profile == null

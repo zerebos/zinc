@@ -12,15 +12,18 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// Custom shaders ([shaders] files): a card that sums the list up and opens its page (SettingsWindow.ShadersPage.cs).
+// Custom shaders (`[shaders] files`) get a card that sums the list up and opens the shaders page
+// (SettingsWindow.ShadersPage.cs).
 internal sealed partial class SettingsWindow
 {
-    // The rows on the shaders page now, refreshed when one of its files is saved; and whether the window listens for that.
+    // The action that refreshes the rows on the shaders page when one of its files is saved, and whether the window
+    // listens for those saves.
     private Action? _shaderRows;
     private bool _shaderWatch;
 
-    // The shader list of the global settings (null) or of a profile, as config.toml has it: its own (null: inherits,
-    // in a profile; none, globally), what it inherits, what's in force; and writing it.
+    // The shader list of the global settings (null) or of a profile, as config.toml has it. The members below give its
+    // own list, what it inherits and what's in force, and `SaveShaders` writes it. A null own list means that a profile
+    // inherits, or globally that there are no shaders.
     private IReadOnlyList<string>? OwnShaders(string? profile) => profile == null
         ? _config.ValueOf("shaders.files") is { } global ? ShaderPaths.Listed(global) : null
         : _config.ValueOf(profile, "shaders.files") is { } own ? ShaderPaths.Listed(own) : null;
@@ -31,7 +34,10 @@ internal sealed partial class SettingsWindow
 
     private IReadOnlyList<string> ShownShaderFiles(string? profile) => [.. ShownShaders(profile).Select(w => ShaderPaths.Resolve(w, _config.Path))];
 
-    /// <summary>Writes the list (globally an empty one is the default: nothing written; a profile's means "none here").</summary>
+    /// <summary>
+    /// Writes the list. Globally an empty list is the default, so nothing is written, and a profile's empty list means
+    /// "none here".
+    /// </summary>
     private bool SaveShaders(string? profile, IReadOnlyList<string> files, TextBlock? error)
     {
         if (_config.HasErrors)
@@ -55,9 +61,9 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// The shader list as a card: which shaders run (and whether one doesn't compile), and Edit shaders, which opens
-    /// their own page (the list, the library to choose from, folders). In a profile: the inherited list until changed
-    /// there; the reset arrow inherits again.
+    /// The shader list as a card, which shows which shaders run (and whether one doesn't compile) and has Edit shaders,
+    /// which opens their own page (the list, the library to choose from, folders). In a profile the card shows the
+    /// inherited list until it's changed there, and the reset arrow makes the profile inherit again.
     /// </summary>
     private Border ShaderFilesCard(SettingDef setting, string? profile)
     {
@@ -95,7 +101,8 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        // Whether they all compile (the terminals' check and cache): the card says so when one doesn't.
+        // Checks whether they all compile, with the same check and cache the terminals use. The card says so when one
+        // doesn't.
         async void CheckAll(IReadOnlyList<string> full, int current)
         {
             try
@@ -143,7 +150,7 @@ internal sealed partial class SettingsWindow
     {
         var written = files[index];
         var full = ShaderPaths.Resolve(written, _config.Path);
-        // One of Zinc's: its name, and what it does where a path would be.
+        // One of Zinc's shows its name, and what it does where a path would be.
         var bundled = ShaderPaths.IsBundled(full) && File.Exists(full);
         var name = bundled ? Path.GetFileNameWithoutExtension(full) : Path.GetFileName(full);
         var detail = bundled
@@ -169,7 +176,7 @@ internal sealed partial class SettingsWindow
                 Content = new FontIcon { Glyph = glyph, FontSize = 12 },
                 Padding = new Thickness(8, 6, 8, 6),
                 IsEnabled = enabled,
-                Opacity = enabled ? 1 : 0, // a disabled button draws a grey box; this keeps its place instead
+                Opacity = enabled ? 1 : 0, // a disabled button draws a gray box, so it's made invisible, which keeps its place
                 Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
                 BorderThickness = new Thickness(0),
             };
@@ -238,9 +245,9 @@ internal sealed partial class SettingsWindow
                 icon.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 icon.Opacity = 1;
                 state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
-                // The message names the file first ("crt.glsl, line 3: ..."); the row already does.
                 var message = loaded.Errors[0];
-                // The message names the shader first ("crt.glsl, line 3: ...", "nope: no shader..."); the row already does.
+                // The message names the shader first ("crt.glsl, line 3: ...", "nope: no shader..."). The row already
+                // shows the name, so it's cut from the message.
                 foreach (var name in new[] { Path.GetFileName(full), Path.GetFileNameWithoutExtension(full) })
                 {
                     if ((message.StartsWith(name + ", ") || message.StartsWith(name + ": ")) && message.Length > name.Length + 2)
@@ -306,7 +313,9 @@ internal sealed partial class SettingsWindow
         return [.. (await picker.PickMultipleFilesAsync()).Select(f => f.Path)];
     }
 
-    /// <summary>In the app .glsl files open with, else Notepad (most PCs have none for them).</summary>
+    /// <summary>
+    /// Opens the file in the app .glsl files open with, or else in Notepad, because most PCs have no app for them.
+    /// </summary>
     private static void OpenShader(string file)
     {
         try

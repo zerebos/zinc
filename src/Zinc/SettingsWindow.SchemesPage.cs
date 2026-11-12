@@ -10,13 +10,17 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// The color schemes page: a sub-page of Appearance (or of a profile's page), opened from the Color scheme card. The scheme in
-// force (or the light/dark pair) with Edit and New scheme…; then the library, as the shaders page's (Store-style: pills for
-// dark, light or yours, a search, a card per scheme, in a grid that only builds what's in view: there are ~650). A click
-// on a scheme shows it in the preview above; a click again takes it back. Use puts it in place (with a pair: one side).
+// The color schemes page is a sub-page of Appearance (or of a profile's page), opened from the Color scheme card. It
+// shows the scheme in force (or the light/dark pair) with Edit, and then the library, which works like the shaders
+// page's. The library is Store-style, with pills for dark, light or yours, a search, New scheme… and a card per scheme,
+// in a grid that only builds the cards in view because there are about 650 schemes. A click on a scheme shows it in the
+// preview above, and a second click takes it back. Use puts the scheme in place (with a pair, on one side).
 internal sealed partial class SettingsWindow
 {
-    /// <summary>The color schemes page is shown (for <see cref="_schemesProfile"/>: null, the global scheme).</summary>
+    /// <summary>
+    /// Whether the color schemes page is shown. <see cref="_schemesProfile"/> says whose scheme it edits, and null means
+    /// the global scheme.
+    /// </summary>
     private bool _editingSchemes;
 
     private string? _schemesProfile;
@@ -27,12 +31,13 @@ internal sealed partial class SettingsWindow
     private SchemeKind _schemeKind;
     private string _schemeQuery = "";
 
-    /// <summary>Zinc's own scheme: in force where none is chosen.</summary>
+    /// <summary>Zinc's own scheme, which is in force where none is chosen.</summary>
     private const string ZincScheme = "Lit Cell";
 
     private void OpenSchemes(string? profile)
     {
-        // From anywhere, search results included: a sub-page of Appearance, or of the profile's page.
+        // The page can be opened from anywhere, search results included, and it's a sub-page of Appearance or of the
+        // profile's page.
         _navigating = true;
         try
         {
@@ -57,8 +62,9 @@ internal sealed partial class SettingsWindow
         _scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
 
-    // The scheme of the global settings (null) or of a profile, as config.toml has it: where it's written, its own (null:
-    // none, i.e. Zinc's own globally, inherited in a profile), what it inherits, and what's in force.
+    // The scheme of the global settings (null) or of a profile, as config.toml has it. The four members below give where
+    // it's written, its own value, what it inherits, and what's in force. A null own value means none, which is Zinc's
+    // own globally and the inherited scheme in a profile.
     private static IReadOnlyList<string> SchemePath(string? profile) => profile == null ? ["colors", "theme"] : ["profile", profile, "colors", "theme"];
 
     private string? OwnScheme(string? profile) => (profile == null ? _config.ValueOf("colors.theme") : _config.ValueOf(profile, "colors.theme")) as string;
@@ -67,7 +73,10 @@ internal sealed partial class SettingsWindow
 
     private string? ShownScheme(string? profile) => OwnScheme(profile) ?? InheritedScheme(profile);
 
-    /// <summary>A scheme value's sides: the scheme (or the dark one of a pair; null: Zinc's own) and the light one (null: no pair).</summary>
+    /// <summary>
+    /// A scheme value's sides. Dark is the scheme, or the dark one of a pair, and null means Zinc's own. Light is the
+    /// light one of a pair, and null means there's no pair.
+    /// </summary>
     private static (string? Dark, string? Light) SchemeSides(string? value) =>
         value != null && ThemeLibrary.TryParsePair(value, out var light, out var dark) ? (dark, light) : (value, null);
 
@@ -77,7 +86,7 @@ internal sealed partial class SettingsWindow
         var path = SchemePath(profile);
         _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it; click again to stop."));
 
-        // ---- In use: the scheme, or the pair; following Windows' light/dark.
+        // ---- In use: the scheme, or the pair that follows Windows' light/dark.
         var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
         reset.Click += (_, _) => Write(path, null);
         var description = DescriptionText();
@@ -118,7 +127,7 @@ internal sealed partial class SettingsWindow
             }
         };
 
-        // A slot: one scheme in force, its tile and Edit (the cards' pencil) beside it (the tile names the scheme).
+        // A slot shows one scheme in force, with its tile, which names the scheme, and Edit (the cards' pencil) beside it.
         Border Slot(string label, string about, string? name)
         {
             var shown = name ?? ZincScheme;
@@ -137,8 +146,9 @@ internal sealed partial class SettingsWindow
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { tile, edit } });
         }
 
-        // ---- Library: a heading with the count; one toolbar row (dark, light, yours as pills; a search; New scheme; a menu); a card per
-        // scheme in a grid. The heading and the toolbar stay in view once scrolled to (StickLibraryHeader).
+        // ---- Library: a heading with the count, one toolbar row (pills for dark, light and yours, a search, New scheme and
+        // a menu), and a card per scheme in a grid. The heading and the toolbar stay in view once scrolled to
+        // (`StickLibraryHeader`).
         var libraryTitle = PartTitle("Library");
         var pills = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         AutomationProperties.SetName(pills, "Kinds of scheme");
@@ -152,8 +162,8 @@ internal sealed partial class SettingsWindow
         };
         ToolTipService.SetToolTip(more, "More");
         AutomationProperties.SetName(more, "More");
-        // New scheme: a copy of the one previewed, else the one in use (or any: "Start from"). With a pair, "Use it now" puts it
-        // on the side its starting scheme suits.
+        // New scheme makes a copy of the scheme previewed, or else the one in use, or any other picked in "Start from". With
+        // a pair, "Use it now" puts the new scheme on the side its starting scheme suits.
         var add = new Button
         {
             Content = new FontIcon { Glyph = "\uE710", FontSize = 14 }, // add (+)
@@ -202,16 +212,16 @@ internal sealed partial class SettingsWindow
         var status = DescriptionText("Reading the schemes…");
         _page.Children.Add(status);
 
-        // Cards are made as they come into view; one scrolled away waits in a pool and comes back showing another scheme
-        // (making one is ~30 elements and three button templates: making them anew while scrolling fast left gaps).
-        // Each one in view knows how to show the state.
+        // Cards are made as they come into view. A card scrolled away waits in a pool and comes back showing another
+        // scheme, because a card is about 30 elements and three button templates, and making cards anew during a fast
+        // scroll leaves gaps. Each card in view has an action that updates it to the current state.
         var shownCards = new Dictionary<UIElement, Action>();
         var spareCards = new Stack<Button>();
         var grid = new ItemsRepeater
         {
             Layout = new UniformGridLayout
             {
-                MinItemWidth = 340, // room for the name beside the buttons (at 250 most were cut short); two across at the widest
+                MinItemWidth = 340, // room for the name beside the buttons, and two across at the widest
                 MinItemHeight = 138,
                 MinRowSpacing = 8,
                 MinColumnSpacing = 8,
@@ -238,17 +248,17 @@ internal sealed partial class SettingsWindow
             return name.Equals(dark ?? ZincScheme, StringComparison.OrdinalIgnoreCase) || name.Equals(light, StringComparison.OrdinalIgnoreCase);
         }
 
-        // Puts scheme name in place: the scheme, or with a pair, its light or dark side.
+        // Puts scheme `name` in place as the scheme, or with a pair, as its light or dark side.
         void Use(string name, bool forLight)
         {
             var (dark, light) = SchemeSides(ShownScheme(profile));
-            _previewedScheme = null; // in force now: the preview shows it anyway
+            _previewedScheme = null; // it's in force now, so the preview shows it anyway
             Write(path, light == null ? name : forLight ? $"light:{name},dark:{dark}" : $"light:{light},dark:{name}");
         }
 
         void Preview(string name)
         {
-            _previewedScheme = name.Equals(_previewedScheme, StringComparison.OrdinalIgnoreCase) ? null : name; // the same again: stop
+            _previewedScheme = name.Equals(_previewedScheme, StringComparison.OrdinalIgnoreCase) ? null : name; // previewing the same scheme again stops the preview
             if (_previewedScheme is { } shown)
             {
                 PreviewScheme(path, shown);
@@ -261,12 +271,12 @@ internal sealed partial class SettingsWindow
             UpdateCards();
         }
 
-        // A card: the scheme as itself on top (SchemeSample: a few colored terminal lines, its 16 colors as a band); under it
-        // its name, "In use", whose it is,
-        // Use and Edit (a pencil). With a light/dark pair, Use is a split button: its main part puts the scheme on the side
-        // it suits (a dark scheme on the dark side; already there: the other side), its arrow offers both. The card is a
-        // button: a click previews (Space too), Enter uses it. Made once, shown with any scheme (Show), so a card can be
-        // reused for another.
+        // A card shows the scheme as itself on top (a `SchemeSample`, which is a few colored terminal lines and the scheme's
+        // 16 colors as a band). Under the sample are its name, "In use", whose it is, Use and Edit (a pencil). With a
+        // light/dark pair, Use is a split button. Its main part puts the scheme on the side it suits (a dark scheme on the
+        // dark side, or the other side when it's already there), and its arrow offers both sides. The card is a button,
+        // so a click previews (Space too) and Enter uses the scheme. A card is made once and can show any scheme (`Show`),
+        // so it can be reused for another.
         (Button Card, Action<SchemeEntry> Show, Action Update) NewCard()
         {
             SchemeEntry entry = null!;
@@ -280,7 +290,7 @@ internal sealed partial class SettingsWindow
             };
             var whose = new TextBlock { FontSize = 12, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
             ToolTipService.SetToolTip(inUseBadge, "In use");
-            // A check when it's in use, the name in the UI font (readable whatever the scheme's contrast; shortened when
+            // A check when it's in use, the name in the UI font (readable whatever the scheme's contrast, and shortened when
             // the buttons leave it little room), and whose it is.
             var name = new TextBlock { FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
             var badges = new Grid
@@ -374,7 +384,7 @@ internal sealed partial class SettingsWindow
                     forLight = !entry.IsDark;
                     if (forLight ? inLight : inDark)
                     {
-                        forLight = !forLight; // already on the side it suits: the main part offers the other
+                        forLight = !forLight; // already on the side it suits, so the main part offers the other
                     }
 
                     var label = forLight ? "Use for light" : "Use for dark";
@@ -450,7 +460,7 @@ internal sealed partial class SettingsWindow
 
         foreach (var (kind, label) in new[] { (SchemeKind.All, "All"), (SchemeKind.Dark, "Dark"), (SchemeKind.Light, "Light"), (SchemeKind.Yours, "Yours") })
         {
-            // Pills, as the Store's: the one shown is checked (accent).
+            // Pills like the Store's, where the one shown is checked (accent).
             var pill = new ToggleButton { Content = label, IsChecked = kind == _schemeKind, CornerRadius = new CornerRadius(16), Padding = new Thickness(16, 5, 16, 6) };
             pill.Click += (_, _) =>
             {
@@ -535,25 +545,26 @@ internal sealed partial class SettingsWindow
             LoadLibrary(); // a scheme made, deleted or edited lighter shows up
             if (_previewedScheme is { } previewed)
             {
-                PreviewScheme(path, previewed); // a reload shows the config in force: the previewed one goes back on top
+                PreviewScheme(path, previewed); // a reload shows the config in force, so the previewed scheme goes back on top
             }
         });
         HookLibrarySticking();
         Quietly(RefreshInUse);
         if (_schemeList.Count > 0)
         {
-            FillLibrary(); // as last read, at once; read again below
+            FillLibrary(); // shows the list as last read at once, and it's read again below
         }
 
         LoadLibrary();
     }
 
     /// <summary>
-    /// A split button drawn like the buttons around it. Its halves (and their backgrounds) fill under its see-through outline,
-    /// so it read lighter than a plain button, whose fill stops inside it: each part is pulled in by the outline's width.
-    /// Done once the template exists: on Loaded, or for a button shown later (a split button appears once a light/dark pair
-    /// is on) on its first size. (A subclass overriding OnApplyTemplate can't be made: WinUI gives a C# subclass of
-    /// SplitButton no template and throws.)
+    /// Makes a split button draw like the buttons around it. A split button's halves (and their backgrounds) fill under
+    /// its see-through outline, which makes it look lighter than a plain button, whose fill stops inside the outline. So
+    /// each part is pulled in by the outline's width. This happens once the template exists, which is on Loaded, or on
+    /// the first size change for a button shown later (a split button appears once a light/dark pair is on). A subclass
+    /// that overrides OnApplyTemplate isn't an option, because WinUI gives a C# subclass of SplitButton no template and
+    /// throws.
     /// </summary>
     private static SplitButton LikePlainButton(SplitButton split)
     {
@@ -626,7 +637,7 @@ internal sealed partial class SettingsWindow
     }
 }
 
-/// <summary>Builds the color schemes page's cards for its grid as they come into view, and hears when one is dropped.</summary>
+/// <summary>Builds the color schemes page's cards for its grid as they come into view, and is told when one is dropped.</summary>
 internal sealed partial class SchemeCardFactory(Func<object, UIElement> build, Action<UIElement> dropped) : IElementFactory
 {
     public UIElement GetElement(ElementFactoryGetArgs args) => build(args.Data);

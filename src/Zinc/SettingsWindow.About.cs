@@ -8,7 +8,8 @@ using Microsoft.UI.Xaml.Media;
 namespace Zinc;
 
 /// <summary>
-/// About's list of licenses: Zinc's own, then the open-source software Zinc ships (<see cref="OpenSourceNotices"/>).
+/// About's list of licenses, with Zinc's own first and then the open-source software Zinc ships
+/// (<see cref="OpenSourceNotices"/>).
 /// </summary>
 internal sealed partial class SettingsWindow
 {

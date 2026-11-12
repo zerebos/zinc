@@ -11,13 +11,17 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// The shaders page: a sub-page of Appearance (or of a profile's page), opened by the Custom shaders card's Edit shaders.
-// The list in force (order, compile state, open, remove) and its Animation setting; then the library: Zinc's shaders,
-// yours and the folders you added (Store-style: pills for where from, a search, a card per shader). A click on a shader runs it in the preview above, after
-// the list's own, and checks it compiles; a click again takes it back. Add or Remove changes the list.
+// The shaders page is a sub-page of Appearance (or of a profile's page), opened by the Custom shaders card's Edit shaders.
+// It shows the list in force (order, compile state, open, remove) and its Animation setting, and then the library, which
+// has Zinc's shaders, yours and the folders you added. The library is Store-style, with pills for where a shader is
+// from, a search and a card per shader. A click on a shader runs it in the preview above, after the list's own shaders,
+// and checks that it compiles, and a second click takes it back. Add or Remove changes the list.
 internal sealed partial class SettingsWindow
 {
-    /// <summary>The shaders page is shown (for <see cref="_shadersProfile"/>: null, the global list).</summary>
+    /// <summary>
+    /// Whether the shaders page is shown. <see cref="_shadersProfile"/> says whose list it edits, and null means the
+    /// global list.
+    /// </summary>
     private bool _editingShaders;
 
     private string? _shadersProfile;
@@ -30,7 +34,8 @@ internal sealed partial class SettingsWindow
 
     private void OpenShaders(string? profile)
     {
-        // From anywhere, search results included: a sub-page of Appearance, or of the profile's page.
+        // The page can be opened from anywhere, search results included, and it's a sub-page of Appearance or of the
+        // profile's page.
         _navigating = true;
         try
         {
@@ -99,7 +104,7 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        // The group title's margins on the row, so the arrow centers on the title's text, not on its margins too.
+        // The row takes the group title's margins, so the arrow centers on the title's text and not on its margins too.
         var inUse = PartTitle("In use");
         var listTitle = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = inUse.Margin, Children = { inUse, reset } };
         inUse.Margin = new Thickness(0);
@@ -116,8 +121,8 @@ internal sealed partial class SettingsWindow
         var animation = SettingsCatalog.Find("shaders.animation")!;
         _page.Children.Add(profile == null ? Card(animation) : OverrideCard(animation, profile));
 
-        // ---- Library, as the Store's: a heading with the count; one toolbar row on the page (where from as pills, a search,
-        // a menu for folders and files); then each shader as a card of its own, under a heading per source.
+        // ---- Library, like the Store's: a heading with the count, one toolbar row on the page (pills for where from, a
+        // search, a menu for folders and files), and then each shader as a card of its own, under a heading per source.
         var libraryTitle = PartTitle("Library");
         var sources = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
         AutomationProperties.SetName(sources, "Shader sources");
@@ -156,7 +161,8 @@ internal sealed partial class SettingsWindow
         var library = new StackPanel { Spacing = 4 };
         _page.Children.Add(library);
 
-        // A card per shader: a click previews it (again: stops); "In use" when the list has it; Add or Remove; a menu.
+        // A card per shader. A click previews it and a second click stops, "In use" shows when the list has it, and the
+        // card has Add or Remove and a menu.
         var rowsByFile = new Dictionary<string, (Border Ring, Button Toggle, TextBlock InUse, TextBlock Detail, ShaderEntry Entry)>(StringComparer.OrdinalIgnoreCase);
         var cards = new List<Button>();
 
@@ -200,7 +206,7 @@ internal sealed partial class SettingsWindow
         {
             if (entry.File.Equals(_previewedShader, StringComparison.OrdinalIgnoreCase))
             {
-                _previewedShader = null; // the same one again: back to the list as it is
+                _previewedShader = null; // the same one again goes back to the list as it is
                 ShowPreviewed();
                 ApplyShaderPreview();
                 return;
@@ -268,7 +274,7 @@ internal sealed partial class SettingsWindow
                 Children =
                 {
                     name,
-                    // A line about it, or a note there isn't one (the cards keep one height).
+                    // A line about the shader, or a note that there isn't one, so the cards keep one height.
                     entry.Description is { } about
                         ? new TextBlock { Text = about, FontSize = 12, Opacity = 0.75, TextWrapping = TextWrapping.Wrap }
                         : new TextBlock { Text = "No description in the file.", FontSize = 12, Opacity = 0.5, FontStyle = Windows.UI.Text.FontStyle.Italic },
@@ -308,8 +314,8 @@ internal sealed partial class SettingsWindow
             Grid.SetColumn(toggle, 1);
             Grid.SetColumn(options, 2);
 
-            // The card itself is the button (its hover covers all of it, the Add button too); the buttons in it take their
-            // own clicks.
+            // The card itself is the button (its hover covers all of it, the Add button too), and the buttons in it take
+            // their own clicks.
             var card = new Button
             {
                 Content = grid,
@@ -325,7 +331,7 @@ internal sealed partial class SettingsWindow
             AutomationProperties.SetHelpText(card, $"{entry.Description} Space previews; Enter adds or removes.".Trim());
             ToolTipService.SetToolTip(card, entry.File);
             card.Click += (_, _) => Preview(entry);
-            // Enter adds or removes (Space previews: a button's click); arrows move between shaders.
+            // Enter adds or removes, Space previews (it's a button's click), and arrows move between shaders.
             card.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler((s, e) =>
             {
                 if (!ReferenceEquals(e.OriginalSource, card))
@@ -380,8 +386,8 @@ internal sealed partial class SettingsWindow
                     continue;
                 }
 
-                // Under All, a heading per source, as every group in Settings (with its count), and its folder; under one
-                // source's pill, only its folder.
+                // Under All, each source gets a heading like every group in Settings (with its count), and its folder.
+                // Under one source's pill, only its folder shows.
                 if (_shaderSource == null)
                 {
                     var heading = GroupTitle($"{section.Title} · {section.Shaders.Count}");
@@ -429,7 +435,7 @@ internal sealed partial class SettingsWindow
 
             foreach (var title in _shaderLibrary.Select(s => s.Title).Prepend(null))
             {
-                // Pills, as the Store's: the one shown is checked (accent).
+                // Pills like the Store's, where the one shown is checked (accent).
                 var pill = new ToggleButton
                 {
                     Content = title ?? "All",
@@ -451,7 +457,7 @@ internal sealed partial class SettingsWindow
             }
         }
 
-        // The toolbar's menu: add a folder or a file; stop listing a folder you added.
+        // The toolbar's menu adds a folder or a file, and stops listing a folder you added.
         void FillMenu()
         {
             var menu = new MenuFlyout { Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight };
@@ -564,7 +570,7 @@ internal sealed partial class SettingsWindow
                 ShowToggle(row);
             }
 
-            ApplyShaderPreview(); // a reload shows the config in force: the previewed one goes back on top
+            ApplyShaderPreview(); // a reload shows the config in force, so the previewed shader goes back on top
         });
         _shaderRows = RefreshList;
         HookLibrarySticking();
@@ -575,9 +581,9 @@ internal sealed partial class SettingsWindow
     }
 
     /// <summary>
-    /// The accent ring of a library card (one that's a Button) while it's the one previewed: drawn over the card's own border
-    /// from inside its content (<paramref name="cardPadding"/> out), so the hover and press states, which set the button's
-    /// border themselves, can't take it away.
+    /// The accent ring of a library card (one that's a Button) while it's the one previewed. The ring is drawn over the
+    /// card's own border from inside the card's content (<paramref name="cardPadding"/> out), so the hover and press
+    /// states, which set the button's border themselves, can't take it away.
     /// </summary>
     private static Border SelectionRing(Thickness cardPadding) => new()
     {
@@ -589,13 +595,13 @@ internal sealed partial class SettingsWindow
         Visibility = Visibility.Collapsed,
     };
 
-    /// <summary>A heading for a part of a page ("In use", "Library"): one size up from a group's.</summary>
+    /// <summary>A heading for a part of a page ("In use", "Library"), one size up from a group's.</summary>
     private static TextBlock PartTitle(string title) =>
         new() { Text = title, Style = TextStyle("SubtitleTextBlockStyle"), Margin = new Thickness(0, 24, 0, 8) };
 
-    // The library's heading and toolbar, kept in view: moved into the pinned area (under the preview) once scrolled up to
-    // it, back when scrolled above it. A spacer of its height takes its place in the page, and the scroll moves by that
-    // height each way, so nothing on screen jumps.
+    // Keeps the library's heading and toolbar in view. They move into the pinned area (under the preview) once the page is
+    // scrolled up to them, and back when it's scrolled above them. A spacer of the header's height takes its place in the
+    // page, and the scroll moves by that height each way, so nothing on screen jumps.
     private Action? _stickLibrary;
     private bool _libraryPinned;
     private Border? _librarySpacer;
@@ -658,7 +664,9 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Hooks the scroller once: each scroll lets the shaders or color schemes page keep its library header in view.</summary>
+    /// <summary>
+    /// Hooks the scroller once, so each scroll lets the shaders or color schemes page keep its library header in view.
+    /// </summary>
     private void HookLibrarySticking()
     {
         if (!_stickHooked)
@@ -671,7 +679,7 @@ internal sealed partial class SettingsWindow
     // Folders taken out since config.toml was last read (gone from the library at once).
     private readonly List<string> _hiddenShaderFolders = [];
 
-    /// <summary>The preview: the list in force, and the library shader being previewed after it, if any.</summary>
+    /// <summary>Makes the preview run the list in force, and after it the library shader being previewed, if any.</summary>
     private void ApplyShaderPreview()
     {
         if (!_editingShaders)

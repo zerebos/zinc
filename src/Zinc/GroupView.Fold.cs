@@ -7,11 +7,11 @@ using Zinc.Panes;
 
 namespace Zinc;
 
-// A narrow header's tabs: the others shorten (then the shown tab, down to the shortest), then become their icon and mark,
-// then all fold at once into a count ("4 of 5", with the most urgent mark among them) that takes the +'s place.
-// Which stage applies follows the width and the number of tabs only, so a title change never flips it.
-// The count opens a menu of every tab with its status in words, then New tab in this pane. With pane-tabs-as = menu the
-// tabs are folded at every width.
+// In a narrow header the tabs other than the shown one shorten first (then the shown tab, down to the shortest), then
+// become their icon and mark, then all fold at once into a count ("4 of 5", with the most urgent mark among them) that
+// takes the +'s place. Which stage applies follows the width and the number of tabs only, so a title change never flips
+// the stage. The count opens a menu of every tab with its status in words, then New tab in this pane. With
+// pane-tabs-as = menu the tabs are folded at every width.
 internal sealed partial class GroupView
 {
     private readonly Button _count;
@@ -44,7 +44,9 @@ internal sealed partial class GroupView
         return count;
     }
 
-    /// <summary>The count's words and mark: where the shown tab is, and the most urgent mark among the others.</summary>
+    /// <summary>
+    /// Sets the count's words and mark, which are where the shown tab is and the most urgent mark among the others.
+    /// </summary>
     private void ShowCount()
     {
         if (_shown == null || _order.Count == 0)

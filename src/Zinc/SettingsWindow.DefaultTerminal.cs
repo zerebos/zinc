@@ -6,7 +6,7 @@ using Zinc.Pty;
 namespace Zinc;
 
 /// <summary>
-/// "Default terminal app": not a config.toml setting but Windows' own (Windows Settings can change it
+/// "Default terminal app" is not a config.toml setting but Windows' own (Windows Settings can change it
 /// too), so the switch shows and changes Windows' state (<see cref="DefaultTerminal"/>).
 /// </summary>
 internal sealed partial class SettingsWindow
