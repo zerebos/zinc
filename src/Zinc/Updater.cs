@@ -124,13 +124,19 @@ internal static class Updater
     }
 
     /// <summary>
-    /// The update manager for an address. A GitHub repository's updates are its releases, leaving out the ones marked
-    /// as pre-releases. Any other address is a folder or a web address that serves the release files themselves.
+    /// The update manager for an address. A GitHub repository's updates are its releases. The ones marked as
+    /// pre-releases count only when this build is a pre-release itself, so a tester on a release candidate gets the
+    /// next candidate and then the release, and everyone else gets releases only. Any other address is a folder or a
+    /// web address that serves the release files themselves.
     /// </summary>
     private static UpdateManager ManagerFor(string source) =>
         UpdateFeed.GitHubRepository(source) is { } repository
-            ? new UpdateManager(new GithubSource(repository, accessToken: null, prerelease: false))
+            ? new UpdateManager(new GithubSource(repository, accessToken: null, prerelease: UpdateFeed.IsPreRelease(OwnVersion)))
             : new UpdateManager(source);
+
+    /// <summary>This build's version, as the build worked it out ("0.1.0-rc.1+a1b2c3d").</summary>
+    private static string OwnVersion =>
+        typeof(Updater).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0";
 
     /// <summary>The installed version (null when this copy can't update).</summary>
     public static string? CurrentVersion => Manager?.CurrentVersion?.ToString();

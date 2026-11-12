@@ -1,0 +1,114 @@
+name: Release
+
+# Pushing a version tag publishes a release. The tag is v<ZincVersion> for a release, or v<ZincVersion>-rc.N for a
+# pre-release, with ZincVersion from Directory.Build.props. Run by hand, the workflow is a dry run that builds and
+# packs the same way and keeps the files as an artifact, without making a release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: ${{ github.event_name == 'push' && 'Release' || 'Dry run' }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      GH_TOKEN: ${{ github.token }}
+      REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The build works out Zinc's version from the commit's tag.
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Builds the native DLLs, or restores them from the cache.
+      - uses: ./.github/actions/native-dlls
+
+      # The version is the build's own, and a tag that doesn't match it is refused. Such a tag names a version other
+      # than ZincVersion, or isn't in the form v<ZincVersion> or v<ZincVersion>-<something>.
+      - name: Work out the version
+        id: version
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (dotnet msbuild src/Zinc.Core/Zinc.Core.csproj -nologo -t:ZincGitVersion -getProperty:ZincPackVersion).Trim()
+          if ($env:GITHUB_EVENT_NAME -eq 'push' -and "v$version" -ne $env:GITHUB_REF_NAME) {
+              throw "The tag is $env:GITHUB_REF_NAME, but this commit builds as $version. A release's tag is v<ZincVersion>, or v<ZincVersion>-rc.N for a pre-release, with ZincVersion from Directory.Build.props."
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "prerelease=$($version.Contains('-').ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          "Zinc $version"
+
+      # Installed copies only update to a higher version, so a release has to be above every release before it.
+      - name: Check the version is above the last release
+        if: github.event_name == 'push'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $mine = [semver]'${{ steps.version.outputs.version }}'
+          $tags = gh api "repos/$env:GITHUB_REPOSITORY/releases" --paginate --jq '.[].tag_name'
+          if ($LASTEXITCODE -ne 0) { throw "Couldn't list the repository's releases." }
+          $highest = $tags | Where-Object { $_ -match '^v\d' } | ForEach-Object { [semver]$_.Substring(1) } |
+              Sort-Object | Select-Object -Last 1
+          if ($highest -and $mine -le $highest) { throw "This would be $mine, but $highest is already released." }
+          "Above the last release ($highest)."
+
+      - name: Check the changelog
+        if: github.event_name == 'push'
+        run: dotnet run scripts/release/release-notes.cs -- ${{ steps.version.outputs.version }} --check
+
+      - name: Build
+        run: dotnet build Zinc.slnx --no-incremental -warnaserror
+
+      - name: Test
+        run: dotnet test
+
+      # release.ps1 publishes the app, checks the result and packs it with Velopack. -From fetches the release before
+      # this one, so this one also gets a small package of only what changed.
+      - name: Pack
+        run: |
+          dotnet tool restore
+          pwsh scripts/release/release.ps1 -Out dist/release -From $env:REPOSITORY_URL
+
+      # What the website's reference pages and the config schema are made from.
+      - name: Export the reference
+        run: dotnet run scripts/dev/export-reference.cs -- --out dist/reference
+
+      - name: Keep the files (dry run)
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: zinc-${{ steps.version.outputs.version }}
+          path: |
+            dist/release
+            dist/reference
+          retention-days: 7
+
+      - name: Publish the release
+        if: github.event_name == 'push'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $version = '${{ steps.version.outputs.version }}'
+          $pre = if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { @('--pre') } else { @() }
+          dotnet vpk upload github --repoUrl $env:REPOSITORY_URL --token $env:GH_TOKEN --outputDir dist/release `
+              --tag $env:GITHUB_REF_NAME --releaseName "Zinc $version" --publish @pre
+          dotnet run scripts/release/release-notes.cs -- $version --out dist/notes.md
+          gh release edit $env:GITHUB_REF_NAME --notes-file dist/notes.md
+          gh release upload $env:GITHUB_REF_NAME dist/reference/zinc-reference.json dist/reference/config.schema.json

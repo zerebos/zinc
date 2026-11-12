@@ -20,4 +20,15 @@ public class UpdateFeedTests
     [InlineData(@"C:\Temp\feed")]
     [InlineData("")]
     public void AnyOtherAddressIsServedAsItIs(string address) => Assert.Null(UpdateFeed.GitHubRepository(address));
+
+    [Theory]
+    [InlineData("0.1.0", false)]
+    [InlineData("0.1.0+a1b2c3d", false)]
+    [InlineData("0.1.0+a1b2c3d-dirty", false)]
+    [InlineData("1.2.3", false)]
+    [InlineData("0.1.0-rc.1", true)]
+    [InlineData("0.1.0-rc.1+a1b2c3d", true)]
+    [InlineData("0.1.0-dev+a1b2c3d", true)]
+    public void AVersionWithAPartAfterADashIsAPreRelease(string version, bool preRelease) =>
+        Assert.Equal(preRelease, UpdateFeed.IsPreRelease(version));
 }

@@ -1,0 +1,37 @@
+name: Native DLLs
+description: >
+  Puts the native DLLs (libghostty-vt, the sprite rasterizer, the shader translator) in native/. They change only
+  when the build scripts, the Ghostty patches or the native sources do, so they're built once per such change and
+  kept in the cache.
+
+runs:
+  using: composite
+  steps:
+    - name: Restore the native DLLs
+      id: native
+      uses: actions/cache/restore@v6
+      with:
+        path: native
+        key: native-x64-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
+
+    # setup-zig downloads Zig from the community mirrors (because ziglang.org asks CI to) and checks its signature.
+    # It's pinned to the commit of v2.2.1 with its own cache off, because the DLLs are cached above.
+    - name: Install Zig
+      if: steps.native.outputs.cache-hit != 'true'
+      uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
+      with:
+        version: 0.16.0
+        use-cache: false
+
+    - name: Build the native DLLs
+      if: steps.native.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: pwsh scripts/build/libghostty.ps1
+
+    # Saved here, not at the end of the job, so a failing build or test doesn't throw away the DLLs just built.
+    - name: Keep the native DLLs
+      if: steps.native.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: native
+        key: ${{ steps.native.outputs.cache-primary-key }}

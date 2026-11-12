@@ -15,8 +15,9 @@
   -UpdateUrl is the folder this release is uploaded to and that testers' installed copies still check (the feed
   from before GitHub Releases). -Publish needs it, to refuse a version that isn't above the one published there.
 
-  Deltas need the previous release in -Out. -From fetches it first, from the address testers update from (an
-  https URL) or from a local folder.
+  Deltas need the previous release in -Out. -From fetches it first, from a GitHub repository's releases (the
+  repository's address, with a token in GH_TOKEN when it's private), from the address testers update from (any other
+  https URL) or from a local folder. A repository with no release yet gives none, and the release has no delta.
 
   A release is a commit, so a working tree with uncommitted changes is refused (-AllowDirty is for tests). Its
   version is the one the build works out in Directory.Build.props. A commit tagged v<ZincVersion> is a release, one
@@ -127,9 +128,17 @@ if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
 # ---- the previous release, for deltas ----
 if ($From) {
     Write-Host "Fetching the previous release from $From ..."
-    $kind = if ($From -match '^https?://') { 'http', '--url' } else { 'local', '--path' }
-    dotnet vpk download $kind[0] $kind[1] $From -o $Out --allowEmptyChannel
-    if ($LASTEXITCODE -ne 0) { throw "Couldn't fetch the previous release from $From." }
+    if ($From -match '^https://github\.com/[^/]+/[^/]+/?$') {
+        # A pre-release's delta is made from the newest release or pre-release, and a release's from the newest release.
+        $pre = if ($Version.Split('+')[0].Contains('-')) { @('--pre') } else { @() }
+        $token = if ($env:GH_TOKEN) { @('--token', $env:GH_TOKEN) } else { @() }
+        dotnet vpk download github --repoUrl $From -o $Out @pre @token
+        if ($LASTEXITCODE -ne 0) { Write-Warning "No previous release came from $From, so this release has no delta package." }
+    } else {
+        $kind = if ($From -match '^https?://') { 'http', '--url' } else { 'local', '--path' }
+        dotnet vpk download $kind[0] $kind[1] $From -o $Out --allowEmptyChannel
+        if ($LASTEXITCODE -ne 0) { throw "Couldn't fetch the previous release from $From." }
+    }
 }
 
 # ---- publish ----
@@ -183,7 +192,8 @@ if ($missing) {
 Write-Host "Packing $PackId $Version ..."
 # The title is what Settings > Apps shows, so a test package shows its own id instead of a second "Zinc".
 $title = if ($PackId -eq 'Zinc') { 'Zinc' } else { $PackId }
-dotnet vpk pack --packId $PackId --packVersion $Version --packTitle $title --packAuthors Zinc --runtime win-x64 `
+# Packed under the version without the commit's hash. The hash is in the app itself, where About shows it.
+dotnet vpk pack --packId $PackId --packVersion ($Version.Split('+')[0]) --packTitle $title --packAuthors Zinc --runtime win-x64 `
     --packDir $publishDir --mainExe zinc.exe --icon (Join-Path $repo 'src\Zinc\Assets\Zinc.ico') `
     --shortcuts $Shortcuts --outputDir $Out @notesArgs
 if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed.' }
