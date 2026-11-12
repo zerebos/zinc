@@ -18,13 +18,14 @@
   Deltas need the previous release in -Out. -From fetches it first, from the address testers update from (an
   https URL) or from a local folder.
 
-  A release is a commit, so a working tree with uncommitted changes is refused (-AllowDirty is for tests),
-  and its version (computed as Directory.Build.props does) only ever goes up.
+  A release is a commit, so a working tree with uncommitted changes is refused (-AllowDirty is for tests). Its
+  version is the one the build works out in Directory.Build.props. A commit tagged v<ZincVersion> is a release, one
+  tagged v<ZincVersion>-<something> is a pre-release, and any other commit is a dev build, which -Publish refuses.
 
-  Its notes are CHANGELOG.md's entry for its version ("## 0.1.0-dev.N (date)"), handed to the installer (a downloaded
+  Its notes are CHANGELOG.md's entry for its version ("## 0.1.0 (date)"), handed to the installer (a downloaded
   update shows them under "What's new" in About). -Publish refuses without one, or with anything left under
-  "## Unreleased". Before publishing, rename "## Unreleased" to the version the next commit makes (N is
-  `git rev-list --count HEAD` plus one), start a new empty "## Unreleased" above it, and commit that.
+  "## Unreleased". Before publishing, rename "## Unreleased" to the version, start a new empty "## Unreleased"
+  above it, commit that, and tag the commit.
 
   -Publish does the whole thing from release.local.json, in the repo's root and not in git:
     { "updateUrl": "https://example.com/zinc/",
@@ -84,27 +85,27 @@ if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
     throw 'native\x64\ghostty-vt.dll missing: run scripts/build/libghostty.ps1 first.'
 }
 
-# ---- version (as Directory.Build.props computes it) ----
+# ---- version (the one Directory.Build.props works out) ----
 $dirty = [bool](git -C $repo status --porcelain --untracked-files=no)
 if ($dirty -and -not $AllowDirty) { throw 'Uncommitted changes: a release is a commit. Commit first (or -AllowDirty for a test).' }
 if (-not $Version) {
-    $rev = (git -C $repo rev-parse --short=7 HEAD).Trim()
-    if ($dirty) { $rev += '-dirty' }
-    $base = [regex]::Match((Get-Content (Join-Path $repo 'Directory.Build.props') -Raw), '<ZincVersion>(.+?)</ZincVersion>').Groups[1].Value
-    $commits = (git -C $repo rev-list --count HEAD).Trim()
-    git -C $repo describe --exact-match --tags --match "v$base" HEAD 2>$null | Out-Null
-    $Version = if ($LASTEXITCODE -eq 0) { "$base+$rev" } else { "$base-dev.$commits+$rev" }
+    $Version = (dotnet msbuild (Join-Path $repo 'src\Zinc.Core\Zinc.Core.csproj') -nologo -t:ZincGitVersion -getProperty:ZincInformationalVersion).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $Version) { throw "Couldn't ask the build for its version." }
+    if ($dirty) { $Version += '-dirty' }
+}
+if ($Publish -and $Version -match '-dev\+') {
+    throw "This commit has no version tag, so it would be $Version. Tag it (v<ZincVersion>, or v<ZincVersion>-rc.N for a pre-release) and run this again."
 }
 
 # ---- a release testers would never get, because it isn't above the one already published ----
-# dev.N is the commit count, and squashing or rewriting history lowers it. Velopack only updates to a higher version.
-if ($Publish -and $Version -match '^(.+)-dev\.(\d+)') {
-    $base, $number = $Matches[1], [int]$Matches[2]
-    $published = (Invoke-RestMethod "$($UpdateUrl.TrimEnd('/'))/releases.win.json").Assets |
-        ForEach-Object { if ($_.Version -match "^$([regex]::Escape($base))-dev\.(\d+)") { [int]$Matches[1] } } |
-        Measure-Object -Maximum
-    if ($published.Count -gt 0 -and $number -le $published.Maximum) {
-        throw "This would be dev.$number, but dev.$($published.Maximum) is already published: testers only update to a higher number. It needs $($published.Maximum - $number + 1) more commit(s)."
+# Velopack only updates to a higher version. Versions compare as SemVer orders them, so 0.1.0-rc.1 is above every
+# 0.1.0-dev.N, and 0.1.0 is above every pre-release of it.
+if ($Publish) {
+    $mine = [semver]$Version.Split('+')[0]
+    $highest = (Invoke-RestMethod "$($UpdateUrl.TrimEnd('/'))/releases.win.json").Assets |
+        ForEach-Object { [semver]$_.Version.Split('+')[0] } | Sort-Object | Select-Object -Last 1
+    if ($highest -and $mine -le $highest) {
+        throw "This would be $mine, but $highest is already published, and testers only update to a higher version. Tag it with a version above $highest."
     }
 }
 

@@ -17,8 +17,9 @@ public class TerminalOptionTests
         session.WriteToScreen("\e[>q");
         Assert.Contains("\eP>|zinc ", Joined(replies));
         Assert.StartsWith("zinc ", TerminalSession.Version);
-        // The version comes from Directory.Build.props, either the release ("0.1.0+a1b2c3d") or a dev build ("0.1.0-dev.812+a1b2c3d").
-        Assert.Matches(@"^zinc \d+\.\d+\.\d+(-dev\.\d+)?(\+[0-9a-f]{7})?$", TerminalSession.Version);
+        // The version comes from Directory.Build.props: a release ("0.1.0+a1b2c3d"), a pre-release ("0.1.0-rc.1+a1b2c3d")
+        // or a dev build ("0.1.0-dev+a1b2c3d").
+        Assert.Matches(@"^zinc \d+\.\d+\.\d+(-[0-9A-Za-z.]+)?(\+[0-9a-f]{7})?$", TerminalSession.Version);
     }
 
     [Fact]

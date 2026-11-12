@@ -2,9 +2,10 @@
   <!--
     Zinc's version, for every project. ZincVersion is the release being worked toward:
     bump it when work on the next one starts. A build of the commit tagged v$(ZincVersion) is that
-    release ("0.1.0+a1b2c3d"); any other build is a dev build, numbered by the repository's commit
-    count, which only grows ("0.1.0-dev.812+a1b2c3d"). Shown in About, answered to XTVERSION, in the
-    exe's file properties and the crash log.
+    release ("0.1.0+a1b2c3d"). A build of a commit tagged with a pre-release of it, such as
+    v$(ZincVersion)-rc.1, is that pre-release ("0.1.0-rc.1+a1b2c3d"). Any other build is a dev build
+    ("0.1.0-dev+a1b2c3d"), which is never released. About shows the version, XTVERSION answers with it,
+    and the crash log records it.
   -->
   <PropertyGroup>
     <ZincVersion>0.1.0</ZincVersion>
@@ -21,10 +22,6 @@
   </PropertyGroup>
 
   <Target Name="ZincGitVersion" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo" Condition="'$(ZincInformationalVersion)' == ''">
-    <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low"
-          StandardErrorImportance="low" WorkingDirectory="$(MSBuildThisFileDirectory)">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_ZincCommits" />
-    </Exec>
     <Exec Command="git rev-parse --short=7 HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low"
           StandardErrorImportance="low" WorkingDirectory="$(MSBuildThisFileDirectory)">
       <Output TaskParameter="ConsoleOutput" PropertyName="_ZincHash" />
@@ -33,12 +30,21 @@
           StandardErrorImportance="low" EchoOff="true" WorkingDirectory="$(MSBuildThisFileDirectory)">
       <Output TaskParameter="ExitCode" PropertyName="_ZincTagged" />
     </Exec>
+    <!-- A pre-release tag counts only when the commit isn't also tagged as the release itself. The command prints
+         the tag's name, or git's error text when there's no such tag, so its output is used only when git succeeds. -->
+    <Exec Command="git describe --exact-match --tags --match v$(ZincVersion)-* HEAD" ConsoleToMSBuild="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true" WorkingDirectory="$(MSBuildThisFileDirectory)">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ZincPreTag" />
+      <Output TaskParameter="ExitCode" PropertyName="_ZincPreTagged" />
+    </Exec>
     <PropertyGroup>
-      <_ZincDev Condition="'$(_ZincTagged)' != '0' and '$(_ZincCommits)' != ''">-dev.$(_ZincCommits)</_ZincDev>
+      <!-- The version without the commit's hash, which is what a release is packed and published as. -->
+      <ZincPackVersion>$(ZincVersion)-dev</ZincPackVersion>
+      <ZincPackVersion Condition="'$(_ZincPreTagged)' == '0'">$(_ZincPreTag.Trim().Substring(1))</ZincPackVersion>
+      <ZincPackVersion Condition="'$(_ZincTagged)' == '0'">$(ZincVersion)</ZincPackVersion>
       <_ZincBuild Condition="'$(_ZincHash)' != ''">+$(_ZincHash)</_ZincBuild>
-      <ZincInformationalVersion>$(ZincVersion)$(_ZincDev)$(_ZincBuild)</ZincInformationalVersion>
+      <ZincInformationalVersion>$(ZincPackVersion)$(_ZincBuild)</ZincInformationalVersion>
       <InformationalVersion>$(ZincInformationalVersion)</InformationalVersion>
-      <FileVersion Condition="'$(_ZincCommits)' != ''">$(ZincVersion).$(_ZincCommits)</FileVersion>
     </PropertyGroup>
   </Target>
 </Project>

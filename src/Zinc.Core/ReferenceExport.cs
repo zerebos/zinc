@@ -69,7 +69,7 @@ public static class ReferenceExport
     /// </summary>
     public static string ToJson(JsonNode reference) => reference.ToJsonString(Written) + "\n";
 
-    /// <summary>This build's informational version ("0.1.0-dev.452+abc1234").</summary>
+    /// <summary>This build's informational version ("0.1.0-dev+abc1234").</summary>
     public static string Version =>
         typeof(ReferenceExport).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0";
 
