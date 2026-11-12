@@ -41,6 +41,7 @@ public class ConfigFileTests : IDisposable
         Assert.Equal(400, none.FontWeight);
         Assert.Empty(none.FontFallbacks);
         Assert.Contains(Parse("[font]\nweight = \"heaviest\"").Warnings, w => w.Contains("weight"));
+        Assert.Contains(Parse("[font]\nweight = -1").Warnings, w => w.Contains("weight")); // not weight 1
     }
 
     [Fact]

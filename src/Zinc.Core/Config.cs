@@ -313,7 +313,8 @@ public sealed record Config
             "bold" => 700,
             "extrabold" or "ultrabold" => 800,
             "black" or "heavy" => 900,
-            var n when int.TryParse(n, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number is >= 1 and <= 999 => number,
+            // The number is parsed from the value as written, because the switch strips its dashes and -1 would read as 1
+            _ when int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) && number is >= 1 and <= 999 => number,
             _ => 0,
         };
         return weight > 0;
