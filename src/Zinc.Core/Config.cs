@@ -4,7 +4,7 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-/// <summary>Which panes show a header (for now, their strip of tabs). Config: <c>[window] pane-headers</c>.</summary>
+/// <summary>Which panes show a header. Config: <c>[window] pane-headers</c>.</summary>
 public enum PaneHeaders
 {
     /// <summary>On panes holding two or more tabs (the old <c>pane-tab-strip = "auto"</c>).</summary>
@@ -26,7 +26,7 @@ public enum PaneHeaderButtons
     /// <summary>None.</summary>
     Hide,
 
-    /// <summary>The focused pane's; the others' while the pointer is over their header (decision 45).</summary>
+    /// <summary>The focused pane's, and another pane's while the pointer is over its header.</summary>
     Focused,
 
     /// <summary>A pane's while the pointer is over its header.</summary>
@@ -45,7 +45,7 @@ public enum PaneFocus
     /// <summary>An accent ring around the pane.</summary>
     Ring,
 
-    /// <summary>No mark (dimming the other panes still shows which is focused, when it's on).</summary>
+    /// <summary>No mark. When unfocused panes are dimmed, that still shows which one is focused.</summary>
     None,
 }
 
@@ -55,10 +55,11 @@ public enum PaneTabsAs
     /// <summary>A row of tabs, shortened, then icons, then folded into a count as the pane narrows.</summary>
     Tabs,
 
-    /// <summary>The shown tab and the count ("2 of 5") that opens a menu of them all, at every width (row 28).</summary>
+    /// <summary>The shown tab and a count ("2 of 5") that opens a menu of them all, at every width.</summary>
     Menu,
 }
 
+/// <summary>Where a window lists its workspaces. Config: <c>[window] workspace-tabs = top | left</c>.</summary>
 public enum WorkspaceTabs
 {
     /// <summary>In the title bar.</summary>
@@ -68,7 +69,7 @@ public enum WorkspaceTabs
     Left,
 }
 
-/// <summary>What opens a link under the pointer. Config: <c>link-click = ctrl | alt | click</c>.</summary>
+/// <summary>What opens a link under the pointer. Config: <c>[terminal] link-click = ctrl | alt | click</c>.</summary>
 public enum LinkClick
 {
     /// <summary>Ctrl+click (links show underlined while Ctrl is held).</summary>
@@ -77,14 +78,14 @@ public enum LinkClick
     /// <summary>Alt+click.</summary>
     Alt,
 
-    /// <summary>A click without dragging (a drag still selects; a program using the mouse still gets it).</summary>
+    /// <summary>A click without dragging. A drag still selects, and a program using the mouse still gets the click.</summary>
     Click,
 }
 
-/// <summary>What a right-click in a terminal does. Config: <c>right-click = menu | copy-paste | paste</c>.</summary>
+/// <summary>What a right-click in a terminal does. Config: <c>[terminal] right-click = menu | copy-paste | paste</c>.</summary>
 public enum RightClick
 {
-    /// <summary>A menu: copy, paste, find, the link or command under the pointer, split, close.</summary>
+    /// <summary>A menu with copy, paste, find, the link or command under the pointer, split and close.</summary>
     Menu,
 
     /// <summary>Copies a selection, or pastes when there's none (the Windows console's way).</summary>
@@ -94,7 +95,7 @@ public enum RightClick
     Paste,
 }
 
-/// <summary>Whether Zinc loads its shell integration into the shells it starts. Config: <c>shell-integration</c>.</summary>
+/// <summary>Whether Zinc loads its shell integration into the shells it starts. Config: <c>[terminal] shell-integration</c>.</summary>
 public enum ShellIntegrationMode
 {
     /// <summary>PowerShell, bash and zsh get it (after the user's own startup files).</summary>
@@ -104,23 +105,19 @@ public enum ShellIntegrationMode
     Off,
 }
 
-/// <summary>Which commands get a bar in the pane's left edge (shell integration). Config: <c>command-marks</c>.</summary>
+/// <summary>Which commands get a bar in the pane's left edge (shell integration). Config: <c>[terminal] command-marks</c>.</summary>
 public enum CommandMarks
 {
     /// <summary>Failed commands only (and scrollbar ticks for every prompt).</summary>
     Failures,
 
-    /// <summary>Every command that ran: green, or red if it failed.</summary>
+    /// <summary>Every command that ran, in green, or in red if it failed.</summary>
     All,
 
     /// <summary>No bars and no ticks.</summary>
     None,
 }
 
-/// <summary>
-/// How Zinc tells you about something that happened out of view (a long command finishing, a
-/// program's notification). Config: <c>[notify] command-finished</c> and <c>programs</c>.
-/// </summary>
 /// <summary>The sound for a finished long command. Config: <c>[notify] command-finished-sound</c>.</summary>
 public enum FinishedSound
 {
@@ -133,9 +130,13 @@ public enum FinishedSound
     Beep,
 }
 
+/// <summary>
+/// How Zinc tells you about something that happened out of view (a long command finishing, a
+/// program's notification). Config: <c>[notify] command-finished</c> and <c>programs</c>.
+/// </summary>
 public enum NotifyMode
 {
-    /// <summary>A dot on its tab; the taskbar button flashes if the window is in the background.</summary>
+    /// <summary>A dot on its tab. The taskbar button also flashes if the window is in the background.</summary>
     Badge,
 
     /// <summary>The dot, plus a Windows notification when Zinc is in the background.</summary>
@@ -146,37 +147,37 @@ public enum NotifyMode
     Never,
 }
 
-/// <summary>What happens to a pane when its program ends. Config: <c>close-on-exit = success | always | never</c>.</summary>
+/// <summary>What happens to a pane when its program ends. Config: <c>[terminal] close-on-exit = success | always | never</c>.</summary>
 public enum CloseOnExit
 {
-    /// <summary>Closes after a clean exit (code 0); a failure stays on screen so it can be read.</summary>
+    /// <summary>Closes after a clean exit (code 0). A failure stays on screen so it can be read.</summary>
     Success,
     Always,
     Never,
 }
 
-/// <summary>Starting when you sign in. Config: <c>launch-at-login = off | tray | windows</c>.</summary>
+/// <summary>Starting when you sign in. Config: <c>[window] launch-at-login = off | tray | windows</c>.</summary>
 public enum LaunchAtLogin
 {
     Off,
 
-    /// <summary>No window: the tray icon and the quick terminal's hotkey are ready.</summary>
+    /// <summary>No window opens. The tray icon and the quick terminal's hotkey are ready.</summary>
     Tray,
 
     /// <summary>The windows you had open (or a new one).</summary>
     Windows,
 }
 
-/// <summary>Programs reading the clipboard (OSC 52). Config: <c>clipboard-read = ask | allow | deny</c>.</summary>
+/// <summary>Programs reading the clipboard (OSC 52). Config: <c>[terminal] clipboard-read = ask | allow | deny</c>.</summary>
 public enum ClipboardAccess
 {
-    /// <summary>Each read asks: allow once, for the tab, or deny.</summary>
+    /// <summary>Each read asks whether to allow it once, allow it for the tab, or deny it.</summary>
     Ask,
     Allow,
     Deny,
 }
 
-/// <summary>What the bell (BEL) does. Config: <c>bell = attention | flash | none</c>.</summary>
+/// <summary>What the bell (BEL) does. Config: <c>[terminal] bell = attention | flash | none</c>.</summary>
 public enum BellMode
 {
     /// <summary>A dot on the tab (and the taskbar button flashes) when you aren't looking at it.</summary>
@@ -196,15 +197,20 @@ public enum ShaderAnimation
     /// <summary>While the terminal has focus (true, the default).</summary>
     Focused,
 
-    /// <summary>Never (false): they hold still (their clock stopped, cursor effects finished); drawn only when something on screen changes.</summary>
+    /// <summary>
+    /// Never (false). They hold still, with their clock stopped and cursor effects finished, and are drawn only when
+    /// something on screen changes.
+    /// </summary>
     Never,
 
     /// <summary>Focused or not.</summary>
     Always,
 }
 
-/// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>title-bar = show | auto-hide</c>.</summary>
-/// <summary>Light or dark windows, menus and dialogs (the terminal's colors are the color scheme's).</summary>
+/// <summary>
+/// Light or dark windows, menus and dialogs (the terminal's colors are the color scheme's). Config:
+/// <c>[window] appearance</c>.
+/// </summary>
 public enum ChromeAppearance
 {
     /// <summary>As Windows' app mode is when Zinc starts.</summary>
@@ -215,19 +221,23 @@ public enum ChromeAppearance
     Dark,
 }
 
-/// <summary>What a window shows behind its content (and through a see-through terminal background).</summary>
+/// <summary>
+/// What a window shows behind its content, and through a see-through terminal background. Config:
+/// <c>[window] backdrop</c>.
+/// </summary>
 public enum WindowBackdrop
 {
-    /// <summary>Mica: the wallpaper's tint, as Windows apps use.</summary>
+    /// <summary>Mica, which takes a tint from the wallpaper, as Windows apps do.</summary>
     Mica,
 
     /// <summary>The windows behind, blurred.</summary>
     Acrylic,
 
-    /// <summary>Nothing: the windows behind show as they are.</summary>
+    /// <summary>Nothing, so the windows behind show as they are.</summary>
     None,
 }
 
+/// <summary>The title bar with <c>workspace-tabs = left</c>. Config: <c>[window] title-bar = show | auto-hide</c>.</summary>
 public enum TitleBarMode
 {
     Show,
@@ -236,7 +246,7 @@ public enum TitleBarMode
     AutoHide,
 }
 
-/// <summary>The workspace list with <c>workspace-tabs = left</c>. Config: <c>sidebar = full | rail | auto-hide</c>.</summary>
+/// <summary>The workspace list with <c>workspace-tabs = left</c>. Config: <c>[window] sidebar = full | rail | auto-hide</c>.</summary>
 public enum SidebarMode
 {
     Full,
@@ -249,16 +259,16 @@ public enum SidebarMode
 }
 
 /// <summary>
-/// One resolved set of settings (the global ones, or a profile's). <see cref="ConfigFile"/>
-/// reads config.toml into it; <see cref="Apply"/> parses one value by its Ghostty-style key,
-/// which is also how color scheme files (Ghostty's theme format) are read.
+/// One resolved set of settings (the global ones, or a profile's). <see cref="ConfigFile"/> reads config.toml into
+/// it, one setting at a time, through the setting's binding in <see cref="Zinc.Settings.SettingsCatalog"/>. A
+/// property's initializer is the setting's default. The <c>Try…</c> methods parse the forms values are written in.
 /// </summary>
 public sealed record Config
 {
     /// <summary>Default font size in points (≈14 DIPs).</summary>
     public const float DefaultFontSize = 10.5f;
 
-    /// <summary>Primary font family; glyphs it lacks fall back through DirectWrite.</summary>
+    /// <summary>The font family. Glyphs it lacks fall back through DirectWrite. Config: <c>[font] family</c>.</summary>
     public string FontFamily { get; init; } = "Cascadia Mono NF"; // ships with Zinc (Fonts)
 
     /// <summary>
@@ -298,7 +308,10 @@ public sealed record Config
         return text == null ? null : string.Join(", ", text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
-    /// <summary>Font weights by name (CSS's, as DirectWrite's): "semibold" = 600; also "semi-bold" and the numbers.</summary>
+    /// <summary>
+    /// A font weight by name, as CSS and DirectWrite name them ("semibold" is 600, and "semi-bold" reads the same), or
+    /// as a number from 1 to 999.
+    /// </summary>
     public static bool TryWeight(string value, out int weight)
     {
         weight = value.Replace("-", "").Replace(" ", "").ToLowerInvariant() switch
@@ -328,8 +341,8 @@ public sealed record Config
     public bool BuiltinGlyphs { get; init; } = true;
 
     /// <summary>
-    /// Makes the built-in glyphs' lines thicker or thinner than the font's underline (Ghostty's
-    /// adjust-box-thickness): whole pixels, or a percentage. Config: <c>[font] adjust-box-thickness = 1 | "20%"</c>.
+    /// Makes the built-in glyphs' lines thicker or thinner than the font's underline, by whole pixels or by a
+    /// percentage (Ghostty's adjust-box-thickness). Config: <c>[font] adjust-box-thickness = 1 | "20%"</c>.
     /// </summary>
     public (double Amount, bool Percent) AdjustBoxThickness { get; init; }
 
@@ -342,12 +355,15 @@ public sealed record Config
     });
 
     /// <summary>
-    /// Taller or shorter cells (Ghostty's adjust-cell-height): pixels at 100% scale, or a percentage of the font's own
-    /// line height; text stays centered in them. Config: <c>[font] adjust-cell-height = 2 | "20%"</c>.
+    /// Taller or shorter cells, by pixels at 100% scale or by a percentage of the font's own line height (Ghostty's
+    /// adjust-cell-height). Text stays centered in them. Config: <c>[font] adjust-cell-height = 2 | "20%"</c>.
     /// </summary>
     public (double Amount, bool Percent) AdjustCellHeight { get; init; }
 
-    /// <summary>A cell's height in device pixels: the font's <paramref name="natural"/> one, adjusted (never below half of it).</summary>
+    /// <summary>
+    /// A cell's height in device pixels, which is the font's <paramref name="natural"/> height adjusted by
+    /// <see cref="AdjustCellHeight"/>, and never less than half of it.
+    /// </summary>
     public uint AdjustedCellHeight(uint natural, float scale)
     {
         var extra = AdjustCellHeight switch
@@ -359,36 +375,36 @@ public sealed record Config
         return (uint)Math.Max(Math.Ceiling(natural / 2.0), natural + extra);
     }
 
-    /// <summary>Font size in points, like Ghostty and Windows Terminal.</summary>
+    /// <summary>Font size in points, like Ghostty and Windows Terminal. Config: <c>[font] size</c>.</summary>
     public float FontSize { get; init; } = DefaultFontSize;
 
-    /// <summary>Font size in DIPs (96 per inch; a point is 1/72 inch).</summary>
+    /// <summary>Font size in DIPs. There are 96 DIPs to an inch, and 72 points.</summary>
     public float FontSizeDip => FontSize * 96f / 72f;
 
-    /// <summary>Command line to run; null means pick a default shell.</summary>
+    /// <summary>The command line to run, or null to pick a default shell. Config: a profile's <c>command</c>.</summary>
     public string? Command { get; init; }
 
     public TerminalTheme Theme { get; init; } = TerminalTheme.Default;
 
-    /// <summary>With a light/dark theme pair: whether its dark side is the one in force. Null for a single theme.</summary>
+    /// <summary>With a light/dark theme pair, whether its dark side is the one in force. Null for a single theme.</summary>
     public bool? PairedDark { get; init; }
 
     /// <summary>
-    /// Whether programs are told the colors are dark (CSI ? 996 n, mode 2031): the side of a
-    /// light/dark pair in force, else whether the background is dark.
+    /// Whether programs are told the colors are dark (CSI ? 996 n, mode 2031). That's the side of a light/dark pair
+    /// in force, or without a pair, whether the background is dark.
     /// </summary>
     public bool IsDark => PairedDark ?? 0.2126 * Theme.Background.R + 0.7152 * Theme.Background.G + 0.0722 * Theme.Background.B < 128;
 
     /// <summary>
-    /// Pointer over the terminal: an arrow (default, like Windows Terminal) or a text
-    /// I-beam (like Ghostty, kitty, WezTerm). Config: <c>mouse-pointer = arrow | text</c>.
+    /// Whether the pointer over the terminal is a text I-beam (like Ghostty, kitty and WezTerm) instead of an arrow
+    /// (the default, like Windows Terminal). Config: <c>[terminal] mouse-pointer = arrow | text</c>.
     /// </summary>
     public bool TextPointer { get; init; }
 
-    /// <summary>Programs may set the clipboard with OSC 52. Config: <c>clipboard-write = allow | deny</c>.</summary>
+    /// <summary>Programs may set the clipboard with OSC 52. Config: <c>[terminal] clipboard-write = true | false</c>.</summary>
     public bool ClipboardWrite { get; init; } = true;
 
-    /// <summary>A selection is copied as soon as it's made (and stays selected). Config: <c>copy-on-select = true</c>.</summary>
+    /// <summary>A selection is copied as soon as it's made (and stays selected). Config: <c>[terminal] copy-on-select = true</c>.</summary>
     public bool CopyOnSelect { get; init; }
 
     /// <summary>
@@ -397,13 +413,13 @@ public sealed record Config
     /// </summary>
     public bool CopyFormatting { get; init; }
 
-    /// <summary>What opens a link. Config: <c>link-click</c>.</summary>
+    /// <summary>What opens a link. Config: <c>[terminal] link-click</c>.</summary>
     public LinkClick LinkClick { get; init; }
 
-    /// <summary>What a right-click does (unless a program uses the mouse). Config: <c>right-click</c>.</summary>
+    /// <summary>What a right-click does (unless a program uses the mouse). Config: <c>[terminal] right-click</c>.</summary>
     public RightClick RightClick { get; init; }
 
-    /// <summary>The middle button pastes (unless a program uses the mouse). Config: <c>middle-click-paste = true</c>.</summary>
+    /// <summary>The middle button pastes (unless a program uses the mouse). Config: <c>[terminal] middle-click-paste = true</c>.</summary>
     public bool MiddleClickPaste { get; init; }
 
     /// <summary>
@@ -412,97 +428,105 @@ public sealed record Config
     /// </summary>
     public bool ClickToMove { get; init; } = true;
 
-    /// <summary>When a paste asks first. Config: <c>paste-warning = auto | multiline | never</c>.</summary>
+    /// <summary>When a paste asks first. Config: <c>[terminal] paste-warning = auto | multiline | never</c>.</summary>
     public Zinc.Terminal.PasteWarning PasteWarning { get; init; }
 
-    /// <summary>A paste over 5 KB asks first. Config: <c>large-paste-warning = true | false</c>.</summary>
+    /// <summary>A paste over 5 KB asks first. Config: <c>[terminal] large-paste-warning = true | false</c>.</summary>
     public bool LargePasteWarning { get; init; } = true;
 
     /// <summary>
-    /// Characters that end a word when you double-click (space and tab always do); null: Ghostty's
-    /// own set. Config: <c>word-boundaries = "'\"|:;,()[]{}&lt;&gt;$"</c>.
+    /// Characters that end a word when you double-click (space and tab always do). Null means Ghostty's
+    /// own set. Config: <c>[terminal] word-boundaries = "'\"|:;,()[]{}&lt;&gt;$"</c>.
     /// </summary>
     public string? WordBoundaries { get; init; }
 
     /// <summary>Moving the pointer into a pane focuses it. Config: <c>[window] focus-follows-mouse = true</c> (global).</summary>
     public bool FocusFollowsMouse { get; init; }
 
-    /// <summary>The cursor until a program picks its own. Config: <c>cursor-style = block | bar | underline | block-hollow</c>.</summary>
+    /// <summary>The cursor until a program picks its own. Config: <c>[terminal] cursor-style = block | bar | underline | block-hollow</c>.</summary>
     public Zinc.Ghostty.TerminalCursorStyle CursorStyle { get; init; } = Zinc.Ghostty.TerminalCursorStyle.Block;
 
-    /// <summary>Whether that cursor blinks. Config: <c>cursor-blink = true</c>.</summary>
+    /// <summary>Whether that cursor blinks. Config: <c>[terminal] cursor-blink = true</c>.</summary>
     public bool CursorBlink { get; init; }
 
     /// <summary>
-    /// The cursor while a shell waits at its prompt (needs shell integration's marks); null: the
-    /// same as elsewhere. Config: <c>cursor-style-at-prompt = same | block | bar | underline | block-hollow</c>.
+    /// The cursor while a shell waits at its prompt (needs shell integration's marks). Null means the
+    /// same as elsewhere. Config: <c>[terminal] cursor-style-at-prompt = same | block | bar | underline | block-hollow</c>.
     /// </summary>
     public Zinc.Ghostty.TerminalCursorStyle? CursorStyleAtPrompt { get; init; }
 
-    /// <summary>Lines kept above the screen. Config: <c>scrollback-lines = 10000</c>.</summary>
+    /// <summary>Lines kept above the screen. Config: <c>[terminal] scrollback-lines = 10000</c>.</summary>
     public int ScrollbackLines { get; init; } = DefaultScrollbackLines;
 
     public const int DefaultScrollbackLines = 10_000;
 
     public const int MaxScrollbackLines = 100_000;
 
-    /// <summary>What happens when the program ends. Config: <c>close-on-exit</c>.</summary>
+    /// <summary>What happens when the program ends. Config: <c>[terminal] close-on-exit</c>.</summary>
     public CloseOnExit CloseOnExit { get; init; }
 
-    /// <summary>What the bell does. Config: <c>bell</c>.</summary>
+    /// <summary>What the bell does. Config: <c>[terminal] bell</c>.</summary>
     public BellMode Bell { get; init; }
 
-    /// <summary>The bell also plays Windows' default sound. Config: <c>bell-sound = true</c>.</summary>
+    /// <summary>The bell also plays Windows' default sound. Config: <c>[terminal] bell-sound = true</c>.</summary>
     public bool BellSound { get; init; }
 
     /// <summary>
-    /// New tabs read environment variables from Windows when they start (as Windows Terminal), so a PATH an installer
-    /// changed works without restarting Zinc; merged over Zinc's own, nothing removed. Config: <c>reload-environment</c>.
+    /// New tabs read environment variables from Windows when they start, as Windows Terminal does, so a PATH an
+    /// installer changed works without restarting Zinc. They're merged over Zinc's own, and nothing is removed. Config:
+    /// <c>[terminal] reload-environment</c>.
     /// </summary>
     public bool ReloadEnvironment { get; init; } = true;
 
     /// <summary>
-    /// Variables set for the programs started (<c>[environment]</c>, a profile's <c>[profile.x.environment]</c> over it);
-    /// an empty value removes the variable.
+    /// Variables set for the programs started, from <c>[environment]</c> with a profile's
+    /// <c>[profile.x.environment]</c> over it. An empty value removes the variable.
     /// </summary>
     public IReadOnlyDictionary<string, string> EnvironmentVariables { get; init; } = NoVariables;
 
-    // One empty set for every config without variables: configs compare as records, and two empty dictionaries don't.
+    // One empty set for every config without variables, because configs compare as records and two separate empty
+    // dictionaries wouldn't be equal.
     private static readonly IReadOnlyDictionary<string, string> NoVariables = new Dictionary<string, string>();
 
-    /// <summary>A program's screen flash (a "visible bell") rings the bell instead. Config: <c>screen-flash-bell = false</c>.</summary>
+    /// <summary>A program's screen flash (a "visible bell") rings the bell instead. Config: <c>[terminal] screen-flash-bell = false</c>.</summary>
     public bool ScreenFlashBell { get; init; } = true;
 
     /// <summary>
-    /// Input methods (IME) type into the terminal: a focused pane's keys pass through a hidden text box
-    /// Windows' input methods work with. On by default (since 2026-10-04, after a long run on the user's machine);
-    /// <c>input-method = false</c> sends keys straight to the terminal.
+    /// Input methods (IME) type into the terminal. A focused pane's keys pass through a hidden text box that Windows'
+    /// input methods work with. Config: <c>[terminal] input-method = false</c> sends keys straight to the terminal.
     /// </summary>
     public bool InputMethod { get; init; } = true;
 
-    /// <summary>Programs may set the tab's title (OSC 0/2); off: the profile's name. Config: <c>program-titles = false</c>.</summary>
+    /// <summary>
+    /// Programs may set the tab's title (OSC 0/2). When off, the tab shows the profile's name. Config:
+    /// <c>[terminal] program-titles = false</c>.
+    /// </summary>
     public bool ProgramTitles { get; init; } = true;
 
     /// <summary>
-    /// The tab shows the folder at the shell's prompt and the command while one runs (from the shell's marks; a title the
-    /// running program sets still wins). Config: <c>shell-titles</c>.
+    /// The tab shows the folder at the shell's prompt and the command while one runs, from the shell's marks. A title
+    /// the running program sets still wins. Config: <c>[terminal] shell-titles</c>.
     /// </summary>
     public bool ShellTitles { get; init; } = true;
 
     /// <summary>
-    /// Whether programs may read the clipboard with OSC 52: anything running in the terminal, e.g.
-    /// over ssh, could read it, so by default each read asks. Config: <c>clipboard-read = ask | allow | deny</c>.
+    /// Whether programs may read the clipboard with OSC 52. Anything running in the terminal could read it, including
+    /// a program on the far end of ssh, so by default each read asks. Config:
+    /// <c>[terminal] clipboard-read = ask | allow | deny</c>.
     /// </summary>
     public ClipboardAccess ClipboardRead { get; init; } = ClipboardAccess.Ask;
 
     /// <summary>
-    /// Whether closing the last window quits Zinc (global only). Null (the default): keep
-    /// running in the tray while the quick terminal hotkey works, so it still summons one.
-    /// Config: <c>quit-after-last-window-closed = true | false</c>.
+    /// Whether closing the last window quits Zinc (global only). Null, the default, keeps Zinc running in the tray
+    /// while the quick terminal's hotkey is set, so the hotkey still works, and quits otherwise.
+    /// Config: <c>[window] quit-after-last-window-closed = true | false</c>.
     /// </summary>
     public bool? QuitAfterLastWindowClosed { get; init; }
 
-    /// <summary>A sound when a long command finishes out of view (not with a Windows notification: it has its own).</summary>
+    /// <summary>
+    /// A sound when a long command finishes out of view. It doesn't play with a Windows notification, which has its
+    /// own. Config: <c>[notify] command-finished-sound</c>.
+    /// </summary>
     public FinishedSound CommandFinishedSound { get; init; }
 
     /// <summary>How far the resize-pane action moves a divider, as a fraction of the split. Config: <c>[window] pane-resize-step</c> (percent).</summary>
@@ -518,28 +542,29 @@ public sealed record Config
     public bool ConfirmQuit { get; init; } = true;
 
     /// <summary>
-    /// A pane can hold several tabs (true, the default); false keeps one terminal per pane, and
-    /// "new tab" opens a workspace instead. Config: <c>pane-tabs = true | false</c> (global).
+    /// A pane can hold several tabs (true, the default). False keeps one terminal per pane, and
+    /// "new tab" opens a workspace instead. Config: <c>[window] pane-tabs = true | false</c> (global).
     /// </summary>
     public bool PaneTabs { get; init; } = true;
 
     /// <summary>
-    /// Draw with the CPU (WARP) instead of the graphics card: for broken GPU drivers, some virtual
+    /// Draw with the CPU (WARP) instead of the graphics card, for broken GPU drivers, some virtual
     /// machines and remote desktop glitches. Config: <c>[window] software-rendering = true</c> (global).
     /// </summary>
     public bool SoftwareRendering { get; init; }
 
     /// <summary>
     /// Each terminal presents from a swap chain of its own as soon as a frame is ready, instead of waiting for the
-    /// window's next render tick (typing shows up about a refresh sooner). On by default since 2026-10-03; off = the
-    /// CanvasControl path, kept as a fallback. Config: <c>[window] low-latency-drawing</c> (global; terminals opened from now on).
+    /// window's next render tick, so typing shows up about a refresh sooner. Off draws through a CanvasControl, which
+    /// is kept as a fallback. Config: <c>[window] low-latency-drawing</c> (global, for terminals opened from then on).
     /// </summary>
     public bool LowLatencyDrawing { get; init; } = true;
 
     /// <summary>
-    /// A tab hidden for <see cref="FreeHiddenAfter"/> gives its drawing surface's graphics memory back (two full-size
-    /// buffers, plus a shader pane's pictures: tens of MB a maximized tab on a high-resolution screen); shown again, it
-    /// makes them anew for its first frame. Low-latency drawing only. Config: <c>[window] free-hidden-memory</c> (global).
+    /// A tab hidden for <see cref="FreeHiddenAfter"/> gives its drawing surface's graphics memory back. That's two
+    /// full-size buffers plus a shader pane's pictures, tens of MB for a maximized tab on a high-resolution screen. When
+    /// it's shown again, it makes them anew for its first frame. Low-latency drawing only. Config:
+    /// <c>[window] free-hidden-memory</c> (global).
     /// </summary>
     public bool FreeHiddenMemory { get; init; } = true;
 
@@ -563,15 +588,21 @@ public sealed record Config
     public ShaderAnimation ShaderAnimation { get; init; }
 
     /// <summary>
-    /// Which panes show a header. Config: <c>[window] pane-headers = auto | with-tabs | always | never</c>; the old
-    /// <c>pane-tab-strip</c> is read as this key (<c>ConfigFile.ReplacedKeys</c>).
+    /// Which panes show a header. Config: <c>[window] pane-headers = auto | with-tabs | always | never</c>. The old
+    /// <c>pane-tab-strip</c> is read as this key (<see cref="ConfigFile.ReplacedKeys"/>).
     /// </summary>
     public PaneHeaders PaneHeaders { get; init; }
 
-    /// <summary>Which panes show their header's buttons. Config: <c>[window] pane-header-buttons = show | hover | hide</c>.</summary>
+    /// <summary>
+    /// Which panes show their header's buttons. Config: <c>[window] pane-header-buttons = always | focused | hover |
+    /// hide</c>.
+    /// </summary>
     public PaneHeaderButtons PaneHeaderButtons { get; init; }
 
-    /// <summary>Pixels between panes; 0 is the divider (a 5 px band with a 1 px line). Config: <c>[window] pane-gap</c>.</summary>
+    /// <summary>
+    /// Pixels between panes. At 0 the panes meet at a divider, a 5 px band with a 1 px line. Config:
+    /// <c>[window] pane-gap</c>.
+    /// </summary>
     public int PaneGap { get; init; }
 
     /// <summary>The gap at the workspace's outer edges too, split or not. Config: <c>[window] pane-gap-edges</c>.</summary>
@@ -589,46 +620,54 @@ public sealed record Config
     /// <summary>How a pane shows its tabs. Config: <c>[window] pane-tabs-as = tabs | menu</c>.</summary>
     public PaneTabsAs PaneTabsAs { get; init; }
 
-    /// <summary>Where a window's workspaces are listed. Config: <c>workspace-tabs = top | left</c> (global).</summary>
+    /// <summary>Where a window's workspaces are listed. Config: <c>[window] workspace-tabs = top | left</c> (global).</summary>
     public WorkspaceTabs WorkspaceTabs { get; init; }
 
-    /// <summary>Config: <c>[notify] command-finished = badge | toast | toast-always | never</c> (global).</summary>
+    /// <summary>
+    /// How Zinc tells you a long command finished out of view. Config: <c>[notify] command-finished = badge | toast |
+    /// toast-always | never</c> (global).
+    /// </summary>
     public NotifyMode NotifyCommandFinished { get; init; }
 
-    /// <summary>Notifications programs send (OSC 9, OSC 777). Config: <c>[notify] programs = badge | toast | toast-always | never</c> (global).</summary>
+    /// <summary>
+    /// Notifications programs send (OSC 9, OSC 777). Config: <c>[notify] programs = badge | toast | toast-always |
+    /// never</c> (global).
+    /// </summary>
     public NotifyMode NotifyPrograms { get; init; }
 
-    /// <summary>How long a command must run to count as long. Config: <c>[notify] command-finished-after = 10</c> (seconds, or "30s", "2m"; global).</summary>
+    /// <summary>
+    /// How long a command must run to count as long. Config: <c>[notify] command-finished-after = 10</c>, in seconds, or
+    /// with a unit ("30s", "2m"). Global.
+    /// </summary>
     public TimeSpan NotifyCommandFinishedAfter { get; init; } = TimeSpan.FromSeconds(10);
 
-    /// <summary>Marks for shell-integrated commands. Config: <c>command-marks = failures | all | none</c>.</summary>
+    /// <summary>Marks for shell-integrated commands. Config: <c>[terminal] command-marks = failures | all | none</c>.</summary>
     public CommandMarks CommandMarks { get; init; }
 
-    /// <summary>Zinc's shell integration, loaded automatically. Config: <c>shell-integration = auto | off</c>.</summary>
+    /// <summary>Zinc's shell integration, loaded automatically. Config: <c>[terminal] shell-integration = auto | off</c>.</summary>
     public ShellIntegrationMode ShellIntegration { get; init; }
 
-    /// <summary>The title bar with the workspace list. Config: <c>title-bar = show | auto-hide</c> (global).</summary>
+    /// <summary>The title bar with the workspace list. Config: <c>[window] title-bar = show | auto-hide</c> (global).</summary>
     public TitleBarMode TitleBar { get; init; }
 
-    /// <summary>How the workspace list shows. Config: <c>sidebar = full | rail | auto-hide</c> (global).</summary>
+    /// <summary>How the workspace list shows. Config: <c>[window] sidebar = full | rail | auto-hide</c> (global).</summary>
     public SidebarMode Sidebar { get; init; }
 
     /// <summary>
     /// How visible panes without focus stay, 0.15–1 (1 = not dimmed). Config, as in Ghostty and
-    /// with its default: <c>unfocused-split-opacity = 0.7</c> (global).
+    /// with its default: <c>[window] unfocused-pane-opacity = 0.7</c> (global).
     /// </summary>
     public double UnfocusedPaneOpacity { get; init; } = 0.7;
 
     /// <summary>
-    /// Whether windows, workspaces and tabs reopen as they were (session.json; not their
-    /// contents). Config, as in Ghostty: <c>window-save-state = default | always | never</c>
-    /// (global; default = always).
+    /// Whether windows, workspaces and tabs reopen as they were, from session.json. Their contents don't come back.
+    /// Config: <c>[window] save-state = always | never</c> (global). "default", Ghostty's third value, reads as always.
     /// </summary>
     public bool SaveState { get; init; } = true;
 
     /// <summary>
-    /// A new workspace opens on a page for choosing its profile, folder and name (Enter starts the
-    /// default). Config: <c>[window] new-workspace-page = false</c> starts the default at once.
+    /// A new workspace opens on a page for choosing its profile, folder and name, where Enter starts the
+    /// default. Config: <c>[window] new-workspace-page = false</c> starts the default at once.
     /// </summary>
     public bool NewWorkspacePage { get; init; } = true;
 
@@ -636,7 +675,7 @@ public sealed record Config
     public Zinc.Panes.WorkspaceColorMode WorkspaceColors { get; init; }
 
     /// <summary>
-    /// Where new tabs and splits start in a workspace without a folder of its own (splits: always where you are).
+    /// Where new tabs start in a workspace without a folder of its own. A split always starts where you are.
     /// Config: <c>[window] start-in = current | profile</c>.
     /// </summary>
     public Zinc.Terminal.NewTerminalFolder StartIn { get; init; }
@@ -647,24 +686,27 @@ public sealed record Config
     /// <summary>"Open in Zinc" on Explorer's menu for folders and drives. Config: <c>[window] explorer-menu = true</c>.</summary>
     public bool ExplorerMenu { get; init; }
 
-    /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
+    /// <summary>
+    /// What unfocused panes are dimmed toward, or null for each pane's own background. Config:
+    /// <c>[window] unfocused-pane-fill</c> (global).
+    /// </summary>
     public GhosttyColorRgb? UnfocusedPaneFill { get; init; }
 
-    /// <summary>The line between split panes; null: Zinc's grey. Config: <c>[window] divider-color</c> (global).</summary>
+    /// <summary>The line between split panes, or null for Zinc's grey. Config: <c>[window] divider-color</c> (global).</summary>
     public GhosttyColorRgb? DividerColor { get; init; }
 
     /// <summary>
-    /// The least contrast text may have against its background (WCAG ratio, 1 = any, 21 = black on
-    /// white); below it, text turns black or white. Config: <c>[colors] minimum-contrast</c>.
+    /// The least contrast text may have against its background, as a WCAG ratio (1 allows any, 21 is black on
+    /// white). Text below it turns black or white. Config: <c>[colors] minimum-contrast</c>.
     /// </summary>
     public double MinimumContrast { get; init; } = 1;
 
-    /// <summary>Bold text in the default color takes this one; null: the same. Config: <c>[colors] bold</c>.</summary>
+    /// <summary>Bold text in the default color takes this one, or with null keeps that color. Config: <c>[colors] bold</c>.</summary>
     public GhosttyColorRgb? BoldColor { get; init; }
 
     /// <summary>
-    /// Pane headers take this fill (cards' edges a step further); null: made from the background at
-    /// <see cref="PaneHeaderLevel"/>. Config: <c>[colors] pane-header</c> = a color.
+    /// Pane headers take this fill, and cards' edges go a step further. With null, the fill is made from the
+    /// background at <see cref="PaneHeaderLevel"/>. Config: <c>[colors] pane-header</c> = a color.
     /// </summary>
     public GhosttyColorRgb? PaneHeaderColor { get; init; }
 
@@ -684,8 +726,9 @@ public sealed record Config
     public double FaintOpacity { get; init; } = 0.5;
 
     /// <summary>
-    /// How opaque the default background is (0-1); below 1 the window's backdrop shows through (0: only it).
-    /// Cells with a background color of their own stay solid. Config: <c>[colors] background-opacity</c> (Ghostty's).
+    /// How opaque the default background is, from 0 to 1. Below 1 the window's backdrop shows through, and at 0 only
+    /// the backdrop shows. Cells with a background color of their own stay solid. Config:
+    /// <c>[colors] background-opacity</c> (Ghostty's).
     /// </summary>
     public double BackgroundOpacity { get; init; } = 1;
 
@@ -693,35 +736,36 @@ public sealed record Config
     public WindowBackdrop Backdrop { get; init; }
 
     /// <summary>
-    /// How much color frosted or clear glass carries (0: none, the most see-through; 1: solid), in
-    /// <see cref="BackdropColor"/>. Config: <c>[window] backdrop-tint</c> (global).
+    /// How much of <see cref="BackdropColor"/> frosted or clear glass carries, from 0 (none, the most see-through)
+    /// to 1 (solid). Config: <c>[window] backdrop-tint</c> (global).
     /// </summary>
     public double BackdropTint { get; init; } = 0.3;
 
     /// <summary>
     /// Zinc's green as the app's accent (selections, focus lines, switches), or Windows' accent color
-    /// (false). Config: <c>[window] accent = "zinc" | "windows"</c> (global; applies when Zinc starts).
+    /// (false). Config: <c>[window] accent = "zinc" | "windows"</c> (global, applied when Zinc starts).
     /// </summary>
     public bool ZincAccent { get; init; } = true;
 
     /// <summary>
     /// Light or dark windows, menus and dialogs. Config: <c>[window] appearance = "system" | "light" | "dark"</c>
-    /// (global; applies when Zinc starts: WinUI sets an app's theme once).
+    /// (global, applied when Zinc starts, because WinUI sets an app's theme once).
     /// </summary>
     public ChromeAppearance Appearance { get; init; }
 
     /// <summary>
-    /// The tab dots' colors (null: Zinc's green, amber and red, darker on light themes): a command that
-    /// finished or a program's notification, the bell, a failed command. Config: <c>[notify] finished-color</c>,
-    /// <c>bell-color</c>, <c>failed-color</c> (global).
+    /// The tab dot for a command that finished or a program's notification, or null for Zinc's green (darker on light
+    /// themes). Config: <c>[notify] finished-color</c> (global).
     /// </summary>
     public GhosttyColorRgb? DotFinishedColor { get; init; }
 
+    /// <summary>The tab dot for the bell, or null for Zinc's amber. Config: <c>[notify] bell-color</c> (global).</summary>
     public GhosttyColorRgb? DotBellColor { get; init; }
 
+    /// <summary>The tab dot for a failed command, or null for Zinc's red. Config: <c>[notify] failed-color</c> (global).</summary>
     public GhosttyColorRgb? DotFailedColor { get; init; }
 
-    /// <summary>The glass's color; null: the terminal's background. Config: <c>[window] backdrop-color</c> (global).</summary>
+    /// <summary>The glass's color, or null for the terminal's background. Config: <c>[window] backdrop-color</c> (global).</summary>
     public GhosttyColorRgb? BackdropColor { get; init; }
 
     /// <summary>Whether Zinc keeps a debug log (<see cref="Log.FilePath"/>). Config: <c>[debug] logging</c> (global).</summary>
@@ -736,25 +780,36 @@ public sealed record Config
     /// <summary>Whether zn's folder is on the user's PATH, for other terminals. Config: <c>[cli] path</c> (global).</summary>
     public bool ZnOnPath { get; init; }
 
-    /// <summary>The cursor's opacity (0.1-1; a block shows the character under it in its own color). Config: <c>[colors] cursor-opacity</c>.</summary>
+    /// <summary>
+    /// The cursor's opacity, from 0.1 to 1. Below 1, a block cursor shows the character under it in its own color.
+    /// Config: <c>[colors] cursor-opacity</c>.
+    /// </summary>
     public double CursorOpacity { get; init; } = 1;
 
-    /// <summary>Find's highlights, the current match's apart; null: Zinc's yellow and orange. Config: <c>[colors] find-highlight</c>, <c>find-highlight-current</c>.</summary>
+    /// <summary>Find's highlight on matches, or null for Zinc's yellow. Config: <c>[colors] find-highlight</c>.</summary>
     public GhosttyColorRgb? SearchBackground { get; init; }
 
-    /// <inheritdoc cref="SearchBackground"/>
+    /// <summary>
+    /// Find's highlight on the current match, or null for Zinc's orange. Config: <c>[colors] find-highlight-current</c>.
+    /// </summary>
     public GhosttyColorRgb? SearchSelectedBackground { get; init; }
 
     /// <summary>The quick terminal (global only; ignored inside profiles).</summary>
     public QuickTerminalSettings QuickTerminal { get; init; } = new();
 
-    /// <summary>Padding around the grid, in DIPs.</summary>
+    /// <summary>
+    /// Padding around the grid, in DIPs, here and in the next three. Config: <c>[terminal] padding-x</c> and
+    /// <c>padding-y</c>, in points.
+    /// </summary>
     public float PaddingLeft { get; init; } = 8;
     public float PaddingRight { get; init; } = 8;
     public float PaddingTop { get; init; } = 8;
     public float PaddingBottom { get; init; } = 8;
 
-    /// <summary>Split the room left over by whole cells between both sides, instead of leaving it right and bottom.</summary>
+    /// <summary>
+    /// Splits the room left over by whole cells between both sides, instead of leaving it all on the right and bottom.
+    /// Config: <c>[terminal] padding-balance</c>.
+    /// </summary>
     public bool PaddingBalance { get; init; }
 
     public static string DefaultPath => ConfigFile.DefaultPath;
@@ -762,15 +817,17 @@ public sealed record Config
     /// <summary>Loads the global settings (see <see cref="ConfigFile"/> for profiles).</summary>
     public static Config Load(string? path = null) => ConfigFile.Load(path).Global;
 
-    /// <summary>Profile tab icon (image path); only meaningful inside a profile.</summary>
+    /// <summary>An image file for a profile's tabs. Only a profile sets it. Config: a profile's <c>icon</c>.</summary>
     public string? Icon { get; init; }
 
-    /// <summary>Starting directory for the command; null means the user's home.</summary>
+    /// <summary>
+    /// The folder the command starts in, or null for the user's home. Config: a profile's <c>working-directory</c>.
+    /// </summary>
     public string? WorkingDirectory { get; init; }
 
     /// <summary>
-    /// The directory to start in: <see cref="WorkingDirectory"/> with <c>~</c> / <c>home</c>
-    /// expanded, or the user's home.
+    /// The folder to start in, which is <see cref="WorkingDirectory"/> with <c>~</c>, <c>home</c> and
+    /// <c>%VARIABLES%</c> expanded, or the user's home.
     /// </summary>
     public string ResolveWorkingDirectory()
     {
@@ -806,7 +863,7 @@ public sealed record Config
         return true;
     }
 
-    /// <summary>Parses a duration: seconds ("10", "2.5"), or with units ("30s", "2m", "1m30s", "1h").</summary>
+    /// <summary>Parses a duration in seconds ("10", "2.5") or with units ("30s", "2m", "1m30s", "1h").</summary>
     public static bool TryDuration(string value, out TimeSpan duration)
     {
         duration = TimeSpan.Zero;
@@ -840,7 +897,7 @@ public sealed record Config
         return ok;
     }
 
-    /// <summary>A metric adjustment as Ghostty writes one: whole pixels ("1", "-1", "1px") or a percentage ("20%").</summary>
+    /// <summary>A metric adjustment as Ghostty writes one, in whole pixels ("1", "-1", "1px") or as a percentage ("20%").</summary>
     public static bool TryAdjustment(string value, out (double Amount, bool Percent) adjustment)
     {
         var s = value.Trim();
@@ -903,7 +960,9 @@ public sealed record Config
                TryColor(s[(eq + 1)..].Trim(), out color);
     }
 
-    /// <summary>Parses Ghostty padding in points: <c>N</c> (both sides) or <c>A,B</c>; returns DIPs.</summary>
+    /// <summary>
+    /// Parses Ghostty's padding in points, either <c>N</c> for both sides or <c>A,B</c>. The results are in DIPs.
+    /// </summary>
     public static bool TryPadding(string s, out float first, out float second)
     {
         first = second = 0;
