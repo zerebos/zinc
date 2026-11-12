@@ -366,7 +366,7 @@ public class ConfigTests : IDisposable
         {
             lock (session.Lock)
             {
-                Native.RenderStateUpdate(state, session.Handle);
+                Assert.True(session.UpdateRenderState(state));
             }
 
             Native.RenderStateGet(state, RenderStateData.RowIterator, &rows);

@@ -163,12 +163,15 @@ public sealed unsafe partial class TerminalSession : IDisposable
         Check(Native.MouseEventNew(0, out _mouseEvent));
     }
 
-    /// <summary>The raw GhosttyTerminal handle. Only use while holding <see cref="Lock"/>.</summary>
-    public nint Handle => _terminal;
+    /// <summary>
+    /// The raw GhosttyTerminal handle. Only use while holding <see cref="Lock"/>. Internal, so the app reaches the
+    /// terminal through this class's methods, which check that the session is still open.
+    /// </summary>
+    internal nint Handle => _terminal;
 
     /// <summary>
-    /// True once <see cref="Dispose"/> has freed the terminal, after which <see cref="Handle"/> must not be used. Read
-    /// it under <see cref="Lock"/>, in the same lock as the call it guards.
+    /// True once <see cref="Dispose"/> has freed the terminal. Read it under <see cref="Lock"/>, in the same lock as
+    /// the work it guards.
     /// </summary>
     public bool IsDisposed => _disposed;
 
@@ -858,6 +861,23 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
 
         return (int)(sb.Total - sb.Len) + y + 1;
+    }
+
+    /// <summary>
+    /// Refreshes <paramref name="renderState"/> (a libghostty render state the caller owns) from the terminal. The
+    /// caller holds <see cref="Lock"/>, so that what it reads next comes from the same terminal state. False when the
+    /// update fails or the session is closed.
+    /// </summary>
+    public bool UpdateRenderState(nint renderState) =>
+        !_disposed && Native.RenderStateUpdate(renderState, _terminal) == GhosttyResult.Success;
+
+    /// <summary>Whether a full-screen program's alternate screen is showing. False once the session is closed.</summary>
+    public bool OnAlternateScreen()
+    {
+        lock (Lock)
+        {
+            return !_disposed && !OnPrimaryScreen();
+        }
     }
 
     /// <summary>The scrollbar's position, or all zeros once the session is closed.</summary>
@@ -1612,8 +1632,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public long RenderHeldSince { get; private set; }
 
     /// <summary>
-    /// A hold began: capture the screen now (called synchronously, under <see cref="Lock"/>, on
-    /// the reader thread: the renderer updates its snapshot from <see cref="Handle"/> here).
+    /// Called when a hold begins, so the handler captures the screen now. It runs synchronously on the reader thread,
+    /// under <see cref="Lock"/>, and the renderer updates its snapshot there with <see cref="UpdateRenderState"/>.
     /// </summary>
     public Action? RenderHoldBegan { get; set; }
 

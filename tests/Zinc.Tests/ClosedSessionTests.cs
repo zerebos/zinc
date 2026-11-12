@@ -32,6 +32,8 @@ public class ClosedSessionTests
         var session = Closed();
         Assert.Equal(0, session.RowsUsed());
         Assert.Equal(default, session.GetScrollbar());
+        Assert.False(session.OnAlternateScreen());
+        Assert.False(session.UpdateRenderState(0));
         Assert.False(session.GetMode(GhosttyMode.BracketedPaste));
         Assert.False(session.IsMouseTracking);
         Assert.Equal(0, session.KittyKeyboardFlags);

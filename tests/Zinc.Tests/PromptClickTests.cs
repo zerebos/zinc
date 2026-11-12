@@ -148,7 +148,9 @@ public class PromptClickTests
         Assert.Null(Click(session, 2, 0));
 
         using var vim = Prompt("vim");
+        Assert.False(vim.OnAlternateScreen());
         vim.WriteToScreen($"{Esc}[?1049h");
+        Assert.True(vim.OnAlternateScreen());
         Assert.Null(Click(vim, 2, 0));
     }
 

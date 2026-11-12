@@ -399,7 +399,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             {
                 lock (_stateLock)
                 {
-                    if (Native.RenderStateUpdate(_renderState, session.Handle) != GhosttyResult.Success)
+                    if (!session.UpdateRenderState(_renderState))
                     {
                         return false;
                     }
@@ -408,9 +408,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 // Under the same lock, so images and text come from the same terminal state.
                 session.CollectImages(_images, _needsPixels);
             }
-            GhosttyTerminalScrollbar scrollbar;
-            Native.TerminalGet(session.Handle, TerminalData.Scrollbar, &scrollbar);
-            _viewportTop = scrollbar.Offset;
+            _viewportTop = session.GetScrollbar().Offset;
         }
 
         UpdateImageCache(ds);
@@ -441,7 +439,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 return;
             }
 
-            Native.RenderStateUpdate(_renderState, session.Handle);
+            session.UpdateRenderState(_renderState);
 
             // The image placements are kept too, because a program that sends an image again under the same id
             // unplaces the old image until the new one has fully arrived (terminal-browser does this with its page on

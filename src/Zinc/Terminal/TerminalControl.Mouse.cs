@@ -234,20 +234,7 @@ public sealed partial class TerminalControl
             return;
         }
 
-        bool alternateScreen;
-        lock (session.Lock)
-        {
-            if (session.IsDisposed)
-            {
-                return;
-            }
-
-            int screen;
-            Native.TerminalGet(session.Handle, TerminalData.ActiveScreen, &screen);
-            alternateScreen = screen == 1;
-        }
-
-        if (alternateScreen && session.GetMode(GhosttyMode.AltScroll))
+        if (session.OnAlternateScreen() && session.GetMode(GhosttyMode.AltScroll))
         {
             // Full-screen apps without mouse support (less, man) get arrow keys.
             var key = up ? GhosttyKey.ArrowUp : GhosttyKey.ArrowDown;
