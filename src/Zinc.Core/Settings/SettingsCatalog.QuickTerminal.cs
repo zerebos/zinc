@@ -9,7 +9,7 @@ public static partial class SettingsCatalog
             {
                 Binding = Bind.Custom(
                     (c, v) => v is string s && Config.TryHotkey(s) ? Quick(c, q => q with { Hotkey = s }) : null,
-                    c => c.QuickTerminal.Hotkey),
+                    [Accepts.Text()], c => c.QuickTerminal.Hotkey),
             },
         new("quick", "Placement", "quick-terminal.position", "Position", "", SettingKind.Choice)
             {
@@ -27,7 +27,8 @@ public static partial class SettingsCatalog
                 Placeholder = "50%",
                 Binding = Bind.Custom((c, v) => QuickSize(v) is { } s && Config.TryQuickSize(s, out var a, out var b)
                     ? Quick(c, q => q with { Primary = a, Secondary = b })
-                    : null),
+                    : null,
+                    [Accepts.Text(), Accepts.List([Accepts.Text()], 1, 2)]),
             },
         new("quick", "Behavior", "quick-terminal.autohide", "Hide when it loses focus", "", SettingKind.Toggle)
             {

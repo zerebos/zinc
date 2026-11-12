@@ -14,11 +14,16 @@ public sealed class SettingBinding
     private readonly Func<SettingDef, Config, object, string, Config?> _read;
     private readonly Func<SettingDef, Config, object?>? _default;
 
-    internal SettingBinding(Func<SettingDef, Config, object, string, Config?> read, Func<SettingDef, Config, object?>? @default)
+    internal SettingBinding(Func<SettingDef, Config, object, string, Config?> read, Func<SettingDef, Config, object?>? @default,
+        IReadOnlyList<Accepts> accepts)
     {
         _read = read;
         _default = @default;
+        Accepts = accepts;
     }
+
+    /// <summary>The forms of TOML value the setting takes, for config.schema.json.</summary>
+    public IReadOnlyList<Accepts> Accepts { get; }
 
     /// <summary>
     /// <paramref name="config"/> with <paramref name="value"/> applied, or null when the value doesn't fit.
@@ -51,7 +56,7 @@ public static class Bind
 {
     /// <summary>true or false.</summary>
     public static SettingBinding Bool(Func<Config, bool> get, Func<Config, bool, Config> set) =>
-        new((_, config, value, _) => value is bool b ? set(config, b) : null, (_, config) => get(config));
+        new((_, config, value, _) => value is bool b ? set(config, b) : null, (_, config) => get(config), [Accepts.Bool]);
 
     /// <summary>
     /// A number in the setting's <see cref="SettingDef.Minimum"/> to <see cref="SettingDef.Maximum"/>. A number outside
@@ -65,45 +70,47 @@ public static class Bind
             { } n when clamp => set(config, Math.Clamp(n, setting.Minimum, setting.Maximum)),
             { } n when n >= setting.Minimum && n <= setting.Maximum => set(config, n),
             _ => null,
-        }, (_, config) => Tidy(get(config)));
+        }, (_, config) => Tidy(get(config)), [clamp ? Accepts.AnyNumber : whole ? Accepts.Integer() : Accepts.Number()]);
 
     /// <summary>Any text except an empty string. An empty default means none is written.</summary>
     public static SettingBinding Text(Func<Config, string> get, Func<Config, string, Config> set) =>
         new((_, config, value, _) => value is string { Length: > 0 } s ? set(config, s) : null,
-            (_, config) => get(config) is { Length: > 0 } s ? s : null);
+            (_, config) => get(config) is { Length: > 0 } s ? s : null, [Accepts.Text()]);
 
     /// <summary>"#rrggbb" or "rrggbb". No default is written, so the color comes from the scheme or the app.</summary>
     public static SettingBinding Color(Func<Config, GhosttyColorRgb, Config> set) =>
-        new((_, config, value, _) => value is string s && Config.TryColor(s, out var color) ? set(config, color) : null, null);
+        new((_, config, value, _) => value is string s && Config.TryColor(s, out var color) ? set(config, color) : null, null, [Accepts.Color]);
 
     /// <summary>
     /// A kebab-case name of <typeparamref name="T"/> ("tab-accent" for TabAccent). The default is the choice that
     /// matches <c>new Config()</c>.
     /// </summary>
     public static SettingBinding Enum<T>(Func<Config, T, Config> set) where T : struct, System.Enum =>
-        new((_, config, value, _) => value is string s && Config.TryMode<T>(s, out var mode) ? set(config, mode) : null, null);
+        new((_, config, value, _) => value is string s && Config.TryMode<T>(s, out var mode) ? set(config, mode) : null, null,
+            [Accepts.Choices]);
 
     /// <summary>
-    /// Any other kind of setting. <paramref name="read"/> takes the TOML value as it is, and <paramref name="default"/>
-    /// gives the TOML value that matches a config. Nothing is written when there's no <paramref name="default"/> or it
-    /// returns null.
+    /// Any other kind of setting. <paramref name="read"/> takes the TOML value as it is, <paramref name="accepts"/> lists
+    /// the forms of value the setting takes, and <paramref name="default"/> gives the TOML value that matches a config.
+    /// Nothing is written when there's no <paramref name="default"/> or it returns null.
     /// </summary>
-    public static SettingBinding Custom(Func<Config, object, Config?> read, Func<Config, object?>? @default = null) =>
-        Custom((_, config, value) => read(config, value), @default);
+    public static SettingBinding Custom(Func<Config, object, Config?> read, Accepts[] accepts, Func<Config, object?>? @default = null) =>
+        Custom((_, config, value) => read(config, value), accepts, @default);
 
     /// <summary>
     /// The same, for a <paramref name="read"/> that needs the setting itself, such as its
     /// <see cref="SettingDef.Minimum"/> and <see cref="SettingDef.Maximum"/>.
     /// </summary>
-    public static SettingBinding Custom(Func<SettingDef, Config, object, Config?> read, Func<Config, object?>? @default = null) =>
-        new((setting, config, value, _) => read(setting, config, value), @default == null ? null : (_, config) => @default(config));
+    public static SettingBinding Custom(Func<SettingDef, Config, object, Config?> read, Accepts[] accepts, Func<Config, object?>? @default = null) =>
+        new((setting, config, value, _) => read(setting, config, value), @default == null ? null : (_, config) => @default(config), accepts);
 
     /// <summary>
     /// One path or a list of them, with relative ones resolved by <paramref name="resolve"/> from the config file that
     /// names them. None is written by default.
     /// </summary>
     public static SettingBinding Paths(Func<string, string, string> resolve, Func<Config, ValueList<string>, Config> set) =>
-        new((_, config, value, file) => PathList(value, file, resolve) is { } paths ? set(config, paths) : null, null);
+        new((_, config, value, file) => PathList(value, file, resolve) is { } paths ? set(config, paths) : null, null,
+            [Accepts.Text(), Accepts.List([Accepts.Text()])]);
 
     /// <summary>
     /// One path or a list of them from config.toml, blank ones left out and the rest resolved from

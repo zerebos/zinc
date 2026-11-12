@@ -49,14 +49,14 @@ public static partial class SettingsCatalog
                     "arrow" => c with { TextPointer = false },
                     "text" => c with { TextPointer = true },
                     _ => null,
-                }),
+                }, [Accepts.Choices]),
             },
         new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
             "Characters that end a word when you double-click (space and tab always do). Empty: the ones shown.", SettingKind.Text)
             {
                 Placeholder = "'\"│`|:;,()[]{}<>$",
                 // Empty means the built-in set, so it's accepted too.
-                Binding = Bind.Custom((c, v) => v is string s ? c with { WordBoundaries = s.Length > 0 ? s : null } : null),
+                Binding = Bind.Custom((c, v) => v is string s ? c with { WordBoundaries = s.Length > 0 ? s : null } : null, [Accepts.Text()]),
             },
         new("terminal", "Mouse", "terminal.click-to-move", "Click to move the cursor",
             "At a shell prompt, clicking in the command you're typing moves the cursor there. Needs shell integration.",
@@ -117,7 +117,7 @@ public static partial class SettingsCatalog
                     true or "allow" => c with { ClipboardWrite = true },
                     false or "deny" => c with { ClipboardWrite = false },
                     _ => null,
-                }, c => c.ClipboardWrite),
+                }, [Accepts.Bool], c => c.ClipboardWrite),
             },
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs reading the clipboard",
             "Anything running, including a remote host, could read it.", SettingKind.Choice)
@@ -135,7 +135,7 @@ public static partial class SettingsCatalog
                     false => c with { ClipboardRead = ClipboardAccess.Deny },
                     string s when Config.TryMode<ClipboardAccess>(s, out var access) => c with { ClipboardRead = access },
                     _ => null,
-                }),
+                }, [Accepts.Choices]),
             },
         new("terminal", "Bell", "terminal.bell", "Bell", "When a program rings it, e.g. at a failed tab completion.",
             SettingKind.Choice)
@@ -180,6 +180,7 @@ public static partial class SettingsCatalog
                     (c, v) => Bind.AsText(v) is { } s && Config.TryDuration(s, out var d) && d >= TimeSpan.FromSeconds(1)
                         ? c with { FreeHiddenAfter = d }
                         : null,
+                    [Accepts.Number(1, null), Accepts.Text()],
                     c => Bind.Tidy(c.FreeHiddenAfter.TotalSeconds)),
             },
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",

@@ -34,7 +34,7 @@ public static partial class SettingsCatalog
             {
                 Placeholder = "Symbols Nerd Font, Noto Sans JP",
                 Binding = Bind.Custom((c, v) => Config.FallbackList(v) is { } fonts ? c with { FontFallback = fonts } : null,
-                    c => c.FontFallback is { Length: > 0 } fonts ? fonts : null),
+                    [Accepts.Text(), Accepts.List([Accepts.Text()])], c => c.FontFallback is { Length: > 0 } fonts ? fonts : null),
             },
         new("appearance", "Font", "font.adjust-cell-height", "Line height",
             "More room between lines, as a percentage (20%) or in pixels (2). A negative value gives less. Text stays centered.", SettingKind.Text)
@@ -102,7 +102,7 @@ public static partial class SettingsCatalog
                 string s when Config.TryColor(s, out var color) =>
                     c with { PaneHeaderColor = color, PaneHeaderLevel = Panes.HeaderLevel.Standard },
                 _ => null,
-            }),
+            }, [Accepts.Choices, Accepts.Text("^auto$"), Accepts.Color]), // "auto" is Standard, which is written as nothing
         },
         new("appearance", "Readability", "colors.minimum-contrast", "Minimum contrast",
             "Text that reads poorly against its background turns black or white. 1 turns it off, 4.5 is the usual accessibility level, and 21 makes all text black or white.",
@@ -130,7 +130,7 @@ public static partial class SettingsCatalog
             SettingKind.Choice)
             {
                 Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
-                Binding = Bind.Custom((c, v) => CursorStyle(v) is { } style ? c with { CursorStyle = style } : null),
+                Binding = Bind.Custom((c, v) => CursorStyle(v) is { } style ? c with { CursorStyle = style } : null, [Accepts.Choices]),
             },
         new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Until a program says otherwise.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.CursorBlink, (c, v) => c with { CursorBlink = v }) },
@@ -154,7 +154,7 @@ public static partial class SettingsCatalog
                     string s when s.Equals("same", StringComparison.OrdinalIgnoreCase) => c with { CursorStyleAtPrompt = null },
                     _ when CursorStyle(v) is { } style => c with { CursorStyleAtPrompt = style },
                     _ => null,
-                }),
+                }, [Accepts.Choices]),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
             "Windows, menus and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
@@ -180,7 +180,7 @@ public static partial class SettingsCatalog
                     "zinc" => c with { ZincAccent = true },
                     "windows" => c with { ZincAccent = false },
                     _ => null,
-                }),
+                }, [Accepts.Choices]),
             },
         new("appearance", "Background", "window.backdrop", "Window background", "What's behind everything in the window: tabs, sidebar and terminal.",
             SettingKind.Choice)
@@ -236,7 +236,7 @@ public static partial class SettingsCatalog
                 false or "false" => c with { ShaderAnimation = ShaderAnimation.Never },
                 "always" => c with { ShaderAnimation = ShaderAnimation.Always },
                 _ => null,
-            }),
+            }, [Accepts.Choices]),
         },
         new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number)
         {
@@ -263,11 +263,13 @@ public static partial class SettingsCatalog
 
     /// <summary>A font weight by name ("semibold") or number (600).</summary>
     private static SettingBinding Weight(Func<Config, int, Config> set) =>
-        Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryWeight(s, out var weight) ? set(c, weight) : null);
+        Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryWeight(s, out var weight) ? set(c, weight) : null,
+            [Accepts.Choices, Accepts.Integer(1, 999)]);
 
     /// <summary>A size adjustment in pixels (1, -1) or as a percentage ("20%").</summary>
     private static SettingBinding Adjustment(Func<Config, (double Amount, bool Percent), Config> set) =>
-        Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryAdjustment(s, out var adjustment) ? set(c, adjustment) : null);
+        Bind.Custom((c, v) => Bind.AsText(v) is { } s && Config.TryAdjustment(s, out var adjustment) ? set(c, adjustment) : null,
+            [Accepts.AnyNumber, Accepts.Text()]);
 
     /// <summary>A cursor shape's name, with "block_hollow" taken as "block-hollow" (Ghostty's spelling).</summary>
     private static Ghostty.TerminalCursorStyle? CursorStyle(object value) =>
@@ -287,5 +289,5 @@ public static partial class SettingsCatalog
                 double.TryParse(p, NumberStyles.Float, CultureInfo.InvariantCulture, out var points) &&
                 points >= setting.Minimum && points <= setting.Maximum) == true;
             return inRange && Config.TryPadding(text!, out var a, out var b) ? set(c, a, b) : null;
-        }, c => Bind.Tidy(first(c) * 72 / 96));
+        }, [Accepts.Number(), Accepts.List([Accepts.Number()], 1, 2)], c => Bind.Tidy(first(c) * 72 / 96));
 }

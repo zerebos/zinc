@@ -131,7 +131,7 @@ public static partial class SettingsCatalog
                     true or "always" or "default" => c with { RestoreSession = true },
                     false or "never" => c with { RestoreSession = false },
                     _ => null,
-                }),
+                }, [Accepts.Choices]),
             },
         new("layout", "When you come back", "window.quit-after-last-window-closed", "When the last window closes",
             "", SettingKind.Choice)
@@ -142,7 +142,7 @@ public static partial class SettingsCatalog
                     new("Quit", true),
                     new("Stay in the tray", false, "Click the tray icon to open a window again."),
                 ],
-                Binding = Bind.Custom((c, v) => v is bool b ? c with { QuitAfterLastWindowClosed = b } : null),
+                Binding = Bind.Custom((c, v) => v is bool b ? c with { QuitAfterLastWindowClosed = b } : null, [Accepts.Bool]),
             },
         new("layout", "When you come back", "window.launch-at-login", "When you sign in to Windows", "", SettingKind.Choice)
             {
@@ -158,7 +158,7 @@ public static partial class SettingsCatalog
                     false => c with { LaunchAtLogin = LaunchAtLogin.Off },
                     string s when Config.TryMode<LaunchAtLogin>(s, out var login) => c with { LaunchAtLogin = login },
                     _ => null,
-                }),
+                }, [Accepts.Choices]),
             },
         new("layout", "When you come back", "window.explorer-menu", "Open in Zinc from File Explorer",
             "Adds \"Open in Zinc\" to the right-click menu of folders and drives. On Windows 11 it's under \"Show more options\".",

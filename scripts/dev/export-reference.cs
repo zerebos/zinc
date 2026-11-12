@@ -2,22 +2,23 @@
 #:property TargetFramework=net10.0-windows10.0.26100.0
 #:property PublishAot=false
 
-// Writes zinc-reference.json, this checkout's settings, actions and open-source notices, for the website's reference
-// pages. Run it with `dotnet run`:
+// Writes two files for the website: zinc-reference.json, this checkout's settings, actions and open-source notices for
+// its reference pages, and config.schema.json, a JSON Schema for config.toml. Run it with `dotnet run`:
 //
-//   dotnet run scripts/dev/export-reference.cs                       (writes dist\reference\zinc-reference.json)
+//   dotnet run scripts/dev/export-reference.cs                       (writes both to dist\reference)
 //   dotnet run scripts/dev/export-reference.cs -- --out <folder>
 //
-// The shape is Zinc.Core's ReferenceExport. License texts are read from this checkout, where the app's build takes
-// them from.
+// Zinc.Core's ReferenceExport and ConfigSchema make them. License texts are read from this checkout, where the app's
+// build takes them from.
 
 using Zinc;
+using Zinc.Settings;
 
 const string Usage = """
-    Writes zinc-reference.json (settings, actions, open-source notices) for the website.
+    Writes zinc-reference.json (settings, actions, open-source notices) and config.schema.json for the website.
 
     Options:
-      --out <folder>   where to write it (default: dist\reference)
+      --out <folder>   where to write them (default: dist\reference)
     """;
 
 var repo = Path.GetFullPath(Path.Combine((string)AppContext.GetData("EntryPointFileDirectoryPath")!, "..", ".."));
@@ -41,7 +42,12 @@ for (var i = 0; i < args.Length; i++)
 
 var reference = ReferenceExport.Build(c => File.ReadAllText(OpenSourceNotices.SourceIn(repo, c.LicenseFile)));
 Directory.CreateDirectory(outFolder);
-var file = Path.Combine(outFolder, "zinc-reference.json");
-File.WriteAllText(file, ReferenceExport.ToJson(reference));
-Console.WriteLine($"Wrote {file} ({ReferenceExport.Version}).");
+foreach (var (name, json) in new[] { ("zinc-reference.json", reference), ("config.schema.json", ConfigSchema.Build()) })
+{
+    var file = Path.Combine(outFolder, name);
+    File.WriteAllText(file, ReferenceExport.ToJson(json));
+    Console.WriteLine($"Wrote {file}.");
+}
+
+Console.WriteLine($"Zinc {ReferenceExport.Version}.");
 return 0;

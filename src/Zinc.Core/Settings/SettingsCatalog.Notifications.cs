@@ -16,6 +16,7 @@ public static partial class SettingsCatalog
                     (c, v) => Bind.AsText(v) is { } s && Config.TryDuration(s, out var d)
                         ? c with { NotifyCommandFinishedAfter = d }
                         : null,
+                    [Accepts.Number(0, null), Accepts.Text()],
                     c => Bind.Tidy(c.NotifyCommandFinishedAfter.TotalSeconds)),
             },
         new("notifications", "Long commands", "notify.command-finished-sound", "Sound",

@@ -8,9 +8,8 @@ using Zinc.Settings;
 namespace Zinc;
 
 /// <summary>
-/// zinc-reference.json: the settings, actions and open-source notices of this build, for the website's reference pages.
-/// <c>scripts/dev/export-reference.cs</c> writes it. Names are camelCase. A value is the TOML value config.toml
-/// writes, or null when nothing is written.
+/// Defines zinc-reference.json, the settings, actions and open-source notices of this build, for the website's reference pages.
+/// Names are camelCase. A value is the TOML value config.toml writes, or null when nothing is written.
 /// </summary>
 public static class ReferenceExport
 {
@@ -65,8 +64,10 @@ public static class ReferenceExport
         };
     }
 
-    /// <summary>The reference as the file holds it: indented, with non-ASCII text written as it is.</summary>
-    public static string ToJson(JsonObject reference) => reference.ToJsonString(Written) + "\n";
+    /// <summary>
+    /// The reference, or the config schema, as the file holds it, indented and with non-ASCII text written as it is.
+    /// </summary>
+    public static string ToJson(JsonNode reference) => reference.ToJsonString(Written) + "\n";
 
     /// <summary>This build's informational version ("0.1.0-dev.452+abc1234").</summary>
     public static string Version =>
@@ -115,7 +116,11 @@ public static class ReferenceExport
             b => new JsonObject { ["keys"] = b.Keys, ["action"] = Actions.Format(b.Action) }),
     };
 
-    private static JsonNode? Value(object? value, string key) => value switch
+    /// <summary>
+    /// A setting's TOML value as JSON (null for none). <paramref name="key"/> names the setting in the error for a
+    /// value of any other type.
+    /// </summary>
+    internal static JsonNode? Value(object? value, string key) => value switch
     {
         null => null,
         bool b => JsonValue.Create(b),
