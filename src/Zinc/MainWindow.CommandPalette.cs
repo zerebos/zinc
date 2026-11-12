@@ -13,21 +13,21 @@ using Windows.System;
 namespace Zinc;
 
 // The command palette: every action, profile and workspace as a searchable list, recently used
-// ones first; "@" searches this window's tabs instead (the tab switcher), dots first.
+// ones first. "@" searches this window's tabs instead (the tab switcher), dots first.
 public sealed partial class MainWindow
 {
     private const int MaxPaletteRows = 200;
 
-    /// <summary>Typed first, the palette searches tabs (what "Go to tab…" opens with).</summary>
+    /// <summary>Typed first, this makes the palette search tabs (what "Go to tab…" opens with).</summary>
     private const string TabPrefix = "@";
 
     private List<PaletteCommand> _paletteCommands = [];
     private bool _paletteWired;
 
     /// <summary>
-    /// A command's second step: the palette asks for its argument, from a list of
+    /// A command's second step, where the palette asks for its argument, from a list of
     /// <see cref="Choices"/> (each one's Run applies it) or typed and handed to <see cref="Submit"/>.
-    /// <see cref="Highlight"/> follows the selected choice (a live preview); <see cref="Cancel"/>
+    /// <see cref="Highlight"/> follows the selected choice (a live preview). <see cref="Cancel"/>
     /// runs if the palette closes without a choice.
     /// </summary>
     private sealed record PaletteArgument(string Prompt, IReadOnlyList<PaletteCommand>? Choices = null,
@@ -128,9 +128,9 @@ public sealed partial class MainWindow
 
         if (_argument != null)
         {
-            // An answer: not a cancel. It may ask again (a folder that doesn't exist), so it runs
-            // before the palette closes; closing first would hand focus back to the terminal and
-            // shut the new question.
+            // This is an answer, not a cancel. It may ask again (a folder that doesn't exist), so it
+            // runs before the palette closes, because closing first would hand focus back to the
+            // terminal and shut the new question.
             _argument = null;
             command.Run();
             if (_argument == null)
@@ -180,7 +180,7 @@ public sealed partial class MainWindow
         };
         PaletteQuery.LostFocus += (_, _) =>
         {
-            // Clicking into the list keeps the palette; anything else closes it.
+            // Clicking into the list keeps the palette, and anything else closes it.
             DispatcherQueue.SafeEnqueue(() =>
             {
                 var focused = FocusManager.GetFocusedElement(Root.XamlRoot) as DependencyObject;
@@ -239,7 +239,7 @@ public sealed partial class MainWindow
         IReadOnlyList<PaletteMatch> matches;
         if (_argument is { } argument)
         {
-            // A question: its choices, or the typed value as the one thing Enter runs.
+            // For a question, the rows are its choices, or the typed value as the one thing Enter runs.
             matches = argument.Choices is { } choices
                 ? CommandFilter.Filter(choices, query)
                 : query.Trim().Length == 0
@@ -290,7 +290,7 @@ public sealed partial class MainWindow
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        // A profile's icon (profile commands, tabs); a tab also shows its dot.
+        // A profile's icon (profile commands, tabs). A tab also shows its dot.
         var (profile, tabAttention) = match.Command.Icon switch
         {
             Profile p => (p, Attention.None),
@@ -401,7 +401,7 @@ public sealed partial class MainWindow
         Action(TerminalAction.OpenSettings);
         commands.Add(new PaletteCommand("Welcome…", null, () => App.Instance.ShowWelcome(firstRun: false)));
 
-        // Profiles: a workspace in the page's place (as picking it on the page does), or a window.
+        // Profiles start a workspace in the page's place (as picking one on the page does), or a window.
         var profiles = _config.VisibleProfiles.ToList();
         foreach (var profile in profiles)
         {
@@ -485,8 +485,8 @@ public sealed partial class MainWindow
         Custom("Close workspaces to the right", () => CloseWorkspaces(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action(TerminalAction.NextTab);
         Action(TerminalAction.PreviousTab);
-        // From the palette, "Go to tab…" turns the palette itself into the tab switcher ("@"); run
-        // as an action it closed the palette, and reopening it lost to the focus going back.
+        // From the palette, "Go to tab…" turns the palette itself into the tab switcher ("@"). Run
+        // as an action, it would close the palette, and reopening the palette would lose to the focus going back.
         commands.Add(new PaletteCommand(Actions.Title(TerminalAction.TabSwitcher), Keys(TerminalAction.TabSwitcher), () =>
         {
             PaletteQuery.Text = TabPrefix;
@@ -514,7 +514,7 @@ public sealed partial class MainWindow
         Custom("Welcome…", () => App.Instance.ShowWelcome(firstRun: false));
         if (Log.Enabled && !PointerTrace.Running)
         {
-            Custom("Trace the pointer (15 s)", App.Instance.TracePointer); // diagnostics: a flickering pointer shape
+            Custom("Trace the pointer (15 s)", App.Instance.TracePointer); // diagnostics for a flickering pointer shape
         }
 
         // Panes.
@@ -557,7 +557,7 @@ public sealed partial class MainWindow
         Action(TerminalAction.CopyOutput);
         Action(TerminalAction.SelectOutput);
 
-        // Profiles: open as a tab (in this pane, with tab groups), a workspace, a split either way, or a window.
+        // Profiles open as a tab (in this pane, with pane tabs on), a workspace, a split either way, or a window.
         var group = _config.Global.PaneTabs ? tab.Workspace.GroupOf(tab.Active) : null;
         var profiles = _config.VisibleProfiles.ToList();
         for (var i = 0; i < profiles.Count; i++)
@@ -603,7 +603,7 @@ public sealed partial class MainWindow
         Custom("Workspace color: None", () => SetTabColor(tab, null));
         if (_quick)
         {
-            commands.RemoveAll(c => AboutTabsOrWorkspaces(c.Title)); // one terminal: no tabs, no workspaces
+            commands.RemoveAll(c => AboutTabsOrWorkspaces(c.Title)); // one terminal, so no tabs and no workspaces
             if (HasQuickSize())
             {
                 Custom("Reset quick terminal size", ResetQuickSize);

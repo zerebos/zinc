@@ -8,7 +8,7 @@ namespace Zinc;
 // profile, maybe in a folder, or the workspace closed last.
 public sealed partial class MainWindow
 {
-    /// <summary>A window a launch asked for: one workspace running a profile, maybe in a folder.</summary>
+    /// <summary>A window a launch asked for, with one workspace running a profile, maybe in a folder.</summary>
     internal sealed record LaunchStart(Profile Profile, string? Folder);
 
     internal MainWindow(ConfigFile config, Keybindings keybindings, LaunchStart start)
@@ -24,7 +24,9 @@ public sealed partial class MainWindow
         BringForward();
     }
 
-    /// <summary>The workspace closed last, back, in front (nothing to reopen: just in front).</summary>
+    /// <summary>
+    /// Brings back the workspace closed last and puts the window in front (only in front when there's nothing to reopen).
+    /// </summary>
     internal void ReopenLastWorkspace()
     {
         if (App.Instance.ClosedWorkspaces.All.FirstOrDefault() is { } last)

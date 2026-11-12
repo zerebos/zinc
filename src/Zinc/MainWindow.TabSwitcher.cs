@@ -20,7 +20,9 @@ public sealed partial class MainWindow
                 () => BringToPane(e.Workspace, e.Tab), Remember: false, Icon: e.Tab, IsTab: true));
     }
 
-    /// <summary>"title · its dot's state · what it runs (or its folder) · workspace": what the switcher searches.</summary>
+    /// <summary>
+    /// What the switcher searches: "title · its dot's state · what it runs (or its folder) · workspace".
+    /// </summary>
     private static string TabLabel(WorkspaceTab workspace, int number, TerminalTab tab, bool withWorkspace)
     {
         var title = GroupView.TitleOf(tab);
@@ -50,7 +52,7 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Goes to the most urgent tab with a dot (failed, then a program's notification, then
-    /// finished; the first in the window among equals). Looking at it clears its dot, so pressing
+    /// finished, and the first in the window among equals). Looking at it clears its dot, so pressing
     /// again goes on to the next.
     /// </summary>
     private void GoToNextAttention()

@@ -10,9 +10,9 @@ namespace Zinc;
 // Dragging tabs. A workspace (title-bar tab) can go out of the strip (new window), onto another
 // window's strip, onto a pane's edge (its layout becomes a split) or middle (its terminals join
 // the pane). A pane's own tab (a terminal) can be reordered in its strip, go into another pane
-// (middle or strip) or beside it (edge), onto the title bar (its own workspace; hovering a
+// (middle or strip) or beside it (edge), onto the title bar (its own workspace, and hovering a
 // workspace switches to it), or out of every window (new window). A whole pane, dragged by its
-// header's empty part, goes everywhere a pane's tab can, in any workspace or window; a workspace's
+// header's empty part, goes everywhere a pane's tab can, in any workspace or window. A workspace's
 // only pane takes its workspace along. Dragging from a maximized pane shows every pane until the
 // drag ends. Windows are in one process, so the dragged tab or pane is handed over directly via
 // App.Drag.
@@ -39,7 +39,7 @@ public sealed partial class MainWindow
     private void OnTabDragCompleted(TabView sender, TabViewTabDragCompletedEventArgs args)
     {
         Log.Write($"tab drag completed: {args.DropResult}");
-        // Nobody took the drop: tear the tab off. (Handled here as well as in TabDroppedOutside,
+        // Nobody took the drop, so this tears the tab off. (Handled here as well as in TabDroppedOutside,
         // since which of the two TabView raises first isn't something to rely on.)
         if (args.DropResult == DataPackageOperation.None)
         {
@@ -57,8 +57,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A dragged tab released where no target took it: outside every Zinc window it becomes
-    /// a window there; over one of our windows (a pane's middle, the window itself) nothing happens.
+    /// A dragged tab released where no target took it. Outside every Zinc window it becomes
+    /// a window there, and over one of our windows (a pane's middle, the window itself) nothing happens.
     /// </summary>
     private void TryTearOff()
     {
@@ -82,7 +82,7 @@ public sealed partial class MainWindow
         CloseIfEmpty();
     }
 
-    /// <summary>A pane's tab was dragged and released: outside every Zinc window, it becomes a window.</summary>
+    /// <summary>A pane's tab was dragged and released. Outside every Zinc window, it becomes a window.</summary>
     private void OnTerminalTabDragCompleted(TerminalTab pane, DataPackageOperation result)
     {
         _springTimer?.Stop();
@@ -105,7 +105,7 @@ public sealed partial class MainWindow
         MainWindow window;
         if (from.Workspace.Tabs.Count() == 1)
         {
-            window = App.Instance.OpenWindow(drag.Window.DetachWorkspace(from)); // its only tab: the workspace goes
+            window = App.Instance.OpenWindow(drag.Window.DetachWorkspace(from)); // its only tab, so the workspace goes
         }
         else
         {
@@ -119,8 +119,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A pane was dragged and released. Nobody took it: outside every Zinc window it becomes a window there (a
-    /// workspace's only pane takes its workspace), elsewhere it stays where it was.
+    /// A pane was dragged and released. If nobody took it, outside every Zinc window it becomes a window there (a
+    /// workspace's only pane takes its workspace), and elsewhere it stays where it was.
     /// </summary>
     private void OnPaneDragCompleted(TabGroup<TerminalTab> group, DataPackageOperation result)
     {
@@ -172,7 +172,10 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A drag ended: if the pane it showed the others for is still there and focused, it fills the workspace again.</summary>
+    /// <summary>
+    /// After a drag ends, the pane it showed the others for fills the workspace again, if that pane is still there and
+    /// focused.
+    /// </summary>
     private void RestoreMaximized()
     {
         if (_dragMaximized is not var (tab, group))
@@ -209,7 +212,7 @@ public sealed partial class MainWindow
     /// <summary>
     /// Whether the workspace tabs (title bar or list) take the dragged tab, which is over
     /// <paramref name="under"/>'s tab if any: another window's workspace moves here, this
-    /// window's own is reordered (<paramref name="reorder"/>: the list; the title bar's
+    /// window's own is reordered (with <paramref name="reorder"/>, for the list, because the title bar's
     /// TabView reorders its own), and a pane's tab becomes a workspace of its own, unless it
     /// already is one of ours. Resting a pane's tab on a workspace switches to it.
     /// </summary>
@@ -247,7 +250,7 @@ public sealed partial class MainWindow
                 break;
         }
 
-        // Only ever raise it: the title bar's own reorder goes through this event too.
+        // Only ever raise it, because the title bar's own reorder goes through this event too.
         if (accept)
         {
             e.AcceptedOperation = DataPackageOperation.Move;
@@ -298,7 +301,7 @@ public sealed partial class MainWindow
                 App.Instance.Drag = null;
                 if (from.Workspace.Layout.Count == 1)
                 {
-                    // Another window's workspace with only this pane: the workspace moves here, its name and color too.
+                    // Another window's workspace with only this pane, so the workspace moves here, its name and color too.
                     var transfer = drag.Window.DetachWorkspace(from);
                     AddWorkspace(transfer.Workspace, transfer.CustomTitle, transfer.Color, index, transfer.Folder, transfer.Icon, transfer.Id);
                 }
@@ -319,7 +322,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Lets workspace tabs be reordered by dragging (off while a pane's tab is dragged; see App.Drag).</summary>
+    /// <summary>Lets workspace tabs be reordered by dragging (App.Drag turns it off while a pane or a pane's tab is dragged).</summary>
     internal void SetTabReordering(bool on)
     {
         if (Tabs.CanReorderTabs != on)
@@ -356,8 +359,8 @@ public sealed partial class MainWindow
             _springTimer.IsRepeating = false;
             _springTimer.OnTick(_ =>
             {
-                // DragOver only comes with movement, so a resting pointer is still where it was;
-                // leaving for anywhere else cancels (CancelSpringLoad).
+                // DragOver only comes with movement, so a resting pointer is still where it was.
+                // Leaving for anywhere else cancels (CancelSpringLoad).
                 if (App.Instance.Drag != null && _springTarget != null && AllTabs().Contains(_springTarget))
                 {
                     Tabs.SelectedItem = _springTarget.Item;
@@ -369,17 +372,17 @@ public sealed partial class MainWindow
         _springTimer.Start();
     }
 
-    /// <summary>The drag went somewhere other than a workspace tab: don't switch after all.</summary>
+    /// <summary>The drag went somewhere other than a workspace tab, so this cancels the switch.</summary>
     private void CancelSpringLoad()
     {
         _springTimer?.Stop();
         _springTarget = null;
     }
 
-    // The strip events only cover the tabs themselves; the +/▾ buttons count too, via the window
-    // root. The empty rest of the title bar can't: it's the window's caption (drag-to-move),
-    // which Windows owns and refuses drops on, and WinUI keeps it caption even when asked not to
-    // (InputNonClientPointerSource.Clear/SetRegionRects and SetTitleBar(empty) were all tried).
+    // The strip events only cover the tabs themselves, and the +/▾ buttons count too, via the window
+    // root. The empty rest of the title bar can't take drops, because it's the window's caption
+    // (drag-to-move), which Windows owns and refuses drops on. WinUI keeps it caption even when asked
+    // not to through InputNonClientPointerSource.Clear/SetRegionRects or SetTitleBar(empty).
 
     private void OnRootDragOver(object sender, DragEventArgs e)
     {
@@ -395,7 +398,7 @@ public sealed partial class MainWindow
 
     private void OnRootDragLeave(object sender, DragEventArgs e)
     {
-        // Children's DragLeave bubbles here too; only leaving the window itself counts.
+        // Children's DragLeave bubbles here too, so only leaving the window itself counts.
         var p = e.GetPosition(Root);
         if (p.X < 0 || p.Y < 0 || p.X >= Root.ActualWidth || p.Y >= Root.ActualHeight)
         {
@@ -419,7 +422,7 @@ public sealed partial class MainWindow
     {
         if (_workspaceList != null)
         {
-            return false; // the title bar is all caption; the list takes drops itself
+            return false; // the title bar is all caption, and the list takes drops itself
         }
 
         var caption = DragRegion.TransformToVisual(Root).TransformPoint(new Point(0, 0));
@@ -569,7 +572,7 @@ public sealed partial class MainWindow
         }
         else
         {
-            // Every terminal of the dragged workspace becomes a tab of this group; the one
+            // Every terminal of the dragged workspace becomes a tab of this group. The one
             // that had focus there is shown.
             foreach (var pane in transfer.Workspace.Tabs)
             {
@@ -591,11 +594,11 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// The workspace and group under a host, if the dragged tab can be dropped there on
-    /// <paramref name="edge"/> (null: the middle, which joins the pane's tabs; only with tab
-    /// groups). A workspace can't be dropped onto its own panes; a terminal tab not into its
-    /// own pane, nor beside it when it's the pane's only tab; a pane nowhere on itself. The
-    /// quick terminal takes none since it can be shown mid-drag (via its hotkey), but it
-    /// isn't a valid place to keep tabs or panes.
+    /// <paramref name="edge"/> (null for the middle, which joins the pane's tabs, and only with pane
+    /// tabs on). A workspace can't be dropped onto its own panes. A terminal tab can't go into its
+    /// own pane, nor beside it when it's the pane's only tab. A pane can't go anywhere on itself.
+    /// The quick terminal takes none, because although it can be shown mid-drag (via its hotkey),
+    /// it isn't a valid place to keep tabs or panes.
     /// </summary>
     private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? DropTarget(Border host, PaneDirection? edge)
     {
@@ -614,7 +617,7 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>The edge whose band (the outer third, like VS Code) holds <paramref name="p"/>; null in the middle.</summary>
+    /// <summary>The edge whose band (the outer third, like VS Code) holds <paramref name="p"/>, or null in the middle.</summary>
     private static PaneDirection? EdgeUnder(FrameworkElement host, Point p)
     {
         double w = host.ActualWidth, h = host.ActualHeight;

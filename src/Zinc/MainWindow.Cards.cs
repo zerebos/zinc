@@ -9,16 +9,17 @@ using Windows.UI;
 namespace Zinc;
 
 // Panes as cards (pane-gap above 0): the host Border rounds the corners (clipping the terminal, shaders included) and
-// draws the 2 px edge; GroupView fills the header. At gap 0 the host stays a plain Border, as panes always were, and only
-// the header takes the card's fill.
+// draws the 2 px edge, and GroupView fills the header. At gap 0 the host stays a plain Border, and only the header takes
+// the card's fill.
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Makes a pane's host a card for its shown tab's profile and returns its header fill: the profile's pane-header color,
-    /// else the scheme's background just enough lighter or darker (WCAG contrast) to stand apart (<see cref="PaneCard.HeaderFill(GhosttyColorRgb)"/>), as see-through as
-    /// the terminal so the card stays one piece. The edge is a step stronger (<see cref="PaneCard.EdgeFill(Config)"/>; none
-    /// with a header that matches the terminal), dimmed with the rest of the card by <paramref name="dim"/> toward
-    /// <paramref name="dimFill"/>, or the <paramref name="ring"/> on the focused card.
+    /// Makes a pane's host a card for its shown tab's profile and returns its header fill. That fill is the profile's
+    /// pane-header color, or else the scheme's background made just enough lighter or darker (WCAG contrast) to stand
+    /// apart (<see cref="PaneCard.HeaderFill(GhosttyColorRgb, HeaderLevel)"/>). It's as see-through as the terminal, so
+    /// the card stays one piece. The edge is a step stronger (<see cref="PaneCard.EdgeFill(Config)"/>), or none with a
+    /// header that matches the terminal. The edge is dimmed with the rest of the card by <paramref name="dim"/> toward
+    /// <paramref name="dimFill"/>, and the focused card shows the <paramref name="ring"/> instead.
     /// Every card keeps its 2 px edge, so focus never resizes a terminal.
     /// </summary>
     private static Color ShowCard(Border host, Config config, double dim, GhosttyColorRgb dimFill, Brush? ring)
@@ -44,8 +45,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A pane's host at gap 0: no corners or edge. Returns its header fill, the same as a card's: on the window's backdrop
-    /// alone, a header below another pane read as empty space.
+    /// Makes a pane's host flat for gap 0, with no corners or edge. Returns its header fill, the same as a card's, because
+    /// on the window's backdrop alone a header below another pane would read as empty space.
     /// </summary>
     private static Color ShowFlat(Border host, Config config)
     {

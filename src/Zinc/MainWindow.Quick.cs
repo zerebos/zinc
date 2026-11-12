@@ -9,8 +9,8 @@ using Zinc.Input;
 namespace Zinc;
 
 // The quick terminal: a window summoned and dismissed with a global hotkey (quick-terminal-* settings), and the
-// notice shown when that hotkey is taken. Like Ghostty's: one terminal (splits, no tabs or workspaces; no title bar,
-// caption buttons or strips), centered by default, fading and growing into place (or out of its edge). Closing it
+// notice shown when that hotkey is taken. Like Ghostty's, it's one terminal (splits but no tabs or workspaces, and no
+// title bar, caption buttons or strips), centered by default, fading and growing into place (or out of its edge). Closing it
 // hides it (its shells and scrollback live on until Zinc quits or its last tab closes), and dismissing it gives the
 // foreground back to the window you came from.
 public sealed partial class MainWindow
@@ -20,14 +20,16 @@ public sealed partial class MainWindow
     private bool _active;
     private bool _hotkeyNoticeDismissed;
 
-    // The window that had the foreground when the quick terminal was summoned: it gets it back on dismissal.
+    // The window that had the foreground when the quick terminal was summoned, which gets the foreground back on dismissal.
     private nint _previousForeground;
 
-    // Fading out: hidden when the timer fires (kept in a field: a timer only a local holds would be collected).
+    // Fading out, the window hides when this timer fires. It's kept in a field because a timer only a local holds would
+    // be collected.
     private DispatcherQueueTimer? _fadeOutTimer;
     private Action? _fadeOutDone;
 
-    // Fading in: Windows' shadow (which comes with the rounded corners) is off until the content is whole, then on.
+    // While fading in, Windows' shadow (which comes with the rounded corners) stays off until the content is whole, and
+    // this timer turns it on.
     private DispatcherQueueTimer? _shadowTimer;
 
     public bool IsQuickShownAndActive => _quickShown && _active;
@@ -60,15 +62,16 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Minimizing and restoring move and size the window: checked on every change, cheap when nothing changed.
+        // Minimizing and restoring move and size the window, so this checks on every change, which is cheap when nothing
+        // changed.
         AppWindow.Changed += (_, _) =>
             SetPanesHidden(AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized });
     }
 
     private void ConfigureQuickWindow()
     {
-        // Out of the taskbar and Alt+Tab, above other windows while shown, with no frame at all: the content fades and
-        // grows in a see-through window (ApplyBackdrop gives it a clear one), and a frame would sit there at full size
+        // Out of the taskbar and Alt+Tab, above other windows while shown, with no frame at all, because the content fades
+        // and grows in a see-through window (ApplyBackdrop gives it a clear one), and a frame would sit there at full size
         // meanwhile. Windows still rounds its corners when asked.
         AppWindow.IsShownInSwitchers = false;
         if (AppWindow.Presenter is OverlappedPresenter presenter)
@@ -76,20 +79,20 @@ public sealed partial class MainWindow
             presenter.IsAlwaysOnTop = true;
             presenter.IsMinimizable = false;
             presenter.IsMaximizable = false;
-            // Resizable by a real frame that QuickFrame keeps from being drawn (alone, a resizing frame without a
-            // title bar drew a light strip across the top and invisible margins around the content).
+            // Resizable by a real frame that QuickFrame keeps from being drawn (on its own, a resizing frame without a
+            // title bar draws a light strip across the top and invisible margins around the content).
             presenter.IsResizable = true;
             presenter.SetBorderAndTitleBar(hasBorder: false, hasTitleBar: false);
         }
 
-        // No border drawn (a classic one survived the presenter's settings, and Windows 11 outlines windows): just the
-        // rounded terminal. The resizing frame stays, for Windows to drag (QuickFrame hides it).
+        // No border is drawn, just the rounded terminal, because a classic border survives the presenter's settings and
+        // Windows 11 outlines windows. The resizing frame stays for Windows to drag, and QuickFrame hides it.
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         const int WS_BORDER = 0x00800000, WS_DLGFRAME = 0x00400000, WS_THICKFRAME = 0x00040000;
         AttachQuickFrame(hwnd);
         SetWindowLongW(hwnd, -16 /* GWL_STYLE */, (GetWindowLongW(hwnd, -16) & ~(WS_BORDER | WS_DLGFRAME)) | WS_THICKFRAME);
-        // A tool window: Windows doesn't snap those (Win+arrows). QuickFrame refused the snap's move, but Windows still
-        // took the window for snapped: square corners and no shadow until its next resize.
+        // A tool window, because Windows doesn't snap those (Win+arrows). QuickFrame can refuse the snap's move, but
+        // Windows would still treat the window as snapped, with square corners and no shadow until its next resize.
         const int WS_EX_TOOLWINDOW = 0x00000080;
         SetWindowLongW(hwnd, -20 /* GWL_EXSTYLE */, GetWindowLongW(hwnd, -20) | WS_EX_TOOLWINDOW);
         SetWindowPos(hwnd, 0, 0, 0, 0, 0, 0x0027 /* SWP_FRAMECHANGED | NOMOVE | NOSIZE | NOZORDER */ | 0x0010 /* NOACTIVATE */);
@@ -98,7 +101,7 @@ public sealed partial class MainWindow
         var noOutline = unchecked((int)0xFFFFFFFE); // DWMWA_COLOR_NONE
         DwmSetWindowAttribute(hwnd, 34 /* DWMWA_BORDER_COLOR */, ref noOutline, sizeof(int));
 
-        // Just the terminal: the workspace strip (which is also the title bar elsewhere) stays collapsed.
+        // Just the terminal, so the workspace strip (which is also the title bar elsewhere) stays collapsed.
         Tabs.IsAddTabButtonVisible = false;
         Tabs.Loaded += (_, _) =>
         {
@@ -120,8 +123,8 @@ public sealed partial class MainWindow
             }
         }), handledEventsToo: true);
 
-        // Closing (Alt+F4, the system menu) hides it: what runs in it lives on. Only quitting Zinc, or its last tab
-        // closing (nothing left to keep), closes it for real.
+        // Closing (Alt+F4, the system menu) hides the window, so what runs in it lives on. Only quitting Zinc, or its last
+        // tab closing (nothing left to keep), closes it for real.
         AppWindow.Closing += (_, args) =>
         {
             if (!App.Instance.Quitting && AllTabs().Any())
@@ -137,7 +140,7 @@ public sealed partial class MainWindow
         _active = args.WindowActivationState != WindowActivationState.Deactivated;
         if (_quick)
         {
-            // Focus went elsewhere: it hides (focus stays where it went).
+            // When focus goes elsewhere, the window hides and focus stays where it went.
             if (!_active && _quickShown && _config.Global.QuickTerminal.Autohide && PaletteLayer.Visibility != Visibility.Visible)
             {
                 HideQuick(restoreFocus: false);
@@ -169,7 +172,7 @@ public sealed partial class MainWindow
     {
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var settings = _config.Global.QuickTerminal;
-        // Summoned again while fading out: it turns around from where it is (still placed, still showing).
+        // Summoned again while fading out, it turns around from where it is (still placed, still showing).
         var turningAround = _fadeOutTimer?.IsRunning == true;
         _fadeOutTimer?.Stop();
         if (!_quickShown && !turningAround)
@@ -185,8 +188,8 @@ public sealed partial class MainWindow
 
             var rect = new RectInt32(r.X, r.Y, r.Width, r.Height);
             PlaceQuick(rect);
-            // Onto a monitor with another scale, Windows resizes it by the change of scale once it's there (too big on
-            // a 125% screen, too small back on 100%): the size it should have, again.
+            // Onto a monitor with another scale, Windows resizes the window by the change of scale once it's there (too
+            // big on a 125% screen, too small back on 100%), so this sets the size it should have again.
             if (AppWindow.Size.Width != rect.Width || AppWindow.Size.Height != rect.Height || AppWindow.Position.X != rect.X)
             {
                 PlaceQuick(rect);
@@ -196,7 +199,7 @@ public sealed partial class MainWindow
             {
                 var scale = Scale();
                 SetAppearance(QuickTerminalAppear.Start(settings.Position, r.Width / scale, r.Height / scale), opacity: 0, animate: false);
-                SetShadow(false); // Windows draws it at full size from the first frame: on once the content is
+                SetShadow(false); // Windows draws it at full size from the first frame, so it goes on once the content is whole
             }
         }
 
@@ -212,8 +215,8 @@ public sealed partial class MainWindow
             FocusActive(tab);
         }
 
-        // Into place: the start values were set without a transition; the targets go with one, once the start has been
-        // drawn, so the transition runs from it.
+        // Into place. The start values were set without a transition, and the targets get one once the start has been
+        // drawn, so the transition runs from the start.
         if (settings.AnimationDuration > 0)
         {
             DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.Low, () =>
@@ -247,8 +250,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Fades it out and hides it. <paramref name="restoreFocus"/>: dismissed here (the hotkey, closing), so the window
-    /// you came from gets the foreground back; not when it hides because focus already went elsewhere.
+    /// Fades the window out and hides it. <paramref name="restoreFocus"/> is true when it's dismissed here (the hotkey,
+    /// closing), so the window you came from gets the foreground back. It's false when the window hides because focus
+    /// already went elsewhere.
     /// </summary>
     public void HideQuick(bool restoreFocus = true)
     {
@@ -263,7 +267,7 @@ public sealed partial class MainWindow
         {
             AppWindow.Hide();
             SetPanesHidden(true);
-            SetAppearance((1, 0, 0), opacity: 1, animate: false); // whole again for next time (hidden: nothing shows)
+            SetAppearance((1, 0, 0), opacity: 1, animate: false); // whole again for next time (nothing shows while hidden)
             if (previous != 0 && IsWindow(previous) && IsWindowVisible(previous))
             {
                 SetForegroundWindow(previous);
@@ -277,8 +281,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Out: the shadow goes first (it would stay full size), then the content fades a little smaller (or back toward
-        // its edge); hidden once the fade is done.
+        // Out. The shadow goes first (it would stay full size), then the content fades a little smaller (or back toward
+        // its edge), and the window hides once the fade is done.
         _shadowTimer?.Stop();
         SetShadow(false);
         var start = QuickTerminalAppear.Start(_config.Global.QuickTerminal.Position, Root.ActualWidth, Root.ActualHeight);
@@ -297,7 +301,7 @@ public sealed partial class MainWindow
 
     private double Scale() => Root.XamlRoot?.RasterizationScale ?? 1;
 
-    /// <summary>Moves and sizes the window, as Zinc may (QuickFrame refuses other moves: Windows' snapping).</summary>
+    /// <summary>Moves and sizes the window as Zinc may. QuickFrame refuses other moves, such as Windows' snapping.</summary>
     private void PlaceQuick(RectInt32 rect)
     {
         QuickFrame.Placing = true;
@@ -313,7 +317,8 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Windows' shadow around the window, off while the content isn't whole. A frameless window's shadow comes with its
-    /// rounded corners (turning off non-client rendering left it there): square while fading, rounded once whole.
+    /// rounded corners (turning off non-client rendering leaves it there), so the corners are square while fading and
+    /// rounded once the content is whole.
     /// </summary>
     private void SetShadow(bool on)
     {
@@ -328,7 +333,8 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// The content's look: scale (around its middle), offset (DIPs) and opacity, at once or with a transition of the
-    /// configured length (WinUI's implicit transitions, run by the compositor: smooth even when the UI thread is busy).
+    /// configured length. WinUI's implicit transitions do this, and the compositor runs them, so they're smooth even when
+    /// the UI thread is busy.
     /// </summary>
     private void SetAppearance((double Scale, double OffsetX, double OffsetY) look, double opacity, bool animate)
     {
@@ -350,8 +356,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// What the quick terminal doesn't do: it's one terminal (splits are fine), as Ghostty's: no tabs (Windows Terminal's
-    /// quake window keeps them, but with no strip to see them by), no workspaces, no sidebar or title bar to toggle.
+    /// What the quick terminal doesn't do. Like Ghostty's, it's one terminal (splits are fine) with no tabs (Windows
+    /// Terminal's quake window keeps them, but with no strip to see them by), no workspaces, and no sidebar or title bar
+    /// to toggle.
     /// </summary>
     internal static bool NotInQuickTerminal(TerminalAction action) => action is
         TerminalAction.NewTab or TerminalAction.NewTabFromProfile or TerminalAction.DuplicateTab or TerminalAction.OpenNewTabMenu or

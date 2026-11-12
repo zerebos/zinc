@@ -11,15 +11,14 @@ namespace Zinc;
 
 /// <summary>
 /// A window of workspaces (the title-bar tabs). Each workspace is a split layout of tab
-/// groups, and each tab in a group is one terminal. (Groups hold one tab until tab groups
-/// arrive, so a group is what the UI still calls a pane.)
+/// groups, which the UI calls panes, and each tab in a group is one terminal.
 /// </summary>
 public sealed partial class MainWindow : Window
 {
     private ConfigFile _config; // replaced on a config reload (ApplyConfig)
     private readonly Keybindings _keybindings;
     /// <summary>
-    /// The line between split panes, a quiet grey for the app's light or dark theme, unless <c>divider-color</c> says otherwise.
+    /// The line between split panes, a quiet gray for the app's light or dark theme, unless <c>divider-color</c> says otherwise.
     /// </summary>
     private static readonly Windows.UI.Color DefaultDividerColor = Application.Current.RequestedTheme == ApplicationTheme.Light
         ? Windows.UI.Color.FromArgb(0xFF, 0xC8, 0xC8, 0xC8)
@@ -31,7 +30,7 @@ public sealed partial class MainWindow : Window
     /// <summary>One terminal tab: the profile/command it was opened with, and its control.</summary>
     internal sealed class TerminalTab(Profile profile, string command, string workingDirectory, TerminalControl control)
     {
-        /// <summary>Its profile; replaced by the same id's on a config reload.</summary>
+        /// <summary>Its profile, replaced by the profile with the same id on a config reload.</summary>
         public Profile Profile { get; set; } = profile;
         public string Command { get; } = command;
         public string WorkingDirectory { get; } = workingDirectory;
@@ -40,16 +39,16 @@ public sealed partial class MainWindow : Window
         /// <summary>The terminal's number for zn while Zinc runs (its shell gets it as ZINC_TERMINAL_ID).</summary>
         public int Id { get; } = CliServer.NewTerminal(control);
 
-        /// <summary>A title given to this tab (zn terminal title), over the program's; null: the program's.</summary>
+        /// <summary>A title given to this tab (zn terminal title) over the program's, or null for the program's.</summary>
         public string? CustomTitle { get; set; }
 
-        /// <summary>What its tab says: the given title, else the program's, else the profile's name.</summary>
+        /// <summary>What its tab says, which is the given title, else the program's, else the profile's name.</summary>
         public string Title => CustomTitle ?? (string.IsNullOrWhiteSpace(Control.Title) ? Profile.Name : Control.Title);
 
         /// <summary><see cref="Title"/> is the shell's folder.</summary>
         public bool TitleIsFolder => CustomTitle == null && Control.TitleIsFolder;
 
-        /// <summary>A console Windows handed over (default terminal): not saved with the session.</summary>
+        /// <summary>A console Windows handed over (default terminal), which isn't saved with the session.</summary>
         public bool HandedOver { get; set; }
 
         /// <summary>Removes the owning window's event wiring (set by <see cref="Wire"/>).</summary>
@@ -65,14 +64,14 @@ public sealed partial class MainWindow : Window
         public int? FailedExit { get; set; }
 
         /// <summary>
-        /// A color scheme chosen for this tab alone (the palette's "Color scheme for this tab…"); its
+        /// A color scheme chosen for this tab alone (the palette's "Color scheme for this tab…"), and its
         /// <see cref="Profile"/> then carries that scheme. Re-applied on reload and restore.
         /// </summary>
         public string? ColorScheme { get; set; }
     }
 
     /// <summary>
-    /// A workspace on its way to another window: its terminals keep running, detached from
+    /// A workspace on its way to another window, whose terminals keep running, detached from
     /// the old window's elements and events.
     /// </summary>
     internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color,
@@ -105,16 +104,16 @@ public sealed partial class MainWindow : Window
         /// <summary>Icon + title, updated in place.</summary>
         public TabHeader Header { get; } = new(item);
 
-        /// <summary>Set by "Rename tab"; overrides the app/profile title until cleared.</summary>
+        /// <summary>Set by "Rename workspace…", and overrides the app or profile title until cleared.</summary>
         public string? CustomTitle { get; set; }
 
-        /// <summary>Set by "Change tab color".</summary>
+        /// <summary>Set by "Workspace color".</summary>
         public Windows.UI.Color? Color { get; set; }
 
         /// <summary>The (tab color, pane background) last applied to the item's resources.</summary>
         public object? AppliedColors { get; set; }
 
-        /// <summary>Its own folder (chosen on the new-workspace page): new tabs and splits start there.</summary>
+        /// <summary>Its own folder (chosen on the new-workspace page), where new tabs and splits start.</summary>
         public WorkspaceFolder? Folder { get; set; }
 
         /// <summary>Its own icon (a <see cref="WorkspaceIcons"/> name), shown instead of the active tab's profile icon.</summary>
@@ -144,13 +143,13 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// A console Windows handed over (Zinc as the default terminal: a script double-clicked, Run,
-    /// an installer): a new workspace with the default profile's look, running what it runs. Not saved
-    /// with the session (it can't be reopened); Duplicate starts its program again.
+    /// Opens a console Windows handed over (Zinc as the default terminal, for a script double-clicked,
+    /// Run or an installer) as a new workspace with the default profile's look, running what it runs.
+    /// It isn't saved with the session (it can't be reopened), and Duplicate starts its program again.
     /// </summary>
     internal void OpenHandedOver(Zinc.Pty.ConPty pty, string title)
     {
-        // Its program, not the title: from a shortcut that's the shortcut's name ("Command Prompt").
+        // Its program, not the title, because from a shortcut the title is the shortcut's name ("Command Prompt").
         var program = pty.ProgramPath ?? title;
         var profile = ProfileForHandedOver(program);
         var pane = CreatePane(profile, program, profile.Config.ResolveWorkingDirectory(), recent: false);
@@ -162,9 +161,10 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Who a handed-over console's tab says it is: the one profile running the same program (cmd.exe:
-    /// Command Prompt), else the program itself, named after it with its own icon, in the default
-    /// profile's look (several profiles run wsl.exe: which distro isn't known, so "wsl").
+    /// Who a handed-over console's tab says it is. It's the one profile running the same program
+    /// (Command Prompt for cmd.exe), else the program itself, named after it with its own icon, in the
+    /// default profile's look. Several profiles run wsl.exe and which distro isn't known, so that one
+    /// is just "wsl".
     /// </summary>
     private Profile ProfileForHandedOver(string program)
     {
@@ -224,15 +224,15 @@ public sealed partial class MainWindow : Window
         HotkeyNotice.Closed += (_, _) => _hotkeyNoticeDismissed = true;
         if (!quick)
         {
-            // The tab strip is the title bar. (The quick terminal has none: extending into one left a light strip
-            // across its top.)
+            // The tab strip is the title bar. (The quick terminal has none, because extending into one leaves a light
+            // strip across its top.)
             ExtendsContentIntoTitleBar = true;
             SetTitleBar(DragRegion);
         }
 
         var titleBar = AppWindow.TitleBar;
-        // Standard (32 px) caption buttons fit inside the ~41 px tab strip; Tall (48 px)
-        // hung below it, so their hover highlight covered the top of the terminal.
+        // Standard (32 px) caption buttons fit inside the ~41 px tab strip, while Tall (48 px) ones
+        // hang below it, so their hover highlight covers the top of the terminal.
         titleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
         Brand.StyleCaptionButtons(titleBar);
         ApplyBackdrop();
@@ -262,12 +262,12 @@ public sealed partial class MainWindow : Window
 
         Closed += (_, _) =>
         {
-            // Nothing may reach for this window once it's gone (its AppWindow is null by now): the
+            // Nothing may reach for this window once it's gone (its AppWindow is null by now), so the
             // timers stop, and the terminals are unwired before they close, so events already
             // queued (titles, commands, progress) find no handler here.
             if (!_quick)
             {
-                // First: its shells' folders are read from them.
+                // This runs first, because it reads the shells' folders from them before they close.
                 Ui.Guard("remembering a closed window", () => App.Instance.NoteClosedWindow(this));
             }
 
@@ -289,19 +289,19 @@ public sealed partial class MainWindow : Window
         };
     }
 
-    /// <summary>The workspaces, in order (a new-workspace page among them isn't one).</summary>
     /// <summary>How many terminals this window holds (Settings > About's memory row).</summary>
     internal int PaneCount => AllTabs().Sum(t => t.Workspace.Tabs.Count());
 
+    /// <summary>The workspaces, in order (a new-workspace page among them isn't one).</summary>
     private IEnumerable<WorkspaceTab> AllTabs() => Tabs.TabItems.Cast<TabViewItem>().Select(i => i.Tag).OfType<WorkspaceTab>();
 
     private WorkspaceTab? SelectedTab => (Tabs.SelectedItem as TabViewItem)?.Tag as WorkspaceTab;
 
     /// <summary>
     /// Key bindings while focus is outside the terminals (the tab strip, the sidebar, a menu
-    /// button): a terminal runs its own bindings, so what bubbles up here unhandled comes from
-    /// elsewhere. Only chords with Ctrl or Alt: plain keys and Shift+key belong to the lists and
-    /// buttons. Pane actions (copy, find…) go to the focused terminal of the shown workspace.
+    /// button). A terminal runs its own bindings, so what bubbles up here unhandled comes from
+    /// elsewhere. Only chords with Ctrl or Alt count, because plain keys and Shift+key belong to
+    /// the lists and buttons. Pane actions (copy, find…) go to the focused terminal of the shown workspace.
     /// </summary>
     private void OnWindowKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
     {
@@ -324,7 +324,7 @@ public sealed partial class MainWindow : Window
         }
         else if (StartPageItem() is { } page && ReferenceEquals(Tabs.SelectedItem, page))
         {
-            // The new-workspace page: the window's own shortcuts (it has no pane to act on).
+            // On the new-workspace page, only the window's own shortcuts run, because it has no pane to act on.
             e.Handled = HandlePageAction(invocation, page);
             Log.Write($"keys: {invocation} on the new-workspace page{(e.Handled ? "" : ": nothing to do there")}");
         }
@@ -335,8 +335,8 @@ public sealed partial class MainWindow : Window
     /// <summary>What the next pane created types into its shell once it's ready ("New tab running…").</summary>
     private string? _startupInput;
 
-    /// <param name="recent">Whether it counts as opening its profile (the jump list's recent profiles): not restored
-    /// terminals or a console Windows handed over.</param>
+    /// <param name="recent">Whether it counts as opening its profile (the jump list's recent profiles), which restored
+    /// terminals and consoles Windows handed over don't.</param>
     private TerminalTab CreatePane(Profile profile, string command, string workingDirectory, bool recent = true)
     {
         if (recent && !_quick)
@@ -346,7 +346,7 @@ public sealed partial class MainWindow : Window
 
         var control = new TerminalControl(profile.Config, _keybindings, command, workingDirectory)
         {
-            // A canvas has no desired size of its own; make sure it fills its slot.
+            // A canvas has no desired size of its own, so make sure it fills its slot.
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             StartupInput = _startupInput,
@@ -435,7 +435,7 @@ public sealed partial class MainWindow : Window
         Rebuild(tab);
     }
 
-    /// <summary>Closes one terminal tab; an emptied group, then workspace, goes with it.</summary>
+    /// <summary>Closes one terminal tab, and an emptied group, then an emptied workspace, goes with it.</summary>
     private void ClosePaneTab(WorkspaceTab tab, TerminalTab pane)
     {
         if (tab.Workspace.GroupOf(pane) == null || CloseAnimated(tab, pane))
@@ -443,9 +443,9 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // Its events go first. a click on its tab's × left focus there, and when that × leaves the header, XAML hands
-        // focus to the next thing it finds, which can be this terminal, still shown until the pane switches. Its focus
-        // handler then activated a tab the workspace no longer had (ArgumentException).
+        // Its events go first, because a click on its tab's × leaves focus there, and when that × leaves the header, XAML
+        // hands focus to the next thing it finds, which can be this terminal, still shown until the pane switches. Its
+        // focus handler would then activate a tab the workspace no longer has (ArgumentException).
         pane.Unwire?.Invoke();
         pane.Control.Close();
         if (!tab.Workspace.Close(pane))
@@ -477,7 +477,7 @@ public sealed partial class MainWindow : Window
     private bool _reshaping;
 
     /// <summary>
-    /// Rebuilds after a pane moved, then animates every pane from where <paramref name="shape"/> noted it (when the
+    /// Rebuilds after a pane moved, then animates every pane from where <paramref name="shape"/> recorded it (when the
     /// workspace was on screen).
     /// </summary>
     private void RebuildShaped(WorkspaceTab tab, ShapeBefore? shape, TabGroup<TerminalTab> moved)
@@ -505,7 +505,7 @@ public sealed partial class MainWindow : Window
         // twice, and Win2D's canvas (which counts Loaded/Unloaded) then never draws again.
         UpdateFocusBorders(tab);
 
-        // Take the old layout apart first: pane hosts are reused and XAML elements can't
+        // Take the old layout apart first, because pane hosts are reused and XAML elements can't
         // have two parents (0x800F1000). FrameworkElement.Parent is null for children
         // added to a Panel in code, so detaching by asking each host for its parent fails.
         Dismantle(tab.Container);
@@ -572,7 +572,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// A group's element in the layout: a border (marking focus once a workspace is split)
+    /// A group's element in the layout, which is a border (marking focus once a workspace is split)
     /// around the shown tab's terminal. Kept on the group and reused across rebuilds.
     /// </summary>
     private Border HostOf(TabGroup<TerminalTab> group)
@@ -627,8 +627,8 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// A group's header (pane-headers, pane-tabs), in a workspace that's split (<paramref name="split"/>, a maximized
-    /// pane included: decision 31) or not. The quick terminal has none.
+    /// A group's header (pane-headers, pane-tabs), in a workspace that's split (<paramref name="split"/>, which counts a
+    /// workspace with a maximized pane) or not. The quick terminal has none.
     /// </summary>
     private PaneHeaderKind HeaderOf(TabGroup<TerminalTab> group, bool split) => _quick ? PaneHeaderKind.None
         : PaneHeader.For(_config.Global.PaneHeaders, _config.Global.PaneTabs, split, group.Tabs.Count);
@@ -651,8 +651,8 @@ public sealed partial class MainWindow : Window
     {
         var lift = NoteMaximizeChange(tab);
         ClearSeenAttention(tab);
-        // A shown tab carries the accent line whenever its pane has focus; otherwise focus is only marked once a
-        // workspace is split (and no pane is maximized): the line on the focused pane's title header or along its
+        // A shown tab carries the accent line whenever its pane has focus. Otherwise focus is only marked once a
+        // workspace is split (and no pane is maximized), with the line on the focused pane's title header or along its
         // top, and optionally dimmed others (PaneHeader.AccentLine).
         var split = tab.Workspace.Layout.Count > 1;
         var several = split && tab.Workspace.Maximized == null;
@@ -672,7 +672,7 @@ public sealed partial class MainWindow : Window
                 : ShowFlat(host, config);
             ((GroupView)host.Child).Update(group, HeaderOf(group, split), settings, focused, _focusBrush, split, several,
                 tab.Workspace.Maximized == group, dim, TerminalRenderer.ToColor(fill), headerFill, card, HiddenTabFill(config));
-            host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one; ShowMaximized hides it again)
+            host.Visibility = Visibility.Visible; // (a pane hidden by a maximized one, which ShowMaximized hides again)
         }
 
         tab.Container.Padding = new Thickness(PaneGap.Edge(Gap, _config.Global.PaneGapEdges));
@@ -707,16 +707,15 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // After a rebuild the panes are re-parented and not loaded yet; focus once
+        // After a rebuild the panes are re-parented and not loaded yet, so focus once
         // layout has run.
         var control = tab.Active.Control;
         DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
             () => control.Focus(FocusState.Programmatic));
     }
 
-    /// <summary>Finds the Grid built for a split in a tab's current content.</summary>
     /// <summary>
-    /// Shows the workspace's maximized pane alone (maximize-pane), or every pane: along the path from the maximized
+    /// Shows the workspace's maximized pane alone (maximize-pane), or every pane. Along the path from the maximized
     /// pane's host up to the root, each split shows only the side holding it. Nothing leaves the tree (PaneDivider.ShowOnly).
     /// </summary>
     private static void ShowMaximized(WorkspaceTab tab, int gap, bool everyPane = false)
@@ -737,6 +736,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>Finds the Grid built for a split in a tab's current content.</summary>
     private static Grid? GridFor(WorkspaceTab tab, PaneSplit split) =>
         Descendants(tab.Container).OfType<Grid>().FirstOrDefault(g => g.Tag == split);
 
@@ -770,8 +770,8 @@ public sealed partial class MainWindow : Window
     private WorkspaceTab AddWorkspace(Workspace<TerminalTab> workspace, string? customTitle = null, Windows.UI.Color? color = null,
         int? index = null, WorkspaceFolder? folder = null, string? icon = null, int? id = null)
     {
-        // Note: no Horizontal/VerticalContentAlignment here — TabViewItem applies them
-        // to its header, and Stretch pushed the label above the icon.
+        // No Horizontal/VerticalContentAlignment here, because TabViewItem applies them
+        // to its header, and Stretch would push the label above the icon.
         var item = new TabViewItem();
         var tab = new WorkspaceTab(item, workspace)
         {
@@ -800,15 +800,15 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Takes a workspace out of this window without ending its terminals: its tab goes, its
+    /// Takes a workspace out of this window without ending its terminals. Its tab goes, its
     /// layout elements are taken apart and its terminals unwired, ready for another window.
     /// The caller closes this window if it's now empty, once the workspace has a new home
-    /// (closing first could quit the app: it would have no windows left).
+    /// (closing first could quit the app, because it would have no windows left).
     /// </summary>
     private WorkspaceTransfer DetachWorkspace(WorkspaceTab tab)
     {
-        // Terminals leave their panes before the panes leave the layout (see Rebuild: the
-        // other order unloads each terminal twice, which stops Win2D drawing it).
+        // Terminals leave their panes before the panes leave the layout (see RebuildLayout), because
+        // the other order unloads each terminal twice, which stops Win2D drawing it.
         foreach (var group in tab.Workspace.Groups)
         {
             ReleaseHost(group);
@@ -864,7 +864,7 @@ public sealed partial class MainWindow : Window
     private void NewTabInGroup(WorkspaceTab tab, TabGroup<TerminalTab> group, Profile profile,
         string? command = null, string? workingDirectory = null)
     {
-        // Given a command, it runs where asked; otherwise in the workspace's folder, else where you are.
+        // Given a command, it runs where asked, and otherwise in the workspace's folder, else where you are.
         var (start, directory) = command != null
             ? (command, workingDirectory ?? profile.Config.ResolveWorkingDirectory())
             : StartFor(StartKind.NewTab, tab, group.Active, profile);
@@ -883,7 +883,7 @@ public sealed partial class MainWindow : Window
         FocusActive(tab);
     }
 
-    /// <summary>Shows the next (or previous) tab of <paramref name="pane"/>'s group, wrapping.</summary>
+    /// <summary>Shows the next (or previous) tab of <paramref name="group"/>, wrapping.</summary>
     private void CycleGroup(WorkspaceTab tab, TabGroup<TerminalTab> group, int step)
     {
         var index = (group.Tabs.ToList().IndexOf(group.Active) + step + group.Tabs.Count) % group.Tabs.Count;
@@ -917,8 +917,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// A pane header's ⋯ menu: its buttons' actions (which fold into it when the header is narrow), then its shown tab's
-    /// menu, then closing the pane with all its tabs (decision 4). Everything else stays in the right-click menu and the
-    /// palette.
+    /// menu, then closing the pane with all its tabs. Everything else stays in the right-click menu and the palette.
     /// </summary>
     private void ShowPaneMenu(WorkspaceTab tab, TabGroup<TerminalTab> group, FrameworkElement anchor)
     {
@@ -955,7 +954,7 @@ public sealed partial class MainWindow : Window
                 () => AskClosePaneTabs(tab, [.. group.Tabs], "pane")));
         }
 
-        // Below the button, right edges aligned, like other app menus (the default opened above when there was room).
+        // Below the button, right edges aligned, like other app menus (the default opens above when there's room).
         menu.RunAfterClose().ShowAt(anchor, new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
         {
             Placement = Microsoft.UI.Xaml.Controls.Primitives.FlyoutPlacementMode.BottomEdgeAlignedRight,
@@ -987,15 +986,15 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Takes one terminal tab out of its workspace, still running and free to be added anywhere
-    /// (another pane, workspace or window): its terminal leaves the pane showing it, its window
+    /// (another pane, workspace or window). Its terminal leaves the pane showing it, its window
     /// wiring comes off, and an emptied pane (then workspace) goes. The caller closes this
     /// window if it's now empty, once the tab has its new home.
     /// </summary>
     private void TakeTab(WorkspaceTab tab, TerminalTab pane)
     {
-        // Let go of the terminal while its pane is still in the layout: if the pane empties it
-        // leaves the layout without being updated again, and the terminal would stay attached
-        // to it (and releasing it from a detached pane unloads it twice; see Rebuild).
+        // Let go of the terminal while its pane is still in the layout, because if the pane empties,
+        // it leaves the layout without being updated again, and the terminal would stay attached
+        // to it. Releasing the terminal from a detached pane would also unload it twice (see RebuildLayout).
         if (tab.Workspace.GroupOf(pane) is { Tag: Border { Child: GroupView view } } group && group.Active == pane)
         {
             view.Release();
@@ -1021,13 +1020,13 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Moves terminal tab <paramref name="pane"/> (from <paramref name="source"/>, maybe this
-    /// window) into <paramref name="tab"/>: as a new pane beside <paramref name="group"/> on side
+    /// window) into <paramref name="tab"/>, as a new pane beside <paramref name="group"/> on side
     /// <paramref name="edge"/>, or into <paramref name="group"/> at <paramref name="index"/>.
     /// </summary>
     private void MoveTerminalTab(MainWindow source, TerminalTab pane, WorkspaceTab tab, TabGroup<TerminalTab> group,
         PaneDirection? edge, int? index = null)
     {
-        // Within its own pane without an edge: just a new position.
+        // Within its own pane without an edge, the tab just takes a new position.
         if (edge == null && group.Contains(pane))
         {
             group.Move(pane, index ?? group.Tabs.Count);
@@ -1041,8 +1040,8 @@ public sealed partial class MainWindow : Window
         }
 
         // A pane's only tab takes the whole pane, as dragging the pane by its header does, so it animates the same way.
-        // (Taking the tab out and splitting the target rebuilt twice, and the second rebuild cut the first one's
-        // animation short.)
+        // (Taking the tab out and splitting the target would rebuild twice, and the second rebuild would cut the first
+        // one's animation short.)
         if (from.Workspace.GroupOf(pane) is { Tabs.Count: 1 } alone && alone != group)
         {
             MovePane(source, alone, tab, group, edge, index);
@@ -1050,7 +1049,7 @@ public sealed partial class MainWindow : Window
         }
 
         // Taking the tab out rebuilds its workspace, and placing it rebuilds this one. Within one workspace, the layout
-        // is noted once before both and animated once after them, because a pane read right after a rebuild has no size
+        // is recorded once before both and animated once after them, because a pane read right after a rebuild has no size
         // yet, so the second rebuild would find nothing on screen to animate from.
         var before = from == tab ? NoteLayout(tab) : null;
         _reshaping = before != null;
@@ -1077,8 +1076,8 @@ public sealed partial class MainWindow : Window
             }
             else
             {
-                // The target pane went away with the tab (it was the tab's only pane): nothing to
-                // attach to, so the tab gets a workspace of its own.
+                // The target pane went away with the tab (it was the tab's only pane), so there's
+                // nothing to attach to and the tab gets a workspace of its own.
                 AddWorkspace(new Workspace<TerminalTab>(pane));
                 source.CloseIfEmpty();
                 return;
@@ -1101,10 +1100,10 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Moves pane <paramref name="group"/> (from <paramref name="source"/>, maybe this window) into <paramref name="tab"/>:
+    /// Moves pane <paramref name="group"/> (from <paramref name="source"/>, maybe this window) into <paramref name="tab"/>,
     /// beside <paramref name="target"/> on side <paramref name="edge"/>, or into its tabs at <paramref name="index"/> when
-    /// <paramref name="edge"/> is null. A workspace's only pane takes its workspace with it (not remembered as closed:
-    /// its terminals live on).
+    /// <paramref name="edge"/> is null. A workspace's only pane takes its workspace with it, which isn't remembered as
+    /// closed because its terminals live on.
     /// </summary>
     private void MovePane(MainWindow source, TabGroup<TerminalTab> group, WorkspaceTab tab, TabGroup<TerminalTab> target,
         PaneDirection? edge, int? index = null)
@@ -1122,8 +1121,8 @@ public sealed partial class MainWindow : Window
             var shape = NoteShape(tab);
             if (edge == null)
             {
-                // Its tabs join another pane, whose view shows its terminal next. Release it while this pane is still in
-                // the layout (see `Rebuild`). The pane's own host goes with it.
+                // Its tabs join another pane, whose view shows its terminal next. Release the terminal while this pane is
+                // still in the layout (see `RebuildLayout`). The pane's own host goes with it.
                 ReleaseHost(group);
             }
 
@@ -1166,14 +1165,14 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// Takes pane <paramref name="group"/> out of <paramref name="tab"/>, terminals running and unwired, ready for another
-    /// workspace or window. It leaves its host behind (the new place builds its own); an emptied workspace goes, not
+    /// workspace or window. It leaves its host behind (the new place builds its own). An emptied workspace goes, and isn't
     /// remembered as closed. The caller closes this window if it's now empty, once the pane has its new home.
     /// </summary>
     private void TakeGroupOut(WorkspaceTab tab, TabGroup<TerminalTab> group)
     {
         var shape = NoteShape(tab);
 
-        // Release the pane's terminal while the pane is still in the layout (see Rebuild).
+        // Release the pane's terminal while the pane is still in the layout (see RebuildLayout).
         ReleaseHost(group);
         foreach (var pane in group.Tabs)
         {
@@ -1196,7 +1195,10 @@ public sealed partial class MainWindow : Window
     /// <summary>The workspace holding a terminal tab, in this window.</summary>
     private WorkspaceTab? WorkspaceOf(TerminalTab pane) => AllTabs().FirstOrDefault(t => t.Workspace.Tabs.Contains(pane));
 
-    /// <summary>Takes <paramref name="pane"/>'s group out of a split workspace, terminals running; null if it's the only group.</summary>
+    /// <summary>
+    /// Takes <paramref name="pane"/>'s group out of a split workspace, terminals running, and returns it, or null if it's
+    /// the only group.
+    /// </summary>
     private TabGroup<TerminalTab>? TakeGroup(WorkspaceTab tab, TerminalTab pane)
     {
         if (tab.Workspace.Layout.Count < 2 || tab.Workspace.GroupOf(pane) is not { } group)
@@ -1231,7 +1233,7 @@ public sealed partial class MainWindow : Window
     private void OpenTab(Profile profile) =>
         OpenTab(profile, ShellResolver.ForProfile(profile.Config), profile.Config.ResolveWorkingDirectory());
 
-    /// <summary>Closes a workspace when you ask to: asks first if a command is running.</summary>
+    /// <summary>Closes a workspace when you ask to, and asks first if a command is running.</summary>
     private async void CloseWorkspace(WorkspaceTab tab)
     {
         if (await ConfirmClose(tab.Workspace.Tabs.ToList(), "workspace"))
@@ -1244,10 +1246,12 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Closes every terminal in a workspace and removes its tab (it can be reopened: see <see cref="RememberClosed"/>).</summary>
+    /// <summary>
+    /// Closes every terminal in a workspace and removes its tab. It can be reopened (<see cref="RememberClosed"/>).
+    /// </summary>
     private void CloseWorkspaceNow(WorkspaceTab tab)
     {
-        RememberClosed(tab); // first: its shells' folders are read from them
+        RememberClosed(tab); // first, because it reads the shells' folders from them
         foreach (var pane in tab.Workspace.Tabs.ToList())
         {
             pane.Control.Close();
@@ -1277,19 +1281,21 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        // The selection moves only if the removed workspace was the one shown: removing another
+        // The selection moves only if the removed workspace was the one shown, because removing another
         // (e.g. one dragged into the shown workspace) must not switch away from it.
         Tabs.SelectedItem = wasSelected ? Tabs.TabItems[Math.Min(index, Tabs.TabItems.Count - 1)] : selected;
         RefreshWorkspaceList();
     }
 
-    /// <param name="fromShell">A shell reported a new title or folder: the command center waits for the rest of the burst.</param>
+    /// <param name="fromShell">
+    /// True when a shell reported a new title or folder, so the command center waits for the rest of the burst.
+    /// </param>
     private void UpdateTitle(WorkspaceTab tab, bool fromShell = false)
     {
         var pane = tab.Active;
         var title = tab.CustomTitle ?? pane.Title;
 
-        // Updated in place (see TabHeader): no header transition, no icon re-decode.
+        // Updated in place (see TabHeader), so there's no header transition and no icon re-decode.
         tab.Header.SetTitle(title);
         tab.Header.SetProfile(pane.Profile);
         ApplyTabBackground(tab);
@@ -1313,7 +1319,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Keeps the tab strip clear of the caption buttons: the footer's drag area is at
+    /// Keeps the tab strip clear of the caption buttons. The footer's drag area is at
     /// least as wide as the buttons (plus some room to grab), so tabs shrink and then
     /// scroll instead of sliding under Minimize/Maximize/Close.
     /// </summary>
@@ -1329,7 +1335,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Turns off the tab strip's add/remove/reorder transitions: new tabs otherwise
+    /// Turns off the tab strip's add/remove/reorder transitions, because new tabs otherwise
     /// slide in visibly after their terminal has already rendered.
     /// </summary>
     private void DisableTabAnimations()
@@ -1340,7 +1346,8 @@ public sealed partial class MainWindow : Window
             Log.Write($"tab strip: cleared transitions on {list.Name}");
         }
 
-        // TabView's + says "Add New Tab"; here it opens a workspace (screen readers, UIA, tooltip).
+        // TabView's + says "Add New Tab", but here it opens a workspace, so its name (screen readers, UIA) and tooltip
+        // say so.
         if (VisualDescendants(Tabs).OfType<Button>().FirstOrDefault(b => b.Name == "AddButton") is { } add)
         {
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(add, "New workspace");
@@ -1461,8 +1468,8 @@ public sealed partial class MainWindow : Window
     private string? Shortcut(ActionInvocation action) => _keybindings.ShortcutFor(action);
 
     /// <summary>
-    /// A tooltip: <paramref name="text"/> plus the action's shortcut, read from the current bindings each
-    /// time it opens (so a key change in config.toml shows); just the text while the action is unbound.
+    /// A tooltip with <paramref name="text"/> plus the action's shortcut, read from the current bindings each
+    /// time it opens (so a key change in config.toml shows), or just the text while the action is unbound.
     /// </summary>
     private ToolTip ShortcutTip(string text, ActionInvocation action)
     {
@@ -1472,7 +1479,7 @@ public sealed partial class MainWindow : Window
         return tip;
     }
 
-    /// <summary>A profile's shortcut: bound by id, or by its position in the menu (0-based).</summary>
+    /// <summary>A profile's shortcut, bound by id or by its position in the menu (0-based).</summary>
     private string? ShortcutForProfile(Profile profile, int index) =>
         Shortcut(new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: profile.Id)) ??
         Shortcut(new ActionInvocation(TerminalAction.NewTabFromProfile, index));
@@ -1624,7 +1631,7 @@ public sealed partial class MainWindow : Window
                 {
                     tab.Workspace.Activate(maximize.Active);
                     tab.Workspace.ToggleMaximize();
-                    UpdateFocusBorders(tab); // (animates it: NoteMaximizeChange)
+                    UpdateFocusBorders(tab); // (NoteMaximizeChange animates it)
                     FocusActive(tab);
                 }
 
@@ -1632,10 +1639,10 @@ public sealed partial class MainWindow : Window
             case TerminalAction.ResizePane:
                 if (tab.Workspace.Maximized != null)
                 {
-                    return true; // its dividers are hidden so moving one would show the others at the new ratio
+                    return true; // its dividers are hidden, so moving one would show the others at the new ratio
                 }
 
-                SettleTween(tab, run: true); // (a close finishing rebuilds: find the Grid after)
+                SettleTween(tab, run: true); // (a close finishing rebuilds, so find the Grid after)
                 if (tab.Workspace.GroupOf(origin) is { } group &&
                     tab.Workspace.Resize(group, invocation.Direction, _config.Global.PaneResizeStep) is { } split &&
                     GridFor(tab, split) is { } grid && !ResizeAnimated(tab, grid, split))

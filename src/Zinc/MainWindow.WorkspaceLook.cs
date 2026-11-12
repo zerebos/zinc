@@ -29,7 +29,7 @@ public sealed partial class MainWindow
         flyout.ShowAt(AnchorOf(tab));
     }
 
-    /// <summary>The palette's icon question: each one previews on the tab; Esc puts the old one back.</summary>
+    /// <summary>The palette's icon question. Each icon previews on the tab, and Esc puts the old one back.</summary>
     private void AskWorkspaceIcon(WorkspaceTab tab)
     {
         var before = tab.Icon;
@@ -40,7 +40,9 @@ public sealed partial class MainWindow
             Cancel: () => SetWorkspaceIcon(tab, before)));
     }
 
-    /// <summary>"Set folder…": typed like "New tab in folder…" (relative to where the focused shell is; ~ is home).</summary>
+    /// <summary>
+    /// "Set folder…", typed like "New tab in folder…" (relative to where the focused shell is, and ~ is home).
+    /// </summary>
     private void AskWorkspaceFolder(WorkspaceTab tab, string? prompt = null) =>
         AskPaletteArgument(new PaletteArgument(prompt ?? "Folder for this workspace: its new tabs and splits start there",
             Submit: typed => SetWorkspaceFolder(tab, typed)));
@@ -59,8 +61,9 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Named after its folder, unless you named it yourself; with colors by folder, colored after
-        // it too, unless you colored it yourself (a color that's none or the old folder's is automatic).
+        // The workspace is named after its folder, unless you named it yourself. With colors by folder, it's
+        // colored after the folder too, unless you colored it yourself (a color that's none or the old folder's
+        // is automatic).
         if (tab.CustomTitle == null || tab.CustomTitle == tab.Folder?.Name)
         {
             tab.CustomTitle = folder.Name;
@@ -77,7 +80,7 @@ public sealed partial class MainWindow
         Log.Write($"workspace folder: {folder.Path}");
     }
 
-    /// <summary>A folder's color (<see cref="WorkspaceColors.ForFolder"/>); null without a folder.</summary>
+    /// <summary>A folder's color (<see cref="WorkspaceColors.ForFolder"/>), or null without a folder.</summary>
     private static Windows.UI.Color? FolderColor(WorkspaceFolder? folder) =>
         folder == null ? null : WorkspaceLookPickers.ToColor(WorkspaceColors.All[WorkspaceColors.ForFolder(folder.Path)].Rgb);
 

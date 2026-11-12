@@ -5,11 +5,11 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// Shell integration, the attention part: a long command that finishes where you weren't looking
+// The attention part of shell integration. A long command that finishes where you weren't looking
 // (another workspace, tab or pane, or another app) puts a dot on its tab, red if it failed, and
 // flashes the taskbar button while the window is in the background (or, with "toast", shows a
-// Windows notification); the dot clears once you look. Programs' own notifications (OSC 9 / 777)
-// get a blue dot the same way, and their progress (OSC 9;4) a ring and the taskbar's progress bar.
+// Windows notification). The dot clears once you look. Programs' own notifications (OSC 9 / 777)
+// get a blue dot the same way, and their progress (OSC 9;4) gets a ring and the taskbar's progress bar.
 // Closing something while the shell says a command is running asks first.
 public sealed partial class MainWindow
 {
@@ -74,7 +74,10 @@ public sealed partial class MainWindow
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool MessageBeep(uint type);
 
-    /// <summary>The bell rang (per <c>bell</c>): a dot on the tab where you weren't looking, and a taskbar flash from the background.</summary>
+    /// <summary>
+    /// The bell rang (per <c>bell</c>), so this puts a dot on the tab where you weren't looking, and flashes the taskbar
+    /// when the window is in the background.
+    /// </summary>
     private void OnBell(WorkspaceTab tab, TerminalTab pane)
     {
         if (IsLookingAt(tab, pane))
@@ -95,9 +98,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A tab's own program ended and its pane stays (decisions 46-48): after an error, a red mark where you weren't
-    /// looking (it outranks every other) and a taskbar flash from the background, as the bell. The pane's status slot
-    /// says it either way.
+    /// A tab's own program ended and its pane stays. After an error, this puts a red mark where you weren't looking
+    /// (it outranks every other mark) and flashes the taskbar from the background, as the bell does. The pane's status
+    /// slot shows the exit either way.
     /// </summary>
     private void OnExited(WorkspaceTab tab, TerminalTab pane, uint code)
     {
@@ -134,8 +137,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Past the dot: a Windows notification ("toast": while the window is in the background;
-    /// "toast-always": whenever you weren't looking), else a taskbar flash while in the background.
+    /// What happens besides the dot. That's a Windows notification ("toast" shows one while the window is in the
+    /// background, and "toast-always" whenever you weren't looking), or else a taskbar flash while in the background.
     /// Clicking the notification brings you to the pane.
     /// </summary>
     /// <returns>Whether it was a Windows notification.</returns>
@@ -181,7 +184,7 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Brings the window to the front although another app has it. A notification's click doesn't
-    /// hand Zinc the right to take the foreground (Activate alone left the window behind), so
+    /// hand Zinc the right to take the foreground (Activate alone leaves the window behind), so
     /// its input is briefly attached to the foreground app's thread, which may.
     /// </summary>
     private void ForceForeground()
@@ -236,7 +239,7 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Whether you're looking at a terminal: its window active, its workspace shown, and it has
-    /// focus. A visible pane beside the focused one doesn't count; your attention is elsewhere.
+    /// focus. A visible pane beside the focused one doesn't count, because your attention is elsewhere.
     /// </summary>
     private bool IsLookingAt(WorkspaceTab tab, TerminalTab pane) =>
         _active && SelectedTab == tab && tab.Workspace.Active == pane;
@@ -250,7 +253,10 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A workspace's dot: the most urgent of its terminals'; else a ring for a program's progress (an error first).</summary>
+    /// <summary>
+    /// Shows a workspace's dot, which is the most urgent of its terminals' dots, and a ring for a program's progress
+    /// (an error first).
+    /// </summary>
     private static void ShowWorkspaceAttention(WorkspaceTab tab)
     {
         tab.Header.SetAttention(tab.Workspace.Tabs.Select(t => t.Attention).DefaultIfEmpty().Max(),
@@ -281,8 +287,8 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Asks before closing terminals the shell says are running a command, or (<paramref name="severalTabs"/>) two or
-    /// more tabs at once even with nothing running (decision 29, 2026-10-11: a close-pane key takes every tab of a pane
-    /// and shows no count). True to go ahead (nothing to ask, or the user agreed).
+    /// more tabs at once even with nothing running, because a close-pane key takes every tab of a pane and shows no
+    /// count. True to go ahead (nothing to ask, or the user agreed).
     /// </summary>
     /// <param name="what">What closes, for the button: "tab", "pane", "workspace", "window".</param>
     /// <param name="severalTabs">False for zn: a script gets no question unless a command is running.</param>
@@ -330,8 +336,8 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            // Code after an await resumes as queued work, which bypasses Application.UnhandledException:
-            // record it, and don't close anything.
+            // Code after an await resumes as queued work, which bypasses Application.UnhandledException,
+            // so this records the exception and closes nothing.
             Log.Crash("asking before a close", ex);
             return false;
         }
@@ -344,7 +350,10 @@ public sealed partial class MainWindow
     /// <summary>Closes a terminal tab when you ask to (not when its shell has exited).</summary>
     private void AskClosePaneTab(WorkspaceTab tab, TerminalTab pane) => AskClosePaneTabs(tab, [pane]);
 
-    /// <summary>Closes several terminal tabs, asking once for all of them; <paramref name="what"/> names them for the button ("pane").</summary>
+    /// <summary>
+    /// Closes several terminal tabs, asking once for all of them. <paramref name="what"/> names them for the button
+    /// ("pane").
+    /// </summary>
     private async void AskClosePaneTabs(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
     {
         // FIXME: this is gonna be fun with i18n later...
@@ -360,7 +369,7 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// Closes tabs you asked to close. When they're all of the workspace's tabs, it closes as "Close workspace" does, so
-    /// Reopen closed workspace brings it back (decision 30, 2026-10-11: closing the last tab or pane used to lose it).
+    /// Reopen closed workspace brings it back.
     /// </summary>
     private void CloseAsked(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes)
     {
@@ -376,7 +385,7 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>The window's close button (and Alt+F4): asks if something is running.</summary>
+    /// <summary>Makes the window's close button (and Alt+F4) ask first if something is running.</summary>
     private void ConfirmWindowClose()
     {
         AppWindow.Closing += async (_, args) =>

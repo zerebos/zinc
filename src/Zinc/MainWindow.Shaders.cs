@@ -2,16 +2,16 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// Custom shaders that couldn't be used: one notice for the window, whichever terminals report them.
+// Custom shaders that couldn't be used get one notice for the window, whichever terminals report them.
 public sealed partial class MainWindow
 {
-    // Each terminal's problems as of its last load (most share the same lines: the same shaders).
+    // Each terminal's problems as of its last load (most share the same lines, because they use the same shaders).
     private readonly Dictionary<TerminalControl, IReadOnlyList<string>> _shaderProblems = [];
     private readonly HashSet<string> _dismissedShaderProblems = [];
     private bool _shaderNoticeWired;
 
     /// <summary>
-    /// A terminal loaded its shaders: the notice shows every terminal's problems, and closes once none are left (a fixed
+    /// A terminal loaded its shaders. The notice shows every terminal's problems, and closes once none are left (a fixed
     /// file takes its line back). A problem the notice was closed on stays quiet until the next config reload.
     /// </summary>
     private void ShowShaderProblems(TerminalControl control, IReadOnlyList<string> problems)
@@ -27,7 +27,7 @@ public sealed partial class MainWindow
         UpdateShaderNotice();
     }
 
-    /// <summary>A terminal left the window (closed or moved): its problems go with it.</summary>
+    /// <summary>A terminal left the window (closed or moved), so its problems go with it.</summary>
     private void ForgetShaderProblems(TerminalControl control)
     {
         if (_shaderProblems.Remove(control))
@@ -36,7 +36,9 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>A config reload: the terminals load their shaders again; closed-on problems may show again.</summary>
+    /// <summary>
+    /// On a config reload the terminals load their shaders again, so problems the notice was closed on may show again.
+    /// </summary>
     private void ForgetShaderProblems() => _dismissedShaderProblems.Clear();
 
     private void UpdateShaderNotice()

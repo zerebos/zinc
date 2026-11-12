@@ -22,9 +22,9 @@ public sealed partial class MainWindow
     // ------------------------------------------------------------ color schemes
 
     /// <summary>
-    /// Lists the color schemes, previewing the selected one on <paramref name="pane"/>. Chosen:
-    /// that tab keeps it, or (<paramref name="asDefault"/>) it becomes config.toml's colors.theme.
-    /// Cancelled: the pane gets its colors back.
+    /// Lists the color schemes, previewing the selected one on <paramref name="pane"/>. Once one is chosen,
+    /// that tab keeps it, or (with <paramref name="asDefault"/>) it becomes config.toml's colors.theme.
+    /// If the question is cancelled, the pane gets its colors back.
     /// </summary>
     private void PickColorScheme(WorkspaceTab tab, TerminalTab pane, bool asDefault)
     {
@@ -56,8 +56,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// What the pane would look like with <paramref name="name"/> as config.toml's colors.theme:
-    /// the file read again with just that changed, so colors it sets explicitly (background,
+    /// What the pane would look like with <paramref name="name"/> as config.toml's colors.theme.
+    /// It reads the file again with just that changed, so colors it sets explicitly (background,
     /// foreground, palette entries, a profile's own scheme) still win, as they will after saving.
     /// </summary>
     private Config DefaultSchemePreview(TerminalTab pane, string name)
@@ -90,8 +90,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Written to the config; the reload that follows recolors every pane that doesn't choose
-        // its own. Until then this one keeps the preview.
+        // The scheme is written to the config, and the reload that follows recolors every pane that
+        // doesn't choose its own. Until then this one keeps the preview.
         try
         {
             ConfigEditor.SetInFile(_config.Path, ["colors", "theme"], name);
@@ -117,7 +117,7 @@ public sealed partial class MainWindow
     // ------------------------------------------------------------ new tabs
 
     /// <summary>
-    /// A new tab next to the focused one (in its pane, with tab groups; else a new workspace),
+    /// A new tab next to the focused one (in its pane with pane tabs on, else in a new workspace),
     /// with the focused tab's profile running <paramref name="command"/> in <paramref name="folder"/>.
     /// </summary>
     private void NewTabWith(WorkspaceTab tab, string command, string? folder)
@@ -140,8 +140,8 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// A new tab of the focused tab's shell, in the folder that shell is in, which then types
-    /// <paramref name="line"/> as if by hand: builtins (dir), aliases and WSL programs all work,
-    /// and the tab stays at the shell afterwards, the command in its history.
+    /// <paramref name="line"/> as if by hand. So builtins (dir), aliases and WSL programs all work,
+    /// and the tab stays at the shell afterwards, with the command in its history.
     /// </summary>
     private void NewShellTabRunning(WorkspaceTab tab, string line)
     {
@@ -170,8 +170,8 @@ public sealed partial class MainWindow
         AskPaletteArgument(new PaletteArgument(prompt, Submit: typed => OpenInFolder(tab, typed)));
 
     /// <summary>
-    /// A new tab of the focused tab's profile in <paramref name="typed"/>: <c>~</c> is home (WSL's own
-    /// in WSL), a relative path starts from where the focused shell is. Asks again if the folder
+    /// A new tab of the focused tab's profile in <paramref name="typed"/>. <c>~</c> is home (WSL's own
+    /// in WSL), and a relative path starts from where the focused shell is. Asks again if the folder
     /// doesn't exist or doesn't fit the shell.
     /// </summary>
     private void OpenInFolder(WorkspaceTab tab, string typed)

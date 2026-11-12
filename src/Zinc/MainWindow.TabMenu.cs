@@ -36,7 +36,7 @@ public sealed partial class MainWindow
         menu.Items.Add(colors);
         menu.Items.Add(Item("Workspace icon…", ((char)0xE8B9).ToString(), null, () => ShowIconPicker(tab)));
 
-        // Its folder: what's set shows on the first line; Clear only while there's one.
+        // The workspace's folder. What's set shows on the first line, and Clear is enabled only while there's one.
         var folder = new MenuFlyoutSubItem { Text = "Workspace folder", Icon = Glyph(((char)0xE8B7).ToString()) };
         var current = new MenuFlyoutItem { IsEnabled = false };
         var clear = new MenuFlyoutItem { Text = "Clear folder", Command = Run(() => ClearWorkspaceFolder(tab)) };
@@ -46,7 +46,8 @@ public sealed partial class MainWindow
         menu.Items.Add(folder);
         menu.Opening += (_, _) =>
         {
-            // Without pane tabs, a new tab is a new workspace (the page or its profile's folder): only splits follow.
+            // Without pane tabs, a new tab is a new workspace (the page or its profile's folder), so only splits
+            // follow the folder.
             var what = _config.Global.PaneTabs ? "new tabs and splits" : "splits";
             current.Text = tab.Folder is { } f ? f.Path
                 : _config.Global.StartIn == NewTerminalFolder.Current ? $"No folder set: {what} start where you are"
@@ -91,7 +92,7 @@ public sealed partial class MainWindow
 
         if (shortcut != null)
         {
-            // Shown for discoverability; the real bindings live in Keybindings.
+            // Shown for discoverability, because the real bindings live in Keybindings.
             item.KeyboardAcceleratorTextOverride = shortcut;
         }
 
@@ -137,11 +138,16 @@ public sealed partial class MainWindow
         UpdateTitle(tab);
     });
 
-    /// <summary>Where a terminal tab's own popups go: its tab or title in its pane's header, else its workspace's tab.</summary>
+    /// <summary>
+    /// Where a terminal tab's own popups go, which is its tab or title in its pane's header, else its workspace's tab.
+    /// </summary>
     private FrameworkElement TabAnchor(WorkspaceTab tab, TerminalTab pane) =>
         tab.Workspace.GroupOf(pane) is { Tag: Border { Child: GroupView view } } && view.AnchorFor(pane) is { } anchor ? anchor : AnchorOf(tab);
 
-    /// <summary>Renames one terminal tab (its pane's header and tab label; null gives it back to the program, as zn's does).</summary>
+    /// <summary>
+    /// Renames one terminal tab (its pane's header and tab label). A null name gives the title back to the program, as
+    /// zn's rename does.
+    /// </summary>
     private void ShowRenameTab(WorkspaceTab tab, TerminalTab pane, FrameworkElement anchor) =>
         ShowRenameBox(tab, pane.CustomTitle ?? pane.Title, anchor, name =>
         {
@@ -150,7 +156,9 @@ public sealed partial class MainWindow
             UpdateFocusBorders(tab);
         });
 
-    /// <summary>A rename box under <paramref name="anchor"/>: Enter sets the name (empty: none), Escape leaves it.</summary>
+    /// <summary>
+    /// A rename box under <paramref name="anchor"/>. Enter sets the name (empty clears it), and Escape leaves it.
+    /// </summary>
     private void ShowRenameBox(WorkspaceTab tab, string current, FrameworkElement anchor, Action<string?> rename)
     {
         var box = new TextBox
@@ -167,9 +175,9 @@ public sealed partial class MainWindow
             flyout.Hide();
         }
 
-        // Enter and Escape act on their release, not their press so closing on the press handed focus to the terminal
-        // before the key's character arrived, and the shell got the Enter. Only a press made in the box counts, so
-        // the Enter that opened it (from the palette) doesn't commit it.
+        // Enter and Escape act on their release, not their press, because closing on the press would hand focus to the
+        // terminal before the key's character arrived, and the shell would get the Enter. Only a press made in the box
+        // counts, so the Enter that opened it (from the palette) doesn't commit it.
         Windows.System.VirtualKey? pressed = null;
         box.KeyDown += (_, e) =>
         {
@@ -222,7 +230,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Colors a tab: a chosen tab color if set; otherwise the selected tab takes the
+    /// Colors a tab with its chosen tab color if set. Otherwise the selected tab takes the
     /// focused pane's terminal background, so it flows into the terminal below it.
     /// Only touches the item when the colors change (re-applying flickers).
     /// </summary>
@@ -256,7 +264,7 @@ public sealed partial class MainWindow
             tab.Item.Resources["TabViewItemHeaderBackgroundSelected"] = new SolidColorBrush(paneBackground);
         }
 
-        // The selected tab's text on a light background (a light scheme, a yellow tab): dark.
+        // The selected tab's text is dark on a light background (a light scheme, a yellow tab).
         if (Contrast.TextOn(tab.Color ?? paneBackground) is { } text)
         {
             tab.Item.Resources["TabViewItemHeaderForegroundSelected"] = text;
@@ -264,7 +272,7 @@ public sealed partial class MainWindow
             tab.Item.Resources["TabViewItemHeaderSelectedCloseButtonForeground"] = text;
         }
 
-        // Theme resources are resolved when the template applies; flipping the theme
+        // Theme resources are resolved when the template applies, so flipping the theme
         // makes the item re-resolve them now.
         var theme = Brand.IsDark(tab.Item) ? ElementTheme.Dark : ElementTheme.Light;
         tab.Item.RequestedTheme = theme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
@@ -291,7 +299,7 @@ public sealed partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
         {
-            // A fire-and-forget task: without this, a failed save vanished without a word.
+            // A fire-and-forget task, so without this a failed save would vanish without a word.
             Log.Crash("exporting text", ex);
             ShowError(ex);
         }
@@ -313,10 +321,11 @@ internal sealed partial class RelayCommand(Action action) : System.Windows.Input
 internal static class MenuFlyouts
 {
     /// <summary>
-    /// Runs the chosen item's command once the menu has closed and handed focus back, not while it's still open: the
-    /// focus went back to what had it before the menu after the command ran, so one that moved focus (a split, a new
-    /// tab) lost it to the old pane for a few frames and the focus ring flickered. A command run while the menu isn't
-    /// open (a test hook) runs at once. Items with Click handlers aren't covered so give them a Command.
+    /// Runs the chosen item's command once the menu has closed and handed focus back, not while it's still open.
+    /// Otherwise focus would go back to what had it before the menu after the command ran, so a command that moves
+    /// focus (a split, a new tab) would lose it to the old pane for a few frames and the focus ring would flicker. A
+    /// command run while the menu isn't open (a test hook) runs at once. Items with Click handlers aren't covered, so
+    /// give them a Command.
     /// </summary>
     public static MenuFlyout RunAfterClose(this MenuFlyout menu)
     {
@@ -328,7 +337,7 @@ internal static class MenuFlyouts
             open = false;
             if (chosen is { } run)
             {
-                // Queued, not run here: focus goes back after Closed (logged: closed, focus to the old pane, then this).
+                // Queued, not run here, because focus goes back after Closed (Closed, focus to the old pane, then this).
                 chosen = null;
                 menu.DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, run);
             }

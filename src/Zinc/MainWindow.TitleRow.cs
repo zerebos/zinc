@@ -11,9 +11,9 @@ using Windows.Graphics;
 namespace Zinc;
 
 // The title bar row in vertical-tabs mode: the app's name over the sidebar and, in the middle, a
-// command center showing what the focused tab is doing; clicking it opens the command palette.
+// command center showing what the focused tab is doing. Clicking it opens the command palette.
 // The row is the window's drag area (caption), so the command center is registered as a
-// click-through region. See .scratch/NOTES.md "Chrome plan" for where this is heading.
+// click-through region.
 public sealed partial class MainWindow
 {
     private TextBlock? _commandContext;
@@ -72,7 +72,7 @@ public sealed partial class MainWindow
         content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         _searchGlyph = new FontIcon { Glyph = "", FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
         content.Children.Add(_searchGlyph);
-        // While a command runs: a still lit cell in place of the search glyph (the pulse is for things that need you).
+        // While a command runs, a still lit cell takes the search glyph's place (the pulse is for things that need you).
         _runningCell = new Microsoft.UI.Xaml.Shapes.Rectangle
         {
             Width = 7,
@@ -132,9 +132,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// <see cref="UpdateCommandCenter"/> once a shell's reports have settled. They come in bursts: a
-    /// prompt reports its new folder, then sets the title (Git Bash's names the folder), and drawn
-    /// in between, the center showed the new folder beside the old title for a moment.
+    /// <see cref="UpdateCommandCenter"/> once a shell's reports have settled. They come in bursts. A
+    /// prompt reports its new folder, then sets the title (Git Bash's names the folder), so drawn
+    /// in between, the center would show the new folder beside the old title for a moment.
     /// </summary>
     private void UpdateCommandCenterSoon() => UpdateCommandCenterIn(TimeSpan.FromMilliseconds(80));
 
@@ -232,7 +232,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Lets an element in the title row take clicks: the row is caption (it drags the window),
+    /// Lets an element in the title row take clicks. The row is caption (it drags the window),
     /// so the element is registered as a click-through region, kept in step with layout.
     /// </summary>
     /// <returns>Brings the region up to date now (after a move layout doesn't see, like a slide).</returns>
@@ -241,7 +241,7 @@ public sealed partial class MainWindow
         RectInt32? set = null;
         void Update()
         {
-            // Layout still runs as a closed window tears down; its AppWindow is gone by then.
+            // Layout still runs as a closed window tears down, and its AppWindow is gone by then.
             if (_windowClosed || element.XamlRoot is not { } root || element.ActualWidth <= 0)
             {
                 return;
@@ -250,7 +250,7 @@ public sealed partial class MainWindow
             var scale = root.RasterizationScale;
             var r = element.TransformToVisual(null).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
             var rect = new RectInt32((int)(r.X * scale), (int)(r.Y * scale), (int)Math.Ceiling(r.Width * scale), (int)Math.Ceiling(r.Height * scale));
-            // LayoutUpdated fires for every layout pass in the window: only tell Windows about changes.
+            // LayoutUpdated fires for every layout pass in the window, so this only tells Windows about changes.
             if (set is { } previous && previous.Equals(rect))
             {
                 return;

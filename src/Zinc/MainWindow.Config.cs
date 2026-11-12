@@ -20,22 +20,17 @@ public sealed partial class MainWindow
         }
         catch (Exception ex)
         {
-            // No app for .toml files: fall back to Notepad.
+            // No app for .toml files, so fall back to Notepad.
             Log.Write($"config: open with the default app failed ({ex.Message}); using notepad");
             Process.Start("notepad.exe", $"\"{_config.Path}\"");
         }
     }
 
-    /// <summary>
-    /// Takes new settings without restarting anything: every tab re-resolves its profile by id
-    /// and updates its colors, font and padding; strips, dimming and menus follow. Where the
-    /// workspace tabs sit (top or left) applies to windows opened from now on.
-    /// </summary>
     private (WindowBackdrop, double, Windows.UI.Color)? _backdrop;
 
     /// <summary>
     /// The window's glass (<c>[window] backdrop</c>, <c>backdrop-tint</c>), tinted with the terminal's
-    /// background: set again only when one of them changes (each set restarts it).
+    /// background. It's set again only when one of them changes, because each set restarts it.
     /// </summary>
     private void ApplyBackdrop()
     {
@@ -49,8 +44,8 @@ public sealed partial class MainWindow
         _backdrop = wanted;
         if (_quick)
         {
-            // See-through, untinted: it fades and grows in, and a backdrop (or a tint) would sit there at full size
-            // meanwhile. The terminal draws its own background.
+            // See-through and untinted, because the quick terminal fades and grows in, and a backdrop (or a tint)
+            // would sit there at full size meanwhile. The terminal draws its own background.
             SystemBackdrop = new ClearBackdrop(Windows.UI.Color.FromArgb(0, 0, 0, 0));
             return;
         }
@@ -63,10 +58,17 @@ public sealed partial class MainWindow
         };
     }
 
-    /// <summary>The line between split panes: <c>divider-color</c>, else Zinc's grey (every divider shares the brush).</summary>
+    /// <summary>
+    /// The line between split panes, from <c>divider-color</c> or else Zinc's gray. Every divider shares the brush.
+    /// </summary>
     private void ApplyDividerColor() =>
         _dividerBrush.Color = _config.Global.DividerColor is { } color ? Zinc.Terminal.TerminalRenderer.ToColor(color) : DefaultDividerColor;
 
+    /// <summary>
+    /// Takes new settings without restarting anything. Every tab re-resolves its profile by id and updates its colors,
+    /// font and padding, and the strips, dimming and menus update with them. Where the workspace tabs sit (top or left)
+    /// applies to windows opened from now on.
+    /// </summary>
     internal void ApplyConfig(ConfigFile config)
     {
         _config = config;
@@ -112,8 +114,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Shows the file's problems, if any. <paramref name="applied"/> false: the file isn't valid
-    /// TOML (likely saved mid-edit), so the settings in force stay until it is.
+    /// Shows the file's problems, if any. When <paramref name="applied"/> is false, the file isn't
+    /// valid TOML (likely saved mid-edit), so the settings in force stay until it is.
     /// </summary>
     internal void ShowConfigProblems(ConfigFile config, bool applied)
     {

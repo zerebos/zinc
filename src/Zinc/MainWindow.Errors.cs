@@ -3,14 +3,14 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace Zinc;
 
-// A failure Zinc survived (App.UnhandledException): the notice says so, and where the details are.
+// A failure Zinc survived (App.UnhandledException). The notice says so, and says where the details are.
 public sealed partial class MainWindow
 {
     /// <summary>
-    /// Puts each notice on a solid backing. InfoBar's severity colors are see-through tints: fine over a terminal, but
-    /// over the new-workspace page (on the window's Mica) the page's text showed through and a tester couldn't read the
-    /// update notice. Its own Background replaces the tint instead of sitting under it, hence a backing behind it,
-    /// shown only while that notice is open (an empty one would still take the panel's spacing).
+    /// Puts each notice on a solid backing, because InfoBar's severity colors are see-through tints. They're fine over
+    /// a terminal, but over the new-workspace page (on the window's Mica) the page's text would show through and make
+    /// the notice hard to read. An InfoBar's own Background replaces the tint instead of sitting under it, hence a
+    /// backing behind it, shown only while that notice is open (an empty one would still take the panel's spacing).
     /// </summary>
     private void SolidNoticeBacks()
     {

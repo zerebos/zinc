@@ -5,13 +5,13 @@ using Windows.Graphics;
 namespace Zinc;
 
 // Resizing the quick terminal by its edges. Its frame is a real resizing frame drawn nowhere (QuickFrame), with border
-// regions along the edges that aren't against the screen: Windows runs the drags, with its own pointer, and each step
+// regions along the edges that aren't against the screen. Windows runs the drags, with its own pointer, and each step
 // gets the rectangle Core's QuickTerminalResize and Place give (centered stays centered). The size is remembered for
 // that monitor (App.QuickTerminalSizes, saved with the session) until the config places it differently.
 // Double-clicking an edge, or the palette's "Reset quick terminal size", goes back to the configured size.
 public sealed partial class MainWindow
 {
-    // The minimum size, in DIPs: a few dozen columns and lines.
+    // The minimum size in DIPs, which is a few dozen columns and lines.
     private const double QuickMinWidth = 320, QuickMinHeight = 160;
 
     // How far in from the window's edge a border reaches, in DIPs.
@@ -64,7 +64,10 @@ public sealed partial class MainWindow
         source.SetRegionRects(NonClientRegionKind.BottomBorder, Where(QuickTerminalEdge.Bottom, new RectInt32(0, h - b, w, b)));
     }
 
-    /// <summary>The key a monitor's dragged size is kept under: where it is and how big (stable while the setup is).</summary>
+    /// <summary>
+    /// The key a monitor's dragged size is kept under, made of where the monitor is and how big it is (stable while the
+    /// setup is).
+    /// </summary>
     private static string MonitorKey(DisplayArea area) =>
         $"{area.OuterBounds.X},{area.OuterBounds.Y},{area.OuterBounds.Width}x{area.OuterBounds.Height}";
 
@@ -81,7 +84,7 @@ public sealed partial class MainWindow
         _ => QuickTerminalEdge.BottomRight,
     };
 
-    /// <summary>One step of a drag: the size the pointer gives, placed as the window belongs.</summary>
+    /// <summary>One step of a drag, which returns the size the pointer gives, placed where the window belongs.</summary>
     private QuickFrame.Rect ResizeStep(int wmsz, QuickFrame.Rect proposed)
     {
         if (_resizeArea is not { } area || _windowClosed || !GetCursorPos(out var at))
@@ -98,7 +101,7 @@ public sealed partial class MainWindow
         return new QuickFrame.Rect { Left = r.X, Top = r.Y, Right = r.X + r.Width, Bottom = r.Y + r.Height };
     }
 
-    /// <summary>A drag ended: the size is remembered for this monitor (unless it didn't change).</summary>
+    /// <summary>When a drag ends, the size is remembered for this monitor (unless it didn't change).</summary>
     private void ResizeEnded()
     {
         if (_resizeArea is not { } area || _windowClosed)

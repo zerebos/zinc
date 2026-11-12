@@ -5,11 +5,11 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// zn's commands for this window (App finds the target first: App.Cli.cs). They go through what keys, menus and the
-// palette use, so a command behaves like its key: close confirmation included.
+// zn's commands for this window (App.Cli.cs finds the target first). They go through what keys, menus and the
+// palette use, so a command behaves like its key, close confirmation included.
 public sealed partial class MainWindow
 {
-    /// <summary>A window zn asked for: one workspace running a profile (or a program), maybe in a folder.</summary>
+    /// <summary>A window zn asked for, with one workspace running a profile (or a program), maybe in a folder.</summary>
     internal sealed record CliStart(Profile Profile, string? Cwd, string? CommandLine);
 
     internal MainWindow(ConfigFile config, Keybindings keybindings, CliStart start)
@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     /// <summary>The workspaces, in order (a new-workspace page among them isn't one).</summary>
     internal IEnumerable<WorkspaceTab> Workspaces => AllTabs();
 
-    /// <summary>The workspace shown; null while the new-workspace page is.</summary>
+    /// <summary>The workspace shown, or null while the new-workspace page is shown.</summary>
     internal WorkspaceTab? ShownWorkspace => SelectedTab;
 
     internal bool IsQuick => _quick;
@@ -188,8 +188,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A new tab in <paramref name="group"/>, with any profile (else the terminal's, as New tab does). With tab groups
-    /// off, panes hold one terminal: it opens as a workspace instead, as New tab does then.
+    /// A new tab in <paramref name="group"/>, with any profile (else the terminal's, as New tab does). With pane tabs
+    /// off, a pane holds one terminal, so the new one opens as a workspace instead, as New tab does then.
     /// </summary>
     private CliReply CliNewTerminal(CliRequest request, WorkspaceTab tab, TabGroup<TerminalTab> group, TerminalTab origin)
     {
@@ -213,7 +213,10 @@ public sealed partial class MainWindow
         return CliReply.Done(pane.Id);
     }
 
-    /// <summary>Into another pane (in any window), as its newest tab, shown; the way a tab dropped on a pane's strip moves.</summary>
+    /// <summary>
+    /// Moves a terminal into another pane (in any window) as its newest tab, shown, the way a tab dropped on a pane's strip
+    /// moves.
+    /// </summary>
     private CliReply CliMoveTerminal(CliRequest request, TabGroup<TerminalTab> group, TerminalTab pane)
     {
         if (!_config.Global.PaneTabs)
@@ -236,7 +239,7 @@ public sealed partial class MainWindow
         return CliReply.Done();
     }
 
-    /// <summary>To another window (as its last workspace, shown), or a new one; as dragging its tab there does.</summary>
+    /// <summary>Moves a workspace to another window (as its last workspace, shown) or a new one, as dragging its tab there does.</summary>
     private CliReply CliMoveWorkspace(CliRequest request, WorkspaceTab tab)
     {
         if (request.ToWindow == "new")
@@ -287,11 +290,13 @@ public sealed partial class MainWindow
         return false;
     }
 
-    /// <summary>A folder zn sent (a full Windows path; from WSL, the distro's share) in the profile's terms; null if none.</summary>
+    /// <summary>
+    /// A folder zn sent (a full Windows path, which from WSL is the distro's share) in the profile's terms, or null if none.
+    /// </summary>
     private static WorkspaceFolder? FolderFor(string? cwd, Profile profile) =>
         cwd == null ? null : WorkspaceFolder.FromWindows(cwd, ShellEnvironment.WslDistroOf(ShellResolver.ForProfile(profile.Config)));
 
-    /// <summary>How a profile, or a program under it, starts in <paramref name="folder"/> (null: the profile's usual one).</summary>
+    /// <summary>How a profile, or a program under it, starts in <paramref name="folder"/> (null for the profile's usual one).</summary>
     private static (string Command, string Directory) CliLaunchFor(Profile profile, WorkspaceFolder? folder, string? program)
     {
         var (command, directory) = StartIn(folder, profile);

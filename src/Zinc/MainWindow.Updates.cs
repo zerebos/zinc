@@ -1,6 +1,6 @@
 namespace Zinc;
 
-// A downloaded update (Updater): a notice in each window, with Restart Zinc and Install when I quit.
+// A downloaded update (Updater) shows a notice in each window, with Restart Zinc and Install when I quit.
 public sealed partial class MainWindow
 {
     private void SetUpUpdateNotice()
@@ -11,7 +11,10 @@ public sealed partial class MainWindow
         ShowUpdateNotice();
     }
 
-    /// <summary>Open while an update is ready and nobody said Later; not in the quick terminal (it comes and goes).</summary>
+    /// <summary>
+    /// The notice is open while an update is ready and nobody said Later. It never shows in the quick terminal, which
+    /// comes and goes.
+    /// </summary>
     private void ShowUpdateNotice()
     {
         if (_windowClosed)

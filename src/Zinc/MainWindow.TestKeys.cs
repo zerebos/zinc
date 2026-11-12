@@ -154,7 +154,7 @@ public sealed partial class MainWindow
 
             if (chord == "test:mem")
             {
-                // Where memory goes: the process's private bytes, and how much of it is .NET's heap (after a
+                // Logs where memory goes, with the process's private bytes and how much of it is .NET's heap (after a
                 // collection, so it's what's live). The rest is native: libghostty's screens, Win2D/Direct3D,
                 // WinUI/XAML, DirectWrite.
                 GC.Collect();

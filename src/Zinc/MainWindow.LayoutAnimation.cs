@@ -9,18 +9,19 @@ using Zinc.Terminal;
 namespace Zinc;
 
 // Pane animations (`pane-animations` in [window], on by default). A pane layout change (split, close, maximize and
-// restore, drops) moves the split Grids' real sizes a step each frame, the way a divider drag does, so cards, borders and headers are always really laid out. The terminals inside don't
-// follow: each is held at one size for the whole animation, pinned to its card's edge that moves least, and its card
-// reveals or covers it ("covered": the pane gaining space sweeps over the one losing it). A terminal that grows takes
-// its new size at the start, one that shrinks at the end, one going to or coming from nothing never resizes; and that
-// one resize reaches the shell at once (no settling wait), so a TUI repaints while the panes move. Nothing leaves or
-// joins the tree for this (Win2D's Loaded/Unloaded counts).
+// restore, drops) moves the split Grids' real sizes a step each frame, the way a divider drag does, so cards, borders
+// and headers are always really laid out. The terminals inside don't follow. Each is held at one size for the whole
+// animation, pinned to its card's edge that moves least, and its card reveals or covers it ("covered" means the pane
+// gaining space sweeps over the one losing it). A terminal that grows takes its new size at the start, one that shrinks
+// at the end, and one going to or coming from nothing never resizes. That one resize reaches the shell at once (no
+// settling wait), so a TUI repaints while the panes move. Nothing leaves or joins the tree for this, because of
+// Win2D's Loaded/Unloaded counts.
 public sealed partial class MainWindow
 {
     private static readonly TimeSpan TweenLength = TimeSpan.FromMilliseconds(250);
 
-    // Fluent's standard curve (a CSS cubic-bezier), picked over decelerate (0.2,0,0,1), which put about 80% of the
-    // motion in the first 50 ms and felt like a jump, then a drift.
+    // Fluent's standard curve (a CSS cubic-bezier), picked over decelerate (0.2,0,0,1), which puts about 80% of the
+    // motion in the first 50 ms and feels like a jump, then a drift.
     private static readonly (double X1, double Y1, double X2, double Y2) TweenEase = (0.4, 0, 0.2, 1);
 
     private static readonly TimeSpan MaxStep = TimeSpan.FromMilliseconds(20);
@@ -101,7 +102,10 @@ public sealed partial class MainWindow
         public TimeSpan Last { get; set; }
     }
 
-    /// <summary>Notes the split sizes and shown panes before a layout change; null when off or not on screen.</summary>
+    /// <summary>
+    /// Notes the split sizes and shown panes before a layout change, or returns null when animations are off or the
+    /// workspace isn't on screen.
+    /// </summary>
     private LayoutBefore? NoteLayout(WorkspaceTab tab)
     {
         if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded)
@@ -136,7 +140,9 @@ public sealed partial class MainWindow
         return new LayoutBefore(splits, shown, known, sizes);
     }
 
-    /// <summary>After a layout change (model updated, Grids built): moves every split from where it was to the model's sizes.</summary>
+    /// <summary>
+    /// After a layout change (model updated, Grids built), moves every split from where it was to the model's sizes.
+    /// </summary>
     private void PlayLayout(WorkspaceTab tab, LayoutBefore? before)
     {
         if (before == null || before.Shown.Count == 0)
@@ -183,7 +189,7 @@ public sealed partial class MainWindow
             return false;
         }
 
-        // Its terminal keeps its last picture while its pane shrinks away and closes at the end; its events go now.
+        // Its terminal keeps its last picture while its pane shrinks away, and closes at the end. Its events go now.
         pane.Unwire?.Invoke();
         if (!tab.Workspace.Close(pane))
         {
@@ -210,8 +216,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Resize-pane: moves <paramref name="grid"/> from the sizes it shows to <paramref name="split"/>'s new ratio. False
-    /// when off (the caller applies the ratio at once). A held key repeats: each press starts where the last one got to.
+    /// For resize-pane, moves <paramref name="grid"/> from the sizes it shows to <paramref name="split"/>'s new ratio.
+    /// False when off (the caller applies the ratio at once). A held key repeats, and each press starts where the last
+    /// one got to.
     /// </summary>
     private bool ResizeAnimated(WorkspaceTab tab, Grid grid, PaneSplit split)
     {
@@ -227,10 +234,13 @@ public sealed partial class MainWindow
         return true;
     }
 
-    /// <summary>The pane each workspace shows maximized (its model gets ahead: focus moved off a maximized pane).</summary>
+    /// <summary>
+    /// The pane each workspace shows maximized. The model can get ahead of it, for example when focus moves off a
+    /// maximized pane.
+    /// </summary>
     private readonly Dictionary<WorkspaceTab, TabGroup<TerminalTab>?> _shownMaximized = new();
 
-    /// <summary>Above 0: layout changes that aren't a maximize or restore of their own (a rebuild, a drag's targets).</summary>
+    /// <summary>Above 0 during layout changes that aren't a maximize or restore of their own (a rebuild, a drag's targets).</summary>
     private int _noLift;
 
     /// <summary>
@@ -243,13 +253,16 @@ public sealed partial class MainWindow
         if (_noLift > 0 || shown == tab.Workspace.Maximized || (tab.Workspace.Maximized ?? shown) is not { } group
             || !tab.Workspace.Groups.Contains(group) || (_tweens.TryGetValue(tab, out var running) && running.Lift == null))
         {
-            return null; // a split or close moving, it settles the layout itself
+            return null; // a split or close is moving, and it settles the layout itself
         }
 
         return NoteLift(tab, group) is { } before ? (group, before) : null;
     }
 
-    /// <summary>Before a maximize or restore: where the pane is and how big its terminal is; null when off.</summary>
+    /// <summary>
+    /// Notes, before a maximize or restore, where the pane is and how big its terminal is, or returns null when
+    /// animations are off.
+    /// </summary>
     private LiftBefore? NoteLift(WorkspaceTab tab, TabGroup<TerminalTab> group)
     {
         if (!LayoutAnimationsEnabled || !tab.Container.IsLoaded || tab.Workspace.Layout.Count < 2)
@@ -272,7 +285,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// After maximize-pane changed the model and the layout: the others stay exactly where they are, and the pane grows
+    /// After maximize-pane changed the model and the layout, the others stay exactly where they are, and the pane grows
     /// over them from its place to the whole workspace (or shrinks back into its place, uncovering them). The layout
     /// shows every pane during a maximize and takes the maximized one only at the end.
     /// </summary>
@@ -327,7 +340,7 @@ public sealed partial class MainWindow
         var from = maximizing ? default : cover;
         host.Margin = from;
 
-        // The others show still pictures while it moves over them: their swap chains could draw over it.
+        // The others show still pictures while it moves over them, because their swap chains could draw over it.
         var stills = tab.Workspace.Groups.Where(g => g != group).Select(g => g.Active.Control).ToList();
         foreach (var other in stills)
         {
@@ -486,7 +499,10 @@ public sealed partial class MainWindow
             Math.Max(0, tab.Container.ActualHeight - pad.Top - pad.Bottom));
     }
 
-    /// <summary>The pane host and each split slot above it, from the root: raised so the pane draws over its neighbors.</summary>
+    /// <summary>
+    /// Collects the pane host and each split slot above it, from the root, which get raised so the pane draws over its
+    /// neighbors.
+    /// </summary>
     private static bool RaisePath(UIElement element, Border host, List<UIElement> path)
     {
         if (element == host || (element is Grid { Tag: PaneSplit } grid && grid.Children.Any(c => RaisePath(c, host, path))))
@@ -512,7 +528,7 @@ public sealed partial class MainWindow
         HashSet<Border>? known = null)
     {
         // The Grid keeps a ratio as a float (0.45 reads back as 0.44999998), so compare with room for that, or a rebuild
-        // that changed nothing held every terminal for a whole animation.
+        // that changed nothing would hold every terminal for a whole animation.
         splits.RemoveAll(s => Math.Abs(s.From.First - s.To.First) < 1e-4 && Math.Abs(s.From.Second - s.To.Second) < 1e-4
             && Math.Abs(s.From.Band - s.To.Band) < 0.5);
         if (splits.Count == 0 || tab.Container.Children.FirstOrDefault() is not { } root)
@@ -541,14 +557,15 @@ public sealed partial class MainWindow
             var control = group.Active.Control;
             var noted = sizes != null && sizes.TryGetValue(host, out var n) && n.Terminal.Width > 0 ? n : ((Size, TerminalControl, Size)?)null;
 
-            // The pane shows another terminal than the one noted: a tab was dragged out of it, and the tab behind it shows.
+            // The pane shows a different terminal from the one noted when a tab was dragged out of it and the tab behind
+            // that one shows.
             var swapped = noted is var (_, notedControl, _) && notedControl != control;
             var (nowW, nowH) = noted is var (_, _, terminal) && !swapped ? (terminal.Width, terminal.Height)
                 : control.ActualWidth > 0 && control.ActualHeight > 0 ? (control.ActualWidth, control.ActualHeight)
                 : (control.LaidOutSize.Width, control.LaidOutSize.Height);
             if (nowW <= 0 || nowH <= 0)
             {
-                // A new pane, never laid out: the whole pane is held at its end size (it starts its shell at that size).
+                // A new pane, never laid out, so the whole pane is held at its end size (it starts its shell at that size).
                 var b = host.BorderThickness;
                 view.Width = Math.Max(1, Math.Max(from.Width, to.Width) - b.Left - b.Right);
                 view.Height = Math.Max(1, Math.Max(from.Height, to.Height) - b.Top - b.Bottom);
@@ -557,8 +574,9 @@ public sealed partial class MainWindow
                 continue;
             }
 
-            // Going to or coming from nothing: the size it has (or had before it was hidden), so it never resizes.
-            // Otherwise its end size, taken at the start, growing or shrinking: its app repaints while the card moves.
+            // A terminal going to or coming from nothing keeps the size it has (or had before it was hidden), so it never
+            // resizes. Otherwise it takes its end size at the start, growing or shrinking, so its app repaints while the
+            // card moves.
             // (Plain numbers, not Size: its constructor throws on a negative, and rounding can make one here.)
             var (width, height) = (nowW, nowH);
             if (known?.Contains(host) == false)
@@ -585,15 +603,15 @@ public sealed partial class MainWindow
 
             // Its new size waits for the second frame (Then, in OnTweenFrame). A terminal shows a new size as soon as it
             // presents, the XAML around it only once its frame is done, and the first frame is the slow one (a new pane
-            // starts its shell: 50-90 ms). When resized there, the terminal sat at its new size inside its old card, with
-            // no fill and the backdrop beside it, for that long.
+            // starts its shell then). Resized on the first frame, the terminal would sit at its new size inside its old
+            // card, with no fill and the backdrop beside it, until that frame was done.
             // A terminal that wasn't showing has no size here to keep for a frame, so it takes its end size at once.
             control.Width = swapped ? width : nowW;
             control.Height = swapped ? height : nowH;
             control.ResizeAtOnce = true;
-            // A pane going to or coming from nothing stays put and is covered or uncovered; one on screen throughout
+            // A pane going to or coming from nothing stays put and is covered or uncovered. One on screen throughout
             // carries its text with its card's top-left corner, as layout does (pinned to the far edge, a maximizing
-            // pane's prompt was out of sight until the end).
+            // pane's prompt would be out of sight until the end).
             Pin(control, from, to, stayPut: Empty(from) || Empty(to));
             var config = group.Active.Profile.Config;
             view.FillContent(new SolidColorBrush(WithOpacity(config.Theme.Background, config)));
@@ -622,7 +640,7 @@ public sealed partial class MainWindow
     {
         foreach (var tween in _tweens.Values.ToList())
         {
-            // A slow frame (a new pane starting its shell takes 50-70 ms) delays the motion instead of skipping it.
+            // A slow frame (such as a new pane starting its shell) delays the motion instead of skipping it.
             var now = tween.Clock.Elapsed;
             var step = now - tween.Last;
             tween.Last = now;
@@ -688,13 +706,13 @@ public sealed partial class MainWindow
         }
         else
         {
-            ShowMaximized(tween.Tab, Gap); // the exact end: a maximized pane's other sides collapse
+            ShowMaximized(tween.Tab, Gap); // the exact end, where a maximized pane's other sides collapse
         }
     }
 
     /// <summary>
-    /// Ends a running animation where it is (holds let go). <paramref name="run"/>: also does what it was waiting to do
-    /// (a close's rebuild); a caller about to rebuild anyway passes false.
+    /// Ends a running animation where it is (holds let go). With <paramref name="run"/>, it also does what it was
+    /// waiting to do (a close's rebuild). A caller about to rebuild anyway passes false.
     /// </summary>
     private void SettleTween(WorkspaceTab tab, bool run)
     {
@@ -711,7 +729,7 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// For UpdateFocusBorders: true while an animation is moving this workspace to the layout it shows now (it applies
-    /// the exact end itself); a different layout (focus left a maximized pane) ends it.
+    /// the exact end itself). A different layout (focus left a maximized pane) ends the animation.
     /// </summary>
     private bool Tweening(WorkspaceTab tab)
     {
@@ -765,8 +783,9 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// <paramref name="stayPut"/>: covered, not pushed: held content stays where it is on screen, pinned to its card's
-    /// edge that moves least, and the pane gaining the space sweeps over it (or uncovers it). Otherwise top-left.
+    /// With <paramref name="stayPut"/>, held content is covered, not pushed. It stays where it is on screen, pinned to
+    /// its card's edge that moves least, and the pane gaining the space sweeps over it (or uncovers it). Otherwise it's
+    /// pinned top-left.
     /// </summary>
     private static void Pin(FrameworkElement element, Rect from, Rect to, bool stayPut)
     {
@@ -787,7 +806,7 @@ public sealed partial class MainWindow
         return path;
     }
 
-    /// <summary>A split that's new: the side whose panes weren't on screen grows from nothing.</summary>
+    /// <summary>The start weights for a new split, where the side whose panes weren't on screen grows from nothing.</summary>
     private static Weights Entering(Grid grid, PaneSplit split, Weights to, HashSet<Border> shown)
     {
         bool Seen(int slot) => grid.Children.Where(c => SlotOf(c, split) == slot)
@@ -848,7 +867,7 @@ public sealed partial class MainWindow
         var space = Math.Max(0, (horizontal ? place.Width : place.Height) - w.Band);
         var total = w.First + w.Second;
         // Layout rounds each split to whole physical pixels, giving the first side the extra one at a half (541.5 each
-        // became 542 and 541). Rounding the same way here keeps a terminal's end size from coming out a column off.
+        // becomes 542 and 541). Rounding the same way here keeps a terminal's end size from coming out a column off.
         var scale = grid.XamlRoot?.RasterizationScale ?? 1;
         var first = total > 0 ? Math.Round(space * w.First / total * scale, MidpointRounding.AwayFromZero) / scale : 0;
         var second = total > 0 ? space - first : 0;

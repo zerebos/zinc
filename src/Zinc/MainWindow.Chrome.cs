@@ -13,14 +13,14 @@ namespace Zinc;
 // title-bar = show | auto-hide and sidebar = full | rail | auto-hide (config), switched per window
 // by toggle-title-bar / toggle-sidebar / focus-mode. Auto-hidden, each is an overlay (the
 // terminals don't reflow) that slides in when the pointer reaches its window edge, or a dragged
-// tab does, and slides out once the pointer has been away for a moment. That's polled with
-// GetCursorPos: the caption buttons and flyouts aren't in XAML's tree, so PointerExited would
-// fire on the way to them.
+// tab does, and slides out once the pointer has been away for a moment. The pointer is polled
+// with GetCursorPos, because the caption buttons and flyouts aren't in XAML's tree, so
+// PointerExited would fire on the way to them.
 public sealed partial class MainWindow
 {
     /// <summary>
     /// How far in from the window's edge the pointer reveals a hidden bar (DIPs). The top 4 px
-    /// px stay the resize border (non-client), so the top zone's usable part is what's below.
+    /// stay the resize border (non-client), so the top zone's usable part is what's below.
     /// </summary>
     private const double HotZoneSize = 8;
 
@@ -30,7 +30,9 @@ public sealed partial class MainWindow
     /// <summary>The modes focus mode replaced, while it's on.</summary>
     private (SidebarMode, TitleBarMode)? _beforeFocusMode;
 
-    /// <summary>The config's modes when last applied: a reload only overrides the window's toggles when these change.</summary>
+    /// <summary>
+    /// The config's modes when last applied. A reload only overrides the window's toggles when these change.
+    /// </summary>
     private (SidebarMode, TitleBarMode) _chromeConfig;
 
     private readonly Border _sidebarHotZone = HotZone();
@@ -79,7 +81,7 @@ public sealed partial class MainWindow
         SetTitleBarMode(_config.Global.TitleBar);
     }
 
-    /// <summary>After a config reload: the config's modes win only if they changed.</summary>
+    /// <summary>After a config reload, the config's modes win only if they changed.</summary>
     private void ApplyChromeConfig(Config global)
     {
         if (_workspaceList == null || (global.Sidebar, global.TitleBar) == _chromeConfig)
@@ -117,7 +119,7 @@ public sealed partial class MainWindow
         _beforeFocusMode = saved is { FocusSidebar: { } sidebar, FocusTitleBar: { } titleBar } ? (sidebar, titleBar) : null;
     }
 
-    /// <summary>The chrome actions; false without the workspace list (nothing to switch).</summary>
+    /// <summary>Runs the chrome actions, or returns false without the workspace list (nothing to switch).</summary>
     private bool HandleChromeAction(ActionInvocation invocation)
     {
         if (_workspaceList == null)
@@ -325,7 +327,7 @@ public sealed partial class MainWindow
             }
             else if (show && revealed && ReferenceEquals(element, DragRegion))
             {
-                // Its drag area is taken from where it is now, in place.
+                // WinUI takes the drag area from where the row is now, so this waits until the slide puts it in place.
                 SetTitleBar(DragRegion);
             }
 
@@ -335,8 +337,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Gives the hidden row's area back to the terminals: WinUI keeps the drag area it last
-    /// computed for the title bar element even once it's collapsed.
+    /// Gives the hidden row's area back to the terminals, because WinUI keeps the drag area it
+    /// last computed for the title bar element even once it's collapsed.
     /// </summary>
     private void ReleaseTitleBarArea()
     {

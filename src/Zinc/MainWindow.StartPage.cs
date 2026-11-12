@@ -6,12 +6,12 @@ using Zinc.Terminal;
 
 namespace Zinc;
 
-// The new-workspace page (StartPage): a tab item of its own (not a WorkspaceTab: AllTabs skips it)
-// until it starts, when a workspace takes its place. A workspace started in a folder keeps it
-// (WorkspaceTab.Folder): its new tabs start there, splits where you are (StartFor).
+// The new-workspace page (StartPage) is a tab item of its own (not a WorkspaceTab, so AllTabs skips
+// it) until it starts, when a workspace takes its place. A workspace started in a folder keeps it
+// (WorkspaceTab.Folder), so its new tabs start there and its splits start where you are (StartFor).
 public sealed partial class MainWindow
 {
-    /// <summary>A new workspace: the page, unless it's turned off (or this is the quick terminal).</summary>
+    /// <summary>Opens a new workspace, which is the page unless it's turned off (or this is the quick terminal).</summary>
     private void OpenNewWorkspace()
     {
         if (_quick || !_config.Global.NewWorkspacePage)
@@ -20,7 +20,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        // One page per window: asking again goes back to it.
+        // One page per window, so asking again goes back to it.
         if (StartPageItem() is { Tag: StartPage open } existing)
         {
             Tabs.SelectedItem = existing;
@@ -36,7 +36,7 @@ public sealed partial class MainWindow
             IconSource = new FontIconSource { Glyph = ((char)0xE710).ToString() },
             Tag = page,
             Content = page,
-            // Test captures: its focus outline showed only when the window happened to be in front.
+            // Off for test captures, because the page's focus outline shows only when the window happens to be in front.
             UseSystemFocusVisuals = !TestHooks.Deterministic,
         };
         page.Started += choice => Ui.Guard("starting a workspace", () => StartWorkspace(item, choice));
@@ -53,7 +53,7 @@ public sealed partial class MainWindow
     /// <summary>
     /// A window shortcut pressed on the page: switching and closing tabs, new workspaces and windows,
     /// reopening, settings, quitting, the sidebar and title bar, and the palette (with the window's
-    /// commands: <see cref="BuildPageCommands"/>). Pane actions have nothing to act on here.
+    /// commands, from <see cref="BuildPageCommands"/>). Pane actions have nothing to act on here.
     /// </summary>
     private bool HandlePageAction(ActionInvocation invocation, TabViewItem page)
     {
@@ -133,21 +133,21 @@ public sealed partial class MainWindow
         var (profile, folder, name, layout) = (choice.Profile, choice.Folder, choice.Name, choice.Layout);
         var (command, directory) = StartIn(folder, profile);
         var index = Tabs.TabItems.IndexOf(item);
-        // Every pane of the layout runs the profile in the folder. Named as asked, else after its
-        // folder; without either, its shell names it (as before).
+        // Every pane of the layout runs the profile in the folder. The workspace is named as asked,
+        // else after its folder, and without either, its shell names it.
         var workspace = StartLayouts.Build(layout, () => CreatePane(profile, command, directory));
-        // Its color: the one chosen (even "none"), else the automatic one (workspace-colors).
+        // Its color is the one chosen (even "none"), else the automatic one (workspace-colors).
         var color = choice.ColorChosen ? choice.Color : AutoColor(folder);
         var tab = AddWorkspace(workspace, name ?? folder?.Name, color, index < 0 ? null : index, folder, choice.Icon);
-        Tabs.TabItems.Remove(item); // no longer selected: AddWorkspace selected the new one
+        Tabs.TabItems.Remove(item); // no longer selected, because AddWorkspace selected the new one
         RefreshWorkspaceList();
         FocusActive(tab);
         Log.Write($"start page: {profile.Name} in {folder?.Path ?? "its usual folder"}, {layout}{(name != null ? $" as {name}" : "")}");
     }
 
     /// <summary>
-    /// A workspace you closed comes back as it was saved (tabs, splits, folders, name, color, its own
-    /// folder): in the page's place, or as a new workspace.
+    /// Brings back a workspace you closed as it was saved (tabs, splits, folders, name, color, its own
+    /// folder), in the page's place or as a new workspace.
     /// </summary>
     private void ReopenWorkspace(ClosedWorkspace closed, TabViewItem? page = null)
     {
@@ -176,7 +176,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// A copy of the whole workspace beside it, as reopening would bring it back: its splits and tabs (each where its
+    /// A copy of the whole workspace beside it, as reopening would bring it back, with its splits and tabs (each where its
     /// shell is now), folder, icon, color, and its name with " 2".
     /// </summary>
     private void DuplicateWorkspace(WorkspaceTab tab)
@@ -210,7 +210,9 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>Esc: the page goes (a window's only tab starts the default instead: a window is never empty).</summary>
+    /// <summary>
+    /// Esc closes the page. A window's only tab starts the default profile instead, because a window is never empty.
+    /// </summary>
     private void LeaveStartPage(TabViewItem item)
     {
         if (Tabs.TabItems.Count == 1)
@@ -222,7 +224,7 @@ public sealed partial class MainWindow
         RemoveStartPage(item);
     }
 
-    /// <summary>The page's tab closes (its ×, or Esc): the one before it is shown.</summary>
+    /// <summary>Closes the page's tab (its ×, or Esc) and shows the tab before it.</summary>
     private void RemoveStartPage(TabViewItem item)
     {
         var index = Tabs.TabItems.IndexOf(item);
@@ -247,8 +249,8 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// How <paramref name="profile"/> starts in a workspace with <paramref name="folder"/>: there, in
-    /// the shell's own terms, when it can reach it; else in its usual folder.
+    /// How <paramref name="profile"/> starts in a workspace with <paramref name="folder"/>. It starts
+    /// there, in the shell's own terms, when it can reach the folder, and else in its usual folder.
     /// </summary>
     private static (string Command, string Directory) StartIn(WorkspaceFolder? folder, Profile profile)
     {
@@ -272,7 +274,7 @@ public sealed partial class MainWindow
     /// <summary>
     /// How <paramref name="profile"/> (running <paramref name="command"/>, else its own) starts as a new terminal of
     /// <paramref name="kind"/> in <paramref name="tab"/>, beside <paramref name="origin"/> (the focused or duplicated
-    /// terminal): the first folder in <see cref="NewTerminalStart.Order"/> its shell can reach.
+    /// terminal). It's the first folder in <see cref="NewTerminalStart.Order"/> that its shell can reach.
     /// </summary>
     private (string Command, string Directory) StartFor(StartKind kind, WorkspaceTab tab, TerminalTab? origin, Profile profile,
         string? command = null)
@@ -299,7 +301,9 @@ public sealed partial class MainWindow
         return (command, usual);
     }
 
-    /// <summary>Where <paramref name="terminal"/>'s shell is now, as a folder any shell can be started in; null if it never said.</summary>
+    /// <summary>
+    /// Where <paramref name="terminal"/>'s shell is now, as a folder any shell can be started in, or null if it never said.
+    /// </summary>
     private static WorkspaceFolder? CurrentFolder(TerminalTab terminal)
     {
         var distro = ShellDirectory.IsWsl(terminal.Command) ? ShellEnvironment.WslDistroOf(terminal.Command) : null;
@@ -308,7 +312,9 @@ public sealed partial class MainWindow
         return folder is { WslDistro: null } && folder.Path.StartsWith('/') && ShellDirectory.IsWsl(terminal.Command) ? null : folder;
     }
 
-    /// <summary>How <paramref name="command"/> starts in <paramref name="folder"/>; null when its shell can't reach it.</summary>
+    /// <summary>
+    /// How <paramref name="command"/> starts in <paramref name="folder"/>, or null when its shell can't reach it.
+    /// </summary>
     private static (string Command, string Directory)? Reach(WorkspaceFolder? folder, string command, string usual) =>
         folder?.LaunchFor(command, ShellEnvironment.WslDistroOf(command)) is { } launch &&
         (launch.WorkingDirectory is not { } windows || Directory.Exists(windows))
@@ -316,8 +322,8 @@ public sealed partial class MainWindow
             : null;
 
     /// <summary>
-    /// The automatic color for a new workspace (<c>workspace-colors</c>): its folder's, or the next
-    /// in turn; null when they're off (or "by folder" without a folder).
+    /// The automatic color for a new workspace (<c>workspace-colors</c>), which is its folder's or the
+    /// next in turn, or null when they're off (or "by folder" without a folder).
     /// </summary>
     private Windows.UI.Color? AutoColor(WorkspaceFolder? folder) => _config.Global.WorkspaceColors switch
     {
@@ -340,11 +346,14 @@ public sealed partial class MainWindow
         }
     }
 
-    /// <summary>The page's Browse: Windows' folder dialog, which (unlike FolderPicker) can open in a WSL distro's share.</summary>
+    /// <summary>
+    /// The page's Browse button, which opens Windows' folder dialog. Unlike FolderPicker, the dialog can open in a WSL
+    /// distro's share.
+    /// </summary>
     private string? BrowseFolder(string? startIn) =>
         FolderDialog.Pick(WinRT.Interop.WindowNative.GetWindowHandle(this), startIn, "Folder for the new workspace");
 
-    /// <summary>A shell reported a folder: it goes on the recent list the page offers.</summary>
+    /// <summary>Puts the folder a shell reported on the recent list the page offers.</summary>
     private static void NoteFolder(TerminalTab pane)
     {
         if (ShellDirectory.Parse(pane.Control.ReportedDirectory) is { } path)

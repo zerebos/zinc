@@ -8,9 +8,9 @@ using Windows.ApplicationModel.DataTransfer;
 
 namespace Zinc;
 
-// workspace-tabs = left: the workspaces listed in a column on the left, under a plain title bar.
+// With workspace-tabs = left, the workspaces are listed in a column on the left, under a plain title bar.
 // The TabView stays (it holds the workspaces and shows the selected one's content) with its
-// strip hidden; the list mirrors its items. Everything else addresses workspaces through the
+// strip hidden. The list mirrors its items. Everything else addresses workspaces through the
 // TabView, so the list is refreshed whenever its items, selection or colors change.
 public sealed partial class MainWindow
 {
@@ -23,8 +23,8 @@ public sealed partial class MainWindow
 
     private void UseWorkspaceList()
     {
-        // The strip footer's parts move out: the drag region becomes the title bar, the
-        // profile menu button joins the list's header.
+        // The strip footer's parts move out. The drag region becomes the title bar, and the
+        // profile menu button joins the list's footer.
         var footer = (Grid)Tabs.TabStripFooter;
         footer.Children.Remove(NewTabMenuButton);
         footer.Children.Remove(DragRegion);
@@ -42,7 +42,7 @@ public sealed partial class MainWindow
             }
         };
 
-        // Title bar across the top; list | workspace content below. Overlays keep covering it all.
+        // The title bar goes across the top, with the list and the workspace content below it. Overlays keep covering it all.
         Root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(TitleBarHeight) });
         Root.RowDefinitions.Add(new RowDefinition());
         Root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
         };
         list.ItemDragCompleted += (_, result) =>
         {
-            // As for a title-bar tab (OnTabDragCompleted): nobody took it, so tear it off.
+            // As for a title-bar tab (OnTabDragCompleted), nobody took it, so this tears it off.
             if (result == DataPackageOperation.None)
             {
                 TryTearOff();
@@ -157,7 +157,7 @@ public sealed partial class MainWindow
         return footer;
     }
 
-    /// <summary>On the rail: "+" and "▾" stacked, without the label.</summary>
+    /// <summary>On the rail, "+" and "▾" stack, without the label.</summary>
     private void SetListFooterCompact(bool compact)
     {
         if (_listFooter == null || _newWorkspaceLabel == null)
@@ -199,7 +199,7 @@ public sealed partial class MainWindow
             return;
         }
 
-        // The shown workspace can't be taken out and put back: its content is still attached
+        // The shown workspace can't be taken out and put back, because its content is still attached
         // to the TabView's content area until the next layout pass, and re-adding it fails fast
         // (0x800F1000). So when it's the one moving, the ones it passes move the other way.
         var items = Tabs.TabItems;

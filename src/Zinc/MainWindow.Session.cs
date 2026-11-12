@@ -11,7 +11,9 @@ namespace Zinc;
 // from it. App decides when to save and restore.
 public sealed partial class MainWindow
 {
-    /// <summary>A window reopened from a saved session (check <see cref="HasWorkspaces"/>: tabs may fail to reopen).</summary>
+    /// <summary>
+    /// A window reopened from a saved session. Check <see cref="HasWorkspaces"/>, because tabs may fail to reopen.
+    /// </summary>
     internal MainWindow(ConfigFile config, Keybindings keybindings, WindowState saved)
         : this(config, keybindings, quick: false)
     {
@@ -28,8 +30,8 @@ public sealed partial class MainWindow
             return;
         }
 
-        // Selected again once the TabView has loaded: set before that, it's lost, and the window
-        // opened on the last workspace added instead of the one you left.
+        // Selected again once the TabView has loaded, because a selection set before that is lost,
+        // and the window would open on the last workspace added instead of the one you left.
         var selected = Tabs.TabItems[Math.Clamp(saved.Selected, 0, Tabs.TabItems.Count - 1)];
         Tabs.SelectedItem = selected;
         void Reselect(object sender, RoutedEventArgs e)
@@ -63,7 +65,7 @@ public sealed partial class MainWindow
 
     internal bool HasWorkspaces => Tabs.TabItems.Count > 0;
 
-    /// <summary>This window's saved form; null if it has nothing to reopen.</summary>
+    /// <summary>This window's saved form, or null if it has nothing to reopen.</summary>
     internal WindowState? CaptureState()
     {
         // Workspaces of consoles Windows handed over can't be reopened.
@@ -75,12 +77,12 @@ public sealed partial class MainWindow
             return null;
         }
 
-        // The normal bounds, not the current ones: minimized, Windows parks a window at
+        // The normal bounds, not the current ones, because Windows parks a minimized window at
         // (-32000, -32000) and 160 x 39, and a window restored there is invisible and too small
-        // for its terminals to start (2026-09-27). Minimized windows come back restored.
+        // for its terminals to start. Minimized windows come back restored.
         var b = _normalBounds;
         var maximized = _maximized;
-        // Which workspace was shown (a new-workspace page isn't saved: the one before it, then).
+        // Which workspace was shown (a new-workspace page isn't saved, so it's the one before it).
         var shown = SelectedTab is { } selected ? tabs.IndexOf(selected) : tabs.Count - 1;
         return new WindowState(b.X, b.Y, b.Width, b.Height, maximized, Math.Max(0, shown), workspaces, CaptureChrome());
     }
@@ -88,7 +90,10 @@ public sealed partial class MainWindow
     /// <summary>Where the window is when neither minimized nor maximized (what a session saves).</summary>
     private RectInt32 _normalBounds;
 
-    /// <summary>Whether it's maximized (kept here: a closing window's AppWindow is gone when it's saved as closed).</summary>
+    /// <summary>
+    /// Whether the window is maximized. It's kept here because a closing window's AppWindow is gone when it's saved as
+    /// closed.
+    /// </summary>
     private bool _maximized;
 
     /// <summary>The workspaces' titles, in order (what a closed window is called).</summary>
@@ -100,7 +105,7 @@ public sealed partial class MainWindow
         {
             if (AppWindow.Presenter is OverlappedPresenter { State: not OverlappedPresenterState.Minimized } presenter)
             {
-                _maximized = presenter.State == OverlappedPresenterState.Maximized; // minimized: as it was before
+                _maximized = presenter.State == OverlappedPresenterState.Maximized; // while minimized, it stays as it was before
             }
 
             if (AppWindow.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Minimized or OverlappedPresenterState.Maximized })
@@ -122,7 +127,7 @@ public sealed partial class MainWindow
     }
 
     /// <summary>
-    /// Whether saved bounds are usable: a sensible size, on a screen that exists now. Anything
+    /// Whether saved bounds are usable, meaning a sensible size on a screen that exists now. Anything
     /// else (a monitor since unplugged, a bad save) is ignored and Windows places the window.
     /// </summary>
     private static bool Plausible(WindowState saved)
