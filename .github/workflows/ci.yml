@@ -75,6 +75,7 @@ jobs:
         run: |
           dotnet build scripts/dev/vt-bench.cs -p:TreatWarningsAsErrors=true
           dotnet build scripts/dev/export-reference.cs -p:TreatWarningsAsErrors=true
+          dotnet build scripts/release/release-notes.cs -p:TreatWarningsAsErrors=true
 
       - name: Test
         run: dotnet test

@@ -46,21 +46,46 @@ public class ReleaseNotesTests
             ReleaseNotes.Pieces(ReleaseNotes.Entry(Changelog, "0.1.0-dev.198")!));
     }
 
-    /// <summary>The repo's own CHANGELOG.md, in the shape release.ps1 and the app expect.</summary>
+    [Fact]
+    public void FindsReleasesAndPreReleasesByTheirOwnHeading()
+    {
+        const string changelog = "## Unreleased\n\n## 0.1.0 (2026-12-01)\n\nThe release.\n\n## 0.1.0-rc.2 (2026-11-20)\n\nSecond.\n\n" +
+            "## 0.1.0-rc.1 (2026-11-15)\n\nFirst.\n\n## 0.1.0-dev.428 (2026-10-22)\n\nOlder.\n";
+        Assert.Equal("The release.", ReleaseNotes.Entry(changelog, "0.1.0")); // not 0.1.0-rc.2's, whose heading also starts with "## 0.1.0"
+        Assert.Equal("Second.", ReleaseNotes.Entry(changelog, "0.1.0-rc.2"));
+        Assert.Equal("First.", ReleaseNotes.Entry(changelog, "0.1.0-rc.1"));
+        Assert.Equal("Older.", ReleaseNotes.Entry(changelog, "0.1.0-dev.428"));
+        Assert.Equal("0.1.0", ReleaseNotes.Newest(changelog));
+    }
+
+    [Fact]
+    public void AReleaseNeedsItsOwnEntryAndNothingLeftUnreleased()
+    {
+        Assert.Null(ReleaseNotes.ReleaseProblem(Changelog, "0.1.0-dev.229"));
+        Assert.Contains("no entry for 0.1.0", ReleaseNotes.ReleaseProblem(Changelog, "0.1.0"));
+
+        var unreleased = Changelog.Replace("## Unreleased\n", "## Unreleased\n\n- Something new.\n");
+        Assert.Contains("Unreleased", ReleaseNotes.ReleaseProblem(unreleased, "0.1.0-dev.229"));
+
+        // A heading with nothing under it isn't an entry.
+        Assert.Contains("no entry", ReleaseNotes.ReleaseProblem("## Unreleased\n\n## 0.1.0 (2026-12-01)\n\n## 0.1.0-rc.1 (2026-11-15)\n\nFirst.\n", "0.1.0"));
+    }
+
+    /// <summary>The repo's own CHANGELOG.md, in the shape the release and the app expect.</summary>
     [Fact]
     public void TheRealChangelog()
     {
-        var root = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(root, "Zinc.slnx")))
-        {
-            root = Path.GetDirectoryName(root)!;
-        }
+        var text = File.ReadAllText(Path.Combine(OpenSourceNoticesTests.Root, "CHANGELOG.md")).Replace("\r\n", "\n");
+        Assert.Contains("## Unreleased\n", text);
 
-        var text = File.ReadAllText(Path.Combine(root, "CHANGELOG.md"));
-        Assert.Contains("## Unreleased", text);
+        // Every heading is "Unreleased" or a version with its date, so each release's entry can be found.
+        var headings = text.Split('\n').Where(l => l.StartsWith("## ", StringComparison.Ordinal)).ToList();
+        Assert.Equal("## Unreleased", headings[0]);
+        Assert.All(headings.Skip(1), h => Assert.Matches(@"^## \d+\.\d+\.\d+(-[0-9A-Za-z.]+)? \(\d{4}-\d{2}-\d{2}\)$", h));
+
         var newest = ReleaseNotes.Newest(text);
         Assert.NotNull(newest);
-        Assert.Matches(@"^0\.1\.0-dev\.\d+$", newest);
         Assert.NotEmpty(ReleaseNotes.Pieces(ReleaseNotes.Entry(text, newest)!));
+        Assert.Null(ReleaseNotes.ReleaseProblem(text.Replace(ReleaseNotes.Entry(text, "Unreleased") ?? "", ""), newest));
     }
 }

@@ -113,30 +113,15 @@ if ($Publish) {
 $notesArgs = @()
 if (-not $Changelog) { $Changelog = Join-Path $repo 'CHANGELOG.md' }
 if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
+    # release-notes.cs reads the changelog as the app does. With --check it refuses a version that has no entry, or a
+    # changelog with notes left under "## Unreleased". Without --check, a build with no entry has no notes.
     $plain = $Version.Split('+')[0]
-    $lines = (Get-Content $Changelog -Raw) -replace "`r`n", "`n" -split "`n"
-    function Entry([string]$heading) {
-        $start = [Array]::FindIndex($lines, [Predicate[string]] { param($l) $l -eq "## $heading" -or $l.StartsWith("## $heading (") })
-        if ($start -lt 0) { return $null }
-        $end = [Array]::FindIndex($lines, $start + 1, [Predicate[string]] { param($l) $l.StartsWith('## ') })
-        if ($end -lt 0) { $end = $lines.Length }
-        ($lines[($start + 1)..($end - 1)] -join "`n").Trim()
-    }
-
-    if ($Publish -and (Entry 'Unreleased')) {
-        throw "CHANGELOG.md has notes under '## Unreleased': rename it to '## $plain ($(Get-Date -Format yyyy-MM-dd))', add a new empty '## Unreleased' above it, commit, then publish."
-    }
-
-    $notes = Entry $plain
-    if (-not $notes) {
-        if ($Publish) { throw "CHANGELOG.md has no entry for $plain (see this script's help)." }
-        Write-Warning "CHANGELOG.md has no entry for ${plain}: this build has no release notes."
-    } else {
-        $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out, because everything there is uploaded
-        [IO.File]::WriteAllText($notesFile, $notes + "`n", [Text.UTF8Encoding]::new($false))
-        $notesArgs = '--releaseNotes', $notesFile
-        Write-Host "Release notes: CHANGELOG.md's entry for $plain"
-    }
+    $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out, because everything there is uploaded
+    if (Test-Path $notesFile) { Remove-Item $notesFile }
+    $check = if ($Publish) { @('--check') } else { @() }
+    dotnet run (Join-Path $PSScriptRoot 'release-notes.cs') -- $plain --changelog $Changelog --out $notesFile @check
+    if ($LASTEXITCODE -ne 0) { throw 'The changelog is not ready for this release (see above, and this script''s help).' }
+    if (Test-Path $notesFile) { $notesArgs = '--releaseNotes', $notesFile }
 }
 
 # ---- the previous release, for deltas ----
