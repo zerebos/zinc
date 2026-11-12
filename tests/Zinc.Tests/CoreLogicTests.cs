@@ -56,7 +56,7 @@ public class ConfigTests : IDisposable
     [Fact]
     public void PaneTabsTurnOffUnderTheirOldName()
     {
-        Assert.False(Load("[window]\ntab-groups = false").TabGroups);
+        Assert.False(Load("[window]\ntab-groups = false").PaneTabs);
     }
 
     [Theory]
@@ -152,20 +152,20 @@ public class ConfigTests : IDisposable
     [Fact]
     public void UnfocusedOpacityIsClampedLikeGhostty()
     {
-        Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 1").UnfocusedSplitOpacity);
-        Assert.Equal(0.15, Load("[window]\nunfocused-split-opacity = 0").UnfocusedSplitOpacity); // clamped, like Ghostty
-        Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 3.0").UnfocusedSplitOpacity);
-        Assert.Equal(0.7, Load("[window]\nunfocused-split-opacity = \"dim\"").UnfocusedSplitOpacity);
-        Assert.Equal(new GhosttyColorRgb { R = 0, G = 0, B = 0 }, Load("[window]\nunfocused-split-fill = \"#000000\"").UnfocusedSplitFill);
+        Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 1").UnfocusedPaneOpacity);
+        Assert.Equal(0.15, Load("[window]\nunfocused-split-opacity = 0").UnfocusedPaneOpacity); // clamped, like Ghostty
+        Assert.Equal(1.0, Load("[window]\nunfocused-split-opacity = 3.0").UnfocusedPaneOpacity);
+        Assert.Equal(0.7, Load("[window]\nunfocused-split-opacity = \"dim\"").UnfocusedPaneOpacity);
+        Assert.Equal(new GhosttyColorRgb { R = 0, G = 0, B = 0 }, Load("[window]\nunfocused-split-fill = \"#000000\"").UnfocusedPaneFill);
     }
 
     [Fact]
     public void SessionsAreRestoredUnlessTurnedOff()
     {
-        Assert.True(Load("[window]\nsave-state = \"always\"").RestoreSession);
-        Assert.False(Load("[window]\nsave-state = \"never\"").RestoreSession);
-        Assert.False(Load("[window]\nsave-state = false").RestoreSession);
-        Assert.True(Load("[window]\nsave-state = \"sometimes\"").RestoreSession);
+        Assert.True(Load("[window]\nsave-state = \"always\"").SaveState);
+        Assert.False(Load("[window]\nsave-state = \"never\"").SaveState);
+        Assert.False(Load("[window]\nsave-state = false").SaveState);
+        Assert.True(Load("[window]\nsave-state = \"sometimes\"").SaveState);
     }
 
     [Fact]

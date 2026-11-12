@@ -631,7 +631,7 @@ public sealed partial class MainWindow : Window
     /// pane included: decision 31) or not. The quick terminal has none.
     /// </summary>
     private PaneHeaderKind HeaderOf(TabGroup<TerminalTab> group, bool split) => _quick ? PaneHeaderKind.None
-        : PaneHeader.For(_config.Global.PaneHeaders, _config.Global.TabGroups, split, group.Tabs.Count);
+        : PaneHeader.For(_config.Global.PaneHeaders, _config.Global.PaneTabs, split, group.Tabs.Count);
 
     /// <summary>Pixels between panes (pane-gap). The quick terminal has none, as it has no header.</summary>
     private int Gap => _quick ? 0 : _config.Global.PaneGap;
@@ -656,15 +656,15 @@ public sealed partial class MainWindow : Window
         // top, and optionally dimmed others (PaneHeader.AccentLine).
         var split = tab.Workspace.Layout.Count > 1;
         var several = split && tab.Workspace.Maximized == null;
-        var dim = 1 - _config.Global.UnfocusedSplitOpacity;
-        var settings = new HeaderSettings(_config.Global.PaneFocus, _config.Global.PaneHeaderButtons, _config.Global.TabGroups,
+        var dim = 1 - _config.Global.UnfocusedPaneOpacity;
+        var settings = new HeaderSettings(_config.Global.PaneFocus, _config.Global.PaneHeaderButtons, _config.Global.PaneTabs,
             _config.Global.PaneTabsAs);
         var card = PaneCard.At(Gap);
         foreach (var group in tab.Workspace.Groups)
         {
             var host = HostOf(group);
             var focused = group == tab.Workspace.ActiveGroup;
-            var fill = _config.Global.UnfocusedSplitFill ?? group.Active.Profile.Config.Theme.Background;
+            var fill = _config.Global.UnfocusedPaneFill ?? group.Active.Profile.Config.Theme.Background;
             var config = group.Active.Profile.Config;
             var ring = PaneHeader.Ring(_config.Global.PaneFocus, focused, several)
                 ? Contrast.AccentOn(TerminalRenderer.ToColor(config.Theme.Background), _focusBrush) : null;
@@ -938,7 +938,7 @@ public sealed partial class MainWindow : Window
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
-        if (_config.Global.TabGroups)
+        if (_config.Global.PaneTabs)
         {
             menu.Items.Add(Item("New tab in this pane", "", Shortcut(TerminalAction.NewTab),
                 () => NewTabInGroup(tab, group, pane.Profile)));
@@ -1487,7 +1487,7 @@ public sealed partial class MainWindow : Window
         var count = Tabs.TabItems.Count;
         // With tab groups, new tabs open in the focused pane (with the focused tab's profile);
         // without, a new tab is a new workspace, as in Windows Terminal.
-        var tabGroup = _config.Global.TabGroups ? tab.Workspace.GroupOf(origin) : null;
+        var tabGroup = _config.Global.PaneTabs ? tab.Workspace.GroupOf(origin) : null;
         switch (invocation.Action)
         {
             case TerminalAction.NewTab when tabGroup != null:

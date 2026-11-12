@@ -125,7 +125,7 @@ public sealed partial class MainWindow
         var profile = _config.FindProfile(tab.Active.Profile.Id) ?? tab.Active.Profile;
         var directory = folder ?? profile.Config.ResolveWorkingDirectory();
         Log.Write($"palette: new tab {profile.Name}: {command} in {directory}");
-        if (_config.Global.TabGroups && tab.Workspace.GroupOf(tab.Active) is { } group)
+        if (_config.Global.PaneTabs && tab.Workspace.GroupOf(tab.Active) is { } group)
         {
             NewTabInGroup(tab, group, profile, command, directory);
         }

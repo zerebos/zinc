@@ -201,7 +201,7 @@ public sealed partial class MainWindow
         var folder = FolderFor(request.Cwd, profile);
         var (command, directory) = CliLaunchFor(profile, folder ?? tab.Folder, request.CommandLine);
         var pane = CreatePane(profile, command, directory);
-        if (!_config.Global.TabGroups)
+        if (!_config.Global.PaneTabs)
         {
             FocusActive(AddWorkspace(new Workspace<TerminalTab>(pane), color: AutoColor(folder)));
             return CliReply.Done(pane.Id);
@@ -216,7 +216,7 @@ public sealed partial class MainWindow
     /// <summary>Into another pane (in any window), as its newest tab, shown; the way a tab dropped on a pane's strip moves.</summary>
     private CliReply CliMoveTerminal(CliRequest request, TabGroup<TerminalTab> group, TerminalTab pane)
     {
-        if (!_config.Global.TabGroups)
+        if (!_config.Global.PaneTabs)
         {
             return CliReply.Fail(CliCodes.Failed, "Tab groups are off ([window] pane-tabs), so a pane holds one terminal.");
         }

@@ -835,7 +835,7 @@ public partial class App : Application
             return;
         }
 
-        var last = _windows.Count == 1 && ReferenceEquals(_windows[0], window) && _sessionPath != null && _config.Global.RestoreSession;
+        var last = _windows.Count == 1 && ReferenceEquals(_windows[0], window) && _sessionPath != null && _config.Global.SaveState;
         var closed = new ClosedWindow(ClosedWindow.NameFor(window.WorkspaceTitles), state, DateTimeOffset.UtcNow) { WasLast = last };
         ClosedWindows.Note(closed);
         Log.Write($"closed window: {closed.Name} ({closed.Summary}){(last ? ", the last one" : "")}");
@@ -865,7 +865,7 @@ public partial class App : Application
     /// <summary>Recent commands come back even when the windows don't (a launch with a command).</summary>
     private void LoadRecentCommands()
     {
-        var saved = _sessionPath != null && _config.Global.RestoreSession ? SessionStore.Load(_sessionPath) : null;
+        var saved = _sessionPath != null && _config.Global.SaveState ? SessionStore.Load(_sessionPath) : null;
         if (saved?.RecentCommands is { } titles)
         {
             RecentCommands = new Zinc.Commands.RecentCommands(titles);
@@ -914,7 +914,7 @@ public partial class App : Application
     /// <summary>Reopens the windows saved last time; false if there were none (or none reopened).</summary>
     private bool RestoreSession()
     {
-        if (_sessionPath == null || !_config.Global.RestoreSession || SessionStore.Load(_sessionPath) is not { } session)
+        if (_sessionPath == null || !_config.Global.SaveState || SessionStore.Load(_sessionPath) is not { } session)
         {
             return false;
         }
@@ -960,7 +960,7 @@ public partial class App : Application
     /// </summary>
     private void StartSavingSession()
     {
-        if (_sessionPath == null || !_config.Global.RestoreSession)
+        if (_sessionPath == null || !_config.Global.SaveState)
         {
             return;
         }
@@ -1003,7 +1003,7 @@ public partial class App : Application
 
     private void SaveSession()
     {
-        if (_sessionPath == null || _quitting || !_config.Global.RestoreSession)
+        if (_sessionPath == null || _quitting || !_config.Global.SaveState)
         {
             return;
         }

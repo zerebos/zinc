@@ -65,7 +65,7 @@ public sealed partial class MainWindow
 
     /// <summary>The line between split panes: <c>divider-color</c>, else Zinc's grey (every divider shares the brush).</summary>
     private void ApplyDividerColor() =>
-        _dividerBrush.Color = _config.Global.SplitDividerColor is { } color ? Zinc.Terminal.TerminalRenderer.ToColor(color) : DefaultDividerColor;
+        _dividerBrush.Color = _config.Global.DividerColor is { } color ? Zinc.Terminal.TerminalRenderer.ToColor(color) : DefaultDividerColor;
 
     internal void ApplyConfig(ConfigFile config)
     {

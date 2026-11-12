@@ -76,7 +76,7 @@ internal sealed partial class WelcomeWindow : Window
         // Start from what's in force; on first run, workspaces in the sidebar (Zinc at its most
         // itself; Simple is one click away).
         var global = config.Global;
-        _style = firstRun || global.TabGroups || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkStyle.Workspaces : WorkStyle.Simple;
+        _style = firstRun || global.PaneTabs || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkStyle.Workspaces : WorkStyle.Simple;
         _workspacesOn = firstRun || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkspaceTabs.Left : WorkspaceTabs.Top;
         _font = global.FontFamily == BundledFonts.Family ? null : global.FontFamily;
         _scheme = config.SchemeName;

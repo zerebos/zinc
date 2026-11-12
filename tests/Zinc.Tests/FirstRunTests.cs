@@ -13,7 +13,7 @@ public class FirstRunTests
         Assert.StartsWith(FirstRun.Template, text);
         var config = ConfigFile.Parse(text, "config.toml", bundledThemes: Path.GetTempPath());
         Assert.Equal(WorkspaceTabs.Left, config.Global.WorkspaceTabs);
-        Assert.True(config.Global.TabGroups);
+        Assert.True(config.Global.PaneTabs);
         Assert.Equal("JetBrainsMono NF", config.Global.FontFamily);
         Assert.Contains("theme = \"Dracula\"", text);
         Assert.Contains("default-profile = \"wsl:Fedora\"", text);
@@ -28,7 +28,7 @@ public class FirstRunTests
     {
         var config = Read(FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Left, null, null, null)));
         Assert.Equal(WorkspaceTabs.Top, config.Global.WorkspaceTabs); // "on the left" only applies to workspaces
-        Assert.False(config.Global.TabGroups);
+        Assert.False(config.Global.PaneTabs);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class FirstRunTests
         const string existing = "[window]\ntab-groups = true\n";
         var text = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null), Read(existing));
         Assert.DoesNotContain("tab-groups", text);
-        Assert.False(Read(text).Global.TabGroups);
+        Assert.False(Read(text).Global.PaneTabs);
     }
 
     [Fact]

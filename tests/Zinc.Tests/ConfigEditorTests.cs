@@ -136,7 +136,7 @@ public class ConfigEditorTests
         text = Set(text, "window.save-state", "never");
         text = Set(text, "profile.\"ssh:WSL\".hidden", true);
         var config = ConfigFile.Parse(text);
-        Assert.False(config.Global.RestoreSession);
+        Assert.False(config.Global.SaveState);
         Assert.True(config.Profiles.Single(p => p.Id == "ssh:WSL").Hidden);
         Assert.DoesNotContain(config.Warnings, w => !w.Contains("color scheme")); // only the unknown test themes
     }

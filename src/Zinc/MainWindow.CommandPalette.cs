@@ -434,7 +434,7 @@ public sealed partial class MainWindow
         {
             if (!(_quick && NotInQuickTerminal(action.Action)))
             {
-                commands.Add(new PaletteCommand(Actions.Title(action, _config.Global.TabGroups), Keys(action), () => pane.Invoke(action),
+                commands.Add(new PaletteCommand(Actions.Title(action, _config.Global.PaneTabs), Keys(action), () => pane.Invoke(action),
                     SearchWords: Actions.SearchWords(action)));
             }
         }
@@ -443,7 +443,7 @@ public sealed partial class MainWindow
             commands.Add(new PaletteCommand(title, keys, run));
 
         // Tabs (terminals), workspaces (title-bar tabs) and windows.
-        if (_config.Global.TabGroups)
+        if (_config.Global.PaneTabs)
         {
             Action(TerminalAction.NewTab); // (without tabs inside panes it would be a second "New workspace")
         }
@@ -558,7 +558,7 @@ public sealed partial class MainWindow
         Action(TerminalAction.SelectOutput);
 
         // Profiles: open as a tab (in this pane, with tab groups), a workspace, a split either way, or a window.
-        var group = _config.Global.TabGroups ? tab.Workspace.GroupOf(tab.Active) : null;
+        var group = _config.Global.PaneTabs ? tab.Workspace.GroupOf(tab.Active) : null;
         var profiles = _config.VisibleProfiles.ToList();
         for (var i = 0; i < profiles.Count; i++)
         {

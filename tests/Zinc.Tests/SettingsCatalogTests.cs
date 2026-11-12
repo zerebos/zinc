@@ -228,8 +228,8 @@ public class SettingsWriterTests
         var old = "[window]\ngroup-tab-strip = \"always\"\nunfocused-split-opacity = 0.5\ntab-groups = false\n";
         var file = ConfigFile.Parse(old, "config.toml", "", _ => []);
         Assert.Equal(PaneHeaders.Always, file.Global.PaneHeaders);
-        Assert.Equal(0.5, file.Global.UnfocusedSplitOpacity);
-        Assert.False(file.Global.TabGroups);
+        Assert.Equal(0.5, file.Global.UnfocusedPaneOpacity);
+        Assert.False(file.Global.PaneTabs);
         Assert.Equal("always", file.ValueOf("window.pane-headers"));
         Assert.Empty(file.Warnings);
 

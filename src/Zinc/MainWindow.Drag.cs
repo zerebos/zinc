@@ -599,7 +599,7 @@ public sealed partial class MainWindow
     /// </summary>
     private (WorkspaceTab Tab, TabGroup<TerminalTab> Group)? DropTarget(Border host, PaneDirection? edge)
     {
-        if (_quick || host.Tag is not TabGroup<TerminalTab> group || (edge == null && !_config.Global.TabGroups) ||
+        if (_quick || host.Tag is not TabGroup<TerminalTab> group || (edge == null && !_config.Global.PaneTabs) ||
             AllTabs().FirstOrDefault(t => t.Workspace.Groups.Contains(group)) is not { } tab)
         {
             return null;

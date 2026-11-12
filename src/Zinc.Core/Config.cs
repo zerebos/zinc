@@ -519,9 +519,9 @@ public sealed record Config
 
     /// <summary>
     /// A pane can hold several tabs (true, the default); false keeps one terminal per pane, and
-    /// "new tab" opens a workspace instead. Config: <c>tab-groups = true | false</c> (global).
+    /// "new tab" opens a workspace instead. Config: <c>pane-tabs = true | false</c> (global).
     /// </summary>
-    public bool TabGroups { get; init; } = true;
+    public bool PaneTabs { get; init; } = true;
 
     /// <summary>
     /// Draw with the CPU (WARP) instead of the graphics card: for broken GPU drivers, some virtual
@@ -617,14 +617,14 @@ public sealed record Config
     /// How visible panes without focus stay, 0.15–1 (1 = not dimmed). Config, as in Ghostty and
     /// with its default: <c>unfocused-split-opacity = 0.7</c> (global).
     /// </summary>
-    public double UnfocusedSplitOpacity { get; init; } = 0.7;
+    public double UnfocusedPaneOpacity { get; init; } = 0.7;
 
     /// <summary>
     /// Whether windows, workspaces and tabs reopen as they were (session.json; not their
     /// contents). Config, as in Ghostty: <c>window-save-state = default | always | never</c>
     /// (global; default = always).
     /// </summary>
-    public bool RestoreSession { get; init; } = true;
+    public bool SaveState { get; init; } = true;
 
     /// <summary>
     /// A new workspace opens on a page for choosing its profile, folder and name (Enter starts the
@@ -648,10 +648,10 @@ public sealed record Config
     public bool ExplorerMenu { get; init; }
 
     /// <summary>What unfocused panes are dimmed toward; null = each pane's background. Config: <c>unfocused-split-fill</c> (global).</summary>
-    public GhosttyColorRgb? UnfocusedSplitFill { get; init; }
+    public GhosttyColorRgb? UnfocusedPaneFill { get; init; }
 
     /// <summary>The line between split panes; null: Zinc's grey. Config: <c>[window] divider-color</c> (global).</summary>
-    public GhosttyColorRgb? SplitDividerColor { get; init; }
+    public GhosttyColorRgb? DividerColor { get; init; }
 
     /// <summary>
     /// The least contrast text may have against its background (WCAG ratio, 1 = any, 21 = black on

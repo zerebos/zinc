@@ -45,7 +45,7 @@ public static class FirstRun
             text = ConfigEditor.Set(text, ["window", "workspace-tabs"], tabs == WorkspaceTabs.Left ? "left" : "top");
         }
 
-        if (global == null || global.TabGroups != workspaces)
+        if (global == null || global.PaneTabs != workspaces)
         {
             text = ConfigEditor.Set(text, ["window", "pane-tabs"], workspaces);
             text = ConfigEditor.Remove(text, ["window", "tab-groups"]); // its old name (ConfigFile.RenamedKeys) would be read too

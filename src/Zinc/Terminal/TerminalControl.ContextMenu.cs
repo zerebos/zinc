@@ -75,7 +75,7 @@ public sealed partial class TerminalControl
         menu.Items.Add(new MenuFlyoutSeparator());
         Add(menu, "Split right", "", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         Add(menu, "Split down", "", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
-        Add(menu, Actions.Title(TerminalAction.NewTab, _config.TabGroups), "", TerminalAction.NewTab);
+        Add(menu, Actions.Title(TerminalAction.NewTab, _config.PaneTabs), "", TerminalAction.NewTab);
         menu.Items.Add(new MenuFlyoutSeparator());
         Add(menu, "Close tab", "", TerminalAction.CloseTab);
 

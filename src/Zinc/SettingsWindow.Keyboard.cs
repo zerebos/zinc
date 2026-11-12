@@ -60,7 +60,7 @@ internal sealed partial class SettingsWindow
         [.. _config.Keybindings.All.Where(b => b.Action == action).Select(b => b.Chord)];
 
     /// <summary>Tabs inside panes: without them a new tab is a new workspace, and its keys are titled so.</summary>
-    private bool PaneTabs => _config.Global.TabGroups;
+    private bool PaneTabs => _config.Global.PaneTabs;
 
     private List<KeySequence> SequencesOf(ActionInvocation action) =>
         [.. _config.Keybindings.Sequences.Where(s => s.Action == action).Select(s => s.Keys)];

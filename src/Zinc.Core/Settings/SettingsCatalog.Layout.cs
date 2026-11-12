@@ -46,7 +46,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<Terminal.NewTerminalFolder>((c, v) => c with { StartIn = v }),
             },
         new("layout", "Panes", "window.pane-tabs", "Tabs inside panes", "Each pane can hold several tabs.", SettingKind.Toggle)
-            { Binding = Bind.Bool(c => c.TabGroups, (c, v) => c with { TabGroups = v }) },
+            { Binding = Bind.Bool(c => c.PaneTabs, (c, v) => c with { PaneTabs = v }) },
         new("layout", "Panes", "window.pane-tabs-as", "Show pane tabs as", "Only with \"Tabs inside panes\" on.", SettingKind.Choice)
             {
                 Choices =
@@ -116,20 +116,20 @@ public static partial class SettingsCatalog
             "How bright unfocused panes stay (1: not dimmed).", SettingKind.Number)
             {
                 Minimum = 0.15, Maximum = 1, Step = 0.05,
-                Binding = Bind.Number(c => c.UnfocusedSplitOpacity, (c, v) => c with { UnfocusedSplitOpacity = v }, clamp: true),
+                Binding = Bind.Number(c => c.UnfocusedPaneOpacity, (c, v) => c with { UnfocusedPaneOpacity = v }, clamp: true),
             },
         new("layout", "Panes", "window.unfocused-pane-fill", "Dimming color", "What unfocused panes fade toward.", SettingKind.Color)
-            { Placeholder = "The pane's background", Binding = Bind.Color((c, v) => c with { UnfocusedSplitFill = v }) },
+            { Placeholder = "The pane's background", Binding = Bind.Color((c, v) => c with { UnfocusedPaneFill = v }) },
         new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes, when \"Gap between panes\" is 0.", SettingKind.Color)
-            { Placeholder = "Zinc's grey", Binding = Bind.Color((c, v) => c with { SplitDividerColor = v }) },
+            { Placeholder = "Zinc's grey", Binding = Bind.Color((c, v) => c with { DividerColor = v }) },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
             "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice)
             {
                 Choices = [new("Reopen them", "always"), new("Start fresh", "never")],
                 Binding = Bind.Custom((c, v) => v switch
                 {
-                    true or "always" or "default" => c with { RestoreSession = true },
-                    false or "never" => c with { RestoreSession = false },
+                    true or "always" or "default" => c with { SaveState = true },
+                    false or "never" => c with { SaveState = false },
                     _ => null,
                 }, [Accepts.Choices]),
             },
