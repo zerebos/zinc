@@ -127,17 +127,23 @@ public static class Bind
         return written == null ? null : new(written.Select(p => p.Trim()).Where(p => p.Length > 0).Select(p => resolve(p, file)));
     }
 
-    /// <summary>A TOML number as a double. Tomlyn gives a long or a double, nothing else.</summary>
+    /// <summary>
+    /// A TOML number as a double. Tomlyn gives a long or a double, nothing else. TOML's inf and nan aren't taken.
+    /// </summary>
     public static double? AsNumber(object value) => value switch
     {
+        double d when !double.IsFinite(d) => null,
         long or double => Convert.ToDouble(value, CultureInfo.InvariantCulture),
         _ => null,
     };
 
-    /// <summary>A string, or a number as invariant text (for parsers that take either).</summary>
+    /// <summary>
+    /// A string, or a number as invariant text (for parsers that take either). TOML's inf and nan aren't taken.
+    /// </summary>
     public static string? AsText(object value) => value switch
     {
         string s => s,
+        double d when !double.IsFinite(d) => null,
         long or double => Convert.ToString(value, CultureInfo.InvariantCulture),
         _ => null,
     };

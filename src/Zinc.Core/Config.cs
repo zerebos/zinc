@@ -813,8 +813,7 @@ public sealed record Config
         var s = value.Trim().ToLowerInvariant();
         if (double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var seconds))
         {
-            duration = TimeSpan.FromSeconds(seconds);
-            return seconds >= 0;
+            return TrySeconds(seconds, out duration);
         }
 
         var parts = System.Text.RegularExpressions.Regex.Matches(s, @"(\d+(?:\.\d+)?)\s*(h|m|s)");
@@ -823,13 +822,22 @@ public sealed record Config
             return false;
         }
 
+        var total = 0.0;
         foreach (System.Text.RegularExpressions.Match part in parts)
         {
             var n = double.Parse(part.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
-            duration += part.Groups[2].Value switch { "h" => TimeSpan.FromHours(n), "m" => TimeSpan.FromMinutes(n), _ => TimeSpan.FromSeconds(n) };
+            total += n * part.Groups[2].Value switch { "h" => 3600, "m" => 60, _ => 1 };
         }
 
-        return true;
+        return TrySeconds(total, out duration);
+    }
+
+    // From 0 to a thousand years, a safe cap well inside what a TimeSpan holds. Making one from infinity or NaN throws.
+    private static bool TrySeconds(double seconds, out TimeSpan duration)
+    {
+        var ok = seconds is >= 0 and <= 1000 * 365.0 * 86400;
+        duration = ok ? TimeSpan.FromSeconds(seconds) : TimeSpan.Zero;
+        return ok;
     }
 
     /// <summary>A metric adjustment as Ghostty writes one: whole pixels ("1", "-1", "1px") or a percentage ("20%").</summary>
@@ -838,7 +846,8 @@ public sealed record Config
         var s = value.Trim();
         var percent = s.EndsWith('%');
         s = percent ? s[..^1] : s.EndsWith("px", StringComparison.OrdinalIgnoreCase) ? s[..^2] : s;
-        var ok = double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var amount);
+        var ok = double.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var amount) &&
+                 double.IsFinite(amount);
         adjustment = (amount, percent);
         return ok;
     }
@@ -872,7 +881,8 @@ public sealed record Config
     {
         color = default;
         s = s.TrimStart('#');
-        if (s.Length != 6 || !uint.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb))
+        // Six hex digits and nothing else. uint.TryParse alone would also take white space around fewer digits.
+        if (s.Length != 6 || !s.All(char.IsAsciiHexDigit) || !uint.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb))
         {
             return false;
         }

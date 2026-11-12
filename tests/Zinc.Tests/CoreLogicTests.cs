@@ -216,7 +216,30 @@ public class ConfigTests : IDisposable
     [InlineData("10x")]
     [InlineData("-5")]
     [InlineData("5s later")]
+    [InlineData("1e300")]
+    [InlineData("Infinity")]
+    [InlineData("NaN")]
+    [InlineData("99999999999999999999h")]
     public void RejectsWhatIsNotADuration(string text) => Assert.False(Config.TryDuration(text, out _));
+
+    [Theory]
+    [InlineData("[notify]\ncommand-finished-after = inf")]
+    [InlineData("[notify]\ncommand-finished-after = 1e300")]
+    [InlineData("[window]\nfree-hidden-after = nan")]
+    [InlineData("[window]\nunfocused-pane-opacity = nan")]
+    [InlineData("[font]\nadjust-cell-height = inf")]
+    [InlineData("[font]\nadjust-cell-height = \"NaN\"")]
+    [InlineData("[quick-terminal]\nsize = \"Infinity\"")]
+    [InlineData("[terminal]\nscrollback-lines = nan")]
+    [InlineData("[colors]\nbackground = \"#12345 \"")]
+    [InlineData("[colors]\nbackground = \" 12345\"")]
+    [InlineData("[colors]\npalette = [\"+12345\"]")]
+    public void ValuesThatAreNotFiniteNumbersOrSixHexDigitsWarn(string toml)
+    {
+        var file = ConfigFile.Parse(toml);
+        Assert.Single(file.Warnings);
+        Assert.Equal(new Config(), file.Global);
+    }
 
     [Fact]
     public void QuitAfterLastWindowTakesTrueOrFalse()

@@ -34,7 +34,7 @@ public readonly record struct QuickTerminalLength(double Value, bool Percent)
         var percent = s.EndsWith('%');
         var number = percent ? s[..^1] : s.EndsWith("px", StringComparison.OrdinalIgnoreCase) ? s[..^2] : s;
         if (!double.TryParse(number.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ||
-            value <= 0 || (percent && value > 100))
+            !double.IsFinite(value) || value <= 0 || (percent && value > 100))
         {
             return false;
         }
