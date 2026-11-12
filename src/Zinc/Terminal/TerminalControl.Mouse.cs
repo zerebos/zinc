@@ -391,7 +391,7 @@ public sealed partial class TerminalControl
         if (_session is { } session && _config.ClickToMove &&
             session.ClickToMove(col, row, assumeArrows: true) is { Length: > 0 } move)
         {
-            Log.Write($"click-to-move: ({col}, {row}) -> {System.Text.Encoding.ASCII.GetString(move).Replace("\x1b", "ESC")}");
+            Log.Write($"click-to-move: ({col}, {row}) -> {System.Text.Encoding.ASCII.GetString(move).Replace("\e", "ESC")}");
             session.SendInput(move);
         }
     }

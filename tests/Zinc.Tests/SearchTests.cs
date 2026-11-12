@@ -31,7 +31,7 @@ public class SearchTests
     {
         // Full-screen apps position text with the cursor, so blank rows above must still count.
         using var session = new TerminalSession(20, 6, TerminalTheme.Default);
-        session.WriteToScreen("\x1b[4;3Hneedle\x1b[6;1Hneedle");
+        session.WriteToScreen("\e[4;3Hneedle\e[6;1Hneedle");
         Assert.Equal([new SearchMatch(3, 2, 7), new SearchMatch(5, 0, 5)], Find(session, "needle"));
     }
 

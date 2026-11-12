@@ -6,7 +6,7 @@ namespace Zinc.Tests;
 /// <summary>Click to move the cursor in a shell's command line, through libghostty's own prompt marking.</summary>
 public class PromptClickTests
 {
-    private const string Esc = "\x1b";
+    private const string Esc = "\e";
 
     /// <summary>A prompt "> " (with <paramref name="options"/> on its A mark), then <paramref name="input"/> typed after B.</summary>
     private static TerminalSession Prompt(string input, string options = ";cl=line", ushort cols = 40)

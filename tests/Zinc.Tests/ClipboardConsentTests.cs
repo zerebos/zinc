@@ -6,9 +6,9 @@ namespace Zinc.Tests;
 public class ClipboardConsentTests
 {
     [Theory]
-    [InlineData("\u001b]52;c;?\u0007", 0, 9)]
-    [InlineData("ab\u001b]52;;?\u001b\\cd", 2, 11)]
-    [InlineData("\u001b]52;c;aGk=\u0007\u001b]52;p;?\u0007", 12, 21)] // a write first, then a read
+    [InlineData("\e]52;c;?\u0007", 0, 9)]
+    [InlineData("ab\e]52;;?\e\\cd", 2, 11)]
+    [InlineData("\e]52;c;aGk=\u0007\e]52;p;?\u0007", 12, 21)] // a write first, then a read
     public void FindsReadRequests(string text, int start, int end)
     {
         Assert.True(ClipboardReadRequest.TryFind(Encoding.UTF8.GetBytes(text), out var s, out var e));
@@ -16,8 +16,8 @@ public class ClipboardConsentTests
     }
 
     [Theory]
-    [InlineData("\u001b]52;c;aGk=\u0007")] // a write
-    [InlineData("\u001b]52;c;?")]           // not finished in this read
+    [InlineData("\e]52;c;aGk=\u0007")] // a write
+    [InlineData("\e]52;c;?")]           // not finished in this read
     [InlineData("plain text ; ?")]
     public void IgnoresEverythingElse(string text) =>
         Assert.False(ClipboardReadRequest.TryFind(Encoding.UTF8.GetBytes(text), out _, out _));
@@ -38,7 +38,7 @@ public class ClipboardConsentTests
             return allow;
         };
 
-        session.WriteToScreen("before\u001b]52;c;?\u0007after");
+        session.WriteToScreen("before\e]52;c;?\u0007after");
         Assert.Equal(1, asked);
         Assert.Contains($"]52;c;{payload}", string.Concat(replies));
         Assert.Contains("beforeafter", session.ReadScreenText());
@@ -51,7 +51,7 @@ public class ClipboardConsentTests
         var replies = new List<string>();
         session.PtyReplyObserver = r => replies.Add(Encoding.UTF8.GetString(r));
         session.ClipboardReader = () => "secret";
-        session.WriteToScreen("\u001b]52;c;?\u0007");
+        session.WriteToScreen("\e]52;c;?\u0007");
         Assert.Contains("c2VjcmV0", string.Concat(replies));
     }
 }

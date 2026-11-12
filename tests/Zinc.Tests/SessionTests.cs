@@ -115,8 +115,8 @@ public class SessionTests
         var replies = new List<byte[]>();
         session.PtyReplyObserver = replies.Add;
 
-        session.WriteToScreen("\x1b[6n"); // DSR cursor position: ConPTY waits on this at startup
-        Assert.Contains("\x1b[1;1R", Joined(replies));
+        session.WriteToScreen("\e[6n"); // DSR cursor position: ConPTY waits on this at startup
+        Assert.Contains("\e[1;1R", Joined(replies));
     }
 
     [Fact]
@@ -129,11 +129,11 @@ public class SessionTests
 
         // XTWINOPS cell size / text area in chars, and the report sent on enabling
         // in-band resize. libghostty drops all of them unless the OPT_SIZE callback is installed.
-        session.WriteToScreen("\x1b[16t\x1b[18t\x1b[?2048h");
+        session.WriteToScreen("\e[16t\e[18t\e[?2048h");
         var all = Joined(replies);
-        Assert.Contains("\x1b[6;18;9t", all);
-        Assert.Contains("\x1b[8;30;100t", all);
-        Assert.Contains("\x1b[48;30;100;540;900t", all);
+        Assert.Contains("\e[6;18;9t", all);
+        Assert.Contains("\e[8;30;100t", all);
+        Assert.Contains("\e[48;30;100;540;900t", all);
     }
 
     [Fact]
@@ -143,12 +143,12 @@ public class SessionTests
         var copied = new List<string>();
         session.ClipboardWriter = copied.Add;
 
-        session.WriteToScreen("\x1b]52;c;aMOpbGxv\x07"); // "héllo"
-        session.WriteToScreen("\x1b]52;p;aWdub3JlZA==\x07"); // primary selection: no Windows counterpart
+        session.WriteToScreen("\e]52;c;aMOpbGxv\x07"); // "héllo"
+        session.WriteToScreen("\e]52;p;aWdub3JlZA==\x07"); // primary selection: no Windows counterpart
         Assert.Equal(["héllo"], copied);
 
         session.ClipboardWriter = null; // denied: nothing arrives, nothing breaks
-        session.WriteToScreen("\x1b]52;c;aGk=\x07");
+        session.WriteToScreen("\e]52;c;aGk=\x07");
         Assert.Single(copied);
     }
 
@@ -159,19 +159,19 @@ public class SessionTests
         var replies = new List<byte[]>();
         session.PtyReplyObserver = replies.Add;
 
-        session.WriteToScreen("\x1b]52;c;?\x07");
+        session.WriteToScreen("\e]52;c;?\x07");
         Assert.DoesNotContain("aGk=", Joined(replies)); // denied by default
 
         session.ClipboardReader = () => "hi";
-        session.WriteToScreen("\x1b]52;c;?\x07");
-        Assert.Contains("\x1b]52;c;aGk=", Joined(replies));
+        session.WriteToScreen("\e]52;c;?\x07");
+        Assert.Contains("\e]52;c;aGk=", Joined(replies));
     }
 
     [Fact]
     public void FindsHyperlinksAndPlainUrls()
     {
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
-        session.WriteToScreen("ab \x1b]8;;https://example.com/x\x1b\\link text\x1b]8;;\x1b\\ cd\r\n");
+        session.WriteToScreen("ab \e]8;;https://example.com/x\e\\link text\e]8;;\e\\ cd\r\n");
         session.WriteToScreen("see (https://ghostty.org/docs) here");
 
         // "link text" occupies columns 3..11.
@@ -218,7 +218,7 @@ public class SessionTests
         using var session = new TerminalSession(10, 5, TerminalTheme.Default);
         // 10 columns: row 0 is "see click ", row 1 "here now e", so the link text "click here now"
         // runs from column 4 of row 0 to column 7 of row 1.
-        session.WriteToScreen("see \x1b]8;;https://example.com/\x1b\\click here now\x1b]8;;\x1b\\ end");
+        session.WriteToScreen("see \e]8;;https://example.com/\e\\click here now\e]8;;\e\\ end");
 
         var expected = new LinkMatch("https://example.com/", 0, 4, 1, 7, Explicit: true);
         Assert.Equal(expected, session.LinkAt(5, 0));

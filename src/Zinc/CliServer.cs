@@ -14,8 +14,8 @@ namespace Zinc;
 /// </summary>
 internal static class CliServer
 {
-    private static int s_lastTerminalId;
-    private static CancellationTokenSource? s_stop;
+    private static int _lastTerminalId;
+    private static CancellationTokenSource? _stop;
 
     /// <summary>This Zinc's pipe (every terminal's ZINC_PIPE), or null until it listens.</summary>
     public static string? PipeName { get; private set; }
@@ -27,7 +27,7 @@ internal static class CliServer
     /// <summary>A new terminal's id. Its shell will start with the id and the pipe's name in its environment.</summary>
     public static int NewTerminal(TerminalControl control)
     {
-        var id = Interlocked.Increment(ref s_lastTerminalId);
+        var id = Interlocked.Increment(ref _lastTerminalId);
         control.LaunchEnvironment = environment =>
         {
             if (PipeName is { } pipe)
@@ -44,14 +44,14 @@ internal static class CliServer
     public static void Start(string name, Func<CliRequest, Task<CliReply>> handle)
     {
         PipeName = name;
-        s_stop = new CancellationTokenSource();
-        var stop = s_stop.Token;
+        _stop = new CancellationTokenSource();
+        var stop = _stop.Token;
         var thread = new Thread(() => Listen(name, handle, stop)) { IsBackground = true, Name = "zn pipe" };
         thread.Start();
         Log.Write($"cli: listening on {name}");
     }
 
-    public static void Stop() => s_stop?.Cancel();
+    public static void Stop() => _stop?.Cancel();
 
     private static void Listen(string name, Func<CliRequest, Task<CliReply>> handle, CancellationToken stop)
     {

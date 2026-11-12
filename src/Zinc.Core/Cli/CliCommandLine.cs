@@ -339,7 +339,7 @@ public static class CliCommandLine
                     i++;
                     break;
                 case 'e':
-                    sb.Append('\x1b');
+                    sb.Append('\e');
                     i++;
                     break;
                 case '\\':

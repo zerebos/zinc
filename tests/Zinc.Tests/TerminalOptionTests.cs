@@ -14,8 +14,8 @@ public class TerminalOptionTests
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         var replies = new List<byte[]>();
         session.PtyReplyObserver = replies.Add;
-        session.WriteToScreen("\x1b[>q");
-        Assert.Contains("\x1bP>|zinc ", Joined(replies));
+        session.WriteToScreen("\e[>q");
+        Assert.Contains("\eP>|zinc ", Joined(replies));
         Assert.StartsWith("zinc ", TerminalSession.Version);
         // The version comes from Directory.Build.props, either the release ("0.1.0+a1b2c3d") or a dev build ("0.1.0-dev.812+a1b2c3d").
         Assert.Matches(@"^zinc \d+\.\d+\.\d+(-dev\.\d+)?(\+[0-9a-f]{7})?$", TerminalSession.Version);
@@ -30,18 +30,18 @@ public class TerminalOptionTests
         string CursorReport()
         {
             replies.Clear();
-            session.WriteToScreen("\x1bP$q q\x1b\\"); // DECRQSS: which DECSCUSR style is in force?
+            session.WriteToScreen("\eP$q q\e\\"); // DECRQSS: which DECSCUSR style is in force?
             return Joined(replies);
         }
 
         session.SetCursorDefaults(Zinc.Ghostty.TerminalCursorStyle.Bar, blink: true);
         Assert.Contains("5 q", CursorReport()); // blinking bar, at once
 
-        session.WriteToScreen("\x1b[2 q"); // a program picks a steady block
+        session.WriteToScreen("\e[2 q"); // a program picks a steady block
         session.SetCursorDefaults(Zinc.Ghostty.TerminalCursorStyle.Underline, blink: false);
         Assert.Contains("2 q", CursorReport()); // a program's own choice stays
 
-        session.WriteToScreen("\x1b[0 q"); // and its reset goes back to the setting
+        session.WriteToScreen("\e[0 q"); // and its reset goes back to the setting
         Assert.Contains("4 q", CursorReport());
     }
 
@@ -54,20 +54,20 @@ public class TerminalOptionTests
         string CursorReport()
         {
             replies.Clear();
-            session.WriteToScreen("\x1bP$q q\x1b\\");
+            session.WriteToScreen("\eP$q q\e\\");
             return Joined(replies);
         }
 
         session.SetCursorDefaults(Zinc.Ghostty.TerminalCursorStyle.Block, blink: false, atPrompt: Zinc.Ghostty.TerminalCursorStyle.Bar);
         Assert.Contains("2 q", CursorReport()); // no prompt yet: the usual block
 
-        session.WriteToScreen("\x1b]133;A\a$ \x1b]133;B\a");
+        session.WriteToScreen("\e]133;A\a$ \e]133;B\a");
         Assert.Contains("6 q", CursorReport()); // at the prompt: a steady bar
 
-        session.WriteToScreen("ls\r\n\x1b]133;C\a");
+        session.WriteToScreen("ls\r\n\e]133;C\a");
         Assert.Contains("2 q", CursorReport()); // running: the block again
 
-        session.WriteToScreen("\x1b]133;D;0\a\x1b]133;A\a$ \x1b]133;B\a\x1b[4 q"); // a vi mode picks its own
+        session.WriteToScreen("\e]133;D;0\a\e]133;A\a$ \e]133;B\a\e[4 q"); // a vi mode picks its own
         Assert.Contains("4 q", CursorReport());
     }
 
@@ -99,11 +99,11 @@ public class TerminalOptionTests
         session.RenderHoldBegan = () => captures++;
         session.RenderHoldChanged += changes.Add;
 
-        session.WriteToScreen("\x1b[?2026h");
+        session.WriteToScreen("\e[?2026h");
         Assert.True(session.RenderHeld);
         Assert.Equal(1, captures); // the frame is captured as the hold begins
 
-        session.WriteToScreen("frame\x1b[?2026l");
+        session.WriteToScreen("frame\e[?2026l");
         Assert.False(session.RenderHeld);
         Assert.Equal([true, false], changes);
     }
@@ -112,7 +112,7 @@ public class TerminalOptionTests
     public void AHoldThatNeverEndsCanBeCalledOff()
     {
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
-        session.WriteToScreen("\x1b[?2026h");
+        session.WriteToScreen("\e[?2026h");
         lock (session.Lock)
         {
             session.EndRenderHold();

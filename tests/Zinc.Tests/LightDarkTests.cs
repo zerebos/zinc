@@ -88,13 +88,13 @@ public class LightDarkTests
         var replies = new List<byte[]>();
         session.PtyReplyObserver = replies.Add;
 
-        session.WriteToScreen("\x1b[?996n");
-        Assert.Contains("\x1b[?997;1n", Joined(replies)); // dark
+        session.WriteToScreen("\e[?996n");
+        Assert.Contains("\e[?997;1n", Joined(replies)); // dark
 
         session.SetColorScheme(dark: false);
         replies.Clear();
-        session.WriteToScreen("\x1b[?996n");
-        Assert.Contains("\x1b[?997;2n", Joined(replies)); // light
+        session.WriteToScreen("\e[?996n");
+        Assert.Contains("\e[?997;2n", Joined(replies)); // light
     }
 
     [Fact]
@@ -107,11 +107,11 @@ public class LightDarkTests
         session.SetColorScheme(dark: false);
         Assert.Empty(replies); // not subscribed: nothing unasked
 
-        session.WriteToScreen("\x1b[?2031h");
+        session.WriteToScreen("\e[?2031h");
         replies.Clear();
         session.SetColorScheme(dark: true);
-        Assert.Equal("\x1b[?997;1n", Joined(replies));
+        Assert.Equal("\e[?997;1n", Joined(replies));
         session.SetColorScheme(dark: true);
-        Assert.Equal("\x1b[?997;1n", Joined(replies)); // no change, no report
+        Assert.Equal("\e[?997;1n", Joined(replies)); // no change, no report
     }
 }

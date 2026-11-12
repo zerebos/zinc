@@ -17,7 +17,7 @@ public class KittyGraphicsTests
     }
 
     private static string Apc(string control, byte[] payload) =>
-        $"\x1b_G{control};{Convert.ToBase64String(payload)}\x1b\\";
+        $"\e_G{control};{Convert.ToBase64String(payload)}\e\\";
 
     private static List<ImagePlacement> Collect(TerminalSession session, bool pixels = true)
     {
@@ -34,8 +34,8 @@ public class KittyGraphicsTests
         session.PtyReplyObserver = replies.Add;
 
         // How programs (yazi, chafa, timg) detect support.
-        session.WriteToScreen("\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\");
-        Assert.Contains("\x1b_Gi=31;OK\x1b\\", string.Concat(replies.Select(Encoding.UTF8.GetString)));
+        session.WriteToScreen("\e_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\e\\");
+        Assert.Contains("\e_Gi=31;OK\e\\", string.Concat(replies.Select(Encoding.UTF8.GetString)));
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class KittyGraphicsTests
         session.ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Top });
         Assert.Equal(0, Assert.Single(Collect(session)).Row); // back in view from scrollback
 
-        session.WriteToScreen("\x1b_Ga=d,d=I,i=3,q=2\x1b\\"); // (d=A spares it: only deletes what's on screen)
+        session.WriteToScreen("\e_Ga=d,d=I,i=3,q=2\e\\"); // (d=A spares it: only deletes what's on screen)
         Assert.Empty(Collect(session));
     }
 

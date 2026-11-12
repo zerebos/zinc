@@ -15,16 +15,16 @@ internal sealed partial class SettingsWindow
     /// <summary>What the preview shows: prompt segments, bold, the 16 colors, built-in glyphs, the cursor.</summary>
     /// <remarks>The prompt's text is bright white, which reads on a blue fill in light schemes as well as dark ones.</remarks>
     private const string PreviewScript =
-        "\u001b[44;97m ~/src/zinc \u001b[0;34m\u001b[0m git diff --stat\r\n" +
-        " app.cs | 4 \u001b[32m++\u001b[31m--\u001b[0m\r\n" +
-        "\u001b[1mdiff --git a/app.cs b/app.cs\u001b[0m\r\n" +
-        "\u001b[36m@@ -1 +1 @@\u001b[0m\r\n" +
-        "\u001b[31m-  Console.WriteLine(\"hello\");\u001b[0m\r\n" +
-        "\u001b[32m+  Console.WriteLine(\"hello, Zinc\");\u001b[0m\r\n" +
-        "\u001b[30m██\u001b[31m██\u001b[32m██\u001b[33m██\u001b[34m██\u001b[35m██\u001b[36m██\u001b[37m██" +
-        "\u001b[90m██\u001b[91m██\u001b[92m██\u001b[93m██\u001b[94m██\u001b[95m██\u001b[96m██\u001b[97m██\u001b[0m" +
-        "  \u001b[35m╭─ build ─╮\u001b[0m \u001b[33m▁▂▃▅▇█\u001b[0m\r\n" +
-        "\u001b[44;97m ~/src/zinc \u001b[0;34m\u001b[0m ";
+        "\e[44;97m ~/src/zinc \e[0;34m\e[0m git diff --stat\r\n" +
+        " app.cs | 4 \e[32m++\e[31m--\e[0m\r\n" +
+        "\e[1mdiff --git a/app.cs b/app.cs\e[0m\r\n" +
+        "\e[36m@@ -1 +1 @@\e[0m\r\n" +
+        "\e[31m-  Console.WriteLine(\"hello\");\e[0m\r\n" +
+        "\e[32m+  Console.WriteLine(\"hello, Zinc\");\e[0m\r\n" +
+        "\e[30m██\e[31m██\e[32m██\e[33m██\e[34m██\e[35m██\e[36m██\e[37m██" +
+        "\e[90m██\e[91m██\e[92m██\e[93m██\e[94m██\e[95m██\e[96m██\e[97m██\e[0m" +
+        "  \e[35m╭─ build ─╮\e[0m \e[33m▁▂▃▅▇█\e[0m\r\n" +
+        "\e[44;97m ~/src/zinc \e[0;34m\e[0m ";
 
     private const double PreviewHeight = 172;
 

@@ -15,8 +15,8 @@ public sealed class ScreenFlashFilter
     /// <summary>Longest reverse video that still counts as a flash.</summary>
     public const int FlashMs = 250;
 
-    private static ReadOnlySpan<byte> On => "\u001b[?5h"u8;
-    private static ReadOnlySpan<byte> Off => "\u001b[?5l"u8;
+    private static ReadOnlySpan<byte> On => "\e[?5h"u8;
+    private static ReadOnlySpan<byte> Off => "\e[?5l"u8;
 
     /// <summary>Bytes from the end of the last read that may start one of the sequences.</summary>
     private readonly List<byte> _carry = [];

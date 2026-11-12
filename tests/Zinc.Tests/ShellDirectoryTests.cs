@@ -101,10 +101,10 @@ public class ShellDirectoryTests
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         Assert.Null(session.ReportedDirectory);
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe\x07");
+        session.WriteToScreen("\e]7;file://localhost/home/jdoe\x07");
         Assert.Equal("file://localhost/home/jdoe", session.ReportedDirectory);
 
-        session.WriteToScreen("\x1b]9;9;C:\\Users\\JDoe\x1b\\");
+        session.WriteToScreen("\e]9;9;C:\\Users\\JDoe\e\\");
         Assert.Equal(@"C:\Users\JDoe", ShellDirectory.Parse(session.ReportedDirectory));
     }
 
@@ -115,11 +115,11 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe\x07");
-        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe\x07"); // every prompt re-reports it
+        session.WriteToScreen("\e]7;file://localhost/home/jdoe\x07");
+        session.WriteToScreen("\e]7;file://localhost/home/jdoe\x07"); // every prompt re-reports it
         Assert.Equal(1, changes);
 
-        session.WriteToScreen("\x1b]7;file://localhost/tmp\x07");
+        session.WriteToScreen("\e]7;file://localhost/tmp\x07");
         Assert.Equal(2, changes);
     }
 
@@ -130,16 +130,16 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe/src\x07");
-        session.WriteToScreen("\x1b]7;file://build-server/c/x\x07"); // ssh build-server
+        session.WriteToScreen("\e]7;file://localhost/home/jdoe/src\x07");
+        session.WriteToScreen("\e]7;file://build-server/c/x\x07"); // ssh build-server
         Assert.Equal("file://localhost/home/jdoe/src", session.ReportedDirectory);
         Assert.Equal("build-server", session.RemoteHost);
         Assert.Equal(2, changes); // what the tab shows changes
 
-        session.WriteToScreen("\x1b]7;file://build-server/c/y\x07"); // moving around over there: nothing new here
+        session.WriteToScreen("\e]7;file://build-server/c/y\x07"); // moving around over there: nothing new here
         Assert.Equal(2, changes);
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe/src\x07"); // back
+        session.WriteToScreen("\e]7;file://localhost/home/jdoe/src\x07"); // back
         Assert.Null(session.RemoteHost);
         Assert.Equal(3, changes);
     }
@@ -153,22 +153,22 @@ public class ShellDirectoryTests
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         var changes = 0;
         session.DirectoryChanged += () => changes++;
-        const string local = "\x1b]133;A;aid=1\x07$ \x1b]133;B\x07";
+        const string local = "\e]133;A;aid=1\x07$ \e]133;B\x07";
 
-        session.WriteToScreen("\x1b]7;file://localhost/home/jdoe/src\x07" + local + "ssh box\r\n\x1b]133;C\x07");
-        session.WriteToScreen("\x1b]7;file://box/home/jdoe\x07");
+        session.WriteToScreen("\e]7;file://localhost/home/jdoe/src\x07" + local + "ssh box\r\n\e]133;C\x07");
+        session.WriteToScreen("\e]7;file://box/home/jdoe\x07");
         if (remoteMarks)
         {
             // Its prompt isn't the local shell's, so the session is still over there.
-            session.WriteToScreen("\x1b]133;A;aid=77\x07box$ \x1b]133;B\x07");
+            session.WriteToScreen("\e]133;A;aid=77\x07box$ \e]133;B\x07");
             Assert.Equal("box", session.RemoteHost);
-            session.WriteToScreen("exit\r\n\x1b]133;C\x07\x1b]133;D;0\x07");
+            session.WriteToScreen("exit\r\n\e]133;C\x07\e]133;D;0\x07");
         }
 
         Assert.Equal("box", session.RemoteHost);
         Assert.Equal(2, changes);
 
-        session.WriteToScreen("logout\r\n\x1b]133;D;0\x07" + local);
+        session.WriteToScreen("logout\r\n\e]133;D;0\x07" + local);
         Assert.Null(session.RemoteHost);
         Assert.Equal("file://localhost/home/jdoe/src", session.ReportedDirectory);
         Assert.Equal(3, changes);
@@ -183,7 +183,7 @@ public class ShellDirectoryTests
         var changes = 0;
         session.DirectoryChanged += () => changes++;
 
-        session.WriteToScreen($"\x1b]7;file://{name}/home/jdoe\x07");
+        session.WriteToScreen($"\e]7;file://{name}/home/jdoe\x07");
         Assert.Equal(1, changes); // taken as another machine for now
         session.RecheckReportedDirectory(); // still unknown: nothing
         Assert.Null(session.ReportedDirectory);

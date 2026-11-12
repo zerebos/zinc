@@ -77,10 +77,10 @@ public sealed partial class MainWindow : Window
     internal sealed record WorkspaceTransfer(Workspace<TerminalTab> Workspace, string? CustomTitle, Windows.UI.Color? Color,
         WorkspaceFolder? Folder = null, string? Icon = null, int? Id = null);
 
-    private static int s_lastWorkspaceId, s_lastWindowId;
+    private static int _lastWorkspaceId, _lastWindowId;
 
     /// <summary>The window's number for zn while Zinc runs.</summary>
-    internal int Id { get; } = Interlocked.Increment(ref s_lastWindowId);
+    internal int Id { get; } = Interlocked.Increment(ref _lastWindowId);
 
     /// <summary>A title-bar tab and the workspace it shows.</summary>
     internal sealed class WorkspaceTab(TabViewItem item, Workspace<TerminalTab> workspace)
@@ -775,7 +775,7 @@ public sealed partial class MainWindow : Window
         var item = new TabViewItem();
         var tab = new WorkspaceTab(item, workspace)
         {
-            Id = id ?? Interlocked.Increment(ref s_lastWorkspaceId), CustomTitle = customTitle, Color = color, Folder = folder, Icon = icon,
+            Id = id ?? Interlocked.Increment(ref _lastWorkspaceId), CustomTitle = customTitle, Color = color, Folder = folder, Icon = icon,
         };
         tab.Header.SetIcon(WorkspaceIcons.Glyph(icon));
         if (_workspaceList == null)

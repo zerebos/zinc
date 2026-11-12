@@ -119,7 +119,7 @@ public sealed unsafe partial class TerminalSession
                     // only the press, and nushell (reedline) then takes the button as held and ignores the next clicks.
                     col = PromptClick.EventColumn(new ViewportCells(_terminal, _size.Columns, _size.Rows), col, row);
                     var y = mode == PromptClickMode.Events ? row + 1 : row - Math.Max(promptRow, 0) + 1;
-                    return Encoding.ASCII.GetBytes($"\x1b[<0;{col + 1};{y}M\x1b[<0;{col + 1};{y}m");
+                    return Encoding.ASCII.GetBytes($"\e[<0;{col + 1};{y}M\e[<0;{col + 1};{y}m");
                 default:
                     if (CursorInViewport() is not var (cursorCol, cursorRow))
                     {
@@ -131,10 +131,10 @@ public sealed unsafe partial class TerminalSession
                     var appCursor = GetMode(GhosttyMode.DecCkm);
                     var arrow = (left > 0, appCursor) switch
                     {
-                        (true, true) => "\x1bOD",
-                        (true, false) => "\x1b[D",
-                        (false, true) => "\x1bOC",
-                        (false, false) => "\x1b[C",
+                        (true, true) => "\eOD",
+                        (true, false) => "\e[D",
+                        (false, true) => "\eOC",
+                        (false, false) => "\e[C",
                     };
                     var keys = new StringBuilder();
                     for (var i = 0; i < left + right; i++)

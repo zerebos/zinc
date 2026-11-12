@@ -277,8 +277,8 @@ public class CliTests
     [Theory]
     [InlineData("ls\\r", "ls\r")]
     [InlineData("a\\tb\\nc", "a\tb\nc")]
-    [InlineData("\\e[A", "\x1b[A")]
-    [InlineData("\\x1b:q", "\x1b:q")]
+    [InlineData("\\e[A", "\e[A")]
+    [InlineData("\\x1b:q", "\e:q")]
     [InlineData("\\u00e9t\\u00e9", "été")]
     [InlineData("C:\\\\x", "C:\\x")]
     [InlineData("C:\\Users", "C:\\Users")]   // \U isn't an escape: it stays
@@ -347,10 +347,10 @@ public class CliTests
         Assert.Equal("line8\nline9", session.ReadText(2));
         Assert.Equal(13, session.ReadText(100).Split('\n').Length);
 
-        session.WriteToScreen("\x1b[2J\x1b[H\x1b[31mred\x1b[0m");
+        session.WriteToScreen("\e[2J\e[H\e[31mred\e[0m");
         Assert.Equal("red", session.ReadText()); // blank rows below don't count
         var styled = session.ReadText(styled: true);
         Assert.Contains("red", styled);
-        Assert.Contains("\x1b[", styled);
+        Assert.Contains("\e[", styled);
     }
 }

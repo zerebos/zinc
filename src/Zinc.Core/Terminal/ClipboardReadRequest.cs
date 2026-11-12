@@ -8,7 +8,7 @@ namespace Zinc.Terminal;
 /// </summary>
 public static class ClipboardReadRequest
 {
-    private static ReadOnlySpan<byte> Start => "\u001b]52;"u8;
+    private static ReadOnlySpan<byte> Start => "\e]52;"u8;
 
     /// <summary>The first request in <paramref name="data"/>: where it starts and where it ends (exclusive).</summary>
     public static bool TryFind(ReadOnlySpan<byte> data, out int start, out int end)

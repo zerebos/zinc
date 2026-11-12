@@ -336,7 +336,7 @@ public class ConfigTests : IDisposable
     {
         var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(1, 2, 3) } };
         using var session = new TerminalSession(20, 2, theme);
-        session.WriteToScreen("\x1b[31mX");
+        session.WriteToScreen("\e[31mX");
 
         // Read the rendered color back through the render state API.
         Assert.Equal(new GhosttyColorRgb(1, 2, 3), FirstCellForeground(session));
@@ -347,7 +347,7 @@ public class ConfigTests : IDisposable
     {
         var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(1, 2, 3) } };
         using var session = new TerminalSession(20, 2, theme);
-        session.WriteToScreen("\x1b[31mX");
+        session.WriteToScreen("\e[31mX");
 
         session.SetTheme(TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [1] = new(4, 5, 6) } });
         Assert.Equal(new GhosttyColorRgb(4, 5, 6), FirstCellForeground(session));

@@ -292,7 +292,7 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>Shows the preview's script afresh at the grid's size (resizing reflowed it into the scrollback).</summary>
     private void ReplayPreview(TerminalSession session, string script)
     {
-        session.WriteToScreen("\u001b[H\u001b[2J\u001b[3J"); // home, clear the screen, clear the scrollback
+        session.WriteToScreen("\e[H\e[2J\e[3J"); // home, clear the screen, clear the scrollback
         session.WriteToScreen(script);
         var m = _renderer.Metrics;
         PreviewHeightNeeded?.Invoke(session.RowsUsed() * m.Height + _config.PaddingTop + _config.PaddingBottom + 1);
@@ -732,9 +732,9 @@ public sealed partial class TerminalControl : UserControl
             // tab, which then closes on a key like a failed session, rather than take the app down.
             Log.Write($"pane: couldn't start {_commandLine}: {ex.Message}");
             _exited = true;
-            session.WriteToScreen($"\x1b[0;31mCouldn't start {_commandLine}\x1b[0m\r\n{ex.Message}\r\n\r\n" +
-                "\x1b[0;2mShell commands (dir, ls, cd) need a shell: run the shell and type them there. " +
-                "Press any key to close.\x1b[0m");
+            session.WriteToScreen($"\e[0;31mCouldn't start {_commandLine}\e[0m\r\n{ex.Message}\r\n\r\n" +
+                "\e[0;2mShell commands (dir, ls, cd) need a shell: run the shell and type them there. " +
+                "Press any key to close.\e[0m");
         }
     }
 
@@ -835,8 +835,8 @@ public sealed partial class TerminalControl : UserControl
         ExitCode = code;
         ExitedAndKept?.Invoke(code);
         _session.WriteToScreen(code == 0
-            ? "\r\n\x1b[0;2m[Process exited. Press any key to close.]\x1b[0m"
-            : $"\r\n\x1b[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\x1b[0m");
+            ? "\r\n\e[0;2m[Process exited. Press any key to close.]\e[0m"
+            : $"\r\n\e[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\e[0m");
     }
 
     // Held in a field, because a timer only a local references is collected and stops firing.
@@ -1094,7 +1094,7 @@ public sealed partial class TerminalControl : UserControl
     {
         if (_session is { HasExited: false } session && session.GetMode(GhosttyMode.FocusEvent))
         {
-            session.SendInput(focused ? "\x1b[I"u8 : "\x1b[O"u8, scrollToBottom: false);
+            session.SendInput(focused ? "\e[I"u8 : "\e[O"u8, scrollToBottom: false);
         }
     }
 }

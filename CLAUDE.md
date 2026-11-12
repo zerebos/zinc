@@ -39,7 +39,8 @@ compressed style of older comments or of this file, even though it's common here
 - Keep a `<summary>` when it says something the name doesn't (a unit, what null means, when the value changes). Drop
   one that only restates the name (`None.` on `None`). The build generates no documentation file, so a member without
   a summary causes no warning.
-- Wrap at about 120 columns. Up to about 125 is fine when it saves a line.
+- A comment that spans several lines wraps at about 120 columns. A comment that fits on one line stays on one line,
+  even a long one, when that reads better than three. Don't rewrap an existing comment only for its width.
 - The story behind a comment goes in the matching section of `.scratch/internals.md`.
 
 Before: `Not the card less the terminal: an animation cut short leaves the terminal at that one's end size, and it

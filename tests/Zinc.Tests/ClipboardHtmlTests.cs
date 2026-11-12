@@ -20,7 +20,7 @@ public class ClipboardHtmlTests
     [Fact]
     public void ColorsAreWrittenOutAndTheBlockHasTheTerminalsLook()
     {
-        var html = CopyAsHtml("\u001b[31mred\u001b[0m \u001b[1;38;2;10;200;30mbold\u001b[0m \u001b[4;44mund\u001b[0m", 15, 0)!;
+        var html = CopyAsHtml("\e[31mred\e[0m \e[1;38;2;10;200;30mbold\e[0m \e[4;44mund\e[0m", 15, 0)!;
 
         Assert.DoesNotContain("<style>", html);
         Assert.DoesNotContain("var(", html);
@@ -36,7 +36,7 @@ public class ClipboardHtmlTests
     [Fact]
     public void ReverseVideoSwapsTheColorsAndLinesBreakWithBr()
     {
-        var html = CopyAsHtml("one\r\ntwo \u001b[7mrev\u001b[0m \u001b[7;31;42mboth\u001b[0m", 15, 1)!;
+        var html = CopyAsHtml("one\r\ntwo \e[7mrev\e[0m \e[7;31;42mboth\e[0m", 15, 1)!;
 
         Assert.Contains("one<br>two", html);
         Assert.DoesNotContain("\n", html);
@@ -72,7 +72,7 @@ public class ClipboardHtmlTests
     [Fact]
     public void PaletteNamesInTheTextStayText()
     {
-        var html = CopyAsHtml("\u001b[31mvar(--vt-palette-1)\u001b[0m\r\n--vt-palette-1: #000000", 30, 1)!;
+        var html = CopyAsHtml("\e[31mvar(--vt-palette-1)\e[0m\r\n--vt-palette-1: #000000", 30, 1)!;
 
         Assert.Contains("<span style=\"color: #ff6b6b;\">var(--vt-palette-1)</span><br>--vt-palette-1: #000000", html);
     }

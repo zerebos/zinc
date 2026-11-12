@@ -26,7 +26,7 @@ public sealed partial class TerminalControl
     private static readonly Dictionary<Windows.System.VirtualKey, char> HandOffKeys = new()
     {
         [Windows.System.VirtualKey.Enter] = '\r',
-        [Windows.System.VirtualKey.Escape] = '\x1b',
+        [Windows.System.VirtualKey.Escape] = '\e',
         [Windows.System.VirtualKey.Tab] = '\t',
         [Windows.System.VirtualKey.Back] = '\b',
     };
