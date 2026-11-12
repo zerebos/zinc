@@ -54,23 +54,31 @@ runs directly.
 
 ## Sharing a build
 
-`pwsh scripts/release/release.ps1` makes a release in
-`dist\release` with [Velopack](https://velopack.io): `Zinc-win-Setup.exe` (a per-user install, no admin
-prompt), the update packages, `releases.win.json` (what installed copies check daily) and
-`Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are inside (about 77 MB). Installed copies
-update themselves (Settings > About > Updates) from the releases of the GitHub repository that
-`Directory.Build.props` names (`ZincRepositoryUrl`). `-UpdateSource <address>` builds in another place to look
-instead, which is a folder or a web address that holds the folder's contents.
-`-From <address>` fetches the previous release first so the new one also gets a small delta package.
-`README.txt` (from `scripts/release/package-readme.txt`) tells testers how to install past SmartScreen (the
-build isn't signed), how updates work, where settings and logs go, how to send a debug log and
-benchmark results with feedback, and how to remove it.
+Pushing a version tag makes a release. The release workflow (`.github/workflows/release.yml`) builds and tests
+the tagged commit, packs it with [Velopack](https://velopack.io) and publishes it under the repository's GitHub
+Releases: `Zinc-win-Setup.exe` (a per-user install, no admin prompt), the update packages, `releases.win.json`
+(what installed copies check daily) and `Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are
+inside (about 50 MB). The release's notes are CHANGELOG.md's entry for its version, so the workflow refuses a
+version without one, and a changelog with notes still under "Unreleased". It also attaches `zinc-reference.json`
+and `config.schema.json`, which describe that version's settings and actions. Started by hand, the workflow is
+a dry run: it builds and packs the same way and keeps the files with the run, without making a release.
 
-**Versions.** `ZincVersion` in `Directory.Build.props` is the release being worked toward. A build
-of the commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`); every other build is a dev
-build numbered by the repository's commit count (`0.1.0-dev.812+a1b2c3d`). It's shown in Settings >
-About, answered to programs asking the terminal's version (XTVERSION: `zinc 0.1.0-dev.812+a1b2c3d`),
-and in the exe's file properties.
+Installed copies update themselves (Settings > About > Updates) from the releases of the GitHub repository that
+`Directory.Build.props` names (`ZincRepositoryUrl`). A pre-release also gets later pre-releases, and a release
+gets releases only.
+
+`pwsh scripts/release/release.ps1` does the building and packing, into `dist\release`, and runs on your own
+machine too. `-UpdateSource <address>` builds in another place for installed copies to look, which is a folder or
+a web address that holds the folder's contents. `-From <address>` fetches the previous release first, so the new
+one also gets a small delta package. `README.txt` (from `scripts/release/package-readme.txt`) tells testers how to
+install past SmartScreen (the build isn't signed), how updates work, where settings and logs go, how to send a
+debug log and benchmark results with feedback, and how to remove it.
+
+**Versions.** `ZincVersion` in `Directory.Build.props` is the release being worked toward. A build of the
+commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`). A build of a commit tagged as a pre-release
+of it, such as `v0.1.0-rc.1`, is that pre-release (`0.1.0-rc.1+a1b2c3d`). Every other build is a dev build
+(`0.1.0-dev+a1b2c3d`), which is never released. The version is shown in Settings > About and answered to
+programs asking the terminal's version (XTVERSION: `zinc 0.1.0+a1b2c3d`).
 
 ## Configuration
 

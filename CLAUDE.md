@@ -217,14 +217,20 @@ and read state after the write (see `_titleDirty`).
   at startup). Reflection over framework types (JsonSerializer without source gen, etc.) can break only in a publish:
   check `warning IL` in a publish log, and test a publish, not bin/. `DropUnusedFromPublish` leaves out the .NET
   debugger's files and WebView2 (bring it back if a tab ever shows web content). `.scratch/size-audit.py <dir>`.
-- CHANGELOG.md (user-facing, docs/ux-writing.md voice; newest first; `## Unreleased` then `## 0.1.0-dev.N (date)`):
-  add to Unreleased with each user-visible change. Releasing (only when the user asks): rename Unreleased to the
-  version the user's NEXT commit makes (`git rev-list --count HEAD` + 1), add a new empty Unreleased, stage it and
-  propose "release 0.1.0-dev.N"; once the user has committed, `release.ps1 -Publish` (refuses without an entry for its
-  version or with anything left under Unreleased). **The dev number is the commit count, so it must stay above the last
-  published one** (`releases.win.json` on the update server): squashing or rewriting history lowers the count (dev.330
-  was published, then a squash made the next commit dev.330 again, which testers would never get). `-Publish` checks
-  and refuses, saying how many more commits it needs: tell the user, don't work around it.
+- CHANGELOG.md (user-facing, docs/ux-writing.md voice; newest first; `## Unreleased` then `## 0.1.0 (date)` per
+  release, older test builds as `## 0.1.0-dev.N (date)`): add to Unreleased with each user-visible change.
+- Releasing (only when the user asks). A release is a version tag, and the user makes and pushes it:
+  1. The version is `ZincVersion` from `Directory.Build.props` (`0.1.0`), or a pre-release of it (`0.1.0-rc.N`).
+  2. Rename Unreleased to `## <version> (date)`, add a new empty Unreleased above it, stage it and propose
+     "release <version>".
+  3. The user commits, tags the commit `v<version>` and pushes both. `.github/workflows/release.yml` then builds,
+     tests, packs and publishes it to GitHub Releases, marked as a pre-release when the version has an `-rc.N` part.
+  The workflow refuses a tag the build doesn't take as its version, a version that isn't above every earlier
+  release, a version without a changelog entry, and notes left under Unreleased. Tell the user what it refused,
+  don't work around it. Run by hand (`gh workflow run release.yml`, with the user's OK), it's a dry run that makes
+  no release. After a release, `ZincVersion` moves to the next one being worked toward.
+- `release.ps1 -Publish` uploads to the feed from before GitHub Releases. It's only for the last release there, the
+  one that moves testers' copies over to GitHub.
 - Tester builds and the installer: `scripts/release/release.ps1` (self-contained publish, Velopack pack, refuses a
   dirty tree unless -AllowDirty). **`.scratch/tools/install.ps1` and release.ps1 take the `Local\ZincPublish` mutex
   (they share obj\).** Smoke-test a publish with ZINC_CONFIG set to a fresh path. How it all works, and what went
