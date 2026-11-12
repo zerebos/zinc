@@ -183,21 +183,21 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>Test hook: observes every reply libghostty writes back to the PTY.</summary>
     internal Action<byte[]>? PtyReplyObserver;
 
-    /// <param name="environment">Variables to set (or, null, remove) for this child only.</param>
+    /// <param name="environment">
+    /// Variables to set (or, null, remove) for this child only, over <see cref="ChildEnvironment.Terminal"/>.
+    /// </param>
     public void Start(string commandLine, string? workingDirectory, ushort cols, ushort rows,
         IReadOnlyDictionary<string, string?>? environment = null)
     {
-        // Children inherit our environment; advertise what the terminal supports.
-        Environment.SetEnvironmentVariable("COLORTERM", "truecolor");
-        Environment.SetEnvironmentVariable("TERM_PROGRAM", "zinc");
-        // Launched from another terminal, we'd pass on its identity, and programs would pick
-        // features for it (e.g. image protocols for Windows Terminal instead of kitty graphics).
-        foreach (var name in (string[])["WT_SESSION", "WT_PROFILE_ID", "TERM_PROGRAM_VERSION", "KITTY_WINDOW_ID", "WEZTERM_PANE"])
+        // The child gets the terminal's variables through its own environment block. Zinc's process keeps the
+        // environment it was started with, so the other programs Zinc starts (an editor, Explorer) don't get them.
+        var child = new Dictionary<string, string?>(ChildEnvironment.Terminal, StringComparer.OrdinalIgnoreCase);
+        foreach (var (name, value) in environment ?? new Dictionary<string, string?>())
         {
-            Environment.SetEnvironmentVariable(name, null);
+            child[name] = value;
         }
 
-        Attach(new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, environment));
+        Attach(new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, child));
         _ptySentSize = ((short)cols, (short)rows); // (a handed-over console's size is unknown: Attach leaves it unset)
     }
 

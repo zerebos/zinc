@@ -39,13 +39,45 @@ public static partial class ChildEnvironment
     public static string Expand(string value, Func<string, string?> lookup) =>
         Variable().Replace(value, m => lookup(m.Groups[1].Value) ?? m.Value);
 
-    /// <summary>Zinc's own environment, by name (any case).</summary>
+    /// <summary>
+    /// What every program Zinc runs in a terminal gets on top of Zinc's own environment (null removes a variable). Two
+    /// variables say what the terminal supports. The others name a terminal Zinc itself was started from, and they're
+    /// removed because they would make programs pick features for that terminal (image protocols for Windows Terminal
+    /// instead of Kitty graphics).
+    /// </summary>
+    public static IReadOnlyDictionary<string, string?> Terminal { get; } = new Dictionary<string, string?>
+    {
+        ["COLORTERM"] = "truecolor",
+        ["TERM_PROGRAM"] = "zinc",
+        ["WT_SESSION"] = null,
+        ["WT_PROFILE_ID"] = null,
+        ["TERM_PROGRAM_VERSION"] = null,
+        ["KITTY_WINDOW_ID"] = null,
+        ["WEZTERM_PANE"] = null,
+    };
+
+    /// <summary>
+    /// The environment a program in a terminal starts from, by name (any case). It's Zinc's own process variables with
+    /// <see cref="Terminal"/> applied.
+    /// </summary>
     public static Dictionary<string, string> Ours()
     {
         var ours = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (System.Collections.DictionaryEntry e in Environment.GetEnvironmentVariables())
         {
             ours[(string)e.Key] = (string?)e.Value ?? "";
+        }
+
+        foreach (var (name, value) in Terminal)
+        {
+            if (value == null)
+            {
+                ours.Remove(name);
+            }
+            else
+            {
+                ours[name] = value;
+            }
         }
 
         return ours;

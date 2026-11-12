@@ -42,6 +42,28 @@ public class SessionTests
     }
 
     [Fact]
+    public async Task TheChildGetsTheTerminalsVariablesAndOurProcessKeepsItsOwn()
+    {
+        // As if the tests ran inside Windows Terminal.
+        var before = Environment.GetEnvironmentVariable("TERM_PROGRAM");
+        Environment.SetEnvironmentVariable("WT_SESSION", "outer");
+        try
+        {
+            // cmd leaves %NAME% as written when the variable isn't set.
+            using var s = new TestSession("cmd.exe /d /c echo [%TERM_PROGRAM%][%COLORTERM%][%WT_SESSION%]");
+            Assert.Equal(0u, await s.ExitCode);
+            Assert.Contains("[zinc][truecolor][%WT_SESSION%]", s.Session.ReadScreenText());
+
+            Assert.Equal(before, Environment.GetEnvironmentVariable("TERM_PROGRAM"));
+            Assert.Equal("outer", Environment.GetEnvironmentVariable("WT_SESSION"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WT_SESSION", null);
+        }
+    }
+
+    [Fact]
     public async Task NonZeroExitCodeIsReported()
     {
         using var s = new TestSession("cmd.exe /d /c exit 7");

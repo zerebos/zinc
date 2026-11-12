@@ -22,6 +22,16 @@ public sealed class EnvironmentTests : IDisposable
     }
 
     [Fact]
+    public void OursIsTheProcessEnvironmentWithTheTerminalsVariables()
+    {
+        var ours = ChildEnvironment.Ours();
+        Assert.Equal("zinc", ours["TERM_PROGRAM"]);
+        Assert.Equal("truecolor", ours["colorterm"]); // any case
+        Assert.DoesNotContain("TERM_PROGRAM_VERSION", ours.Keys);
+        Assert.Equal(Environment.GetEnvironmentVariable("SystemRoot"), ours["SystemRoot"]);
+    }
+
+    [Fact]
     public void FreshVariablesAddOrReplaceOursButRemoveNothing()
     {
         var ours = Vars(("PATH", "C:\\old"), ("SAME", "1"), ("ONLY_OURS", "kept"));
