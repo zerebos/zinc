@@ -5,15 +5,15 @@ using Zinc.Panes;
 
 namespace Zinc.Terminal;
 
-// The terminal's context menu (right-click = "menu", the default; Shift+F10 or the Menu key always): copy, paste and
-// find; the link or command that was clicked; split, new tab and close. Items run actions through Invoke, as their
-// keys do, and show those keys.
+// The terminal's context menu, opened by a right-click when right-click is "menu" (the default), and always by
+// Shift+F10 or the Menu key. It holds copy, paste and find, then the link or command that was clicked, then split, new
+// tab and close. Items run actions through Invoke, as their keys do, and show those keys.
 public sealed partial class TerminalControl
 {
     /// <summary>Where the right button went down, when its release should open the menu (Windows opens menus on release).</summary>
     private Windows.Foundation.Point? _menuOnRelease;
 
-    /// <summary>Opens the menu at <paramref name="at"/> (pane coordinates): about what's there, then the pane's own items.</summary>
+    /// <summary>Opens the menu at <paramref name="at"/> (pane coordinates), with items about what's there and then the pane's own.</summary>
     private void ShowContextMenu(Windows.Foundation.Point at)
     {
         if (_session is not { } session)
@@ -71,7 +71,7 @@ public sealed partial class TerminalControl
             }
         }
 
-        // The pane's own: these go to the window, as their keys do.
+        // The pane's own items, which go to the window, as their keys do.
         menu.Items.Add(new MenuFlyoutSeparator());
         Add(menu, "Split right", "", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right));
         Add(menu, "Split down", "", new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Down));
@@ -82,7 +82,7 @@ public sealed partial class TerminalControl
         menu.RunAfterClose().ShowAt(this, new FlyoutShowOptions { Position = at, ShowMode = FlyoutShowMode.Standard });
     }
 
-    /// <summary>The menu for the keyboard (Shift+F10, the Menu key): under the cursor, else at the pane's top left.</summary>
+    /// <summary>Opens the menu from the keyboard (Shift+F10, the Menu key), under the cursor or else at the pane's top left.</summary>
     private void ShowContextMenuAtCursor()
     {
         var m = _renderer.Metrics;
@@ -92,7 +92,7 @@ public sealed partial class TerminalControl
         ShowContextMenu(at);
     }
 
-    /// <summary>For tests (<c>test:menu:col:row</c>): the menu a right-click on that viewport cell opens.</summary>
+    /// <summary>Opens the menu a right-click on that viewport cell would, for tests (<c>test:menu:col:row</c>).</summary>
     internal void ShowContextMenuAtCell(int col, int row)
     {
         var m = _renderer.Metrics;
@@ -134,7 +134,7 @@ public sealed partial class TerminalControl
 
         if (shortcut != null)
         {
-            item.KeyboardAcceleratorTextOverride = shortcut; // shown only; the keys themselves are Keybindings'
+            item.KeyboardAcceleratorTextOverride = shortcut; // shown only, because Keybindings handles the keys themselves
         }
 
         return item;

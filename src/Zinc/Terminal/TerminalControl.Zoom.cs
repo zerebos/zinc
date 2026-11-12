@@ -7,7 +7,7 @@ using Microsoft.UI.Xaml.Media;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Zooming (keys, the palette, Ctrl+wheel): the font size changes for this pane, and a badge in
+/// Zooming (keys, the palette, Ctrl+wheel) changes the font size for this pane, and a badge in
 /// its middle shows the zoom against the configured size, fading out a moment after the last step.
 /// </summary>
 public sealed partial class TerminalControl
@@ -16,19 +16,25 @@ public sealed partial class TerminalControl
     private TextBlock? _zoomPercent;
     private TextBlock? _zoomPoints;
 
-    // Held in a field: a timer only a local references is collected and stops firing.
+    // Held in a field, because a timer only a local references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _zoomTimer;
 
-    /// <summary>This pane's zoom (<see cref="ZoomSteps"/>: 0 = 100%, each step 10% of the configured size).</summary>
+    /// <summary>
+    /// This pane's zoom in <see cref="ZoomSteps"/>, where 0 is 100% and each step is 10% of the configured size.
+    /// </summary>
     private int _zoomLevel;
 
-    /// <summary>The configured font size (DIPs), as the pane's size is clamped.</summary>
+    /// <summary>The configured font size (DIPs), clamped as the pane's size is.</summary>
     private float ConfiguredFontSize => Math.Clamp(_config.FontSizeDip, MinFontSize, MaxFontSize);
 
-    /// <summary>The text's size as shown (zoom included), in points: what a document pasted into uses.</summary>
+    /// <summary>
+    /// The text's size as shown (zoom included), in points, which is what a document it's pasted into uses.
+    /// </summary>
     private double FontPoints => ZoomSteps.Size(ConfiguredFontSize, _zoomLevel) * 0.75;
 
-    /// <summary>The font size for the current zoom level (after a config change too: the zoom stays, the base moves).</summary>
+    /// <summary>
+    /// The font size for the current zoom level. After a config change, the zoom level stays and the base size moves.
+    /// </summary>
     private float ZoomedFontSize()
     {
         _zoomLevel = ZoomSteps.Clamp(_zoomLevel, ConfiguredFontSize, MinFontSize, MaxFontSize);

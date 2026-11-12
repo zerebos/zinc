@@ -13,7 +13,7 @@ internal sealed record LoadedShaders(IReadOnlyList<CompiledShader> Shaders, IRea
 /// <summary>
 /// Reads, translates (GLSL to HLSL: <see cref="ShaderTranslator"/>) and compiles (D3DCompile) custom shaders off the UI
 /// thread, ~130 ms a shader. Each file is compiled once while it's unchanged (same size and time) and shared by every
-/// pane: a new tab, or a config reload, reuses it.
+/// pane, so a new tab or a config reload reuses it.
 /// </summary>
 internal static class ShaderLoader
 {
@@ -31,14 +31,15 @@ internal static class ShaderLoader
         """, "vs_5_0", out var error) ?? throw new InvalidOperationException(error));
 
     /// <summary>
-    /// A shader file was saved, created, deleted or renamed (a folder holding a loaded or wanted shader is watched; 300 ms
-    /// of quiet first: editors save in steps). On a thread-pool thread, with the file's full path.
+    /// A shader file was saved, created, deleted or renamed. Every folder holding a loaded or wanted shader is watched,
+    /// and the event waits for 300 ms of quiet first, because editors save in steps. It's raised on a thread-pool thread,
+    /// with the file's full path.
     /// </summary>
     public static event Action<string>? FileChanged;
 
     private static readonly Dictionary<string, FileSystemWatcher> Watchers = new(StringComparer.OrdinalIgnoreCase);
-    // Per changed file: its timer, and when it's due (an event re-arms it; the timer checks the due time itself, since
-    // a re-arm could land while the callback was already waiting for the lock and be lost).
+    // Per changed file, its timer and when it's due. An event re-arms the timer, and the timer checks the due time
+    // itself, because a re-arm could land while the callback was already waiting for the lock and be lost.
     private static readonly Dictionary<string, (Timer Timer, long Due)> Settling = new(StringComparer.OrdinalIgnoreCase);
     private const int SettleMs = 300;
 
@@ -172,7 +173,8 @@ internal static class ShaderLoader
             var translated = watch.Elapsed.TotalMilliseconds;
             if (Compile(hlsl, "ps_5_0", out var error) is not { } bytecode)
             {
-                // The translation's HLSL, refused: not the shader's fault as written, so its lines mean nothing to its author.
+                // Direct3D refused the translated HLSL. That isn't the fault of the shader as written, so the error's
+                // line numbers mean nothing to its author.
                 Log.Write($"shader: {name}: Direct3D refused the translation: {error}");
                 return (null, $"{name}: couldn't be compiled for Direct3D ({FirstLine(error)})");
             }
@@ -187,14 +189,14 @@ internal static class ShaderLoader
         }
         catch (Exception ex)
         {
-            // Anything else is this file's problem, not every pane's: a faulted task cached here would reach each new
-            // pane and each reload as a "something went wrong" notice.
+            // Anything else is this file's problem, not every pane's, because a faulted task cached here would reach
+            // each new pane and each reload as a "something went wrong" notice.
             Log.Crash($"shader {name}", ex);
             return (null, $"{name}: couldn't be compiled ({ex.Message})");
         }
     }
 
-    /// <summary>Shared access and a few tries: an editor may be saving it right now.</summary>
+    /// <summary>Reads with shared access and a few tries, because an editor may be saving the file right now.</summary>
     private static string Read(string file)
     {
         for (var attempt = 0; ; attempt++)

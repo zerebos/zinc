@@ -4,7 +4,7 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// The font that ships with Zinc, Cascadia Mono NF (Microsoft's Nerd Font build of Windows
-/// Terminal's font: prompt icons included), in Fonts\ next to the exe and used from there without
+/// Terminal's font, with prompt icons), in Fonts\ next to the exe and used from there without
 /// being installed. An installed copy of the same family wins.
 /// </summary>
 internal static class BundledFonts

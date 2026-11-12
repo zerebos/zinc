@@ -7,14 +7,14 @@ using Windows.Foundation;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Input methods (IME: Japanese, Chinese, Korean…). WinUI gives a custom control no text-input
+/// Input methods (IMEs, such as Japanese, Chinese and Korean ones). WinUI gives a custom control no text-input
 /// support of its own, so with <c>input-method</c> on, a focused pane's keyboard focus sits in a
 /// hidden TextBox at the terminal's cursor, which Windows' text services know how to talk to:
 /// <list type="bullet">
 /// <item>Keys reach the pane's usual handling first (<c>PreviewKeyDown</c>) and are marked handled, so
-/// the box never acts on them (Tab doesn't move focus); keys an input method takes (VK_PROCESSKEY,
-/// 229) or any key while it's composing go to the box untouched.</item>
-/// <item>Typed characters still come through the pane's character path; the box drops them.</item>
+/// the box never acts on them (Tab doesn't move focus). Keys an input method takes (VK_PROCESSKEY,
+/// 229), or any key while it's composing, go to the box untouched.</item>
+/// <item>Typed characters still come through the pane's character path, and the box drops them.</item>
 /// <item>While composing, the box shows the text being composed where the cursor is, in the
 /// terminal's font and colors (Windows draws its underlines and caret; the candidate window opens
 /// there). When the composition ends, its text is sent to the program like typing.</item>
@@ -33,7 +33,7 @@ public sealed partial class TerminalControl
 
     private bool IsFromInputMethodBox(object source) => _inputBox != null && ReferenceEquals(source, _inputBox);
 
-    /// <summary>Moves focus into the input box (made on first use); false with input methods off.</summary>
+    /// <summary>Moves focus into the input box (made on first use), or returns false with input methods off.</summary>
     private bool FocusInputMethodBox()
     {
         if (!_config.InputMethod || _previewScript != null)
@@ -64,8 +64,8 @@ public sealed partial class TerminalControl
             AcceptsReturn = false,
             IsHitTestVisible = false, // the pane takes the pointer
             Opacity = 0, // shown only while composing
-            // Focusable (Focus() refuses a control that isn't a tab stop); Tab itself never gets to
-            // move focus, as the pane's key handling takes it first.
+            // A tab stop, because Focus() refuses a control that isn't one. Tab itself never gets to
+            // move focus, because the pane's key handling takes it first.
             IsTabStop = true,
             UseSystemFocusVisuals = false,
         };
@@ -81,8 +81,8 @@ public sealed partial class TerminalControl
 
             // Keys the pane encodes or runs (Enter, Tab, arrows, shortcuts) are marked handled there,
             // so the box never acts on them (its Tab would move focus). Keys that type text are left
-            // to it: Windows' text services put that text in the box (real keystrokes don't come as
-            // characters to a focused text box), and BeforeTextChanging takes it from there.
+            // to the box, because Windows' text services put that text in the box (real keystrokes don't
+            // come as characters to a focused text box), and BeforeTextChanging takes it from there.
             HandleKeyDown(e);
         }), handledEventsToo: true);
         box.AddHandler(PreviewKeyUpEvent, new KeyEventHandler((_, e) =>
@@ -94,15 +94,15 @@ public sealed partial class TerminalControl
         }), handledEventsToo: true);
         box.AddHandler(CharacterReceivedEvent, new TypedEventHandler<UIElement, CharacterReceivedRoutedEventArgs>((_, e) =>
         {
-            // Text arrives as the box's text (below); only control characters are taken here.
+            // Text arrives as the box's text (below), so only control characters are taken here.
             if (!_composing && (e.Character < ' ' || e.Character == '\x7f'))
             {
                 HandleCharacter(e);
             }
         }), handledEventsToo: true);
 
-        // Text typed into the box (keys, an input method's direct mode, dead keys, posted characters):
-        // sent to the program, and kept out of the box, which holds only what's being composed.
+        // Text typed into the box (keys, an input method's direct mode, dead keys, posted characters) is
+        // sent to the program and kept out of the box, which holds only what's being composed.
         box.BeforeTextChanging += (_, e) =>
         {
             if (_composing || _clearingInput || _settling)
@@ -145,7 +145,7 @@ public sealed partial class TerminalControl
         box.TextCompositionChanged += (_, e) => PlaceInputBox();
         box.TextCompositionEnded += (_, e) =>
         {
-            // What was composed, as committed: typed into the program.
+            // What was composed, as committed, is typed into the program.
             var text = e.Length > 0 && e.StartIndex + e.Length <= box.Text.Length ? box.Text.Substring(e.StartIndex, e.Length) : box.Text;
             _composing = false;
             box.Opacity = 0;
@@ -156,14 +156,14 @@ public sealed partial class TerminalControl
                 ResetBlink();
             }
 
-            // Emptied once the text services are done: a change made during this event doesn't take
-            // (the next composition then started after the old text). Until then the box's changes
-            // are theirs (the commit settling), not typing.
+            // The box is emptied once the text services are done, because a change made during this
+            // event doesn't take, and the next composition would start after the old text. Until then,
+            // the box's changes are the text services' (the commit settling), not typing.
             _settling = true;
             DispatcherQueue.SafeEnqueue(() =>
             {
                 _settling = false;
-                if (!_composing) // (Korean: the next syllable may be composing already; cleared after it)
+                if (!_composing) // in Korean, the next syllable may be composing already, and the box is cleared after it
                 {
                     ClearInputBox();
                     Log.Write($"ime: box cleared ({box.Text.Length} left)");
@@ -173,7 +173,7 @@ public sealed partial class TerminalControl
             });
         };
 
-        // Its clear button would show over the terminal; it has no use here.
+        // The box's clear button would show over the terminal, and it has no use here.
         box.Loaded += (_, _) =>
         {
             if (FindChild(box, "DeleteButton") is FrameworkElement delete)
@@ -215,7 +215,7 @@ public sealed partial class TerminalControl
         var background = new SolidColorBrush(TerminalRenderer.ToColor(theme.Background));
         var foreground = new SolidColorBrush(TerminalRenderer.ToColor(theme.Foreground));
         var clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
-        // Lightweight styling: the box's own states (focused, pointer over) use these.
+        // Lightweight styling, which the box's own states (focused, pointer over) use.
         foreach (var state in new[] { "", "PointerOver", "Focused", "Disabled" })
         {
             box.Resources[$"TextControlBackground{state}"] = background;
@@ -232,7 +232,7 @@ public sealed partial class TerminalControl
         box.SelectionHighlightColor = new SolidColorBrush(TerminalRenderer.ToColor(theme.Foreground));
     }
 
-    /// <summary>At the terminal's cursor (where input methods compose and open their candidates).</summary>
+    /// <summary>Moves the box to the terminal's cursor, where input methods compose and open their candidates.</summary>
     private void PlaceInputBox()
     {
         if (_inputBox is not { } box || _renderer.CursorCell is not { } cell || _renderer.Metrics.Width <= 0)

@@ -9,7 +9,7 @@ using Vortice.DXGI;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Custom shaders (Ghostty/Shadertoy style) over a terminal's frame, on one device: the frame is drawn with Win2D into
+/// Custom shaders (Ghostty/Shadertoy style) over a terminal's frame, on one device. The frame is drawn with Win2D into
 /// an offscreen texture (<see cref="FrameFor"/>), then each shader runs over the previous one's picture with
 /// Direct3D 11 (a full-screen triangle, iChannel0 = the picture so far), the last into the swap chain's back buffer.
 /// Runs on Win2D's own device, between its drawing sessions.
@@ -24,7 +24,7 @@ internal sealed class ShaderPass : IDisposable
     private readonly ID3D11Buffer _constants;
     private readonly ID3D11SamplerState _sampler;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
-    // The terminal's picture (only ever drawn by the terminal: animation frames run the shaders over it again), and
+    // The terminal's picture (only the terminal draws it, and animation frames run the shaders over it again), and
     // two scratch targets the shaders between the first and the last write into, in turn.
     private CanvasRenderTarget? _frame, _scratchA, _scratchB;
     private int _frameCount;
@@ -37,7 +37,7 @@ internal sealed class ShaderPass : IDisposable
     /// <summary>Whether a shader changes over time on its own (redraws every refresh while it may animate).</summary>
     public bool UsesTime { get; }
 
-    /// <summary>The uniform values; the pass fills the time, size and focus ones itself.</summary>
+    /// <summary>The uniform values. The pass fills the time, size and focus ones itself.</summary>
     public ShaderUniforms Uniforms { get; } = new();
 
     public ShaderPass(CanvasDevice canvasDevice, IReadOnlyList<CompiledShader> shaders)
@@ -67,8 +67,8 @@ internal sealed class ShaderPass : IDisposable
     }
 
     /// <summary>
-    /// Whether the shaders' clock (iTime) runs. Paused while the animation is (an unfocused terminal): a frame drawn
-    /// meanwhile, because the terminal changed, then shows the shader where it stopped instead of jumping ahead.
+    /// Whether the shaders' clock (iTime) runs. It's paused while the animation is (an unfocused terminal), so a frame
+    /// drawn meanwhile because the terminal changed shows the shader where it stopped instead of jumping ahead.
     /// </summary>
     public void SetClock(bool running)
     {
@@ -86,7 +86,7 @@ internal sealed class ShaderPass : IDisposable
     public double Time => _clock.Elapsed.TotalSeconds;
 
     /// <summary>
-    /// Nothing moves (animation "never"): the clock is stopped, and what happens (a cursor move, focus) is stamped long
+    /// Whether nothing moves (animation "never"). The clock is stopped then, and what happens (a cursor move, focus) is stamped long
     /// before it, so effects timed from it (cursor trails, a focus fade) show as finished, not frozen at their start.
     /// </summary>
     public bool AtRest { get; set; }
@@ -94,7 +94,9 @@ internal sealed class ShaderPass : IDisposable
     /// <summary>The time an event is stamped with (iTimeCursorChange, iTimeFocus).</summary>
     public double EventTime => AtRest ? Time - 10_000 : Time;
 
-    /// <summary>The terminal gained or lost focus: iFocus, and iTimeFocus = when it was last gained (as Ghostty).</summary>
+    /// <summary>
+    /// The terminal gained or lost focus. This sets iFocus, and iTimeFocus to when focus was last gained (as Ghostty does).
+    /// </summary>
     public void SetFocus(bool focused)
     {
         if (focused && !_focused)
@@ -116,8 +118,8 @@ internal sealed class ShaderPass : IDisposable
 
     /// <summary>
     /// The offscreen frame for <paramref name="chain"/>'s size: draw the terminal into it, then <see cref="Run"/>.
-    /// <paramref name="fresh"/>: a new one (first, or another size), which has to be drawn; otherwise it still holds the
-    /// last picture, and the shaders may run over it again.
+    /// <paramref name="fresh"/> is true for a new one (the first, or another size), which has to be drawn. Otherwise it
+    /// still holds the last picture, and the shaders may run over it again.
     /// </summary>
     public CanvasRenderTarget FrameFor(CanvasSwapChain chain, out bool fresh) => Sized(ref _frame, chain, out fresh);
 
@@ -137,7 +139,7 @@ internal sealed class ShaderPass : IDisposable
 
     /// <summary>
     /// Runs the shaders over the frame into <paramref name="chain"/>'s back buffer (Present is the caller's), or into
-    /// <paramref name="into"/> (the chain's size: a still picture of the pane).
+    /// <paramref name="into"/> (the chain's size, for a still picture of the pane).
     /// </summary>
     public void Run(CanvasSwapChain chain, CanvasRenderTarget? into = null)
     {
@@ -161,7 +163,7 @@ internal sealed class ShaderPass : IDisposable
         _context.PSSetSampler(0, _sampler);
 
         // Picture so far -> next: from the frame, back and forth between the scratch targets, the last into the back
-        // buffer. Never into the frame: animation frames reuse it, and with 3+ shaders the effects compounded.
+        // buffer. Never into the frame, because animation frames reuse it, and with 3+ shaders the effects would compound.
         var source = frame;
         for (var i = 0; i < _pixels.Count; i++)
         {
@@ -182,7 +184,7 @@ internal sealed class ShaderPass : IDisposable
             source = target!;
         }
 
-        // The device's context is shared (Win2D, every pane): leave nothing of ours bound, so nothing outlives the pass.
+        // The device's context is shared (Win2D, every pane), so leave nothing of ours bound, so nothing outlives the pass.
         _context.VSSetShader(null);
         _context.PSSetShader(null);
         _context.PSSetConstantBuffer(1, null);
@@ -191,7 +193,7 @@ internal sealed class ShaderPass : IDisposable
 
     public void Dispose()
     {
-        // Null-tolerant: the constructor calls it after a failure partway.
+        // Null-tolerant, because the constructor calls it after a failure partway.
         _frame?.Dispose();
         _scratchA?.Dispose();
         _scratchB?.Dispose();

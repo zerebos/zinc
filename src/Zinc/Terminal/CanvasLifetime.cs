@@ -10,13 +10,13 @@ namespace Zinc.Terminal;
 /// Loaded and unregisters it only when an Unloaded brings its load count to exactly zero;
 /// nothing unregisters it when the canvas is destroyed. XAML sometimes reports a removal twice
 /// (see TerminalControl's canvas replacement), after which the count never returns to zero, and
-/// a canvas freed in that state leaves a dangling handler: the window's next XamlRoot change
-/// (minimize, restore, DPI) locks freed memory, which hung the app (2026-09-27 dump).
+/// a canvas freed in that state leaves a dangling handler. The window's next XamlRoot change
+/// (minimize, restore, DPI) then locks freed memory, which can hang the app.
 /// </para>
 /// <para>
 /// So every canvas is created here, its events are mirrored with Win2D's rules, and a retired
-/// canvas is held until an Unloaded unregisters it — for good, if that never happens (a small,
-/// rare leak: its device resources are released and its owner's handlers are removed).
+/// canvas is held until an Unloaded unregisters it, or for good if that never happens. That's a
+/// small, rare leak, because its device resources are released and its owner's handlers are removed.
 /// All on the UI thread.
 /// </para>
 /// </summary>
@@ -36,7 +36,7 @@ internal static class CanvasLifetime
 
     /// <summary>
     /// Canvases draw with the CPU (WARP) instead of the graphics card (<c>[window]
-    /// software-rendering</c>); set by the app on every config load, used by canvases created after.
+    /// software-rendering</c>). The app sets it on every config load, and canvases created after that use it.
     /// </summary>
     public static bool SoftwareRendering { get; set; }
 
@@ -54,8 +54,8 @@ internal static class CanvasLifetime
     public static int LoadCount(CanvasControl canvas) => States.TryGetValue(canvas, out var s) ? s.Loads : 0;
 
     /// <summary>
-    /// Done with <paramref name="canvas"/> (its owner removed its own handlers): forget it once
-    /// Win2D has unregistered it, which may be now or at a pending Unloaded.
+    /// Marks <paramref name="canvas"/> as done with, once its owner has removed its own handlers. It's
+    /// forgotten when Win2D has unregistered it, which may be now or at a pending Unloaded.
     /// </summary>
     public static void Retire(CanvasControl canvas)
     {
@@ -97,7 +97,7 @@ internal static class CanvasLifetime
         ForgetIfDone(canvas, s);
     }
 
-    /// <summary>Logs counts outside 0..1: XAML's events got unbalanced (worth knowing which path did it).</summary>
+    /// <summary>Logs counts outside 0..1, which mean XAML's events got unbalanced (worth knowing which path did it).</summary>
     private static void Note(CanvasControl canvas, State s, string what)
     {
         if (s.Loads is < 0 or > 1)

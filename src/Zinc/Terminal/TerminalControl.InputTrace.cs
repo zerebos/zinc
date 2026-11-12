@@ -4,20 +4,20 @@ using Zinc.Input;
 
 namespace Zinc.Terminal;
 
-// Typing's timings for the debug log (Core InputLatency): only while the log is on, so typing pays nothing otherwise.
+// Typing's timings for the debug log (Core's InputLatency), kept only while the log is on, so typing pays nothing otherwise.
 public sealed partial class TerminalControl
 {
     private InputLatency? _inputLatency;
 
-    /// <summary>The pane's typing trace while the debug log is on; null otherwise.</summary>
+    /// <summary>The pane's typing trace while the debug log is on, or null otherwise.</summary>
     private InputLatency? InputTrace => Log.Enabled ? _inputLatency ??= new InputLatency() : null;
 
     /// <summary>Milliseconds on a monotonic clock.</summary>
     private static double TraceNow => Stopwatch.GetTimestamp() * 1000.0 / Stopwatch.Frequency;
 
     /// <summary>
-    /// How long the message being handled (the key press) waited before the UI thread took it: Windows stamps each
-    /// message when it's queued (GetMessageTime). -1 if that stamp isn't usable.
+    /// How long the message being handled (the key press) waited before the UI thread took it, from the stamp Windows
+    /// puts on each message when it's queued (GetMessageTime). It's -1 if that stamp isn't usable.
     /// </summary>
     private static double QueuedFor()
     {

@@ -14,11 +14,11 @@ public sealed partial class TerminalControl
         }
     }
 
-    /// <summary>Test hook (ZINC_TEST_KEYS): a chord pressed here, as far as sequences go.</summary>
+    /// <summary>Test hook (ZINC_TEST_KEYS) that presses a chord here, as far as key sequences go.</summary>
     internal KeyStep PressForTest(KeyChord pressed) =>
         _session is { } session ? HandleSequenceKey(pressed, repeat: false, session) : KeyStep.NotMine;
 
-    /// <summary>Test hook: expanded, and kept so whatever the pointer does.</summary>
+    /// <summary>Test hook that expands the scroll bar and keeps it expanded whatever the pointer does.</summary>
     internal void PinScrollBarExpandedForTest()
     {
         _scrollBarPinned = true;

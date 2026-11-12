@@ -10,14 +10,13 @@ using Windows.UI;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// A pane's drawing surface with its own swap chain (<c>[window] low-latency-drawing</c>, experimental): a frame is
+/// A pane's drawing surface with its own swap chain (<c>[window] low-latency-drawing</c>, experimental). A frame is
 /// drawn and presented as soon as it's asked for, instead of waiting for WinUI's next render tick the way a
-/// <see cref="CanvasControl"/> does (a tester's "typing feels sluggish" next to Windows Terminal, which presents from
-/// its own swap chain too). At most one frame per refresh: a request right after a present waits for the next
-/// tick (<see cref="CompositionTarget.Rendering"/>), so heavy output never queues frames the screen can't show.
+/// <see cref="CanvasControl"/> does (Windows Terminal presents from its own swap chain too). It presents at most one frame per refresh. A request right after a present waits for the next tick
+/// (<see cref="CompositionTarget.Rendering"/>), so heavy output never queues frames the screen can't show.
 ///
-/// Uses Win2D's shared device, as the canvases do; a lost device brings a new one and new resources (what
-/// CanvasControl does on its own). No Loaded/Unloaded counting is involved: none of CanvasLifetime's workarounds apply.
+/// It uses Win2D's shared device, as the canvases do. A lost device brings a new one and new resources (what
+/// CanvasControl does on its own). No Loaded/Unloaded counting is involved, so none of CanvasLifetime's workarounds apply.
 /// </summary>
 internal sealed class SwapChainSurface
 {
@@ -26,12 +25,12 @@ internal sealed class SwapChainSurface
 
     /// <summary>
     /// How long a pane stays hidden (its tab not shown) before it gives its swap chain and shader pictures back
-    /// (<c>[window] free-hidden-memory</c>, <c>free-hidden-after</c>); null: never. Read when a pane is hidden.
+    /// (<c>[window] free-hidden-memory</c>, <c>free-hidden-after</c>), or null for never. It's read when a pane is hidden.
     /// </summary>
     public static TimeSpan? FreeHiddenAfter { get; set; } = TimeSpan.FromSeconds(60);
 
-    // Started when the panel unloads; if it's still hidden when this fires, the memory goes. Kept in a field: a timer
-    // only a local referenced would be collected and never fire.
+    // Started when the panel unloads. If it's still hidden when this fires, the memory goes. It's kept in a field,
+    // because a timer only a local references would be collected and never fire.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _freeTimer;
 
     /// <summary>
@@ -51,13 +50,13 @@ internal sealed class SwapChainSurface
     private readonly Func<double> _sinceOutput;
     private CanvasSwapChain? _chain;
 
-    // Custom shaders (SetShaders): the pass for the current device, rebuilt after a lost one.
+    // Custom shaders (SetShaders), with the pass for the current device, rebuilt after a lost one.
     private ShaderPass? _shader;
     private IReadOnlyList<CompiledShader> _shaders = [];
     private bool _animate, _focused, _clockRunning = true, _atRest;
 
-    // The terminal changed since its picture was last drawn for the shaders: an animation frame with nothing new only
-    // runs the shaders again over the last picture (redrawing the terminal each refresh cost ~30% of a core).
+    // The terminal changed since its picture was last drawn for the shaders. An animation frame with nothing new only
+    // runs the shaders again over the last picture, because redrawing the terminal every refresh is costly.
     private bool _stale = true;
     private bool _resourcesCreated, _drawQueued, _dirty, _presentedThisTick, _onRendering, _closed, _presenting;
 
@@ -66,7 +65,7 @@ internal sealed class SwapChainSurface
     private bool _windowHidden;
     private int _failures;
 
-    /// <param name="createResources">Device-bound resources (fonts, the atlas): once loaded, and after a lost device.</param>
+    /// <param name="createResources">Makes the device-bound resources (fonts, the atlas), once loaded and again after a lost device.</param>
     /// <param name="draw">Draws a frame.</param>
     /// <param name="scale">The window's scale (RasterizationScale).</param>
     /// <param name="sinceOutput">Milliseconds since the program's output last arrived.</param>
@@ -90,9 +89,10 @@ internal sealed class SwapChainSurface
             }
 
             Resize();
-            // Shown again (a tab selected, a pane moved): frames asked for while it was hidden weren't drawn. Drawn now,
-            // not queued: the swap chain still holds the picture from before it was hidden, and a queued frame let that
-            // show first, so whatever changed meanwhile (a prompt, a git status) visibly jumped into place.
+            // Shown again (a tab selected, a pane moved), and frames asked for while it was hidden weren't drawn. The
+            // frame is drawn now, not queued, because the swap chain still holds the picture from before it was hidden.
+            // A queued frame would let that show first, so whatever changed meanwhile (a prompt, a git status) would
+            // visibly jump into place.
             _freeTimer?.Stop();
             _stale = true;
             Present();
@@ -124,8 +124,9 @@ internal sealed class SwapChainSurface
     }
 
     /// <summary>
-    /// Still hidden: lets go of the swap chain (two full-size buffers) and the shader pass's pictures. Shown again,
-    /// Loaded's Resize makes a new chain and Invalidate draws its first frame (the glyphs are still in the shared atlas).
+    /// Lets go of the swap chain (two full-size buffers) and the shader pass's pictures while the pane is still hidden.
+    /// When it's shown again, Loaded's Resize makes a new chain and Invalidate draws its first frame (the glyphs are still
+    /// in the shared atlas).
     /// </summary>
     private void FreeHidden()
     {
@@ -146,7 +147,7 @@ internal sealed class SwapChainSurface
 
     /// <summary>
     /// Its window was hidden or minimized (true), or shown again. A loaded panel in a hidden window would otherwise go on
-    /// drawing. e.g. an animated shader at every refresh could cause constant GPU use behind a dismissed quick terminal.
+    /// drawing, for example an animated shader at every refresh, which keeps the GPU busy behind a dismissed quick terminal.
     /// </summary>
     public void SetWindowHidden(bool hidden)
     {
@@ -178,8 +179,8 @@ internal sealed class SwapChainSurface
     }
 
     /// <summary>
-    /// The pane as it looks now, shaders included, drawn into a new picture the size of the swap chain (null: nothing to
-    /// draw yet, or asked for during a frame). The caller disposes it.
+    /// The pane as it looks now, shaders included, drawn into a new picture the size of the swap chain. It's null when
+    /// there's nothing to draw yet, or when it's asked for during a frame. The caller disposes it.
     /// </summary>
     public CanvasRenderTarget? Picture()
     {
@@ -188,7 +189,7 @@ internal sealed class SwapChainSurface
             return null;
         }
 
-        _presenting = true; // (the same drawing; a frame asked for meanwhile waits, as in Present)
+        _presenting = true; // (the same drawing, so a frame asked for meanwhile waits, as in Present)
         try
         {
             var picture = new CanvasRenderTarget(Device, (float)chain.Size.Width, (float)chain.Size.Height, chain.Dpi);
@@ -218,7 +219,7 @@ internal sealed class SwapChainSurface
         }
     }
 
-    /// <summary>The custom shaders to run over every frame, in order (none: frames go straight to the swap chain).</summary>
+    /// <summary>The custom shaders to run over every frame, in order (with none, frames go straight to the swap chain).</summary>
     public void SetShaders(IReadOnlyList<CompiledShader> shaders)
     {
         if (_closed || shaders.SequenceEqual(_shaders))
@@ -260,8 +261,8 @@ internal sealed class SwapChainSurface
     }
 
     /// <summary>
-    /// Whether shaders that use time may redraw every refresh on their own (<c>[shaders] animation</c> and focus decide);
-    /// otherwise a frame is drawn only when the terminal changes.
+    /// Whether shaders that use time may redraw every refresh on their own (<c>[shaders] animation</c> and focus decide).
+    /// Otherwise a frame is drawn only when the terminal changes.
     /// </summary>
     public bool Animate
     {
@@ -279,7 +280,7 @@ internal sealed class SwapChainSurface
     // Not on a hidden tab (TabView unloads it) or in a hidden window where nobody would see the frames.
     private bool Animating => _animate && _shader is { UsesTime: true } && Panel.IsLoaded && !_windowHidden;
 
-    /// <summary>Whether nothing moves at all (animation "never": see <see cref="ShaderPass.AtRest"/>).</summary>
+    /// <summary>Whether nothing moves at all (animation "never", as <see cref="ShaderPass.AtRest"/> describes).</summary>
     public void SetAtRest(bool atRest)
     {
         _atRest = atRest;
@@ -289,7 +290,9 @@ internal sealed class SwapChainSurface
         }
     }
 
-    /// <summary>Whether the shaders' clock runs (paused while their animation is: see <see cref="ShaderPass.SetClock"/>).</summary>
+    /// <summary>
+    /// Whether the shaders' clock runs (paused while their animation is, as <see cref="ShaderPass.SetClock"/> describes).
+    /// </summary>
     public void SetClock(bool running)
     {
         _clockRunning = running;
@@ -310,7 +313,7 @@ internal sealed class SwapChainSurface
     public void Resize()
     {
         var (width, height, dpi) = ((float)Panel.ActualWidth, (float)Panel.ActualHeight, 96 * _scale());
-        // Compared in whole pixels (DIP floats differ by rounding at scales like 125%: a needless ResizeBuffers and
+        // Compared in whole pixels (DIP floats differ by rounding at scales like 125%, which would mean a needless ResizeBuffers and
         // full redraw on every window change), and at least a pixel each way (a 0-pixel swap chain throws).
         var (pixelsWide, pixelsHigh) = ((int)Math.Round(width * dpi / 96), (int)Math.Round(height * dpi / 96));
         if (_closed || pixelsWide < 1 || pixelsHigh < 1 || (_windowHidden && _chain == null))
@@ -336,7 +339,7 @@ internal sealed class SwapChainSurface
         }
         catch (Exception ex) when (Device.IsDeviceLost(ex.HResult))
         {
-            // Found lost here first (a resize after a driver reset, while idle): the rebuild resizes again.
+            // Found lost here first (a resize after a driver reset, while idle), and the rebuild resizes again.
             Log.Write($"pane: swap chain: device lost while resizing ({ex.HResult:X8})");
             Device.RaiseDeviceLost();
             return;
@@ -345,7 +348,7 @@ internal sealed class SwapChainSurface
         Invalidate();
     }
 
-    /// <summary>A frame is wanted: drawn at once, or at the next refresh if one was presented since the last.</summary>
+    /// <summary>Asks for a frame, drawn at once, or at the next refresh if one was presented since the last.</summary>
     public void Invalidate()
     {
         _stale = true;
@@ -367,7 +370,7 @@ internal sealed class SwapChainSurface
         {
             // A shell answers a key in several reads within a millisecond or so (PowerShell: 7-9). Presenting at the
             // first would show the screen before the letter arrived, and the frame with it would then wait for the
-            // next refresh: so wait until output pauses (QuietFor), at most MaxWait. Other messages run meanwhile.
+            // next refresh. So this waits until output pauses (QuietFor), at most MaxWait. Other messages run meanwhile.
             if (_sinceOutput() < QuietFor && Stopwatch.GetElapsedTime(asked).TotalMilliseconds < MaxWait)
             {
                 Panel.DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.Normal, DrawWhenQuiet);
@@ -377,7 +380,7 @@ internal sealed class SwapChainSurface
             _drawQueued = false;
             if (_presentedThisTick)
             {
-                // A refresh's frame went out while this waited (an animation tick): this one waits for the next.
+                // A refresh's frame went out while this waited (an animation tick), so this one waits for the next.
                 _dirty = true;
                 HookRendering();
                 return;
@@ -409,10 +412,10 @@ internal sealed class SwapChainSurface
 
         if (_presenting)
         {
-            // Asked for from inside this surface's own frame: a contended lock on the UI thread (the session's, while
-            // the reader parses) runs High-priority queued work during its wait, and Invalidate's DrawWhenQuiet is one.
-            // A second drawing session on the chain would throw ("The last drawing session ... must be disposed"): drawn
-            // at the next refresh instead, like a frame asked for right after a present.
+            // Asked for from inside this surface's own frame, because a contended lock on the UI thread (the session's,
+            // while the reader parses) runs High-priority queued work during its wait, and Invalidate's DrawWhenQuiet is
+            // one. A second drawing session on the chain would throw ("The last drawing session ... must be disposed"),
+            // so the frame is drawn at the next refresh instead, like a frame asked for right after a present.
             Log.Write("pane: swap chain: frame asked for during a frame (drawn at the next refresh)");
             _stale = true;
             _dirty = true;
@@ -441,7 +444,8 @@ internal sealed class SwapChainSurface
                 }
                 catch (Exception ex) when (!Device.IsDeviceLost(ex.HResult))
                 {
-                    // Not worth a blank pane: carry on without shaders (the log says why), drawn plainly this time.
+                    // A failed shader isn't worth a blank pane, so carry on without shaders (the log says why) and
+                    // draw this frame plainly.
                     Log.Crash("shader pass", ex);
                     _shader.Dispose();
                     _shader = null;
@@ -478,14 +482,16 @@ internal sealed class SwapChainSurface
         }
     }
 
-    /// <summary>Once per refresh while frames come: lets the next request present at once, or draws the one that waited.</summary>
+    /// <summary>
+    /// Runs once per refresh while frames come. It lets the next request present at once, or draws the one that waited.
+    /// </summary>
     private void OnRendering(object? sender, object e)
     {
         _presentedThisTick = false;
         if (Animating)
         {
             _dirty = false;
-            Present(); // a shader that uses time: a frame every refresh
+            Present(); // a shader that uses time gets a frame every refresh
         }
         else if (_dirty)
         {
@@ -494,7 +500,7 @@ internal sealed class SwapChainSurface
         }
         else
         {
-            UnhookRendering(); // idle: no per-refresh work until the next frame
+            UnhookRendering(); // idle, so no per-refresh work until the next frame
         }
     }
 
@@ -520,8 +526,8 @@ internal sealed class SwapChainSurface
     {
         Panel.DispatcherQueue.SafeEnqueue(() =>
         {
-            // One loss is raised several times (each pane's draw, each surface), and every raise queues this: only the
-            // first, from the device in use, rebuilds; the rest would each subscribe again to the new device.
+            // One loss is raised several times (each pane's draw, each surface), and every raise queues this. Only the
+            // first, from the device in use, rebuilds, because the rest would each subscribe again to the new device.
             if (_closed || !ReferenceEquals(sender, Device))
             {
                 return;
@@ -540,7 +546,7 @@ internal sealed class SwapChainSurface
         });
     }
 
-    /// <summary>The pane closed: lets go of the swap chain and the device's event.</summary>
+    /// <summary>Lets go of the swap chain and the device's event when the pane closes.</summary>
     public void Close()
     {
         _closed = true;

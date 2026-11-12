@@ -28,10 +28,10 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 {
     private Config _config;
 
-    /// <summary>Where frame times go while a pane is measured (ZINC_PERF, the benchmark); null otherwise.</summary>
+    /// <summary>Where frame times go while a pane is measured (ZINC_PERF, the benchmark), or null otherwise.</summary>
     internal FramePerf? Perf { get; set; }
 
-    /// <summary>The settings drawn with (font family, padding); replaced on a config reload.</summary>
+    /// <summary>The settings drawn with (font family, padding), replaced on a config reload.</summary>
     public Config Config
     {
         get => _config;
@@ -48,38 +48,38 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     private readonly nint _renderState, _rowIterator, _rowCells;
     private readonly CanvasTextFormat?[] _formats = new CanvasTextFormat?[4];
 
-    // The same, centered in a cell (characters drawn on their own): setting a format's alignment per draw unrealized it,
-    // and realizing one can pump messages (GlyphAtlas.FormatFor says why that's fatal mid-frame).
+    // The same formats, centered in a cell (for characters drawn on their own). Setting a format's alignment per draw
+    // would unrealize it, and realizing one can pump messages (GlyphAtlas.FormatFor says why that's fatal mid-frame).
     private readonly CanvasTextFormat?[] _centered = new CanvasTextFormat?[4];
 
-    // The same fonts, as the glyph atlas makes its own formats from them (it's shared: it mustn't hold a pane's).
+    // The same fonts, as the glyph atlas makes its own formats from them (it's shared, so it mustn't hold a pane's).
     private readonly GlyphAtlas.TextStyle[] _textStyles = new GlyphAtlas.TextStyle[4];
     private readonly CanvasFontFace?[] _faces = new CanvasFontFace?[4];
 
-    // [font] fallback: per variant, each family found (its text style and face), tried in order for characters the font
-    // lacks; which one draws each character is remembered (-1: none, Windows picks).
+    // The [font] fallback families that were found, per variant (each with its text style and face), tried in order for
+    // characters the font lacks. Which one draws each character is remembered, with -1 for none, where Windows picks.
     private readonly List<(GlyphAtlas.TextStyle Style, CanvasFontFace Face)>[] _fallbacks = [[], [], [], []];
     private readonly Dictionary<(int Codepoint, int Variant), int> _fallbackFor = [];
     private readonly Dictionary<(uint, int), int> _glyphCache = new();
-    // The first 2,048 codepoints (Latin, Greek, Cyrillic...) per variant: glyph index + 1, 0 = not looked up yet.
-    // Every cell of every frame asks; an array beats the dictionary's tuple hashing.
+    // The first 2,048 codepoints (Latin, Greek, Cyrillic and more) per variant, holding the glyph index + 1, or 0 when
+    // it's not looked up yet. Every cell of every frame asks, so an array beats the dictionary's tuple hashing.
     private readonly int[]?[] _glyphFast = new int[]?[4];
 
     // The bundled Cascadia Mono NF, tried before Windows' font fallback for cell-filling shapes
     // the configured font lacks (it covers most of Symbols for Legacy Computing, which no Windows
-    // font does: flow draws its tabs with them). Its cell at our font size, for fitting them.
+    // font does, and flow draws its tabs with them). The fields below hold its cell at our font size, for fitting them.
     private readonly CanvasFontFace?[] _bundledFaces = new CanvasFontFace?[4];
     private readonly Dictionary<(uint, int), int> _bundledGlyphCache = new();
     private float _bundledAdvance, _bundledLineHeight, _bundledBaseline;
 
-    // Ghostty's sprites (box drawing, blocks, Legacy Computing, Powerline, Braille: Sprites.cs),
-    // one white coverage bitmap per codepoint at the current cell size (null: drew nothing),
+    // Ghostty's sprites (box drawing, blocks, Legacy Computing, Powerline, Braille, from Sprites.cs),
+    // one white coverage bitmap per codepoint at the current cell size (null when it drew nothing),
     // tinted per cell by a sprite batch. This row's sprite cells wait in _rowSprites.
     private readonly Dictionary<uint, (CanvasBitmap Bitmap, int X, int Y)?> _sprites = new();
 
     // The cell size _sprites were drawn for. SetFont clears them, but a frame can still be drawn before it has the new
-    // size (loading a font lets the UI thread's queue run): moved to a 125% monitor, lines kept their 100% width and
-    // showed a gap in every cell.
+    // size (loading a font lets the UI thread's queue run). Without this, a window moved to a 125% monitor would draw
+    // lines at their 100% width, with a gap in every cell.
     private CellMetrics _spritesFor;
     private readonly List<(int Column, uint Codepoint, Color Color)> _rowSprites = [];
     private bool _spriteBatchSupported;
@@ -92,22 +92,22 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     private KittyPlaceholders.Cell?[] _placeholders = [];
     private bool _rowHasPlaceholders;
 
-    // The frame's rows, all read before anything is drawn: the backgrounds go first, as one bitmap
+    // The frame's rows, all read before anything is drawn, because the backgrounds go first, as one bitmap
     // (DrawBackgrounds), then each row's text and the rest. _cells, _placeholders and _rowHasPlaceholders
-    // point at the row being read or drawn; character data is one buffer for the frame (_codepointsUsed).
+    // point at the row being read or drawn. Character data is one buffer for the frame (_codepointsUsed).
     private Cell[][] _frameCells = [];
     private KittyPlaceholders.Cell?[][] _framePlaceholders = [];
     private bool[] _frameHasPlaceholders = [];
     private int[] _frameCounts = [];
     private int _frameColumns, _columns, _codepointsUsed;
 
-    /// <summary>One pixel per cell (premultiplied BGRA): its background, transparent for the default one.</summary>
+    /// <summary>One pixel per cell (premultiplied BGRA) holding its background, transparent for the default one.</summary>
     private byte[] _bgPixels = [];
     private CanvasBitmap? _bgBitmap;
 
-    // Text through the glyph atlas: each frame's glyphs (and box-drawing sprites) are collected while the rows
+    // Text through the glyph atlas. Each frame's glyphs (and box-drawing sprites) are collected while the rows
     // are drawn, then copied in one sprite batch. A device that can't batch sprites draws glyph runs instead.
-    // The shared atlas this pane draws from (GlyphAtlases), and what it was picked by; null until the first frame.
+    // The shared atlas this pane draws from (GlyphAtlases), and the key it was picked by, null until the first frame.
     private GlyphAtlas _atlas = new();
     private GlyphAtlases.Key? _atlasKey;
     private bool _batching;
@@ -144,15 +144,15 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     /// <summary>The regular face's family as XAML text can name it (the bundled font by its file), for the IME's box.</summary>
     public string TextFontFamily { get; private set; } = "Consolas";
 
-    /// <summary>The cursor's cell in the viewport at the last frame (null: off screen), where input methods compose.</summary>
+    /// <summary>The cursor's cell in the viewport at the last frame (null when off screen), where input methods compose.</summary>
     public (int Column, int Row)? CursorCell { get; private set; }
 
-    /// <summary>What custom shaders read from the last frame (palette, colors, the cursor as drawn); null: not kept.</summary>
+    /// <summary>What custom shaders read from the last frame (palette, colors, the cursor as drawn), or null when not kept.</summary>
     public ShaderFrame? ForShaders { get; set; }
 
     public bool HasResources => _brush != null && Metrics.Width > 0;
 
-    // The grid's top-left corner (DIPs): the padding, plus half the spare room with padding-balance (SetGridOrigin).
+    // The grid's top-left corner (DIPs), which is the padding plus half the spare room with padding-balance (SetGridOrigin).
     private float? _gridLeft, _gridTop;
     private float PadLeft => _gridLeft ?? _config.PaddingLeft;
     private float PadTop => _gridTop ?? _config.PaddingTop;
@@ -265,7 +265,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 HorizontalAlignment = CanvasHorizontalAlignment.Center,
             };
 
-            // Realized now, not in a frame (each one's first layout may pump messages: GlyphAtlas.FormatFor).
+            // Realized now, not in a frame (each one's first layout may pump messages, as GlyphAtlas.FormatFor explains).
             using (new CanvasTextLayout(device, "M", _formats[v], 100, 100))
             using (new CanvasTextLayout(device, "M", _centered[v], 100, 100))
             {
@@ -277,7 +277,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             var matches = faces.GetMatchingFonts(_fontFamily, weight, FontStretch.Normal, style).Fonts;
             _faces[v] = matches.Count > 0 ? matches[0] : _faces[0];
 
-            // (Not when it is the font: what that lacks, it lacks.)
+            // (Not when it is the font, because what that lacks, it lacks.)
             var bundledMatches = bundled ? null : BundledFonts.Set(italic)?.GetMatchingFonts(BundledFonts.Family, weight, FontStretch.Normal, style).Fonts;
             _bundledFaces[v] = bundledMatches is { Count: > 0 } ? bundledMatches[0] : null;
 
@@ -342,7 +342,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         }
     }
 
-    /// <summary>Find results, oldest first (screen rows); highlighted where on screen.</summary>
+    /// <summary>Find results, oldest first (screen rows), highlighted where they're on screen.</summary>
     public IReadOnlyList<SearchMatch>? SearchMatches { get; set; }
 
     /// <summary>Index into <see cref="SearchMatches"/> of the selected match (drawn stronger).</summary>
@@ -351,7 +351,10 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     public static readonly Color MatchColor = Color.FromArgb(0x60, 0xFF, 0xD5, 0x4A);
     public static readonly Color CurrentMatchColor = Color.FromArgb(0xC0, 0xFF, 0x96, 0x1A);
 
-    /// <summary>A Find highlight: <c>find-highlight</c> / <c>find-highlight-current</c> (solid), else Zinc's own (see-through).</summary>
+    /// <summary>
+    /// A Find highlight's color, from <c>find-highlight</c> / <c>find-highlight-current</c> (solid), or else Zinc's own
+    /// (see-through).
+    /// </summary>
     public static Color MatchColorFor(Config config, bool current) =>
         (current ? config.SearchSelectedBackground : config.SearchBackground) is { } chosen
             ? ToColor(chosen)
@@ -360,7 +363,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     /// <summary>The palette's colors 8-15 this frame (bold-is-bright).</summary>
     private readonly Color[] _bright = new Color[8];
 
-    /// <summary>The link under the pointer while Ctrl is held; drawn underlined.</summary>
+    /// <summary>The link under the pointer while Ctrl is held, drawn underlined.</summary>
     public LinkMatch? HoverLink { get; set; }
 
     /// <summary>Draws one frame. Returns whether the cursor is visible and blinking.</summary>
@@ -380,8 +383,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 return false;
             }
 
-            // Synchronized output: while a program holds the screen, draw the frame captured when
-            // the hold began (CaptureHeldFrame); give up on a hold that lasts over a second.
+            // Synchronized output. While a program holds the screen, draw the frame captured when
+            // the hold began (CaptureHeldFrame), and give up on a hold that lasts over a second.
             if (session.RenderHeld && Environment.TickCount64 - session.RenderHeldSince >= RenderHoldTimeoutMs)
             {
                 Log.Write("render hold: released after a second (the program never ended it)");
@@ -413,8 +416,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
         UpdateImageCache(ds);
 
-        // The render state is a snapshot, so the rest runs without the terminal's lock; only a
-        // hold beginning (on the reader thread) may refresh it meanwhile, hence _stateLock.
+        // The render state is a snapshot, so the rest runs without the terminal's lock. Only a
+        // hold beginning (on the reader thread) may refresh it meanwhile, which is what _stateLock guards against.
         lock (_stateLock)
         {
             return DrawSnapshot(ds, rows, presentation);
@@ -427,7 +430,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     private readonly object _stateLock = new();
 
     /// <summary>
-    /// A program began holding the screen: keep what's there now. Called by the session on the
+    /// A program began holding the screen, so this keeps what's there now. Called by the session on the
     /// reader thread, under its lock (TerminalSession.RenderHoldBegan).
     /// </summary>
     public void CaptureHeldFrame(TerminalSession session)
@@ -495,7 +498,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         var perf = Perf;
         var t = perf != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
 
-        // Every row first (the backgrounds are drawn before any text)...
+        // Every row is read first, because the backgrounds are drawn before any text.
         var cols = Math.Max(_columns, _cells.Length);
         EnsureFrame(rows, cols);
         _codepointsUsed = 0;
@@ -513,18 +516,19 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         DrawBackgrounds(ds, read, cols);
         if (perf != null) t = perf.Mark(1, t);
 
-        // ...then each row's highlights and text (into the frame's sprite batch where the device can batch sprites), the batch,
+        // Then each row's highlights and text (into the frame's sprite batch where the device can batch sprites), the batch,
         // and each row's decorations and cursor on top.
         _batching = _spriteBatchSupported;
-        // Left over only if a frame failed halfway (OnDraw catches): its sprites may point into pages since disposed
-        // (a device lost), which would fail every frame after.
+        // Left over only if a frame failed halfway (OnDraw catches it). Its sprites may point into pages disposed since
+        // (a lost device), which would fail every frame after.
         _frameSprites.Clear();
         _rowSprites.Clear();
         _ligatureGlyphs.Clear();
         if (_batching)
         {
-            // To 1/64 of a pixel: the padding in points (1pt = 1.333... DIPs) plus whole pixels came out 0.33333206 at one
-            // size and 0.33333302 at another, a new atlas (every glyph drawn again) for most sizes of a window resize.
+            // Rounded to 1/64 of a pixel, because the padding in points (1pt = 1.333... DIPs) plus whole pixels differs by
+            // float noise from one size to the next, which would mean a new atlas (every glyph drawn again) for most sizes
+            // of a window resize.
             var padX = MathF.Round(PadLeft * m.Scale * 64) / 64;
             var padY = MathF.Round(PadTop * m.Scale * 64) / 64;
             _gridX = (int)MathF.Floor(padX);
@@ -540,7 +544,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 _atlasKey = key;
             }
 
-            _atlas.Trim(); // before Prepare: a cleared atlas takes the metrics again
+            _atlas.Trim(); // before Prepare, because a cleared atlas takes the metrics again
             _atlas.Prepare(m, padX - _gridX, padY - _gridY);
         }
 
@@ -642,7 +646,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         Overline = 32,
         Wide = 64,
         SpacerTail = 128,
-        Placeholder = 256, // kitty graphics Unicode placeholder: an image slice, not text
+        Placeholder = 256, // a kitty graphics Unicode placeholder, which is an image slice, not text
         Selected = 512, // in the selection (ligatures break at its edges)
     }
 
@@ -748,7 +752,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 cell.HasBg = true;
             }
 
-            // Bold: palette colors 0-7 in their bright versions, the default color in bold-color.
+            // Bold draws palette colors 0-7 in their bright versions, and the default color in bold-color.
             if ((cell.Flags & CellFlags.Bold) != 0)
             {
                 if (fgTag == 1 && (fgValue & 0xFF) < 8 && Config.BoldIsBright)
@@ -761,8 +765,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 }
             }
 
-            // Selection: the scheme's (or config's) selection colors, else inverse video, which
-            // works with any theme.
+            // The selection uses the scheme's (or config's) selection colors, or else inverse video,
+            // which works with any theme.
             var selected = hasSelection && x >= sel.StartX && x <= sel.EndX;
             if (selected)
             {
@@ -836,13 +840,11 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     }
 
     /// <summary>
-    /// Every cell's background in one draw: a bitmap with one pixel per cell, stretched over the grid without
-    /// smoothing (cells are whole device pixels, so each pixel covers exactly one cell). It replaced a rectangle
-    /// per run of same-colored cells (thousands of Direct2D calls on a busy screen). Measured 2026-10-02: the
-    /// backgrounds went from ~2 ms to ~0.1 ms a frame, but ~1.5 ms of that was Direct2D work it defers, which now
-    /// lands on the text: ~3% overall. The point is the order it sets up: every background before any text, which
-    /// drawing text in one batch (a glyph atlas) needs. The default background is transparent here: the Clear
-    /// (with background-opacity) shows.
+    /// Every cell's background in one draw, as a bitmap with one pixel per cell, stretched over the grid without
+    /// smoothing (cells are whole device pixels, so each pixel covers exactly one cell). That's a little cheaper
+    /// overall than a rectangle per run of same-colored cells (thousands of Direct2D calls on a busy screen), but the
+    /// point is the order it sets up. Every background is drawn before any text, which drawing text in one batch (a
+    /// glyph atlas) needs. The default background is transparent here, so the Clear (with background-opacity) shows.
     /// </summary>
     private void DrawBackgrounds(CanvasDrawingSession ds, int rows, int cols)
     {
@@ -852,7 +854,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         }
 
         var size = rows * cols * 4;
-        if (_bgPixels.Length != size) // exactly the bitmap's size: no copy per frame
+        if (_bgPixels.Length != size) // exactly the bitmap's size, so there's no copy per frame
         {
             _bgPixels = new byte[size];
         }
@@ -905,7 +907,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         var runLen = 0;
         var runVariant = 0;
         Color runColor = default;
-        var shaped = ShapeRow(count, row); // ligatures: the glyphs shaping picked, where they differ
+        var shaped = ShapeRow(count, row); // for ligatures, the glyphs shaping picked where they differ
 
         for (var x = 0; x < count; x++)
         {
@@ -954,8 +956,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             {
                 if (shaped && _shaped[x] != 0)
                 {
-                    // A ligature's glyph can reach several cells to its left or right, past an atlas tile: drawn
-                    // directly, after the batch (TerminalRenderer.Ligatures.cs).
+                    // A ligature's glyph can reach several cells to its left or right, past an atlas tile, so it's
+                    // drawn directly, after the batch (TerminalRenderer.Ligatures.cs).
                     _ligatureGlyphs.Add((x, row, glyph, variant, cell.Fg));
                     continue;
                 }
@@ -1005,14 +1007,14 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         }
 
         var ascent = (int)MathF.Round(m.Baseline * m.Scale);
-        // Lines as thick as the font's underline in device pixels, rounded up: Ghostty's rule
+        // Lines as thick as the font's underline in device pixels, rounded up, which is Ghostty's rule
         // (Metrics.zig: box_thickness = max(1, ceil(underline thickness))).
         var underline = _faces[0] is { UnderlineThickness: > 0 } face ? face.UnderlineThickness * _fontSize : _fontSize / 14;
         var thickness = _config.AdjustedBoxThickness((int)MathF.Max(1, MathF.Ceiling(underline * m.Scale)));
         (CanvasBitmap, int, int)? sprite = null;
         if (Sprites.Draw(codepoint, (int)m.WidthPx, ascent, (int)m.HeightPx - ascent, thickness) is { } image)
         {
-            // White, premultiplied: the batch's tint makes it the cell's color.
+            // White and premultiplied, so the batch's tint makes it the cell's color.
             var pixels = new byte[image.Width * image.Height * 4];
             for (var i = 0; i < image.Coverage.Length; i++)
             {
@@ -1082,7 +1084,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             return;
         }
 
-        // Direct2D's grayscale contrast depends on the text's lightness: dark text has its own tiles.
+        // Direct2D's grayscale contrast depends on the text's lightness, so dark text has its own tiles.
         var dark = 0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B < 128;
         var tile = _atlas.Get(ds, face, _fontSize, glyph, variant, dark);
 
@@ -1092,8 +1094,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     }
 
     /// <summary>
-    /// A character the font lacks, from the atlas like a glyph (CJK, symbols; emoji in color). False: drawn the old way
-    /// (a cell-filling shape from the bundled font, or no format yet).
+    /// Adds a character the font lacks from the atlas, like a glyph (CJK and symbols, and emoji in color). Returns false
+    /// when it's drawn the old way instead (a cell-filling shape from the bundled font, or no format yet).
     /// </summary>
     private bool AddFallback(CanvasDrawingSession ds, ref Cell cell, int column, int row)
     {
@@ -1129,7 +1131,10 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         return true;
     }
 
-    /// <summary>The style a character the font lacks is drawn in: the first [font] fallback family that has it, else the font's own (Windows picks).</summary>
+    /// <summary>
+    /// The style a character the font lacks is drawn in, which is the first [font] fallback family that has it, or else
+    /// the font's own (where Windows picks).
+    /// </summary>
     private GlyphAtlas.TextStyle FallbackStyle(int codepoint, int variant)
     {
         var fallbacks = _fallbacks[variant];
@@ -1148,8 +1153,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     }
 
     /// <summary>
-    /// Whether a fallback character shows in color: emoji presentation (VS16, a ZWJ sequence, a keycap) or a wide
-    /// pictograph. Narrow symbols like U+2714 stay text, and CJK is never color (as Windows Terminal draws them).
+    /// Whether a fallback character shows in color, which it does for emoji presentation (VS16, a ZWJ sequence, a keycap)
+    /// or a wide pictograph. Narrow symbols like U+2714 stay text, and CJK is never color (as Windows Terminal draws them).
     /// </summary>
     private static bool IsEmoji(int codepoint, string? cluster, bool wide)
     {
@@ -1219,7 +1224,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         var width = (cell.Flags & CellFlags.Wide) != 0 ? 2 * m.Width : m.Width;
         using var layout = new CanvasTextLayout(ds, text, _centered[cell.FontVariant]!, width, m.Height);
         // Color glyphs only for emoji presentation. Default-emoji characters are
-        // East Asian Wide (two cells); narrow symbols like U+2714 are text unless
+        // East Asian Wide (two cells). Narrow symbols like U+2714 are text unless
         // followed by VS16 (U+FE0F), matching how Windows Terminal renders them.
         var emoji = (cell.Flags & CellFlags.Wide) != 0 || text.Contains('️');
         layout.Options = emoji ? CanvasDrawTextOptions.EnableColorFont : CanvasDrawTextOptions.Default;
@@ -1233,8 +1238,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     /// <summary>
     /// A cell-filling shape (box drawing, blocks, Symbols for Legacy Computing) the configured
     /// font lacks, from the bundled Cascadia Mono NF, stretched from Cascadia's cell to ours so
-    /// it meets its neighbours. Only those: other characters keep Windows' fallback (as in
-    /// Windows Terminal). False if it isn't one, or Cascadia lacks it too.
+    /// it meets its neighbors. Only those, because other characters keep Windows' fallback (as in
+    /// Windows Terminal). Returns false if it isn't one, or Cascadia lacks it too.
     /// </summary>
     private bool DrawBundled(CanvasDrawingSession ds, ref Cell cell, int x, float top)
     {
@@ -1260,7 +1265,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         var left = PadLeft + x * m.Width;
         _brush!.Color = cell.Fg;
         var glyphs = new[] { new CanvasGlyph { Index = glyph, Advance = _bundledAdvance } };
-        // Half a pixel past the cell on every side: the anti-aliased edges of neighbouring
+        // Half a pixel past the cell on every side, so the anti-aliased edges of neighboring
         // shapes overlap instead of leaving a hairline between them.
         var bleed = 0.5f / m.Scale;
         var saved = ds.Transform;
@@ -1271,7 +1276,10 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         return true;
     }
 
-    /// <summary>Box drawing, block elements and Symbols for Legacy Computing: shapes drawn edge to edge of the cell.</summary>
+    /// <summary>
+    /// Whether a codepoint is box drawing, a block element or a Symbol for Legacy Computing, which are shapes drawn edge
+    /// to edge of the cell.
+    /// </summary>
     private static bool FillsCell(uint codepoint) =>
         codepoint is >= 0x2500 and <= 0x259F or >= 0x1FB00 and <= 0x1FBFF;
 
@@ -1325,7 +1333,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                     stale.Bitmap.Dispose();
                 }
 
-                // 96 DPI: one bitmap DIP per image pixel, so source rects are in pixels.
+                // 96 DPI gives one bitmap DIP per image pixel, so source rects are in pixels.
                 var bitmap = CanvasBitmap.CreateFromBytes(device, pixels, p.ImageWidth, p.ImageHeight,
                     DirectXPixelFormat.R8G8B8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
                 _bitmaps[p.ImageId] = (p.Generation, bitmap);
@@ -1353,8 +1361,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             return;
         }
 
-        // Matches are sorted and don't overlap, so their end rows are sorted too: find the first
-        // ending on or after this row, then walk those that start on or before it.
+        // Matches are sorted and don't overlap, so their end rows are sorted too. This finds the first
+        // ending on or after this row, then walks those that start on or before it.
         var row = _viewportTop + (ulong)y;
         int lo = 0, hi = matches.Count;
         while (lo < hi)
@@ -1385,7 +1393,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         KittyPlaceholders.Runs(_placeholders.AsSpan(0, count), _runs);
         foreach (var run in _runs)
         {
-            // The run's virtual placement: the one it names, else the image's first.
+            // The run's virtual placement, which is the one it names, or else the image's first.
             var placement = _images.Find(p => p.Virtual && p.ImageId == run.ImageId &&
                                               (run.PlacementId == 0 || p.PlacementId == run.PlacementId));
             if (!placement.Virtual || !_bitmaps.TryGetValue(run.ImageId, out var entry) ||
@@ -1482,9 +1490,9 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 break;
             default:
                 ds.FillRectangle(left, top, width, m.Height, color);
-                if (x < count && _cells[x].CpLen > 0 && color.A == 255) // see-through: the character shows as it is
+                if (x < count && _cells[x].CpLen > 0 && color.A == 255) // see-through, so the character shows as it is
                 {
-                    // Redraw the covered glyph in the cursor-text color, else the cell's background.
+                    // Redraw the covered glyph in the cursor-text color, or else the cell's background.
                     ref var cell = ref _cells[x];
                     var fg = cell.Fg;
                     cell.Fg = Config.Theme.CursorText is { } text ? ToColor(text) : cell.HasBg ? cell.Bg : defaultBg;

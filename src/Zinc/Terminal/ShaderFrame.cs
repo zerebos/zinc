@@ -20,7 +20,10 @@ public sealed class ShaderFrame
     /// <summary>Whether the terminal shows a cursor (a program may hide it).</summary>
     public bool CursorVisible { get; set; }
 
-    /// <summary>Whether this frame drew one (not in a blink's off phase); the fields below are from the last one drawn.</summary>
+    /// <summary>
+    /// Whether this frame drew the cursor, which it doesn't in a blink's off phase. The fields below are from the last
+    /// frame that drew it.
+    /// </summary>
     public bool CursorDrawn { get; set; }
 
     public Rect Cursor { get; set; }

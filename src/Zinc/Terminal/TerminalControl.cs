@@ -33,17 +33,13 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>What device-bound resources (fonts, text layouts) are made with.</summary>
     private Microsoft.Graphics.Canvas.ICanvasResourceCreator Creator => _swap?.Device ?? (Microsoft.Graphics.Canvas.ICanvasResourceCreator)_canvas!;
 
-    /// <summary>
-    /// Its window was hidden or minimized (true), or shown again. i.e., no frames meanwhile, and the swap chain's memory goes
-    /// as a hidden tab's does. So the blink stops but the first frame back starts it again.
-    /// </summary>
     private Microsoft.UI.Xaml.Controls.Image? _still;
 
     /// <summary>
-    /// Shows the terminal as a still picture (true) instead of its swap chain, until false. A pane that another one grows
-    /// over during maximize or restore: XAML's z-order doesn't reliably order swap chains against each other, and some
-    /// covered panes' terminals drew over the growing one (2026-10-16, a 2x2 layout). A picture is ordinary XAML content.
-    /// It's drawn once, shaders included (an animated one holds still meanwhile).
+    /// Shows the terminal as a still picture (true) instead of its swap chain, until false. This is for a pane that another
+    /// one grows over during maximize or restore, because XAML doesn't reliably order swap chains against each other, so a
+    /// covered pane's terminal can draw over the growing one. A picture is ordinary XAML content. It's drawn once, shaders
+    /// included (an animated one holds still meanwhile).
     /// </summary>
     public void ShowStill(bool still)
     {
@@ -64,7 +60,8 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        // (A pane coming back from behind a maximized one is still collapsed until layout runs: the size it last had.)
+        // A pane coming back from behind a maximized one is still collapsed until layout runs, so it uses the size it
+        // last had.
         var (width, height) = swap.Panel.ActualWidth > 0 && swap.Panel.ActualHeight > 0
             ? ((float)swap.Panel.ActualWidth, (float)swap.Panel.ActualHeight)
             : ((float)LaidOutSize.Width, (float)LaidOutSize.Height);
@@ -110,6 +107,10 @@ public sealed partial class TerminalControl : UserControl
         }
     }
 
+    /// <summary>
+    /// Its window was hidden or minimized (true), or shown again. While it's hidden, no frames are drawn, and the swap
+    /// chain's memory goes as a hidden tab's does. So the blink stops, and the first frame back starts it again.
+    /// </summary>
     public void SetWindowHidden(bool hidden)
     {
         _swap?.SetWindowHidden(hidden);
@@ -152,7 +153,9 @@ public sealed partial class TerminalControl : UserControl
 
     public event Action<string>? TitleChanged;
 
-    /// <summary>The shell reported a new working directory (<see cref="ReportedDirectory"/>); on the UI thread.</summary>
+    /// <summary>
+    /// The shell reported a new working directory (<see cref="ReportedDirectory"/>). Raised on the UI thread.
+    /// </summary>
     public event Action? DirectoryChanged;
 
     /// <summary>
@@ -162,13 +165,13 @@ public sealed partial class TerminalControl : UserControl
     public Func<ActionInvocation, bool>? ActionHandler { get; set; }
 
     /// <summary>
-    /// What the tab is called (<see cref="ShellTitle"/>): with <c>shell-titles</c>, the folder at the prompt and the command
-    /// while one runs; else the title the program set; "" for the profile's name.
+    /// What the tab is called (<see cref="ShellTitle"/>). With <c>shell-titles</c>, it's the folder at the prompt and the
+    /// command while one runs. Otherwise it's the title the program set, or "" for the profile's name.
     /// </summary>
     public string Title => ShellTitle.Choose(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
         RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand, UserHome);
 
-    /// <summary><see cref="Title"/> is the shell's folder (a tab label then shortens from its start).</summary>
+    /// <summary>Whether <see cref="Title"/> is the shell's folder, which a tab label then shortens from its start.</summary>
     public bool TitleIsFolder => ShellTitle.ChoosesFolder(_config.ShellTitles, _config.ProgramTitles, _session?.AtPrompt, CurrentFolder,
         RunningCommand?.Text, RunningCommand?.Started, DateTime.UtcNow, _programTitle, _programTitleSinceCommand);
 
@@ -184,7 +187,7 @@ public sealed partial class TerminalControl : UserControl
 
     private HeaderTitle? _shownHeaderTitle;
 
-    // Held in a field: a timer only a local references is collected and stops firing.
+    // Held in a field, because a timer only a local references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _headerTimer;
 
     private static readonly string UserHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -252,7 +255,7 @@ public sealed partial class TerminalControl : UserControl
     public string? ReportedDirectory => _session?.ReportedDirectory;
 
     /// <summary>
-    /// Where the shell is, for showing (title, tab switcher, command center, zn): the reported folder, but none while
+    /// Where the shell is, for showing (title, tab switcher, command center, zn). It's the reported folder, but null while
     /// the shell is on another machine (ssh). What decides where new terminals start uses
     /// <see cref="ReportedDirectory"/>, which keeps the folder you ran ssh from.
     /// </summary>
@@ -261,10 +264,14 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>The terminal is done: the child exited cleanly, or the user dismissed a failure.</summary>
     public event Action? CloseRequested;
 
-    /// <summary>The program ended and the pane stays (close-on-exit kept it), with its exit code; on the UI thread.</summary>
+    /// <summary>
+    /// The program ended and the pane stays (close-on-exit kept it), with its exit code. Raised on the UI thread.
+    /// </summary>
     public event Action<uint>? ExitedAndKept;
 
-    /// <summary>The ended program's exit code while the pane stays; null while it runs (or if it never started).</summary>
+    /// <summary>
+    /// The ended program's exit code while the pane stays, or null while it runs (or if it never started).
+    /// </summary>
     public uint? ExitCode { get; private set; }
 
     public TerminalControl(Config config, string commandLine, string? workingDirectory)
@@ -276,7 +283,7 @@ public sealed partial class TerminalControl : UserControl
     private string? _previewScript;
 
     /// <summary>
-    /// A preview's script laid out at its grid: the height (DIPs) it needs to show all of it, its padding included. It
+    /// A preview's script was laid out at its grid, with the height (DIPs) it needs to show all of it, padding included. It
     /// can't be scrolled, so taller rows (line height) or a narrow window, which wrap or push its lines up, tell the
     /// host to grow it.
     /// </summary>
@@ -292,8 +299,8 @@ public sealed partial class TerminalControl : UserControl
     }
 
     /// <summary>
-    /// A terminal that runs nothing and shows <paramref name="script"/> (the settings' preview):
-    /// drawn like any pane, cursor as if focused, not interactive. <see cref="ApplyConfig"/> updates it.
+    /// A terminal that runs nothing and shows <paramref name="script"/> (the settings' preview).
+    /// It's drawn like any pane, with the cursor as if focused, and isn't interactive. <see cref="ApplyConfig"/> updates it.
     /// </summary>
     public static TerminalControl Preview(Config config, string script) => new(config, "", null)
     {
@@ -374,13 +381,14 @@ public sealed partial class TerminalControl : UserControl
                 _xamlRoot.Changed += OnXamlRootChanged;
             }
 
-            // Every load, not just a new window's: a tab detached from the tree while its window changed monitors
-            // missed the change (cheap when nothing did).
+            // Every load, not just a new window's, because a tab detached from the tree while its window changed
+            // monitors misses the change. This is cheap when nothing changed.
             UpdateScale();
         };
     }
 
-    // Out of the tree (a group's hidden tab) there's no XamlRoot: keep the scale it has rather than fall to 100%.
+    // Out of the tree (a group's hidden tab) there's no XamlRoot, so the pane keeps the scale it has rather than falling
+    // to 100%.
     private float DisplayScale => (float)(XamlRoot?.RasterizationScale ?? (_renderer.Metrics.Scale > 0 ? _renderer.Metrics.Scale : 1.0));
 
     private CanvasControl CreateCanvas()
@@ -395,7 +403,9 @@ public sealed partial class TerminalControl : UserControl
         return canvas;
     }
 
-    /// <summary>Done with a canvas: our handlers off (so it doesn't keep this pane alive), then retired.</summary>
+    /// <summary>
+    /// Done with a canvas, so our handlers come off it (so it doesn't keep this pane alive), and then it's retired.
+    /// </summary>
     private void RetireCanvas(CanvasControl canvas)
     {
         canvas.CreateResources -= OnCreateResources;
@@ -411,10 +421,10 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>
     /// Win2D draws a canvas only while its Loaded count exceeds its Unloaded count. XAML can
     /// report one removal twice (e.g. a terminal taken out of a pane that was itself just
-    /// detached), after which the canvas never draws again — the pane looks frozen, even
+    /// detached), after which the canvas never draws again, so the pane looks frozen, even
     /// through resizes. If a Loaded leaves the count at zero or below, swap in a fresh canvas.
-    /// The session, scrollback and everything else stay; only the drawing surface is replaced.
-    /// The old canvas can't simply be dropped: see <see cref="CanvasLifetime"/>.
+    /// The session, scrollback and everything else stay, and only the drawing surface is replaced.
+    /// The old canvas can't simply be dropped (see <see cref="CanvasLifetime"/>).
     /// </summary>
     private void OnCanvasLoaded(object sender, RoutedEventArgs e)
     {
@@ -433,10 +443,10 @@ public sealed partial class TerminalControl : UserControl
     }
 
     /// <summary>
-    /// The other way a canvas stops: an extra Unloaded while it stays on screen, so no Loaded follows to catch it above.
-    /// Closing the shown tab of a restored pane did it (2026-10-03): the tab behind it, not drawn since the restore, got
-    /// a Loaded and an Unloaded as the pane was rebuilt, and showed only its cursor's outline until you switched away and
-    /// back. Checked once the layout has settled: still in the window with Win2D's count at zero means it's stuck.
+    /// The other way a canvas stops is an extra Unloaded while it stays on screen, so no Loaded follows to catch it above.
+    /// For example, when the shown tab of a restored pane closes, the tab behind it (not drawn since the restore) can get
+    /// a Loaded and an Unloaded as the pane is rebuilt. This is checked once the layout has settled, and a canvas still in
+    /// the window with Win2D's count at zero is stuck.
     /// </summary>
     private void OnCanvasUnloaded(object sender, RoutedEventArgs e)
     {
@@ -473,7 +483,7 @@ public sealed partial class TerminalControl : UserControl
         return false;
     }
 
-    /// <summary>A fresh canvas in the old one's place: the session, scrollback and everything else stay.</summary>
+    /// <summary>Puts a fresh canvas in the old one's place, and the session, scrollback and everything else stay.</summary>
     private void ReplaceCanvas(string why)
     {
         Log.Write($"pane: {why}; replacing it");
@@ -492,7 +502,7 @@ public sealed partial class TerminalControl : UserControl
 
     private void OnCreateResources(CanvasControl sender, CanvasCreateResourcesEventArgs args) => CreateResourcesOn(sender, args.Reason.ToString());
 
-    /// <summary>Device-bound resources: the first time, and after a lost device.</summary>
+    /// <summary>Makes the device-bound resources, the first time and after a lost device.</summary>
     private void CreateResourcesOn(Microsoft.Graphics.Canvas.ICanvasResourceCreator creator, string reason)
     {
         Log.Write($"pane: CreateResources ({reason})");
@@ -523,15 +533,16 @@ public sealed partial class TerminalControl : UserControl
         UpdateGrid();
     }
 
-    // The grid's top-left corner in DIPs (the padding, balanced or not): what pointer positions are measured from.
+    // The grid's top-left corner in DIPs (the padding, balanced or not), which pointer positions are measured from.
     private float _gridLeft, _gridTop;
 
     /// <summary>The size the terminal last had its grid laid out at (kept while it's collapsed, which skips sizing).</summary>
     public Windows.Foundation.Size LaidOutSize { get; private set; }
 
     /// <summary>
-    /// The next resize that changes the grid goes to the shell at once instead of once the size settles (a layout
-    /// animation holds the terminal at one size, so there is only the one). False drops a request not used.
+    /// The next resize that changes the grid goes to the shell at once instead of once the size settles. A layout
+    /// animation holds the terminal at one size, so there's only the one resize. Setting false drops a request that
+    /// wasn't used.
     /// </summary>
     public bool ResizeAtOnce
     {
@@ -545,7 +556,7 @@ public sealed partial class TerminalControl : UserControl
     {
         if (_closing.IsCancellationRequested)
         {
-            return; // closed: never (re)start a session, never touch the disposed renderer
+            return; // the pane closed, so never (re)start a session or touch the disposed renderer
         }
 
         var m = _renderer.Metrics;
@@ -572,7 +583,7 @@ public sealed partial class TerminalControl : UserControl
         }
         else
         {
-            // Resize even when the grid is unchanged: the cell pixel size
+            // Resize even when the grid is unchanged, because the cell pixel size
             // (reported to apps via XTWINOPS/mouse pixels) may have changed.
             _session.Resize(cols, rows, m.WidthPx, m.HeightPx, atOnce: resized && _resizeAtOnce);
             _resizeAtOnce &= !resized;
@@ -585,14 +596,14 @@ public sealed partial class TerminalControl : UserControl
         Redraw();
     }
 
-    /// <summary>The canvas's color before its first frame: the background, as see-through as it's drawn.</summary>
+    /// <summary>The canvas's color before its first frame, which is the background, as see-through as it's drawn.</summary>
     private static Windows.UI.Color ClearColor(Config config)
     {
         var c = TerminalRenderer.ToColor(config.Theme.Background);
         return Windows.UI.Color.FromArgb((byte)(255 * config.BackgroundOpacity), c.R, c.G, c.B);
     }
 
-    /// <summary>A console Windows handed over (default terminal): attached instead of starting a program.</summary>
+    /// <summary>A console Windows handed over (default terminal), which is attached instead of starting a program.</summary>
     public Zinc.Pty.ConPty? HandedOver { get; set; }
 
     private void StartSession(ushort cols, ushort rows)
@@ -610,8 +621,9 @@ public sealed partial class TerminalControl : UserControl
 
         var dq = DispatcherQueue;
         session.OutputProcessed += RequestRedraw;
-        // Synchronized output: keep the frame from when a program starts drawing one; if it never
-        // finishes, redraw once the renderer's timeout has passed (no more output would ask).
+        // Synchronized output keeps the frame from when a program starts drawing one. If the program
+        // never finishes, the pane redraws once the renderer's timeout has passed, because no more
+        // output would ask for a frame.
         session.RenderHoldBegan = () => _renderer.CaptureHeldFrame(session);
         session.RenderHoldChanged += held => dq.SafeEnqueue(() =>
         {
@@ -622,7 +634,7 @@ public sealed partial class TerminalControl : UserControl
                 _holdTimer.Start();
             }
         });
-        // One notice until the title is taken (TerminalSession.TakeTitle): a program retitling itself on every
+        // One notice until the title is taken (TerminalSession.TakeTitle), so a program retitling itself on every
         // line costs one read per UI tick, not one per change.
         session.TitleChanged += () => dq.SafeEnqueue(() =>
         {
@@ -664,8 +676,9 @@ public sealed partial class TerminalControl : UserControl
 
         if (ShellDirectory.IsWsl(_commandLine))
         {
-            // The distro's wsl.conf, read now rather than at the first link: a host name of its own makes its
-            // folder reports count (LocalHosts). One that came in before it was known is taken now.
+            // The distro's wsl.conf is read now rather than at the first link, because a host name of its own makes
+            // its folder reports count (LocalHosts). A folder report that came in before the host name was known is
+            // taken now.
             System.Threading.Tasks.Task.Run(() =>
             {
                 var context = ShellEnvironment.LinkContextFor(_commandLine);
@@ -685,8 +698,9 @@ public sealed partial class TerminalControl : UserControl
 
         try
         {
-            // The program's environment: Windows' variables as they are now (a PATH changed since Zinc started), then the
-            // config's; shell integration and zn add theirs on top, each reading the variables as the program gets them.
+            // The program's environment is Zinc's own, then, with reload-environment on, Windows' variables as they are
+            // now (a PATH changed since Zinc started), then the config's. Shell integration and zn add theirs on top,
+            // each reading the variables as the program gets them.
             var ours = Zinc.Pty.ChildEnvironment.Ours();
             var environment = Zinc.Pty.ChildEnvironment.Changes(ours, _config.ReloadEnvironment ? Zinc.Pty.ChildEnvironment.Fresh() : null,
                 _config.EnvironmentVariables);
@@ -727,7 +741,7 @@ public sealed partial class TerminalControl : UserControl
     /// <summary>OSC 52 access per the settings (null = denied).</summary>
     private void ApplyClipboardPermissions(TerminalSession session)
     {
-        // Writes arrive mid-parse on the reader thread: set the clipboard on the UI thread.
+        // Writes arrive mid-parse on the reader thread, so the clipboard is set on the UI thread.
         var dq = DispatcherQueue;
         session.ClipboardWriter = _config.ClipboardWrite ? text => dq.SafeEnqueue(() => ClipboardText.Set(text)) : null;
         session.ClipboardReader = _config.ClipboardRead != ClipboardAccess.Deny ? ClipboardText.ReadNow : null;
@@ -787,8 +801,8 @@ public sealed partial class TerminalControl : UserControl
         ApplyShaders(config);
         if (_renderer.HasResources)
         {
-            // Anything SetFont reads: the faces, formats and cell size are made there (weights and fallbacks too:
-            // without them here, a weight changed live showed only after the next family change).
+            // Anything SetFont reads, because the faces, formats and cell size are made there. That includes the
+            // weights and fallbacks, or a weight changed live would show only after the next family change.
             if (old.FontFamily != config.FontFamily || old.FontSize != config.FontSize || old.AdjustCellHeight != config.AdjustCellHeight ||
                 old.FontWeight != config.FontWeight || old.BoldWeight != config.BoldWeight || old.FontFallback != config.FontFallback)
             {
@@ -825,7 +839,7 @@ public sealed partial class TerminalControl : UserControl
             : $"\r\n\x1b[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\x1b[0m");
     }
 
-    // Held in a field: a timer only a local references is collected and stops firing.
+    // Held in a field, because a timer only a local references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _holdTimer;
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer CreateHoldTimer()
@@ -837,13 +851,15 @@ public sealed partial class TerminalControl : UserControl
         return timer;
     }
 
-    /// <summary>When the program's output last arrived (Stopwatch ticks; the swap chain waits for a pause in it).</summary>
+    /// <summary>
+    /// When the program's output last arrived, in Stopwatch ticks. The swap chain waits for a pause in it.
+    /// </summary>
     private long _lastOutputAt;
 
     private void RequestRedraw()
     {
         Volatile.Write(ref _lastOutputAt, System.Diagnostics.Stopwatch.GetTimestamp());
-        _inputLatency?.Output(TraceNow); // on the reader thread: the shell's output just arrived
+        _inputLatency?.Output(TraceNow); // on the reader thread, as the shell's output arrives
 
         // Coalesce bursts of PTY output into a single invalidate per UI tick.
         if (Interlocked.Exchange(ref _invalidatePending, 1) == 0)
@@ -868,10 +884,10 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        _closing.Cancel(); // a clipboard question still open: the answer is no (and UpdateGrid/UpdateScale stop)
+        _closing.Cancel(); // a clipboard question still open gets no for an answer, and UpdateGrid and UpdateScale stop
         StopShaders();
         _blinkTimer.Stop();
-        // The window's events would otherwise reach a closed pane (a monitor change re-ran SetFont on the disposed
+        // The window's events would otherwise reach a closed pane (a monitor change would rerun SetFont on the disposed
         // renderer) and keep it alive for the window's life.
         if (_xamlRoot != null)
         {
@@ -884,20 +900,20 @@ public sealed partial class TerminalControl : UserControl
             _swap.Panel.SizeChanged -= OnCanvasSizeChanged;
         }
 
-        // A pane that never started (a restored tab never shown) still has a renderer and a surface to free; only the
+        // A pane that never started (a restored tab never shown) still has a renderer and a surface to free. Only the
         // session's own teardown depends on there being one.
         if (_session is { } session)
         {
             _session = null;
-            // The gesture holds references into the terminal: free it first.
+            // The gesture holds references into the terminal, so it's freed first.
             _selection?.Dispose();
             _selection = null;
             session.Dispose();
         }
 
         _renderer.Dispose();
-        // Still in the tree here (its Unloaded comes later); CanvasLifetime holds it until
-        // Win2D has let go of the window.
+        // The canvas is still in the tree here (its Unloaded comes later), so CanvasLifetime holds it
+        // until Win2D has let go of the window.
         if (_canvas != null)
         {
             RetireCanvas(_canvas);
@@ -911,9 +927,9 @@ public sealed partial class TerminalControl : UserControl
     private FramePerf? _perf;
 
     /// <summary>
-    /// A terminal for the drawing benchmark: runs nothing (its workloads arrive through
-    /// <see cref="WriteForBenchmark"/>), measures every frame, draws with the processor when
-    /// <paramref name="software"/>.
+    /// A terminal for the drawing benchmark. It runs nothing (its workloads arrive through
+    /// <see cref="WriteForBenchmark"/>), measures every frame, and draws with the processor when
+    /// <paramref name="software"/> is true.
     /// </summary>
     public static TerminalControl Benchmark(Config config, bool software)
     {
@@ -948,8 +964,8 @@ public sealed partial class TerminalControl : UserControl
     private void DrawSafely(Microsoft.Graphics.Canvas.CanvasDrawingSession ds, Microsoft.Graphics.Canvas.CanvasDevice device)
     {
         // An exception leaving the Draw event leaves Win2D's drawing session open, and every frame
-        // after fails ("The last drawing session ... must be disposed"): a pane that never draws
-        // again. Catching it costs this frame only.
+        // after it fails ("The last drawing session ... must be disposed"), so the pane would never
+        // draw again. Catching it costs this frame only.
         try
         {
             DrawFrame(ds);
@@ -958,8 +974,9 @@ public sealed partial class TerminalControl : UserControl
         {
             if (device.IsDeviceLost(ex.HResult))
             {
-                // Win2D recreates the device (CreateResources) when a lost device's exception leaves Draw; caught
-                // here, it has to be told (the swap chain surface makes its own new device on the same event).
+                // Win2D recreates the device (CreateResources) when a lost device's exception leaves Draw. Caught
+                // here, the exception doesn't leave, so Win2D has to be told (the swap chain surface makes its own new
+                // device on the same event).
                 Log.Write($"pane: device lost while drawing ({ex.HResult:X8})");
                 device.RaiseDeviceLost();
                 return;
@@ -979,7 +996,7 @@ public sealed partial class TerminalControl : UserControl
             return;
         }
 
-        // Test captures draw every cursor as focused: whether a new window gets focus varies.
+        // Test captures draw every cursor as focused, because whether a new window gets focus varies.
         var presentation = new CursorPresentation(_focused || TestHooks.Deterministic || _previewScript != null, _blinkOn);
         var perf = _perf ??= FramePerf.LogEnabled ? new FramePerf { LogsEverySecond = true } : null;
         _renderer.Perf = perf;
@@ -999,7 +1016,7 @@ public sealed partial class TerminalControl : UserControl
         UpdateScrollBar(session);
         if (_inputLatency is { } trace)
         {
-            trace.Drawn(TraceNow); // the frame is recorded; it reaches the screen at the next refresh
+            trace.Drawn(TraceNow); // the frame is recorded, and it reaches the screen at the next refresh
             TraceSummary();
         }
     }
@@ -1035,7 +1052,7 @@ public sealed partial class TerminalControl : UserControl
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {
-        // With input methods on, typing goes through the pane's input box: focus lands there.
+        // With input methods on, typing goes through the pane's input box, so focus lands there.
         if (ReferenceEquals(e.OriginalSource, this) && FocusInputMethodBox())
         {
             return;
@@ -1044,7 +1061,7 @@ public sealed partial class TerminalControl : UserControl
         NoteForeignKeys(); // a key held as focus arrives (Enter in a popup, Escape in the find box)
         if (_focused)
         {
-            return; // from the pane to its input box: still the same focus for the program
+            return; // from the pane to its input box, which is still the same focus for the program
         }
 
         _focused = true;
@@ -1058,7 +1075,7 @@ public sealed partial class TerminalControl : UserControl
     {
         if (FocusIsWithin())
         {
-            return; // still inside the pane: not a focus change for the program
+            return; // still inside the pane, so not a focus change for the program
         }
 
         _focused = false;
@@ -1068,7 +1085,7 @@ public sealed partial class TerminalControl : UserControl
         Redraw();
     }
 
-    /// <summary>Whether keyboard focus is on the pane itself or its input box (the find box counts as elsewhere, as before).</summary>
+    /// <summary>Whether keyboard focus is on the pane itself or its input box (the find box counts as elsewhere).</summary>
     private bool FocusIsWithin() =>
         XamlRoot != null && Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(XamlRoot) is { } focused &&
         (ReferenceEquals(focused, this) || ReferenceEquals(focused, _inputBox));

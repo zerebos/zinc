@@ -5,8 +5,9 @@ using Windows.System;
 
 namespace Zinc.Terminal;
 
-// Links: with the link key held (link-click: Ctrl or Alt; always, for a plain click), the OSC 8 hyperlink or URL under
-// the pointer is underlined and the pointer becomes a hand; a click with it opens it (LinkTarget decides what may open).
+// Links. While the link key is held (Ctrl or Alt, as link-click says, or always when link-click is a plain click), the
+// OSC 8 hyperlink or URL under the pointer is underlined and the pointer becomes a hand. A click then opens the link
+// (LinkTarget decides what may open).
 public sealed partial class TerminalControl
 {
     private Windows.Foundation.Point? _pointerPosition;
@@ -32,7 +33,9 @@ public sealed partial class TerminalControl
         _ => true,
     };
 
-    /// <summary>Re-evaluates the hovered link at the last pointer position (<paramref name="linkKey"/>: links show now).</summary>
+    /// <summary>
+    /// Re-evaluates the hovered link at the last pointer position. <paramref name="linkKey"/> says whether links show now.
+    /// </summary>
     private void UpdateHoverLink(bool linkKey)
     {
         var link = linkKey && !_selecting && _pointerPosition is { } pos ? LinkUnder(pos) : null;
@@ -82,7 +85,7 @@ public sealed partial class TerminalControl
     {
         try
         {
-            // File links use the shell's own paths (WSL, Git Bash): resolve them per pane.
+            // File links use the shell's own paths (WSL, Git Bash), so they're resolved per pane.
             _linkContext ??= ShellEnvironment.LinkContextFor(_commandLine);
             switch (LinkTarget.Classify(uri, _linkContext, out var target))
             {

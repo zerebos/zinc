@@ -19,7 +19,7 @@ public sealed partial class TerminalControl
     private bool _arrowCursor;
     private InputSystemCursorShape _cursorShape;
 
-    // A link pressed with link-click = click, and the cell it was pressed on: opened on release if it wasn't dragged.
+    // A link pressed with link-click = click, and the cell it was pressed on. It's opened on release if it wasn't dragged.
     private (LinkMatch Link, (int Col, int Row)? Cell)? _pendingLink;
 
     protected override void OnPointerPressed(PointerRoutedEventArgs e)
@@ -162,7 +162,7 @@ public sealed partial class TerminalControl
                 ClipboardText.Set(selected, _config.CopyFormatting ? SelectionHtml() : null);
             }
 
-            // A link clicked (link-click = click), not dragged across: it opens, and that's all the click does.
+            // A link that was clicked (link-click = click) and not dragged across opens, and that's all the click does.
             if (_pendingLink is var (link, linkCell) && selected == null && CellAt(position) == linkCell)
             {
                 _pendingLink = null;
@@ -200,7 +200,7 @@ public sealed partial class TerminalControl
         var delta = e.GetCurrentPoint(Surface).Properties.MouseWheelDelta;
 
         // Ctrl+wheel zooms (before programs' mouse reporting, as in Windows Terminal). A precision
-        // touchpad sends small steps: they add up to a notch (120) per point of font size.
+        // touchpad sends small steps, which add up to a notch (120) per zoom step.
         if ((e.KeyModifiers & VirtualKeyModifiers.Control) != 0)
         {
             _zoomDelta += delta;
@@ -291,7 +291,7 @@ public sealed partial class TerminalControl
 
     protected override void OnPointerExited(PointerRoutedEventArgs e)
     {
-        // (Dragging the thumb out of the pane keeps the bar: see ReleaseScrollBar.)
+        // Dragging the thumb out of the pane keeps the bar expanded (see ReleaseScrollBar).
         if (!_scrollBarHeld)
         {
             SetScrollBarExpanded(false);
@@ -303,14 +303,14 @@ public sealed partial class TerminalControl
     }
 
     /// <summary>
-    /// The pointer shape: an arrow by default (like Windows Terminal), over the
-    /// scrollbar, and while the app consumes the mouse; with <c>mouse-pointer = text</c>,
-    /// an I-beam where the mouse selects text.
+    /// The pointer shape. It's an arrow by default (like Windows Terminal), over the
+    /// scrollbar, and while the app consumes the mouse. With <c>mouse-pointer = text</c>,
+    /// it's an I-beam where the mouse selects text.
     /// </summary>
     private void UpdatePointerCursor(bool arrow)
     {
         _arrowCursor = arrow;
-        // A hand over a Ctrl+hovered link, else what the pointer would do here.
+        // A hand over a link the link key shows, else what the pointer would do here.
         var shape = _renderer.HoverLink != null ? InputSystemCursorShape.Hand
             : arrow ? InputSystemCursorShape.Arrow
             : InputSystemCursorShape.IBeam;
@@ -382,8 +382,8 @@ public sealed partial class TerminalControl
     }
 
     /// <summary>
-    /// A plain click at viewport cell (<paramref name="col"/>, <paramref name="row"/>): in a shell's
-    /// command line, moves its cursor there (<see cref="TerminalSession.ClickToMove"/>).
+    /// A plain click at viewport cell (<paramref name="col"/>, <paramref name="row"/>). In a shell's
+    /// command line, it moves the shell's cursor there (<see cref="TerminalSession.ClickToMove"/>).
     /// <c>test:click:col:row</c> calls it directly.
     /// </summary>
     internal void ClickToMove(int col, int row)

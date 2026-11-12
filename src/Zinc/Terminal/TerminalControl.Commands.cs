@@ -29,10 +29,13 @@ public sealed partial class TerminalControl
     /// <summary>A command that was typed and run has finished (once per command). Raised on the UI thread.</summary>
     public event Action<ShellCommand>? CommandFinished;
 
-    /// <summary>A program asked for a desktop notification (OSC 9 / 777): title (maybe empty), body. UI thread.</summary>
+    /// <summary>
+    /// A program asked for a desktop notification (OSC 9 / 777), with a title (maybe empty) and a body. Raised on the UI
+    /// thread.
+    /// </summary>
     public event Action<string, string>? Notified;
 
-    /// <summary>A program's progress (OSC 9;4) changed; see <see cref="Progress"/>. UI thread.</summary>
+    /// <summary>A program's progress (OSC 9;4) changed (see <see cref="Progress"/>). Raised on the UI thread.</summary>
     public event Action? ProgressChanged;
 
     /// <summary>What a program last reported as its progress.</summary>
@@ -50,13 +53,16 @@ public sealed partial class TerminalControl
     }
 
     /// <summary>
-    /// A command line typed into the shell once it's ready ("New tab running…"), as if by hand:
+    /// A command line typed into the shell once it's ready ("New tab running…"), as if by hand, so
     /// builtins, aliases and WSL programs all work, and the tab stays at the shell afterwards.
     /// Set before the pane starts.
     /// </summary>
     public string? StartupInput { get; set; }
 
-    /// <summary>Adds variables to the program's environment as it starts (zn's: the terminal's id and the pipe).</summary>
+    /// <summary>
+    /// Adds variables to the program's environment as it starts (zn's variables, which hold the terminal's id and the
+    /// pipe).
+    /// </summary>
     public Action<IDictionary<string, string?>>? LaunchEnvironment { get; set; }
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _startupInputTimer;
@@ -109,9 +115,10 @@ public sealed partial class TerminalControl
 
     private void OnCommandsChanged()
     {
-        // Each finished command once, when the next prompt has started: only then is a D known to be
-        // the command's own (the shell around a nested one reports how that one ended with a D its
-        // "exit" would otherwise get), and a nested shell's command ends with the outer shell's prompt.
+        // Each finished command is announced once, when the next prompt has started. Only then is a D
+        // known to be the command's own, because when a nested shell exits, the shell around it reports
+        // how the nested shell ended with a D that the nested shell's "exit" would otherwise get. A nested
+        // shell's command also ends with the outer shell's prompt.
         if (_session?.Commands() is { Count: > 1 } commands)
         {
             for (var i = 0; i < commands.Count - 1; i++)
@@ -143,7 +150,7 @@ public sealed partial class TerminalControl
             case TerminalAction.JumpToPrompt:
                 if (!session.JumpToPrompt(invocation.Index))
                 {
-                    session.ScrollLines(invocation.Index); // no shell integration: a line at a time
+                    session.ScrollLines(invocation.Index); // without shell integration, a line at a time
                 }
 
                 Redraw();

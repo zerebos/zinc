@@ -11,8 +11,8 @@ public sealed partial class TerminalControl
     private char _pendingHighSurrogate;
 
     /// <summary>
-    /// Keys already down when this pane got focus: pressed in something that then handed focus
-    /// here (Enter in the rename box or palette, Escape in the find box). Their WM_CHAR and
+    /// Keys already down when this pane got focus, because they were pressed in something that then
+    /// handed focus here (Enter in the rename box or palette, Escape in the find box). Their WM_CHAR and
     /// release still arrive, but belong to where the key went down, so neither reaches the
     /// shell (a stray Enter would run whatever is typed at the prompt).
     /// </summary>
@@ -20,7 +20,7 @@ public sealed partial class TerminalControl
 
     /// <summary>
     /// The keys popups commit/cancel/move with, and the character each produces. Only these are
-    /// tracked, and only their own character is dropped: a stale key state can then cost at
+    /// tracked, and only their own character is dropped, so a stale key state can cost at
     /// most one such character, never ordinary typing.
     /// </summary>
     private static readonly Dictionary<Windows.System.VirtualKey, char> HandOffKeys = new()
@@ -84,13 +84,13 @@ public sealed partial class TerminalControl
         }
     }
 
-    // What HandleKeyPress tells the trace: the character a key press should produce, and that it was a modifier.
+    // What HandleKeyPress tells the trace, which is the character a key press should produce and whether it was a modifier.
     private string? _traceExpect;
     private bool _traceModifier;
 
     private void HandleKeyPress(KeyRoutedEventArgs e)
     {
-        // Pressed (or auto-repeating) here now: from this press on, the key is ours.
+        // Pressed (or auto-repeating) here now, so from this press on the key is ours.
         _foreignKeys.Remove(e.Key);
 
         // Each key's WM_CHAR arrives after its KeyDown and before the next
@@ -104,7 +104,7 @@ public sealed partial class TerminalControl
 
         if (IsFromSearch(e.OriginalSource))
         {
-            // Typing in the find box; only our own shortcuts (reopen = refocus) apply.
+            // Typing in the find box, where only our own shortcut applies (Find again refocuses the box).
             var chord = Keyboard.State.Capture();
             if (_keybindings.TryGet(new KeyChord(e.Key, chord.Ctrl, chord.Alt, chord.Shift), out var own) &&
                 own.Action == TerminalAction.Find)
@@ -156,7 +156,7 @@ public sealed partial class TerminalControl
             return;
         }
 
-        // Shift+F10 and the Menu key: the context menu, as everywhere in Windows (whatever right-click does).
+        // Shift+F10 and the Menu key open the context menu, as everywhere in Windows (whatever right-click does).
         if ((e.Key == Windows.System.VirtualKey.Application && !state.Ctrl && !state.Alt && !state.Shift) ||
             (e.Key == Windows.System.VirtualKey.F10 && state.Shift && !state.Ctrl && !state.Alt))
         {
@@ -166,8 +166,8 @@ public sealed partial class TerminalControl
             return;
         }
 
-        // Alt+F4 is Windows' (close the window: a main window asks first if something runs, the quick terminal hides);
-        // encoded, it reached the shell as an escape sequence (a beep in most) and the window stayed.
+        // Alt+F4 is Windows', which closes the window (a main window asks first if something runs, and the quick terminal
+        // hides). Encoded, it would reach the shell as an escape sequence (a beep in most) and the window would stay.
         if (e.Key == Windows.System.VirtualKey.F4 && state.Alt && !state.Ctrl && !state.Shift)
         {
             return;
@@ -215,7 +215,7 @@ public sealed partial class TerminalControl
         _charHandledByKeyDown = false;
         if (_foreignKeys.Remove(e.Key))
         {
-            return; // released here, pressed elsewhere: not a key event of ours
+            return; // released here but pressed elsewhere, so not a key event of ours
         }
 
         if (IsLinkKey(e.Key))
@@ -314,7 +314,7 @@ public sealed partial class TerminalControl
 
     /// <summary>
     /// Runs an action as if its key had been pressed in this pane (the command palette
-    /// uses this): pane actions run here, the rest go to <see cref="ActionHandler"/>.
+    /// uses this). Pane actions run here, and the rest go to <see cref="ActionHandler"/>.
     /// </summary>
     public bool Invoke(ActionInvocation invocation) =>
         _session is { } session ? RunAction(invocation, session) : ActionHandler?.Invoke(invocation) ?? false;

@@ -26,6 +26,8 @@ public sealed partial class TerminalControl
         return true;
     }
 
-    /// <summary>The screen's text (or the last <paramref name="lines"/>, scrollback included); null before the terminal starts.</summary>
+    /// <summary>
+    /// The screen's text (or the last <paramref name="lines"/>, scrollback included), or null before the terminal starts.
+    /// </summary>
     public string? ReadText(int? lines, bool styled) => _session?.ReadText(lines, styled);
 }

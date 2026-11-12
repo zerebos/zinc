@@ -23,7 +23,7 @@ public static partial class ClipboardText
             package.SetText(text);
             if (html != null)
             {
-                // Next to the text: each app pastes what it understands (Word and Outlook the colors, editors the text).
+                // Next to the text, so each app pastes what it understands (Word and Outlook the colors, editors the text).
                 package.SetHtmlFormat(HtmlFormatHelper.CreateHtmlFormat(html));
             }
 
@@ -55,7 +55,7 @@ public static partial class ClipboardText
         }
         catch (Exception ex)
         {
-            // The clipboard can be transiently locked by another process; a dialog may already be open.
+            // The clipboard can be transiently locked by another process, and a dialog may already be open.
             Log.Write($"paste failed: {ex.Message}");
         }
     }
@@ -135,7 +135,7 @@ public static partial class ClipboardText
 
     /// <summary>
     /// Asks whether a program in a pane may read the clipboard (<c>clipboard-read = ask</c>),
-    /// showing what it would get. Deny is the default; any failure (no window, another question
+    /// showing what it would get. Deny is the default. Any failure (no window, another question
     /// open) answers deny.
     /// </summary>
     public static async void AskToRead(Microsoft.UI.Xaml.XamlRoot? root, string who, TaskCompletionSource<ClipboardReadAnswer> answer)
@@ -213,7 +213,8 @@ public static partial class ClipboardText
 
     /// <summary>
     /// The clipboard's text, read synchronously on any thread (for OSC 52 reads, which must be
-    /// answered before the terminal continues parsing). Null if it's unavailable or not text.
+    /// answered before the terminal continues parsing). Empty if it holds no text, and null if it
+    /// can't be opened or read.
     /// </summary>
     public static string? ReadNow()
     {

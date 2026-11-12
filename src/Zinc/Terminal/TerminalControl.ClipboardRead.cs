@@ -1,12 +1,12 @@
 namespace Zinc.Terminal;
 
 /// <summary>
-/// <c>clipboard-read = ask</c>: a program's clipboard read waits (on the reader thread, the terminal
-/// unlocked) while the window asks: allow once, allow in this tab, or deny.
+/// With <c>clipboard-read = ask</c>, a program's clipboard read waits (on the reader thread, the terminal
+/// unlocked) while the window asks whether to allow it once, allow it in this tab, or deny it.
 /// </summary>
 public sealed partial class TerminalControl
 {
-    /// <summary>"Allow in this tab" was chosen: this pane's programs read without asking.</summary>
+    /// <summary>"Allow in this tab" was chosen, so this pane's programs read without asking.</summary>
     private volatile bool _clipboardReadsAllowed;
 
     /// <summary>Cancelled when the pane closes, ending a question nobody will answer.</summary>
@@ -21,7 +21,7 @@ public sealed partial class TerminalControl
             return true;
         }
 
-        // Only output from the program asks (on its reader thread); the UI thread can't wait for itself.
+        // Only output from the program asks (on its reader thread), because the UI thread can't wait for itself.
         if (DispatcherQueue.HasThreadAccess)
         {
             return false;

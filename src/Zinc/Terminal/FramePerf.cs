@@ -3,12 +3,12 @@ using System.Diagnostics;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Frame timing for one pane: how long its frames took, our drawing (render state, glyph runs: the
-/// commands Direct2D records, split into <see cref="SectionNames"/>) and the flush (Direct2D
-/// rasterizing them: the GPU's work, or the CPU's with software rendering). Two uses: ZINC_PERF=1
-/// with ZINC_LOG logs every pane's numbers once a second (<see cref="LogsEverySecond"/>), and the
-/// drawing benchmark collects them for a run (<see cref="Snapshot"/>). Off, a pane has none and
-/// pays one null check per frame.
+/// Frame timing for one pane, which is how long its frames took, split into our drawing and the flush. Our drawing is
+/// the render state and the glyph runs, which are the commands Direct2D records, split into <see cref="SectionNames"/>.
+/// The flush is Direct2D rasterizing those commands, which is the GPU's work, or the CPU's with software rendering.
+/// ZINC_PERF=1 with ZINC_LOG logs every pane's numbers once a second (<see cref="LogsEverySecond"/>), and the drawing
+/// benchmark collects them for a run (<see cref="Snapshot"/>). When neither is on, a pane has no timing and pays one
+/// null check per frame.
 /// </summary>
 internal sealed class FramePerf
 {
@@ -17,7 +17,9 @@ internal sealed class FramePerf
 
     public static readonly string[] SectionNames = ["read", "backgrounds", "text", "decorations"];
 
-    /// <summary>Where drawing time went (ms, summed over the frames since the last reset): the renderer adds to these.</summary>
+    /// <summary>
+    /// Where drawing time went, in ms summed over the frames since the last reset. The renderer adds to these.
+    /// </summary>
     private readonly double[] _sections = new double[SectionNames.Length];
 
     private readonly List<double> _draw = [];
@@ -26,7 +28,9 @@ internal sealed class FramePerf
 
     public bool LogsEverySecond { get; init; }
 
-    /// <summary>Adds the time since <paramref name="since"/> to section <paramref name="section"/>; returns now.</summary>
+    /// <summary>
+    /// Adds the time since <paramref name="since"/> to section <paramref name="section"/>, and returns now.
+    /// </summary>
     public long Mark(int section, long since)
     {
         var now = Stopwatch.GetTimestamp();

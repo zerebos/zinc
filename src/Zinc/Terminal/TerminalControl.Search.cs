@@ -10,9 +10,9 @@ using VirtualKey = Windows.System.VirtualKey;
 
 namespace Zinc.Terminal;
 
-// Find (Ctrl+Shift+F): a box at the pane's top right. Matches are highlighted as you type;
-// Enter / Shift+Enter move to older / newer matches, Esc closes. Search runs in the session
-// (TerminalSession.Search) and reruns shortly after new output while the box is open.
+// Find (Ctrl+Shift+F) is a box at the pane's top right. Matches are highlighted as you type.
+// Enter and Shift+Enter move to older and newer matches, and Esc closes the box. Search runs in the
+// session (TerminalSession.Search) and reruns shortly after new output while the box is open.
 public sealed partial class TerminalControl
 {
     private Border? _searchPanel;
@@ -31,7 +31,7 @@ public sealed partial class TerminalControl
         EnsureSearchPanel();
         _searchPanel!.Visibility = Visibility.Visible;
         _searchBox!.SelectAll();
-        // Low priority: after the host's own focus requests (e.g. the palette closing).
+        // Low priority, so this runs after the host's own focus requests (for example the palette closing).
         DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.Low, () => _searchBox.Focus(FocusState.Programmatic));
         RunSearch(jump: true);
     }
@@ -67,7 +67,7 @@ public sealed partial class TerminalControl
         return false;
     }
 
-    /// <summary>Called when output arrives: refresh matches soon (not per chunk).</summary>
+    /// <summary>Called when output arrives, and refreshes the matches soon (not per chunk).</summary>
     private void ScheduleSearchRefresh()
     {
         if (!SearchOpen)
@@ -281,7 +281,7 @@ public sealed partial class TerminalControl
         var toggle = new ToggleButton { Content = label, MinWidth = 34, Padding = new Thickness(6, 4, 6, 5), FontSize = 13 };
         AutomationProperties.SetName(toggle, name);
         ToolTipService.SetToolTip(toggle, name);
-        // Checked/Unchecked, not Click: toggling via keyboard or UI Automation counts too.
+        // Checked/Unchecked, not Click, so toggling via keyboard or UI Automation counts too.
         RoutedEventHandler changed = (_, _) =>
         {
             RunSearch(jump: true);

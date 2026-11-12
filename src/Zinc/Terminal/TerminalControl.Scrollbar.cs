@@ -10,8 +10,8 @@ namespace Zinc.Terminal;
 public sealed partial class TerminalControl
 {
     /// <summary>
-    /// The expanded bar's width (DIPs; TerminalScrollBar.xaml), which is also where the pointer
-    /// expands it, as in Windows Terminal: anywhere the full bar will be.
+    /// The expanded bar's width (in DIPs, from TerminalScrollBar.xaml), which is also where the pointer
+    /// expands it, as in Windows Terminal, meaning anywhere the full bar will be.
     /// </summary>
     private const double ScrollBarWidth = 16;
 
@@ -21,7 +21,7 @@ public sealed partial class TerminalControl
     private bool _nearScrollBar;
     private bool _scrollBarPinned;
 
-    /// <summary>A button is held on the bar (dragging the thumb, paging, an arrow): it stays expanded.</summary>
+    /// <summary>A button is held on the bar (dragging the thumb, paging, an arrow), so it stays expanded.</summary>
     private bool _scrollBarHeld;
 
     /// <summary>Creates the overlay scrollbar (called once from the constructor).</summary>
@@ -51,7 +51,7 @@ public sealed partial class TerminalControl
             Redraw();
         };
         // Held down on the bar, it stays expanded wherever the pointer goes (dragging the thumb
-        // along the bar, or off it); released, it's where the pointer is that counts again.
+        // along the bar, or off it). Once it's released, where the pointer is counts again.
         bar.AddHandler(PointerPressedEvent, new PointerEventHandler((_, _) => _scrollBarHeld = true), handledEventsToo: true);
         bar.AddHandler(PointerReleasedEvent, new PointerEventHandler(ReleaseScrollBar), handledEventsToo: true);
         bar.AddHandler(PointerCaptureLostEvent, new PointerEventHandler(ReleaseScrollBar), handledEventsToo: true);
@@ -59,7 +59,7 @@ public sealed partial class TerminalControl
         return bar;
     }
 
-    /// <summary>Syncs the scrollbar with the terminal (called every frame; the read is cheap).</summary>
+    /// <summary>Syncs the scrollbar with the terminal (called every frame, and the read is cheap).</summary>
     private void UpdateScrollBar(TerminalSession session)
     {
         if (_scrollBar is not { } bar)
@@ -95,7 +95,7 @@ public sealed partial class TerminalControl
 
     /// <summary>
     /// Expands the scrollbar while the pointer is over it or within the right-edge hot
-    /// zone, so it doesn't have to be hit exactly; the pointer is an arrow there.
+    /// zone, so it doesn't have to be hit exactly. The pointer is an arrow there.
     /// </summary>
     private void TrackScrollBarProximity(object sender, PointerRoutedEventArgs e)
     {
@@ -125,7 +125,7 @@ public sealed partial class TerminalControl
 
     /// <summary>
     /// Switches the bar between its thin and full looks via the visual states a
-    /// ScrollViewer uses. (IndicatorMode.None does not mean "full bar": it hides it.)
+    /// ScrollViewer uses. (IndicatorMode.None does not mean "full bar", because it hides the bar.)
     /// </summary>
     private void SetScrollBarExpanded(bool expanded)
     {
@@ -133,7 +133,7 @@ public sealed partial class TerminalControl
         if (_scrollBar is { } bar && expanded != _scrollBarExpanded &&
             VisualStateManager.GoToState(bar, expanded ? "Expanded" : "Collapsed", true))
         {
-            // GoToState fails until the template has applied; retry on the next move.
+            // GoToState fails until the template has applied, so this retries on the next move.
             _scrollBarExpanded = expanded;
         }
     }

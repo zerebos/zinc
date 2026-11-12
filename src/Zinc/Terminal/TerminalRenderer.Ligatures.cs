@@ -2,21 +2,21 @@ using Microsoft.Graphics.Canvas.Text;
 
 namespace Zinc.Terminal;
 
-// Ligatures ([font] ligatures): each row's text is shaped by DirectWrite, so a font's ligatures and contextual
+// Ligatures ([font] ligatures). Each row's text is shaped by DirectWrite, so a font's ligatures and contextual
 // alternates (=> != === -> in Cascadia Code, JetBrains Mono, Fira Code) pick their glyphs. Those fonts draw a ligature
 // as one alternate glyph per character, each a cell wide, so every glyph still lands in its own cell (and the atlas,
 // keyed by glyph, needs nothing new). Shaping that merges characters into fewer glyphs (a wider glyph spanning cells)
-// isn't taken: those cells keep their plain glyphs. As in Ghostty, a ligature breaks under the cursor and at the
+// isn't taken, so those cells keep their plain glyphs. As in Ghostty, a ligature breaks under the cursor and at the
 // edges of a selection, so the character there shows as itself.
 public sealed partial class TerminalRenderer
 {
-    /// <summary>Per cell of the row being drawn: the shaped glyph (0: the plain one), filled by <see cref="ShapeRow"/>.</summary>
+    /// <summary>The shaped glyph for each cell of the row being drawn (0 for the plain one), filled by <see cref="ShapeRow"/>.</summary>
     private int[] _shaped = [];
 
     /// <summary>
-    /// Shaped segments by their text (a hash of the codepoints), length and font variant: glyph per character, or null
-    /// when shaping changed nothing. (The variant is a key of its own: XORed into the hash it cancelled out against a
-    /// character, and italic >= reused regular <='s glyphs.)
+    /// Shaped segments by their text (a hash of the codepoints), length and font variant, each a glyph per character, or
+    /// null when shaping changed nothing. The variant is a key of its own, because XORed into the hash it could cancel
+    /// out against a character, and italic >= would reuse regular <='s glyphs.
     /// </summary>
     private readonly Dictionary<(ulong Hash, int Length, int Variant), int[]?> _shapeCache = [];
 
@@ -25,7 +25,7 @@ public sealed partial class TerminalRenderer
 
     private const int MaxShapeCache = 8192;
 
-    /// <summary>This frame's shaped glyphs, drawn after the batch: a ligature can reach past its atlas tile.</summary>
+    /// <summary>This frame's shaped glyphs, drawn after the batch, because a ligature can reach past its atlas tile.</summary>
     private readonly List<(int Column, int Row, int Glyph, int Variant, Windows.UI.Color Color)> _ligatureGlyphs = [];
 
     /// <summary>Draws (and forgets) the frame's shaped glyphs, each at its cell on the grid's baseline.</summary>
@@ -95,10 +95,11 @@ public sealed partial class TerminalRenderer
     }
 
     /// <summary>
-    /// A cell shaping works on: one ASCII symbol or punctuation mark (not under the cursor, not a sprite). Coding fonts'
-    /// ligatures are made of those (=> -> != === <!-- :: && || //), so a segment is a run of adjacent symbols: short,
-    /// and the same ones over and over, which the cache keeps (a screen of new text every frame shaped every row,
-    /// at 4 ms a frame). Letter-based alternates some fonts have (Fira Code's 0x) are left out.
+    /// Whether shaping works on this cell, which takes one ASCII symbol or punctuation mark (not under the cursor, not a
+    /// sprite). Coding fonts' ligatures are made of those (=> -> != === <!-- :: && || //), so a segment is a run of
+    /// adjacent symbols. Those runs are short and the same ones come up over and over, so the cache keeps them, where
+    /// shaping all text would shape every row of a screen of new text every frame. Letter-based alternates some fonts
+    /// have (Fira Code's 0x) are left out.
     /// </summary>
     private bool Shapeable(int x, int row)
     {
@@ -113,7 +114,7 @@ public sealed partial class TerminalRenderer
         return codepoint is > ' ' and < 0x7F && (char.IsPunctuation((char)codepoint) || char.IsSymbol((char)codepoint)) && !IsSprite(ref cell);
     }
 
-    /// <summary>A selection starts or ends at <paramref name="x"/>: a ligature mustn't span it.</summary>
+    /// <summary>Whether a selection starts or ends at <paramref name="x"/>, which a ligature mustn't span.</summary>
     private bool Boundary(int x) => ((_cells[x].Flags ^ _cells[x - 1].Flags) & CellFlags.Selected) != 0;
 
     /// <summary>Shapes cells [<paramref name="start"/>, <paramref name="end"/>) and puts the glyphs that differ into <see cref="_shaped"/>.</summary>
@@ -148,7 +149,10 @@ public sealed partial class TerminalRenderer
         }
     }
 
-    /// <summary>The glyph per character DirectWrite picks for this text, 0 where it's the plain one or not one-to-one; null if none differ.</summary>
+    /// <summary>
+    /// The glyph per character DirectWrite picks for this text, 0 where it's the plain one or not one-to-one, or null if
+    /// none differ.
+    /// </summary>
     private int[]? Shape(int start, int end, int variant, CanvasFontFace face)
     {
         var length = end - start;
@@ -167,10 +171,10 @@ public sealed partial class TerminalRenderer
             var analyzer = new CanvasTextAnalyzer(text, CanvasTextDirection.LeftToRightThenTopToBottom);
             foreach (var (range, script) in analyzer.GetScript())
             {
-                // No number substitution, the font's default features (calt, liga: what draws ligatures).
+                // No number substitution, and the font's default features (calt and liga, which draw ligatures).
                 var glyphs = analyzer.GetGlyphs(range, face, _fontSize, false, false, script, "", null!, null!,
                     out var clusters, out _, out _);
-                // One glyph per character, in order: each character's glyph goes to its own cell.
+                // Only one glyph per character, in order, so each character's glyph goes to its own cell.
                 if (glyphs.Length != range.CharacterCount)
                 {
                     continue;

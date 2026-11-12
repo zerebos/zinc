@@ -10,36 +10,37 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// The font's glyphs, each drawn once into a texture and then copied, tinted with its cell's color, by one
-/// sprite batch per frame, instead of a Direct2D glyph run per color run (thousands of calls on a busy screen:
-/// measured 2026-10-02, a full-color screen went from ~9.5 ms to ~2.9 ms a frame this way). The approach of
-/// Windows Terminal's AtlasEngine and the GPU terminals, inside Win2D.
+/// sprite batch per frame, instead of a Direct2D glyph run per color run (which is thousands of calls on a busy
+/// screen). This is the approach of Windows Terminal's AtlasEngine and the GPU terminals, inside Win2D.
 ///
 /// A tile is three cells wide and two tall, with the glyph's own cell in its middle, so glyphs that reach past
 /// their cell (Nerd Font icons, italics) keep their overhang. The glyph is drawn at the grid's fractional pixel
 /// offset (from the padding), so its anti-aliasing is what a glyph run on screen would get. Direct2D's grayscale
-/// text contrast depends on the text's color, so each glyph has a variant for light text and one for dark text;
-/// both are stored as white coverage (premultiplied: a, a, a, a) for the batch to tint.
+/// text contrast depends on the text's color, so each glyph has a variant for light text and one for dark text.
+/// Both are stored as white coverage (premultiplied, so a, a, a, a) for the batch to tint.
 ///
-/// New glyphs are batched: <see cref="Get"/> reserves a tile, <see cref="Flush"/> (before the frame's sprite batch)
-/// draws every reserved glyph in one session onto a scratch copy of the page and whitens it onto the page in one
-/// effect draw (the scratch's empty parts come out transparent, so tiles already there stay as they are). Two
-/// drawing sessions per frame, however many glyphs are new: doing it per glyph, or reading each tile back to
-/// whiten it on the CPU, cost a screenful of new glyphs (a new pane, a zoom step) 20-40 ms.
+/// New glyphs are batched. <see cref="Get"/> reserves a tile, and <see cref="Flush"/> (before the frame's sprite
+/// batch) draws every reserved glyph in one session onto a scratch copy of the page, then whitens that onto the page in
+/// one effect draw. The scratch's empty parts come out transparent, so tiles already on the page stay as they are.
+/// That makes two drawing sessions per frame however many glyphs are new, which keeps a screenful of new glyphs (a new
+/// pane, a zoom step) cheap. Drawing per glyph, or reading each tile back to whiten it on the CPU, is far slower.
 ///
-/// Lookups are arrays indexed by glyph number (one per font variant and light/dark), not a dictionary: they run
-/// for every cell of every frame.
+/// Lookups are arrays indexed by glyph number (one per font variant and light/dark), not a dictionary, because they
+/// run for every cell of every frame.
 ///
-/// Characters the font lacks (CJK, symbols: Windows' font fallback) go in too, rendered once with a DirectWrite
-/// layout as before: text as white coverage like glyphs, keyed by codepoint (a cluster by its text); emoji on pages of
-/// their own, drawn in color (keyed by the text's color too, for the occasional plain glyph in an emoji font) and
-/// copied untinted. Drawing a layout per cell per frame made a screen of CJK or emoji take ~200 ms a frame.
+/// Characters the font lacks (CJK and symbols, which Windows' font fallback finds) go in too, each rendered once with
+/// a DirectWrite layout. Their text is stored as white coverage like glyphs, keyed by codepoint, or by its text for a
+/// cluster. Emoji go on pages of their own, drawn in color and copied untinted. They're keyed by the text's color too,
+/// for the occasional plain glyph in an emoji font. Drawing a layout per cell per frame would be far too slow for a
+/// screen of CJK or emoji.
 ///
-/// Shared by every pane drawing the same font at the same size, scale and sub-pixel offset on the same device
-/// (<see cref="GlyphAtlases"/>): ten panes used to rasterize and keep the same letters ten times. All on the UI
-/// thread, one frame at a time: a pane's frame reserves tiles and flushes them before the next pane's frame runs.
+/// An atlas is shared by every pane drawing the same font at the same size, scale and sub-pixel offset on the same
+/// device (<see cref="GlyphAtlases"/>), so ten panes don't rasterize and keep the same letters ten times. It's used
+/// only on the UI thread, one frame at a time, so a pane's frame reserves tiles and flushes them before the next
+/// pane's frame runs.
 ///
-/// In 512 px pages (about 1 MB each; larger only if one tile is) added as needed; <see cref="Clear"/>
-/// on any change of font, cell size, scale, device or padding offset, and after a flush that failed halfway.
+/// Tiles live in 512 px pages (about 1 MB each, and larger only if one tile is), added as needed. <see cref="Clear"/>
+/// runs on any change of font, cell size, scale, device or padding offset, and after a flush that failed halfway.
 /// </summary>
 internal sealed class GlyphAtlas : IDisposable
 {
@@ -54,7 +55,10 @@ internal sealed class GlyphAtlas : IDisposable
     /// <summary>Glyphs reserved since the last <see cref="Flush"/>, not drawn yet.</summary>
     private readonly List<(CanvasFontFace Face, float FontSize, int Glyph, bool Dark, int Page, Vector2 Origin, Rect Clip)> _pending = [];
 
-    /// <summary>Pages not cleared yet: a new render target can come with recycled GPU memory, an old atlas's tiles in it.</summary>
+    /// <summary>
+    /// Pages not cleared yet, because a new render target can come with recycled GPU memory that still holds an old
+    /// atlas's tiles.
+    /// </summary>
     private readonly HashSet<int> _unclearedPages = [];
 
     // Fallback text (DirectWrite layouts): tile number + 1 by (codepoint or cluster, variant, wide, dark).
@@ -63,16 +67,16 @@ internal sealed class GlyphAtlas : IDisposable
     private readonly List<(string Text, TextStyle Style, bool Wide, bool Dark, int Page, Vector2 Origin, Rect Clip)> _pendingText = [];
 
     /// <summary>
-    /// The font a fallback character is laid out in: the formats made from it are shared by every atlas and kept for
-    /// the process's life. Panes share atlases, and a pane's own formats go when its font or scale changes: a character
-    /// reserved with one and drawn after it was gone failed the frame (seen after moving to a monitor with another scale).
+    /// The font a fallback character is laid out in. The formats made from it are shared by every atlas and kept for
+    /// the process's life. Panes share atlases, and a pane's own formats go away when its font or scale changes, so a
+    /// character reserved with a pane's format and drawn after that format was gone would fail the frame.
     /// </summary>
     public readonly record struct TextStyle(string Family, float Size, int Weight, bool Italic);
 
-    // Never made during a frame if it can be helped (PrepareFormat, from SetFont): the first layout with a format naming
-    // the bundled font's file (file:///...ttf#Cascadia Mono NF) has Win2D resolve the path through Windows.Storage, a COM
-    // call that pumps messages, and a pointer move pumped inside XAML's render tick ends the process (FailFast on
-    // reentrancy: dragging the quick terminal's edge, 2026-10-04). Realized once, a format doesn't do that again.
+    // Formats are made outside a frame where possible (PrepareFormat, called from SetFont), because the first layout with
+    // a format naming the bundled font's file (file:///...ttf#Cascadia Mono NF) has Win2D resolve the path through
+    // Windows.Storage. That's a COM call that pumps messages, and a pointer move pumped inside XAML's render tick ends
+    // the process (a FailFast on reentrancy). Once realized, a format doesn't do that again.
     private static readonly Dictionary<TextStyle, CanvasTextFormat> Formats = [];
 
     private static CanvasTextFormat FormatFor(ICanvasResourceCreator device, TextStyle style)
@@ -116,10 +120,10 @@ internal sealed class GlyphAtlas : IDisposable
     public readonly record struct Tile(CanvasRenderTarget Page, Rect Source);
 
     /// <summary>
-    /// Most pages a pane's atlas keeps (about 1 MB each): past it, the next frame starts over with only what's on screen.
-    /// Without a limit it only grew until a font, size or scale change (a session paging through thousands of distinct
-    /// characters or icons, or emoji in many text colors, could hold 100+ MB). 32 pages hold ~4,000 tiles at 150%, far
-    /// more than one screen shows, so starting over is rare and never every frame.
+    /// The most pages an atlas keeps (about 1 MB each). Past that, the next frame starts over with only what's on
+    /// screen. Without a limit, an atlas would only grow until a font, size or scale change, and a session paging through
+    /// thousands of distinct characters or icons, or emoji in many text colors, could hold 100+ MB. 32 pages hold about
+    /// 4,000 tiles at 150%, far more than one screen shows, so starting over is rare and never happens every frame.
     /// </summary>
     public const int MaxPages = 32;
 
@@ -127,9 +131,9 @@ internal sealed class GlyphAtlas : IDisposable
     public int PageCount => _pages.Count + _colorPages.Count;
 
     /// <summary>
-    /// At a frame's start (no tile of this frame handed out yet): starts over if the atlas has grown past
-    /// <see cref="MaxPages"/>, or if a frame failed between reserving tiles and drawing them (they'd be drawn later
-    /// with another pane's fonts, which may be gone by then).
+    /// Runs at a frame's start, before any tile of this frame is handed out. Starts over if the atlas has grown past
+    /// <see cref="MaxPages"/>, or if a frame failed between reserving tiles and drawing them, because those tiles would
+    /// be drawn later with another pane's fonts, which may be gone by then.
     /// </summary>
     public void Trim()
     {
@@ -144,7 +148,9 @@ internal sealed class GlyphAtlas : IDisposable
         }
     }
 
-    /// <summary>Tile size and the glyph's origin in it, for these metrics; drops everything if they changed.</summary>
+    /// <summary>
+    /// Works out the tile size and the glyph's origin in it for these metrics, and drops everything if they changed.
+    /// </summary>
     public void Prepare(CellMetrics m, float fracX, float fracY)
     {
         if (m == _metrics && fracX == _fracX && fracY == _fracY && _tileW > 0)
@@ -171,7 +177,7 @@ internal sealed class GlyphAtlas : IDisposable
         return new Rect((cellX - (int)_metrics.WidthPx) / s, (cellY - (int)_metrics.HeightPx / 2) / s, _tileW / s, _tileH / s);
     }
 
-    /// <summary>The tile for <paramref name="glyph"/>; a new one is reserved now and drawn by <see cref="Flush"/>.</summary>
+    /// <summary>The tile for <paramref name="glyph"/>, or a new one reserved now and drawn by <see cref="Flush"/>.</summary>
     public Tile Get(ICanvasResourceCreatorWithDpi device, CanvasFontFace face, float fontSize, int glyph, int variant, bool dark)
     {
         var key = variant * 2 + (dark ? 1 : 0);
@@ -196,9 +202,9 @@ internal sealed class GlyphAtlas : IDisposable
     }
 
     /// <summary>
-    /// The tile for a character the font lacks, as white coverage like a glyph: <paramref name="codepoint"/>, or a
-    /// cluster's <paramref name="cluster"/> text. Laid out in <paramref name="format"/> centered in one cell or two
-    /// (<paramref name="wide"/>), on the grid's baseline, as the cell-by-cell layouts were.
+    /// The tile for a character the font lacks (<paramref name="codepoint"/>, or a cluster's <paramref name="cluster"/>
+    /// text), as white coverage like a glyph. It's laid out in <paramref name="format"/>, centered in one cell or two
+    /// (<paramref name="wide"/>), on the grid's baseline.
     /// </summary>
     public Tile GetText(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, TextStyle format, int variant, bool wide, bool dark)
     {
@@ -228,7 +234,7 @@ internal sealed class GlyphAtlas : IDisposable
 
     /// <summary>
     /// The tile for an emoji (<paramref name="codepoint"/>, or a cluster's <paramref name="cluster"/> text), drawn in
-    /// color and copied untinted; <paramref name="color"/> is the text's.
+    /// color and copied untinted. <paramref name="color"/> is the text's color.
     /// </summary>
     public Tile GetColor(ICanvasResourceCreatorWithDpi device, int codepoint, string? cluster, TextStyle format, int variant, bool wide, Color color)
     {
@@ -243,7 +249,10 @@ internal sealed class GlyphAtlas : IDisposable
         return tile;
     }
 
-    /// <summary>A free tile on <paramref name="pages"/> (a page added when full); its cell's top-left, in DIPs of the page.</summary>
+    /// <summary>
+    /// A free tile on <paramref name="pages"/>, adding a page when the last one is full, and the top-left of the tile's
+    /// cell in DIPs of the page.
+    /// </summary>
     private (Tile Tile, int Page, Vector2 Cell) Reserve(ICanvasResourceCreatorWithDpi device, List<CanvasRenderTarget> pages,
         HashSet<int> uncleared, ref int next)
     {
@@ -288,7 +297,7 @@ internal sealed class GlyphAtlas : IDisposable
         }
         catch
         {
-            // Half drawn: the reserved tiles would stay blank (or get drawn twice). Start over next frame.
+            // Half drawn, so the reserved tiles would stay blank or get drawn twice. Start over next frame.
             Clear();
             throw;
         }
@@ -308,8 +317,8 @@ internal sealed class GlyphAtlas : IDisposable
 
         foreach (var page in _pending.Select(p => p.Page).Concat(_pendingText.Select(p => p.Page)).Distinct().ToList())
         {
-            // The page's new glyphs alone, on transparent, at their tiles: white for light text, black for dark
-            // (Direct2D's contrast for each)...
+            // First the page's new glyphs alone, on transparent, at their tiles. They're white for light text and black
+            // for dark, so each gets Direct2D's contrast for its color.
             using (var ds = _scratch.CreateDrawingSession())
             {
                 ds.Clear(Color.FromArgb(0, 0, 0, 0));
@@ -335,10 +344,10 @@ internal sealed class GlyphAtlas : IDisposable
                 }
             }
 
-            // ...then onto the page as white coverage. Normal blending: everything else in the scratch is transparent,
-            // and each tile is written once. (CanvasBlend.Copy with an effect drew nothing, 2026-10-02.) A new page is
-            // cleared first: it may hold a previous atlas's tiles (after a zoom step, the old pages' freed memory came
-            // back with them, and new glyphs were blended over the fragments: garbled text).
+            // Then the scratch goes onto the page as white coverage. Normal blending works because everything else in the
+            // scratch is transparent and each tile is written once (CanvasBlend.Copy with an effect draws nothing). A new
+            // page is cleared first, because its memory may hold a previous atlas's tiles, and new glyphs blended over
+            // those fragments would show as garbled text.
             _whiten.Source = _scratch;
             using (var ds = _pages[page].CreateDrawingSession())
             {
@@ -354,7 +363,7 @@ internal sealed class GlyphAtlas : IDisposable
         _pending.Clear();
         _pendingText.Clear();
 
-        // Emoji straight onto their pages, in color: nothing to whiten.
+        // Emoji go straight onto their pages in color, so there's nothing to whiten.
         foreach (var page in _pendingColor.Select(p => p.Page).Distinct().ToList())
         {
             using var ds = _colorPages[page].CreateDrawingSession();
@@ -415,14 +424,16 @@ internal sealed class GlyphAtlas : IDisposable
 }
 
 /// <summary>
-/// The glyph atlases panes share (UI thread only): one per (device, font, size, cell metrics, sub-pixel offset), kept
-/// while a pane uses it. A pane whose font, zoom, scale or padding changes moves to the atlas for its new settings.
+/// The glyph atlases panes share (UI thread only). There's one per (device, font, size, cell metrics, sub-pixel
+/// offset), kept while a pane uses it. A pane whose font, zoom, scale or padding changes moves to the atlas for its new
+/// settings.
 /// </summary>
 internal static class GlyphAtlases
 {
     /// <summary>
-    /// What decides an atlas's tiles. The device by its native pointer (a projected object may come back as another
-    /// wrapper of the same device); the font as the text format names it (the bundled font by file).
+    /// What decides an atlas's tiles. The device is keyed by its native pointer, because a projected object may come
+    /// back as another wrapper of the same device. The font is keyed as the text format names it (the bundled font by
+    /// its file).
     /// </summary>
     public readonly record struct Key(nint Device, string Font, float Size, CellMetrics Metrics, float FracX, float FracY)
     {
@@ -434,7 +445,7 @@ internal static class GlyphAtlases
     /// <summary>Panes per atlas now (diagnostics).</summary>
     public static string Describe() => string.Join(", ", Shared.Values.Select(s => $"{s.Users} pane(s), {s.Atlas.PageCount} page(s)"));
 
-    /// <summary>The atlas for <paramref name="key"/>, made if no pane has it; pair with <see cref="Release"/>.</summary>
+    /// <summary>The atlas for <paramref name="key"/>, made if no pane has it. Pair it with <see cref="Release"/>.</summary>
     public static GlyphAtlas Acquire(Key key)
     {
         if (Shared.TryGetValue(key, out var shared))
@@ -450,7 +461,7 @@ internal static class GlyphAtlases
         return atlas;
     }
 
-    /// <summary>A pane stopped using <paramref name="key"/>'s atlas: freed once no pane does.</summary>
+    /// <summary>A pane stopped using <paramref name="key"/>'s atlas, which is freed once no pane uses it.</summary>
     public static void Release(Key key)
     {
         if (!Shared.TryGetValue(key, out var shared))

@@ -7,10 +7,10 @@ using Microsoft.UI.Xaml.Media.Animation;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// The bell (BEL): per <c>bell</c>, the pane flashes and the window is told (a dot on the tab when
-/// you aren't looking); with <c>bell-sound</c>, Windows' default sound plays. A burst rings once:
-/// after a bell, more bells stay quiet until none has come for <see cref="BellQuiet"/> (a held key at
-/// a prompt that refuses it rings on every repeat, and the shell may still be ringing after release).
+/// The bell (BEL). Per <c>bell</c>, the pane flashes and the window is told, which puts a dot on the tab when you
+/// aren't looking. With <c>bell-sound</c>, Windows' default sound plays. A burst rings once, because after a bell, more
+/// bells stay quiet until none has come for <see cref="BellQuiet"/>. A held key at a prompt that refuses it rings on
+/// every repeat, and the shell may still be ringing after the key's release.
 /// </summary>
 public sealed partial class TerminalControl
 {

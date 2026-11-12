@@ -7,16 +7,16 @@ using Zinc.Shaders;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Custom shaders (<c>[shaders] files</c>, Ghostty/Shadertoy GLSL) over the pane's picture: loaded off the UI thread
-/// (<see cref="ShaderLoader"/>, shared between panes), run by the swap chain surface (low-latency drawing only), animated
-/// per <c>[shaders] animation</c> and focus. Shaders that fail are left out and reported (<see cref="ShaderProblems"/>):
-/// the pane draws with the rest, or plainly.
+/// Custom shaders (<c>[shaders] files</c>, Ghostty/Shadertoy GLSL) over the pane's picture. They're loaded off the UI
+/// thread (<see cref="ShaderLoader"/>, shared between panes), run by the swap chain surface (low-latency drawing only),
+/// and animated per <c>[shaders] animation</c> and focus. Shaders that fail are left out and reported
+/// (<see cref="ShaderProblems"/>), and the pane draws with the rest, or plainly.
 /// </summary>
 public sealed partial class TerminalControl
 {
     /// <summary>
-    /// After each load: the pane's shaders that couldn't be used, a line each ("crt.glsl, line 12: ..."), for the window's
-    /// notice; empty when they all run (a fixed file takes its line back).
+    /// Raised after each load with the pane's shaders that couldn't be used, a line each ("crt.glsl, line 12: ..."), for
+    /// the window's notice. The list is empty when they all run, so a fixed file takes its line back.
     /// </summary>
     public event Action<IReadOnlyList<string>>? ShaderProblems;
 
@@ -34,7 +34,9 @@ public sealed partial class TerminalControl
         DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.Low, () => ApplyShaders(_config));
     }
 
-    /// <summary>A shader file was saved: load the pane's shaders again if it's one of them (the rest come from the cache).</summary>
+    /// <summary>
+    /// A shader file was saved, so the pane's shaders load again if it's one of them (the rest come from the cache).
+    /// </summary>
     private void OnShaderFileChanged(string path) => DispatcherQueue.SafeEnqueue(() =>
     {
         if (!_closing.IsCancellationRequested && _config.ShaderFiles.Contains(path, StringComparer.OrdinalIgnoreCase))
@@ -43,14 +45,19 @@ public sealed partial class TerminalControl
         }
     });
 
-    /// <summary>The pane closed: no more file notices (a static event would keep it alive).</summary>
+    /// <summary>
+    /// The pane closed, so it stops hearing about shader files (a static event would keep the pane alive).
+    /// </summary>
     private void StopShaders() => ShaderLoader.FileChanged -= OnShaderFileChanged;
 
-    // The mouse for iMouse, in DIPs: where it is while the left button is down, where that press began.
+    // The mouse for iMouse, in DIPs: where it is while the left button is down, and where that press began.
     private Point _shaderMouse, _shaderMouseDown;
     private bool _shaderMouseIsDown;
 
-    /// <summary>Loads the configured shaders (again: a reload may follow an edited shader file; unchanged files are cached).</summary>
+    /// <summary>
+    /// Loads the configured shaders, which also runs again after a shader file is edited. Unchanged files come from the
+    /// cache.
+    /// </summary>
     private async void ApplyShaders(Config config)
     {
         var load = ++_shaderLoads;
@@ -80,7 +87,7 @@ public sealed partial class TerminalControl
         }
         catch (Exception ex)
         {
-            // After an await: an exception escaping would end the process.
+            // This runs after an await, where an exception escaping would end the process.
             Log.Crash("shaders", ex);
             App.Instance.ShowSurvivedError(ex);
         }
@@ -165,7 +172,7 @@ public sealed partial class TerminalControl
             return;
         }
 
-        // Settings' preview is never focused, but stands for a focused terminal (its cursor is drawn so too).
+        // Settings' preview is never focused, but stands for a focused terminal (its cursor is drawn as focused too).
         var focused = _focused || _previewScript != null;
         _swap.SetAtRest(_config.ShaderAnimation == ShaderAnimation.Never);
         _swap.SetFocus(focused);
@@ -176,9 +183,10 @@ public sealed partial class TerminalControl
             _ => focused,
         };
 
-        // Paused with the animation while unfocused: hovering a program's links or scrollbar redraws the terminal, and
-        // with a running clock each of those frames showed the shader jumped ahead. With animation off it never runs
-        // (unlike Ghostty's false, where frames drawn on change, a selection being dragged, showed it moving).
+        // The clock pauses with the animation while unfocused, because hovering a program's links or scrollbar redraws the
+        // terminal, and with a running clock each of those frames would show the shader jumped ahead. With animation off
+        // the clock never runs, unlike Ghostty's false, where frames drawn on a change (such as a selection being dragged)
+        // show the shader moving.
         _swap.SetClock(_config.ShaderAnimation == ShaderAnimation.Always || _config.ShaderAnimation == ShaderAnimation.Focused && focused);
     }
 }

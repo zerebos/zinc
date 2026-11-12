@@ -8,8 +8,8 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// Key sequences ("ctrl+a>c" in [keys]): the leader starts one, and while it waits a hint at the
-/// bottom of the pane lists what can come next (which-key style). The next key runs its action;
-/// Escape or any other key cancels (dropped, not typed); the leader twice types the leader.
+/// bottom of the pane lists what can come next (which-key style). The next key runs its action.
+/// Escape or any other key cancels, and that key is dropped, not typed. The leader twice types the leader.
 /// </summary>
 public sealed partial class TerminalControl
 {
@@ -19,9 +19,9 @@ public sealed partial class TerminalControl
     private KeySequencer Sequencer => _sequencer ??= new KeySequencer(_keybindings);
 
     /// <summary>
-    /// Feeds a key press to the sequence and does what it says. <see cref="KeyStep.NotMine"/> and
-    /// <see cref="KeyStep.PassThrough"/> (the leader twice): handle the key as usual; otherwise the
-    /// key was the sequence's and goes no further.
+    /// Feeds a key press to the sequence and does what it says. After <see cref="KeyStep.NotMine"/> or
+    /// <see cref="KeyStep.PassThrough"/> (the leader twice), the caller handles the key as usual. Otherwise
+    /// the key was the sequence's and goes no further.
     /// </summary>
     private KeyStep HandleSequenceKey(KeyChord pressed, bool repeat, TerminalSession session)
     {
@@ -50,7 +50,7 @@ public sealed partial class TerminalControl
         return step;
     }
 
-    /// <summary>Focus went elsewhere: a waiting sequence is over.</summary>
+    /// <summary>Ends a waiting sequence, because focus went elsewhere.</summary>
     private void CancelSequence()
     {
         if (_sequencer is { Active: true })
