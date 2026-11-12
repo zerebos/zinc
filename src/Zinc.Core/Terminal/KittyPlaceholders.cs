@@ -1,7 +1,7 @@
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Kitty graphics Unicode placeholders (virtual placements, <c>U=1</c>; what yazi uses): the
+/// Kitty graphics Unicode placeholders (virtual placements, <c>U=1</c>, which yazi uses). The
 /// program prints U+10EEEE cells whose foreground color names the image, underline color
 /// the placement, and combining diacritics the image row/column (and the id's high byte).
 /// Adjacent compatible cells form runs, and each run draws its slice of the image, scaled
@@ -18,10 +18,12 @@ public static partial class KittyPlaceholders
         return i >= 0 ? i : null;
     }
 
-    /// <summary>One placeholder cell; missing parts continue the run to its left.</summary>
+    /// <summary>One placeholder cell, whose missing parts continue the run to its left.</summary>
     public readonly record struct Cell(uint IdLow, byte? IdHigh, uint PlacementId, int? Row, int? Col);
 
-    /// <summary>A run of placeholder cells on one row: image cells (Row, Col..Col+Width-1) drawn at column X.</summary>
+    /// <summary>
+    /// A run of placeholder cells on one row, which draws image cells (Row, Col..Col+Width-1) at column X.
+    /// </summary>
     public readonly record struct Run(int X, uint ImageId, uint PlacementId, int Row, int Col, int Width);
 
     /// <summary>
@@ -85,9 +87,9 @@ public static partial class KittyPlaceholders
 
     /// <summary>
     /// The slice of an image a run shows. The image is fitted into the placement's grid
-    /// (<paramref name="gridCols"/> × <paramref name="gridRows"/> cells; 0 = sized from the
-    /// image) preserving aspect ratio and centered; the run covers image cells
-    /// (<see cref="Run.Row"/>, <see cref="Run.Col"/>...). Null when the run shows only the
+    /// (<paramref name="gridCols"/> × <paramref name="gridRows"/> cells, where 0 means sized from
+    /// the image), keeping its aspect ratio, and centered. The run covers the image cells from
+    /// (<see cref="Run.Row"/>, <see cref="Run.Col"/>) onward. Null when the run shows only the
     /// centering margin.
     /// </summary>
     public static Slice? Geometry(Run run, int imageWidth, int imageHeight, uint gridCols, uint gridRows,
@@ -129,7 +131,7 @@ public static partial class KittyPlaceholders
         var srcH = paddedH * 1 / rows;
         double destW = run.Width * cellWidth, destH = cellHeight;
 
-        // The padding isn't part of the bitmap: trim the source and shift the destination.
+        // The padding isn't part of the bitmap, so trim the source and shift the destination.
         (srcY, srcH, var offY, destH) = Trim(srcY, srcH, marginY, paddedH, imgH, scale, destH);
         (srcX, srcW, var offX, destW) = Trim(srcX, srcW, marginX, paddedW, imgW, scale, destW);
         if (srcW <= 0 || srcH <= 0)

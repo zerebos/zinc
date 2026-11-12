@@ -5,7 +5,7 @@ namespace Zinc.Shaders;
 
 /// <summary>
 /// A custom shader's GLSL as Ghostty runs it: its Shadertoy-style prefix (the uniforms, iChannel0 = the terminal's
-/// picture, main() calling the shader's mainImage) goes first, so Ghostty's and Shadertoy's shaders compile unchanged;
+/// picture, main() calling the shader's mainImage) goes first, so Ghostty's and Shadertoy's shaders compile unchanged.
 /// glslang's messages are given back in the shader file's own line numbers.
 /// </summary>
 public static partial class ShaderSource
@@ -66,7 +66,7 @@ public static partial class ShaderSource
         void main() { mainImage (_fragColor, gl_FragCoord.xy); }
         """;
 
-    // The prefix, then a line break, then the shader: its line 1 is the prefix's line count + 1.
+    // The prefix, then a line break, then the shader, so the shader's line 1 is the prefix's line count + 1.
     private static readonly int LineOffset = Prefix.Count(c => c == '\n') + 1;
 
     /// <summary>The complete fragment shader glslang compiles.</summary>
@@ -74,7 +74,7 @@ public static partial class ShaderSource
 
     /// <summary>
     /// Whether the shader changes over time on its own (it reads the clock or the frame number), so it has to be
-    /// redrawn every refresh while it animates; other shaders are drawn only when the terminal changes.
+    /// redrawn every refresh while it animates. Other shaders are drawn only when the terminal changes.
     /// </summary>
     public static bool UsesTime(string shader) => TimeUniforms().IsMatch(WithoutComments(shader));
 

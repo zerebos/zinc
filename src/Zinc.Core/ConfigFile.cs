@@ -7,7 +7,7 @@ namespace Zinc;
 
 /// <summary>
 /// A named set of settings: the global settings with the profile's own on top. <see cref="Id"/>
-/// is what keys, the default profile and saved sessions refer to; <see cref="Name"/> is shown.
+/// is what keys, the default profile and saved sessions refer to, and <see cref="Name"/> is the one shown.
 /// </summary>
 public sealed record Profile(string Id, string Name, Config Config, bool Hidden = false)
 {
@@ -27,8 +27,8 @@ public sealed record Profile(string Id, string Name, Config Config, bool Hidden 
     public string? Source { get; init; }
 
     /// <summary>
-    /// Why this profile can't open, if it can't: changes you made to a found profile are kept after
-    /// its shell is gone, or while its search is turned off (it's hidden from menus then).
+    /// Why this profile can't open, if it can't. Changes you made to a found profile are kept after
+    /// its shell is gone, or while its search is turned off, and the profile is hidden from menus then.
     /// </summary>
     public ProfileMissing Missing { get; init; }
 }
@@ -95,8 +95,8 @@ public sealed class ConfigFile
     public IReadOnlyCollection<string> Files { get; private init; } = [];
 
     /// <summary>
-    /// The global settings as written (last one wins, includes counted), by key ("font.size"):
-    /// TOML values (string, bool, long, double, lists). For the settings window.
+    /// The global settings as written, by key ("font.size"), as TOML values (string, bool, long, double, lists).
+    /// The last one wins, includes counted. For the settings window.
     /// </summary>
     public IReadOnlyDictionary<string, object> GlobalValues { get; private init; } = new Dictionary<string, object>();
 
@@ -112,9 +112,9 @@ public sealed class ConfigFile
     public object? ValueOf(string key) => GlobalValues.TryGetValue(key, out var value) ? value : null;
 
     /// <summary>
-    /// Keys renamed before 1.0, old to new (2026-10-06: "pane" for the thing, "split" only as the verb; the pane-tab keys
-    /// named as Settings names them). Files with the old names still read (entries are renamed as they're read); the
-    /// settings window writes the new name and removes the old one (SettingsWriter).
+    /// Keys renamed before 1.0, old to new, so "pane" names the thing and "split" is only the verb, and the pane-tab
+    /// keys match the names Settings uses. Files with the old names still read, because entries are renamed as they're
+    /// read. The settings window writes the new name and removes the old one (<c>SettingsWriter</c>).
     /// </summary>
     public static IReadOnlyDictionary<string, string> RenamedKeys { get; } = new Dictionary<string, string>
     {
@@ -124,7 +124,7 @@ public sealed class ConfigFile
         ["window.unfocused-split-fill"] = "window.unfocused-pane-fill",
     };
 
-    /// <summary><paramref name="path"/> under its current name: a renamed key's last two parts replaced.</summary>
+    /// <summary><paramref name="path"/> under its current name, with a renamed key's last two parts replaced.</summary>
     internal static IReadOnlyList<string> CurrentName(IReadOnlyList<string> path) =>
         path.Count >= 2 && RenamedKeys.TryGetValue($"{path[^2]}.{path[^1]}", out var renamed)
             ? [.. path.Take(path.Count - 2), .. renamed.Split('.')]
@@ -132,10 +132,10 @@ public sealed class ConfigFile
 
     /// <summary>
     /// Keys replaced by one whose values mean something else, old to new, with how an old value reads as a new one.
-    /// Read as the new key; when a file has both, the new one wins wherever it is. The settings window writes the new
-    /// key and removes the old one (SettingsWriter). 2026-10-11: <c>pane-tab-strip = "auto"</c> showed the strip on
-    /// panes with two or more tabs, which <c>pane-headers</c> calls <c>with-tabs</c> (its <c>auto</c> is new and
-    /// shows more), so the old key never gives the new Auto.
+    /// An old key is read as the new key, and when a file has both, the new one wins wherever it is. The settings window
+    /// writes the new key and removes the old one (<c>SettingsWriter</c>). For example, <c>pane-tab-strip = "auto"</c>
+    /// shows the strip on panes with two or more tabs, which <c>pane-headers</c> calls <c>with-tabs</c>. The new key's
+    /// own <c>auto</c> shows more, so the old key never gives the new Auto.
     /// </summary>
     public static IReadOnlyDictionary<string, (string Key, Func<object, object> Value)> ReplacedKeys { get; } =
         new Dictionary<string, (string, Func<object, object>)>
@@ -144,7 +144,10 @@ public sealed class ConfigFile
                 v => v is string s && s.Trim().Equals("auto", StringComparison.OrdinalIgnoreCase) ? "with-tabs" : v),
         };
 
-    /// <summary>Every older spelling of <paramref name="key"/> ("window.pane-headers"): renamed and replaced keys, and theirs.</summary>
+    /// <summary>
+    /// Every older spelling of <paramref name="key"/> ("window.pane-headers"), which covers renamed and replaced keys and
+    /// their own older names.
+    /// </summary>
     public static IEnumerable<string> OldNames(string key)
     {
         var older = RenamedKeys.Where(r => r.Value == key).Select(r => r.Key)
@@ -164,7 +167,7 @@ public sealed class ConfigFile
         "shaders.folders",
     ];
 
-    /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page); may be a light/dark pair.</summary>
+    /// <summary>The scheme the global <c>[colors] theme</c> names, if any (for the welcome page), which may be a light/dark pair.</summary>
     public string? SchemeName { get; private init; }
 
     /// <summary>
@@ -188,10 +191,13 @@ public sealed class ConfigFile
     /// <summary>Settings outside any profile.</summary>
     public Config Global { get; }
 
-    /// <summary>Profiles in file order, hidden ones included; never empty (a "Default" profile if none are defined).</summary>
+    /// <summary>
+    /// Profiles in file order, hidden ones included. Never empty, because a "Default" profile stands in when none are
+    /// defined.
+    /// </summary>
     public IReadOnlyList<Profile> Profiles { get; }
 
-    /// <summary>Profiles offered in menus: <see cref="Profiles"/> without the hidden ones.</summary>
+    /// <summary>Profiles offered in menus, which are <see cref="Profiles"/> without the hidden ones.</summary>
     public IEnumerable<Profile> VisibleProfiles => Profiles.Where(p => !p.Hidden);
 
     public Profile DefaultProfile { get; }
@@ -221,7 +227,7 @@ public sealed class ConfigFile
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Treated like invalid TOML: reported, and a reload keeps the settings in force (at
+            // Treated like invalid TOML, so it's reported, and a reload keeps the settings in force (at
             // startup, the defaults) rather than apply a file it couldn't see.
             var defaults = Parse("", path, discover: ProfileDiscovery.Discover);
             return new ConfigFile(defaults.Global, defaults.Profiles, defaults.DefaultProfile,
@@ -233,8 +239,8 @@ public sealed class ConfigFile
     }
 
     /// <summary>
-    /// Reads a file another program may have open (an editor mid-save): sharing its access, with a
-    /// few short retries while it's locked.
+    /// Reads a file another program may have open, such as an editor mid-save. It shares the file's
+    /// access and retries a few times, briefly, while the file is locked.
     /// </summary>
     internal static string ReadShared(string path)
     {
@@ -255,8 +261,8 @@ public sealed class ConfigFile
 
     /// <summary>
     /// Reads config text. <paramref name="path"/> names it in warnings and anchors <c>include</c>
-    /// and the user's themes folder (next to it); <paramref name="bundledThemes"/> is searched after.
-    /// <paramref name="discover"/> finds installed profiles (none if null: tests, and anything
+    /// and the user's themes folder (next to it), and <paramref name="bundledThemes"/> is searched after that folder.
+    /// <paramref name="discover"/> finds installed profiles, or none if it's null (tests, and anything
     /// that shouldn't look at the machine).
     /// </summary>
     public static ConfigFile Parse(string text, string path = "config.toml", string? bundledThemes = null,
@@ -272,14 +278,14 @@ public sealed class ConfigFile
     /// <summary>One setting as written: its full key path, its value, and where it is.</summary>
     private sealed record Entry(IReadOnlyList<string> Path, object Value, string File, int Line)
     {
-        /// <summary>Read from a replaced key (<see cref="ReplacedKeys"/>): the new key written anywhere wins over it.</summary>
+        /// <summary>Read from a replaced key (<see cref="ReplacedKeys"/>), so the new key written anywhere wins over it.</summary>
         public bool Replaced { get; init; }
 
         public string Where => $"{System.IO.Path.GetFileName(File)}:{Line}";
         public string Key => string.Join('.', Path);
     }
 
-    /// <summary>The sections a profile may override; the rest belong to the app.</summary>
+    /// <summary>The sections a profile may override, and the rest belong to the app.</summary>
     private static readonly HashSet<string> ProfileGroups = ["font", "colors", "terminal", "shaders"];
 
     private static readonly HashSet<string> Groups = ["font", "colors", "terminal", "shaders", "window", "notify", "quick-terminal", "updates", "cli", "debug"];
@@ -297,7 +303,7 @@ public sealed class ConfigFile
         private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
         private bool _hasErrors;
 
-        // [profile.<id>] headers in order, empty ones included: a bare header places a found
+        // [profile.<id>] headers in order, empty ones included, because a bare header places a found
         // profile in the menu without changing it.
         private readonly List<string> _profileSections = [];
 
@@ -342,7 +348,7 @@ public sealed class ConfigFile
                 }
             }
 
-            // Included files first: what includes them wins.
+            // Included files are read first, so the file that includes them wins.
             foreach (var include in entries.Where(e => e.Path is ["include"]))
             {
                 foreach (var pattern in include.Value is List<object> list ? list : [include.Value])
@@ -369,7 +375,7 @@ public sealed class ConfigFile
                         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                         {
                             _warnings.Add($"{include.Where}: couldn't read {included} ({ex.Message})");
-                            _hasErrors = true; // as with a file that isn't valid TOML: keep what's in force
+                            _hasErrors = true; // as with a file that isn't valid TOML, keep what's in force
                             continue;
                         }
 
@@ -381,7 +387,7 @@ public sealed class ConfigFile
             _entries.AddRange(entries.Where(e => e.Path is not ["include"]));
         }
 
-        /// <summary>Files an include pattern names, relative to the including file; <c>*</c> matches within a folder.</summary>
+        /// <summary>Files an include pattern names, relative to the including file, where <c>*</c> matches within a folder.</summary>
         private IEnumerable<string> Expand(string pattern, string from, Entry at)
         {
             var baseDir = System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(from)) ?? ".";
@@ -556,8 +562,8 @@ public sealed class ConfigFile
                 ? sectioned.OrderBy(id => _profileSections.IndexOf(id) is var i and >= 0 ? i : int.MaxValue).ToList()
                 : profileOrder;
 
-            // Profiles found on this machine: the base for a section with the same id, else listed
-            // after the file's own.
+            // A profile found on this machine is the base for a section with the same id, or else it's
+            // listed after the file's own.
             var discovered = (discover?.Invoke(discovery) ?? []).GroupBy(d => d.Id).Select(g => g.First()).ToList();
             var found = discovered.ToDictionary(d => d.Id);
 
@@ -579,12 +585,12 @@ public sealed class ConfigFile
                 }
                 else if (source != null && !entries.Any(e => e.Path is ["command"]))
                 {
-                    // Changes to a found profile that isn't here (any more), or whose search is
-                    // off: nothing to run. Kept, hidden from menus, and the settings say why.
+                    // Changes to a found profile that isn't here any more, or whose search is off, have
+                    // nothing to run. They're kept and hidden from menus, and the settings say why.
                     missing = ProfileDiscovery.IsOn(discovery, source) ? ProfileMissing.NotFound : ProfileMissing.SearchOff;
                     name = ProfileDiscovery.NameFor(id); // what the search called it (a name of its own still wins below)
-                    // Only when this read looked: a read without discovery (Settings checking a value) finds nothing,
-                    // and logged a dozen false warnings per check (half of a user's debug log).
+                    // Logged only when this read looked for shells, because a read without discovery (Settings
+                    // checking a value) finds nothing and would log a false warning on every check.
                     if (discover != null)
                     {
                         Log.Write($"config: profile '{id}' {(missing == ProfileMissing.SearchOff ? $"is from the {source} search, which is off" : "wasn't found on this machine")}; hiding it");
@@ -634,9 +640,9 @@ public sealed class ConfigFile
                 });
             }
 
-            // Your own profiles first, in file order; then found ones in the order the searches
-            // found them, changed or not (a section of changes mustn't move one to the top, and so
-            // make it the default); then the ones that can't open.
+            // Your own profiles come first, in file order. Found ones come next, in the order the searches
+            // found them, changed or not, because a section of changes mustn't move a found profile to the
+            // top and so make it the default. The ones that can't open come last.
             var searchOrder = discovered.Select((d, i) => (d.Id, i)).ToDictionary(x => x.Id, x => x.i);
             profiles = profiles.Select((p, i) => (p, i))
                 .OrderBy(x => x.p.Missing != ProfileMissing.None ? 2 : x.p.Found ? 1 : 0)
@@ -645,7 +651,7 @@ public sealed class ConfigFile
 
             if (listOrder != null)
             {
-                // profile-order (the settings window's drag order) first; the rest keep their places after it.
+                // profile-order (the settings window's drag order) first, and the rest keep their places after it.
                 profiles = profiles.Select((p, i) => (p, i))
                     .OrderBy(x => listOrder.IndexOf(x.p.Id) is var at and >= 0 ? at : listOrder.Count + x.i)
                     .Select(x => x.p).ToList();
@@ -700,7 +706,7 @@ public sealed class ConfigFile
             return settings;
         }
 
-        /// <summary>Applies grouped settings: a color theme first, so the colors written next to it override it.</summary>
+        /// <summary>Applies grouped settings, a color theme first so the colors written next to it override the theme.</summary>
         private Config ApplyGroups(Config config, List<Entry> entries, bool inProfile)
         {
             foreach (var e in entries.Where(e => e.Path is ["colors", "theme"]))
@@ -764,11 +770,11 @@ public sealed class ConfigFile
             return config;
         }
 
-        /// <summary>Applies a named color scheme: a file in the user's themes folder, else a bundled one.</summary>
+        /// <summary>Applies a named color scheme, from a file in the user's themes folder or else a bundled one.</summary>
         private Config ApplyTheme(Config config, string name, Entry at)
         {
-            // "light:X,dark:Y": the side for Windows' current mode (both sides checked, so a
-            // typo shows up now rather than when the mode flips).
+            // For "light:X,dark:Y", apply the side for Windows' current mode. Both sides are checked, so a
+            // typo shows up now rather than when the mode flips.
             if (ThemeLibrary.TryParsePair(name, out var light, out var dark))
             {
                 _followsAppearance = true;

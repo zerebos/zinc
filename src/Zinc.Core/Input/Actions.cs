@@ -27,7 +27,7 @@ public static class Actions
         /// <summary>Optional: "if-selection".</summary>
         CopyMode,
 
-        /// <summary>Optional: "rail" or "auto-hide" (toggled with full); none cycles.</summary>
+        /// <summary>Optional: "rail" or "auto-hide" (toggled with full). Without one, the modes cycle.</summary>
         OptionalSidebarMode,
 
         /// <summary>"previous" or "next".</summary>
@@ -123,15 +123,15 @@ public static class Actions
     /// <summary>Every action that needs no argument, as an invocation (for the settings' key list).</summary>
     public static IEnumerable<ActionInvocation> WithoutArguments =>
         Definitions.Where(d => d.Arg is Arg.None or Arg.OptionalProfile or Arg.CopyMode or Arg.OptionalSidebarMode)
-            .Select(d => Parse(d.Name, out _)!.Value); // as the parser makes it: "toggle-sidebar" alone cycles (Index -1)
+            .Select(d => Parse(d.Name, out _)!.Value); // as the parser makes it, so "toggle-sidebar" alone cycles (Index -1)
 
     /// <summary>The registry name an invocation belongs to: "split" for "split right", "new-tab" for "new-tab wsl:Fedora".</summary>
     public static string Family(ActionInvocation invocation) => Definitions[Math.Max(0, Order(invocation))].Name;
 
     /// <summary>
     /// A family's title ("Split", "Go to workspace"). Without tabs inside panes (<paramref name="paneTabs"/> false)
-    /// a new tab is a new workspace, and new-tab is titled so, apart from new-workspace's own card: it's the one with
-    /// a profile.
+    /// a new tab is a new workspace, so new-tab is titled "New workspace with a profile" to tell it apart from
+    /// new-workspace's own card.
     /// </summary>
     public static string FamilyTitle(string family, bool paneTabs = true) =>
         !paneTabs && family == "new-tab" ? $"{WorkspaceTitle} with a profile" : DefinitionOf(family).Title;
@@ -181,8 +181,8 @@ public static class Actions
     }
 
     /// <summary>
-    /// <paramref name="invocation"/>'s label among its family's variants ("Right", "Ubuntu"); one that
-    /// isn't among them names its argument ("Profile 3 in the menu", or as written).
+    /// <paramref name="invocation"/>'s label among its family's variants ("Right", "Ubuntu"). An invocation that isn't
+    /// among them gets a label that names its argument ("Profile 3 in the menu", or as written).
     /// </summary>
     public static string VariantLabel(ActionInvocation invocation, IEnumerable<(string Id, string Name)> profiles) =>
         Variants(Family(invocation), profiles).FirstOrDefault(v => v.Invocation == invocation)?.Label
@@ -228,7 +228,10 @@ public static class Actions
     public static string Category(ActionInvocation invocation) =>
         Order(invocation) is var at and >= 0 && CategoryOf.TryGetValue(Definitions[at].Name, out var category) ? category : "Zinc";
 
-    /// <summary>Every action's name has a category (a test checks, so a new action isn't filed under "Zinc" by accident).</summary>
+    /// <summary>
+    /// Every action name without a category. A test checks that there are none, so a new action isn't filed under "Zinc"
+    /// by accident.
+    /// </summary>
     internal static IEnumerable<string> Uncategorized => Definitions.Select(d => d.Name).Where(n => !CategoryOf.ContainsKey(n));
 
     /// <summary>Where <paramref name="invocation"/>'s action sits in the registry (for listing in its order).</summary>
@@ -241,8 +244,8 @@ public static class Actions
         });
 
     /// <summary>
-    /// Parses an action string. Null (with <paramref name="error"/>) if it's no action;
-    /// <see cref="None"/> is handled by the caller.
+    /// Parses an action string. Returns null (with <paramref name="error"/>) if it isn't an action.
+    /// The caller handles <see cref="None"/>.
     /// </summary>
     public static ActionInvocation? Parse(string text, out string? error)
     {
@@ -336,7 +339,7 @@ public static class Actions
 
     /// <summary>
     /// The command palette's title for an invocation (e.g. "Split right", "Focus pane left"). Without tabs inside panes
-    /// (<paramref name="paneTabs"/> false), new-tab says what it does: "New workspace".
+    /// (<paramref name="paneTabs"/> false), new-tab is titled for what it does, "New workspace".
     /// </summary>
     public static string Title(ActionInvocation invocation, bool paneTabs = true) => invocation.Action switch
     {

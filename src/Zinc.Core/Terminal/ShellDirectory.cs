@@ -1,9 +1,9 @@
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Decodes the working directory a shell reports: OSC 7 sends a <c>file://host/path</c> URI
-/// (percent-encoded), OSC 9;9 and OSC 1337 CurrentDir a bare path. Windows paths come back
-/// with backslashes (<c>file:///C:/x</c> → <c>C:\x</c>); POSIX paths (WSL, MSYS) stay as sent.
+/// Decodes the working directory a shell reports. OSC 7 sends a <c>file://host/path</c> URI
+/// (percent-encoded), and OSC 9;9 and OSC 1337 CurrentDir send a bare path. Windows paths come back
+/// with backslashes (<c>file:///C:/x</c> → <c>C:\x</c>), and POSIX paths (WSL, MSYS) stay as sent.
 /// A URI naming another machine (not one of the <see cref="LocalHosts"/>) reports nothing.
 /// </summary>
 public static class ShellDirectory
@@ -19,9 +19,10 @@ public static class ShellDirectory
 
         if (s.StartsWith("file://", StringComparison.OrdinalIgnoreCase))
         {
-            // file://host/path: the path starts at the first slash after the host. A shell on another
-            // machine (ssh) names its own host, and its /c/x isn't C:\x here. (A session never keeps one as its
-            // ReportedDirectory, but callers like NewTerminalStart.Current take any text: keep this check.)
+            // In file://host/path, the path starts at the first slash after the host. A shell on another
+            // machine (ssh) names its own host, and its /c/x isn't C:\x here. (A session never keeps a remote report
+            // as its `ReportedDirectory`, but callers like `NewTerminalStart.Current` take any text, so this check
+            // stays.)
             var slash = s.IndexOf('/', "file://".Length);
             if (slash < 0 || RemoteHost(s) != null)
             {
@@ -46,9 +47,9 @@ public static class ShellDirectory
     }
 
     /// <summary>
-    /// The host a <c>file://host/path</c> report names when that isn't this PC (<see cref="LocalHosts"/>): a shell
-    /// on another machine. Null for a local one and for reports without a host (OSC 9;9, OSC 1337 CurrentDir:
-    /// those can't be told apart, so they're taken as local).
+    /// The host a <c>file://host/path</c> report names when that host isn't this PC (<see cref="LocalHosts"/>), which
+    /// means a shell on another machine. Null for a local host, and for reports without a host (OSC 9;9 and OSC 1337
+    /// CurrentDir), which are taken as local because they can't be told apart.
     /// </summary>
     public static string? RemoteHost(string? reported)
     {
@@ -73,10 +74,10 @@ public static class ShellDirectory
     {
         if (IsWsl(command))
         {
-            // POSIX, or home-relative: wsl --cd understands "~" and "~/sub" (checked).
+            // POSIX, or home-relative, because wsl --cd understands "~" and "~/sub" (checked).
             if (!directory.StartsWith('/') && directory != "~" && !directory.StartsWith("~/", StringComparison.Ordinal))
             {
-                return null; // a Windows path: the tab's usual start works
+                return null; // a Windows path, where the tab's usual start works
             }
 
             var exe = FirstToken(command);
@@ -97,11 +98,11 @@ public static class ShellDirectory
     }
 
     /// <summary>
-    /// A folder someone typed, in the form <see cref="LaunchIn"/> takes for <paramref name="command"/>:
-    /// for WSL a Linux path (<c>~</c> kept for WSL to expand, <c>C:\x</c> becoming <c>/mnt/c/x</c>);
-    /// otherwise a Windows path (<c>~</c> is the user's home, environment variables expand) or an
+    /// A folder someone typed, in the form <see cref="LaunchIn"/> takes for <paramref name="command"/>.
+    /// For WSL that's a Linux path (<c>~</c> kept for WSL to expand, <c>C:\x</c> becoming <c>/mnt/c/x</c>).
+    /// Otherwise it's a Windows path (<c>~</c> is the user's home, environment variables expand) or an
     /// MSYS one (<c>/c/src</c>). A relative path starts from <paramref name="current"/> (where the
-    /// shell is, as reported). Null if it can't be one.
+    /// shell is, as reported). Null if the text can't be a folder.
     /// </summary>
     public static string? ResolveTyped(string typed, string command, string current, string? home = null)
     {

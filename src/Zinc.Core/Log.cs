@@ -1,10 +1,10 @@
 namespace Zinc;
 
 /// <summary>
-/// Diagnostics. <see cref="Write"/> is opt-in: the debug log (<c>[debug] logging</c>, switched with
-/// <see cref="SetEnabled"/>, into <see cref="FilePath"/>), or ZINC_LOG=&lt;file&gt;, which wins and
+/// Diagnostics. <see cref="Write"/> is opt-in. It writes to the debug log (<c>[debug] logging</c>, switched with
+/// <see cref="SetEnabled"/>, into <see cref="FilePath"/>), or to ZINC_LOG=&lt;file&gt;, which wins and
 /// is always on. <see cref="Crash"/> always keeps a record, in <see cref="CrashPath"/>, so a failure
-/// leaves its stack trace even when nobody was logging. Neither ever throws: a log that can't be
+/// leaves its stack trace even when nobody was logging. Neither ever throws, because a log that can't be
 /// written mustn't take the app down with it.
 /// </summary>
 public static class Log
@@ -27,7 +27,7 @@ public static class Log
 
     private static string Folder => AppFolders.Data;
 
-    /// <summary>The debug log: ZINC_LOG's file, else %APPDATA%\Zinc\logs\zinc.log.</summary>
+    /// <summary>The debug log, which is ZINC_LOG's file or else %APPDATA%\Zinc\logs\zinc.log.</summary>
     public static string FilePath { get; } = EnvironmentPath ?? System.IO.Path.Combine(Folder, "logs", "zinc.log");
 
     /// <summary>The debug log before its last move aside.</summary>
@@ -53,7 +53,7 @@ public static class Log
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                return; // nowhere to write: stays off
+                return; // nowhere to write, so it stays off
             }
 
             _path = FilePath;
@@ -66,15 +66,14 @@ public static class Log
         }
     }
 
-    /// <summary>The version, Windows and where Zinc runs from: the first thing a bug report needs.</summary>
+    /// <summary>The version, Windows and where Zinc runs from, which are the first things a bug report needs.</summary>
     public static string About =>
         $"{Zinc.Terminal.TerminalSession.Version}, Windows {Environment.OSVersion.Version}, " +
         $"{System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}, {AppContext.BaseDirectory}";
 
     /// <summary>
-    /// Adds a line. It's queued and written by a background thread, so logging never holds up the caller (it used
-    /// to open, append to and close the file on the caller's thread for every line: with logging on, every
-    /// keystroke paid for a file write, and an antivirus scan of it, on the UI thread).
+    /// Adds a line. It's queued and written by a background thread, so logging never holds up the caller with a file
+    /// write (and an antivirus scan of it) on the UI thread.
     /// </summary>
     public static void Write(string message)
     {
@@ -115,7 +114,7 @@ public static class Log
     {
         lock (Gate)
         {
-            // In batches, one file open per batch: consecutive lines for the same file.
+            // Writes in batches of consecutive lines for the same file, with one file open per batch.
             var batch = new System.Text.StringBuilder();
             string? batchPath = null;
             while (Pending.TryPeek(out var next))
@@ -168,7 +167,7 @@ public static class Log
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                // Held open elsewhere: keep it.
+                // Held open elsewhere, so keep it.
             }
         }
 
@@ -225,7 +224,7 @@ public static class Log
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Nowhere to write it: nothing more to do.
+            // Nowhere to write it, so there's nothing more to do.
         }
     }
 
@@ -251,7 +250,7 @@ public static class Log
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // A log file that's locked or gone: drop the line rather than fail the caller.
+            // A log file that's locked or gone drops the line rather than fail the caller.
         }
     }
 }

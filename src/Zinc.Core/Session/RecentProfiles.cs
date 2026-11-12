@@ -1,7 +1,8 @@
 namespace Zinc.Session;
 
 /// <summary>
-/// The profiles opened lately, newest first (profile ids; saved with the session): the jump list's "Recent profiles".
+/// The profiles opened lately, newest first, as profile ids saved with the session. The jump list shows them as
+/// "Recent profiles".
 /// Restored and handed-over terminals don't count, only ones opened.
 /// </summary>
 public sealed class RecentProfiles

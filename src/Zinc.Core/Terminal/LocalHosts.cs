@@ -5,7 +5,7 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// The host names that mean this PC in a <c>file://host/path</c> URI (OSC 7 folder reports, OSC 8 links): none,
-/// <c>localhost</c>, its computer name (the NetBIOS one and the DNS one: Git Bash and WSL send the latter) and
+/// <c>localhost</c>, its computer name (the NetBIOS one, and the DNS one that Git Bash and WSL send) and
 /// any a WSL distro was given in its wsl.conf (<see cref="Add"/>). A shell on another machine (ssh) names its
 /// own host, and its paths mean nothing here.
 /// </summary>
@@ -37,10 +37,10 @@ public static class LocalHosts
     }
 
     /// <summary>
-    /// Whether <paramref name="host"/> (a URI's host part, possibly empty) is this PC: one of the names exactly
-    /// (case aside) or a loopback address. No domain is stripped: fresh RHEL/Rocky/CentOS servers are named
-    /// <c>localhost.localdomain</c>, and our scripts send the bare name. A remote machine named plain
-    /// <c>localhost</c> (some containers and cloud images) still passes; only knowing a tab is in ssh could tell.
+    /// Whether <paramref name="host"/> (a URI's host part, possibly empty) is this PC, which means one of the names
+    /// exactly (case aside) or a loopback address. No domain is stripped, because fresh RHEL, Rocky and CentOS servers
+    /// are named <c>localhost.localdomain</c>, and our scripts send the bare name. A remote machine named plain
+    /// <c>localhost</c> (some containers and cloud images) still passes. Only knowing a tab is in ssh could tell.
     /// </summary>
     public static bool Is(string host) =>
         host.Length == 0 || Names.ContainsKey(host) ||

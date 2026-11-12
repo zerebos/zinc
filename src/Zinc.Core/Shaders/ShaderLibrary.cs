@@ -2,13 +2,13 @@ namespace Zinc.Shaders;
 
 /// <summary>
 /// A shader the picker offers: its name, file, how config.toml would name it (<see cref="Written"/>), a line about it,
-/// and whether it moves on its own (uses time: redraws while idle).
+/// and whether it moves on its own (it uses time, so it redraws while idle).
 /// </summary>
 public sealed record ShaderEntry(string Name, string File, string Written, string? Description, bool UsesTime);
 
 /// <summary>
 /// A group of shaders in the picker: Zinc's, yours (<c>shaders\</c> next to the config), or a folder you added
-/// (<see cref="Folder"/>; <see cref="Missing"/> when it's gone).
+/// (<see cref="Folder"/>, with <see cref="Missing"/> set when the folder is gone).
 /// </summary>
 public sealed record ShaderSection(string Title, string? Folder, IReadOnlyList<ShaderEntry> Shaders, bool Missing = false);
 
@@ -17,7 +17,7 @@ public static class ShaderLibrary
 {
     public const string ZincTitle = "Comes with Zinc", YoursTitle = "Your shaders";
 
-    // Bigger than any shader: a file this size isn't one (and isn't read whole to describe it).
+    // Bigger than any shader, so a file this size isn't one (and isn't read whole to describe it).
     private const long MaxSize = 512 * 1024;
 
     public static IReadOnlyList<ShaderSection> List(string configFile, IReadOnlyList<string> folders)
@@ -74,7 +74,7 @@ public static class ShaderLibrary
         }
     }
 
-    /// <param name="name">How config.toml names it (Zinc's and yours: by name), or null for its path.</param>
+    /// <param name="name">How config.toml names it (Zinc's and yours by name), or null for its path.</param>
     private static ShaderEntry? Entry(string file, string? name, string? description, string? configFile = null)
     {
         try
@@ -96,8 +96,8 @@ public static class ShaderLibrary
     }
 
     /// <summary>
-    /// A line about a shader from its own text: the first comment near the top that reads like a sentence (not a
-    /// separator, a license line or an attribution URL alone); null if there's none.
+    /// A line about a shader from its own text, which is the first comment near the top that reads like a sentence (not
+    /// a separator, a license line or an attribution URL alone), or null if there's none.
     /// </summary>
     public static string? Describe(string text)
     {
@@ -114,7 +114,7 @@ public static class ShaderLibrary
             }
             else if (line.Length > 0)
             {
-                break; // code: no description above it
+                break; // code, with no description above it
             }
             else
             {

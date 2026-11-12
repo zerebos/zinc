@@ -2,7 +2,7 @@ namespace Zinc.Commands;
 
 /// <summary>
 /// Fuzzy matching for the command palette: every query character must appear in order
-/// (case-insensitive); spaces in the query are ignored, so "spl gb" works like "splgb".
+/// (case-insensitive). Spaces in the query are ignored, so "spl gb" works like "splgb".
 /// Matches are scored so that tighter, more "intentional" matches rank higher:
 /// consecutive characters, characters at word starts, and matches near the beginning.
 /// </summary>
@@ -24,9 +24,8 @@ public static class FuzzyMatch
             return 0;
         }
 
-        // Greedy left-to-right, but prefer a word-start occurrence when one is available
-        // before the next ordinary one would be used up — cheap and good enough for short
-        // command titles.
+        // Greedy left to right, but a later occurrence at a word start can win over an ordinary one (below).
+        // This is cheap and good enough for short command titles.
         var score = 0;
         var t = 0;
         var previous = -2;

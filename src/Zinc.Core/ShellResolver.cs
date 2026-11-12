@@ -9,14 +9,14 @@ public static class ShellResolver
     public static string Resolve(Config config) =>
         Resolve(config, OwnArguments(), Environment.GetEnvironmentVariable);
 
-    /// <summary>Starting at sign-in (the Run entry Zinc writes): not a command to run.</summary>
+    /// <summary>The flag for starting at sign-in (the Run entry Zinc writes), which isn't a command to run.</summary>
     public const string LoginFlag = "--at-login";
 
     /// <summary>Our command line after the executable, without <see cref="LoginFlag"/> or COM's <c>-Embedding</c>.</summary>
     public static string[] LaunchArguments() =>
         [.. Environment.GetCommandLineArgs().Skip(1).Where(a => a != LoginFlag && a != Zinc.Pty.DefaultTerminal.EmbeddingFlag)];
 
-    /// <summary>The command our command line gives (none when it's Zinc's own flags: <see cref="LaunchRequest"/>).</summary>
+    /// <summary>The command our command line gives (none when it's Zinc's own flags, which <see cref="LaunchRequest"/> reads).</summary>
     public static string[] OwnArguments() => LaunchRequest.Parse(LaunchArguments()) is { Action: LaunchAction.None } request
         ? [.. request.Command]
         : [];
@@ -49,7 +49,7 @@ public static class ShellResolver
     }
 
     /// <summary>
-    /// The command for a profile opened from the UI (new tab/pane): its `command`, else a
+    /// The command for a profile opened from the UI (new tab/pane), which is its `command` or else a
     /// default shell. Our own arguments and ZINC_SHELL only apply to the first tab.
     /// </summary>
     public static string ForProfile(Config profile, Func<string, string?>? getEnv = null)
@@ -80,7 +80,7 @@ public static class ShellResolver
 
     /// <summary>
     /// Quotes one argument so CommandLineToArgvW (and the MSVC CRT) parse it back
-    /// unchanged: backslashes are literal except before a quote, where they must be doubled.
+    /// unchanged. Backslashes are literal except before a quote, where they must be doubled.
     /// </summary>
     public static string Quote(string arg)
     {

@@ -27,8 +27,8 @@ public static class GridLayout
     }
 
     /// <summary>
-    /// Half the spare room, in whole device pixels: the grid's offset within a pixel stays what the padding makes it,
-    /// whatever the window's size (the glyph atlas draws at that offset and starts over when it changes).
+    /// Half the spare room, in whole device pixels, so the grid's offset within a pixel stays what the padding makes it
+    /// whatever the window's size. The glyph atlas draws at that offset and starts over when the offset changes.
     /// </summary>
     private static float Half(double spare, float scale) => spare > 0 ? MathF.Floor((float)(spare * scale) / 2) / scale : 0;
 }

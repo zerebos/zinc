@@ -4,8 +4,8 @@ using System.Text;
 namespace Zinc.Input;
 
 /// <summary>
-/// Where typing spends its time, for the debug log (a tester's "typing feels sluggish, and letters sometimes swap").
-/// The pane reports each step with a timestamp in milliseconds; <see cref="Summary"/> gives one line per stretch of
+/// Where typing spends its time, for the debug log, to find out why typing feels sluggish or letters arrive swapped.
+/// The pane reports each step with a timestamp in milliseconds, and <see cref="Summary"/> gives one line per stretch of
 /// typing:
 /// <list type="bullet">
 /// <item>queue: how long a key press waited before the UI thread got to it (a busy UI thread);</item>
@@ -15,7 +15,7 @@ namespace Zinc.Input;
 /// <item>out of order: a character arriving before one typed earlier (the swapped letters), with examples;</item>
 /// <item>swallowed: a character dropped because a later key claimed it.</item>
 /// </list>
-/// Thread-safe: output arrives on the reader thread, the rest on the UI thread.
+/// Thread-safe, because output arrives on the reader thread and the rest on the UI thread.
 /// </summary>
 public sealed class InputLatency
 {
@@ -35,10 +35,15 @@ public sealed class InputLatency
     /// <summary>How long after a send output still counts as its echo (a shell may answer in several pieces).</summary>
     private const double EchoWindow = 250;
 
-    /// <summary>How long expected characters are kept: older ones never came (a dead key, an IME).</summary>
+    /// <summary>
+    /// How long expected characters are kept. Older ones are taken to have never come (a dead key, an IME).
+    /// </summary>
     private const double ExpectFor = 2000;
 
-    /// <summary>A key press reached the pane; <paramref name="character"/>: the text it should produce, when it goes to the character path.</summary>
+    /// <summary>
+    /// A key press reached the pane. <paramref name="character"/> is the text it should produce, when it goes to the
+    /// character path.
+    /// </summary>
     public void KeyDown(double at, double queued, string? character)
     {
         lock (_gate)
@@ -83,7 +88,7 @@ public sealed class InputLatency
             _keyToChar.Add(at - _expected[index].At);
             if (index > 0)
             {
-                // Typed after characters that haven't arrived yet: it overtook them.
+                // This character was typed after characters that haven't arrived yet, so it overtook them.
                 _outOfOrder++;
                 if (_examples.Count < 5)
                 {
@@ -172,7 +177,7 @@ public sealed class InputLatency
 
     /// <summary>
     /// The line for the log once a stretch of typing is over (every 60 keys or so, or 5 seconds after it began),
-    /// then starts the next stretch; null until then (or with nothing typed).
+    /// then starts the next stretch. Null until then (or with nothing typed).
     /// </summary>
     public string? Summary(double now, bool force = false)
     {
@@ -216,7 +221,9 @@ public sealed class InputLatency
         }
     }
 
-    /// <summary>Ends the current key's echo: how long until its last piece arrived, and in how many reads.</summary>
+    /// <summary>
+    /// Ends the current key's echo, recording how long until its last piece arrived and in how many reads.
+    /// </summary>
     private void CloseEcho()
     {
         if (_echoFrom >= 0 && _echoLast >= 0)

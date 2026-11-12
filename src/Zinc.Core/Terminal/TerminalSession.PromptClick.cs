@@ -18,16 +18,16 @@ public sealed unsafe partial class TerminalSession
 
     /// <summary>
     /// What the shell's last prompt mark asked for. Ghostty keeps it until another prompt says
-    /// otherwise; here each prompt decides, so leaving fish for zsh doesn't send zsh click events.
+    /// otherwise. Here each prompt decides, so leaving fish for zsh doesn't send zsh click events.
     /// </summary>
     private PromptClickMode? _announcedClick;
 
-    /// <summary>A mark has been seen: the shell marks its prompts (shell integration, its own or ours).</summary>
+    /// <summary>A mark has been seen, so the shell marks its prompts (shell integration, its own or ours).</summary>
     private bool _sawPromptMark;
 
     /// <summary>
-    /// From the marks: true while the shell waits at its prompt (or between a command's end and the next prompt), false while
-    /// a command runs; null if the shell has marked nothing.
+    /// Read from the marks. True while the shell waits at its prompt (or between a command's end and the next prompt),
+    /// false while a command runs, and null if the shell has marked nothing.
     /// </summary>
     public bool? AtPrompt
     {
@@ -67,8 +67,8 @@ public sealed unsafe partial class TerminalSession
 
     /// <summary>
     /// What to send the shell for a plain click at viewport cell (<paramref name="col"/>,
-    /// <paramref name="row"/>) to move its cursor there: arrow keys or a mouse press, as its prompt
-    /// mark asked; an empty array if the click is in the command line but needs no move; null if
+    /// <paramref name="row"/>) to move its cursor there. That's arrow keys or a mouse press, as its prompt
+    /// mark asked, or an empty array if the click is in the command line but needs no move. Null if
     /// it isn't a click-to-move (no prompt waiting for input, a full-screen program, or a click above
     /// the prompt).
     /// </summary>
@@ -98,7 +98,7 @@ public sealed unsafe partial class TerminalSession
                 return null;
             }
 
-            // Where the prompt starts, in viewport rows (above the viewport: before every click).
+            // Where the prompt starts, in viewport rows. A prompt above the viewport stays before every click.
             var promptRow = int.MinValue;
             if (_commands.Count > 0 && _commands[^1] is { Closed: false, Prompt: not 0 } command &&
                 Native.TrackedGridRefPoint(command.Prompt, PointTag.Viewport, out var prompt) == GhosttyResult.Success)
@@ -115,8 +115,8 @@ public sealed unsafe partial class TerminalSession
             {
                 case PromptClickMode.Events:
                 case PromptClickMode.EventsRelative:
-                    // A left click, aimed at the text if it missed. Ghostty and kitty send only the press; nushell
-                    // (reedline) then takes the button as held and ignores the next clicks.
+                    // A left press and release, aimed at the text if the click missed it. Ghostty and kitty send
+                    // only the press, and nushell (reedline) then takes the button as held and ignores the next clicks.
                     col = PromptClick.EventColumn(new ViewportCells(_terminal, _size.Columns, _size.Rows), col, row);
                     var y = mode == PromptClickMode.Events ? row + 1 : row - Math.Max(promptRow, 0) + 1;
                     return Encoding.ASCII.GetBytes($"\x1b[<0;{col + 1};{y}M\x1b[<0;{col + 1};{y}m");
@@ -159,7 +159,10 @@ public sealed unsafe partial class TerminalSession
         return row >= 0 && row < _size.Rows ? (x, (int)row) : null;
     }
 
-    /// <summary>The viewport's cells through grid refs (resolved per question: call under the lock, nothing mutating in between).</summary>
+    /// <summary>
+    /// The viewport's cells through grid refs, resolved for each question, so use it under the lock with nothing
+    /// mutating in between.
+    /// </summary>
     private sealed class ViewportCells(nint terminal, ushort cols, ushort rows) : IPromptCells
     {
         public int Columns => cols;

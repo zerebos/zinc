@@ -5,7 +5,10 @@ namespace Zinc.Terminal;
 /// <summary>What the drawing benchmark makes a terminal show (as a program would write it).</summary>
 public enum BenchmarkWorkload
 {
-    /// <summary>Full-screen frames, every few cells a new 256-color foreground and background: nothing repeats (the worst case for drawing).</summary>
+    /// <summary>
+    /// Full-screen frames with a new 256-color foreground and background every few cells, so nothing repeats (the worst
+    /// case for drawing).
+    /// </summary>
     Colors,
 
     /// <summary>The same frames in synchronized output (mode 2026), as btop and neovim send them.</summary>
@@ -18,23 +21,24 @@ public enum BenchmarkWorkload
     Scrolling,
 
     /// <summary>
-    /// Full-screen text in CJK and emoji with some ASCII, changing every frame: wide characters and fallback fonts (the
-    /// default font has no CJK), which the other workloads never draw.
+    /// Full-screen text in CJK and emoji with some ASCII, changing every frame. It draws wide characters and fallback
+    /// fonts (the default font has no CJK), which the other workloads never draw.
     /// </summary>
     Wide,
 }
 
 /// <summary>
 /// The benchmark's output, made up front for a <paramref name="cols"/> x <paramref name="rows"/>
-/// screen from a fixed seed, so every run (and every machine) draws the same thing. A port of
-/// .scratch/perf/load.py, which measured the same workloads from inside WSL.
+/// screen from a fixed seed, so every run (and every machine) draws the same thing.
 /// </summary>
 public sealed class BenchmarkWorkloads(int cols, int rows, int seed = 42)
 {
     private const string Chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{}[]()<>=+-*/│─┼█▓▒░";
     private static readonly string[] Words = ["def", "return", "self", "value", "for", "in", "if", "else"];
 
-    /// <summary>How many different color frames there are (cycled): enough that none is drawn twice in a row.</summary>
+    /// <summary>
+    /// How many different color frames there are (cycled), which is enough that none is drawn twice in a row.
+    /// </summary>
     public const int ColorFrames = 32;
 
     private readonly Random _random = new(seed);
@@ -58,8 +62,8 @@ public sealed class BenchmarkWorkloads(int cols, int rows, int seed = 42)
         workload == BenchmarkWorkload.Scrolling ? "\e[0m"u8.ToArray() : "\e[?25h\e[?1049l"u8.ToArray();
 
     /// <summary>
-    /// Output number <paramref name="n"/>: one full frame, or for <see cref="BenchmarkWorkload.Scrolling"/> 200
-    /// lines; with how many units it counts as (frames, or lines).
+    /// Output number <paramref name="n"/>, which is one full frame (or 200 lines for
+    /// <see cref="BenchmarkWorkload.Scrolling"/>), along with how many units it counts as (frames or lines).
     /// </summary>
     public (byte[] Bytes, int Units) Next(BenchmarkWorkload workload, int n)
     {
@@ -85,7 +89,7 @@ public sealed class BenchmarkWorkloads(int cols, int rows, int seed = 42)
         }
     }
 
-    /// <summary>"frames" or "lines": what <see cref="Next"/>'s units are.</summary>
+    /// <summary>The name of <see cref="Next"/>'s units, "frames" or "lines".</summary>
     public static string Unit(BenchmarkWorkload workload) => workload == BenchmarkWorkload.Scrolling ? "lines" : "frames";
 
     private byte[] ColorFrame(int n)
@@ -212,10 +216,10 @@ public readonly record struct TimeStats(double Average, double P95, double Max)
 }
 
 /// <summary>
-/// One workload's result: how fast the terminal took the program's output (<see cref="ProgramRate"/>
-/// units a second), how often it drew, and how long its frames took: our drawing (<see cref="Draw"/>:
-/// reading the screen and recording Direct2D commands, split into <see cref="Sections"/>) and
-/// <see cref="Flush"/> (Direct2D rasterizing them, on the GPU or the CPU).
+/// One workload's result. It says how fast the terminal took the program's output (<see cref="ProgramRate"/> units
+/// a second), how often it drew, and how long its frames took. A frame's time is split into our drawing
+/// (<see cref="Draw"/>, which reads the screen and records Direct2D commands, split further into
+/// <see cref="Sections"/>) and <see cref="Flush"/> (Direct2D rasterizing those commands, on the GPU or the CPU).
 /// </summary>
 public sealed record BenchmarkResult(
     BenchmarkWorkload Workload,

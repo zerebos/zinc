@@ -2,12 +2,12 @@ using System.Text;
 
 namespace Zinc.Cli;
 
-/// <summary>How zn prints what it's told: aligned columns for people (<c>(*)</c> = focused).</summary>
+/// <summary>How zn prints what it's told, as aligned columns for people, where <c>(*)</c> marks the focused one.</summary>
 public static class CliText
 {
     /// <summary>
-    /// <paramref name="tree"/> narrowed to the targets <paramref name="request"/> names (<c>zn pane list --workspace 2</c>):
-    /// only what's inside them.
+    /// <paramref name="tree"/> narrowed to the targets <paramref name="request"/> names (<c>zn pane list --workspace 2</c>),
+    /// keeping only what's inside them.
     /// </summary>
     public static CliTree Filter(CliTree tree, CliRequest request) => new()
     {
@@ -30,11 +30,11 @@ public static class CliText
             .ToList(),
     };
 
-    /// <summary>What <c>zn list</c>, <c>zn &lt;thing&gt; list</c> print: one row per thing at that level.</summary>
+    /// <summary>What <c>zn list</c> and <c>zn &lt;thing&gt; list</c> print, which is one row per thing at that level.</summary>
     /// <param name="level">"" (zn list), "window", "workspace", "pane" or "terminal".</param>
     /// <param name="cap">
-    /// The longest a name, title or folder may be (zn passes 40 when printing to a terminal: one long title made the
-    /// whole table too wide to read); null: whole, for output that goes on to another program.
+    /// The longest a name, title or folder may be, or null to keep them whole for output that goes on to another
+    /// program. zn passes 40 when printing to a terminal, so one long title can't make the whole table too wide to read.
     /// </param>
     public static string List(CliTree tree, string level, int? cap = null)
     {
@@ -94,13 +94,15 @@ public static class CliText
     public static string Cut(string text, int? cap) =>
         cap is { } n && text.Length > n ? text[..(n - 1)].TrimEnd() + "…" : text;
 
-    /// <summary>A path cut to <paramref name="cap"/> characters from the front: its end (the folder itself) is what matters.</summary>
+    /// <summary>
+    /// A path cut to <paramref name="cap"/> characters from the front, because its end (the folder itself) is what matters.
+    /// </summary>
     public static string CutFront(string text, int? cap) =>
         cap is { } n && text.Length > n ? "…" + text[^(n - 1)..] : text;
 
     private static string Mark(int id, bool focused) => focused ? $"{id} (*)" : id.ToString();
 
-    /// <summary>Rows as columns two spaces apart; the last column isn't padded.</summary>
+    /// <summary>Rows as columns two spaces apart. The last column isn't padded.</summary>
     public static string Table(IReadOnlyList<string[]> rows)
     {
         var columns = rows.Max(r => r.Length);

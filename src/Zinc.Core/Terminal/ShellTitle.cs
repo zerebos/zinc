@@ -3,17 +3,17 @@ using System.Text.RegularExpressions;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// A pane header's title: what leads, and the quieter text after it (null: none). A part that's a folder
+/// A pane header's title: what leads, and the quieter text after it (null for none). A part that's a folder
 /// (<paramref name="LeadIsFolder"/>, <paramref name="DetailIsFolder"/>) loses its start when narrow, not its end
 /// (<see cref="ShellTitle.FitFolder"/>).
 /// </summary>
 public sealed record HeaderTitle(string Lead, string? Detail, bool LeadIsFolder = false, bool DetailIsFolder = false);
 
 /// <summary>
-/// What a terminal's tab is called (<c>[terminal] shell-titles</c>, Ghostty's <c>title</c> feature, done from the marks
-/// instead of in each shell's script, so every shell that marks its prompt gets it): the folder while the shell waits at
-/// its prompt, the command while one runs. A title the running program sets itself (vim, htop) wins until it ends.
-/// Shells that mark nothing keep today's behaviour: the program's title.
+/// What a terminal's tab is called (<c>[terminal] shell-titles</c>, Ghostty's <c>title</c> feature). It's worked out from
+/// the marks instead of in each shell's script, so every shell that marks its prompt gets it. The tab shows the folder
+/// while the shell waits at its prompt, and the command while one runs. A title the running program sets itself (vim,
+/// htop) wins until it ends. Shells that mark nothing get the program's title.
 /// </summary>
 public static partial class ShellTitle
 {
@@ -26,7 +26,7 @@ public static partial class ShellTitle
     /// <param name="programTitle">The last title a program set ("" if none).</param>
     /// <param name="programTitleSinceCommand">That title was set after the running command started.</param>
     /// <param name="home">The user's Windows home folder (shown as ~).</param>
-    /// <returns>The title; "" leaves it to the profile's name.</returns>
+    /// <returns>The title, or "" to leave it to the profile's name.</returns>
     /// <remarks>
     /// A command names the tab once it has run <see cref="CommandLeadsAfter"/>, and until then the folder stays, as in
     /// a pane header. A title the running program set (vim) names it at once.
@@ -71,7 +71,10 @@ public static partial class ShellTitle
     /// </summary>
     public static readonly TimeSpan CommandLeadsAfter = TimeSpan.FromMilliseconds(300);
 
-    /// <summary>How long until a command started at <paramref name="started"/> leads a header (zero: it does); null if none runs.</summary>
+    /// <summary>
+    /// How long until a command started at <paramref name="started"/> leads a header (zero when it already does), or null
+    /// if none runs.
+    /// </summary>
     public static TimeSpan? UntilCommandLeads(DateTime? started, DateTime now)
     {
         if (started is not { } at)
@@ -84,10 +87,10 @@ public static partial class ShellTitle
     }
 
     /// <summary>
-    /// A one-tab pane header's title (decisions 19, 38): what leads, and quieter text after it. At the prompt the folder
-    /// leads and the profile follows; once a command has run <see cref="CommandLeadsAfter"/>, the command leads and the
-    /// folder follows; a title the running program set (vim) leads at once. Without the marks: the program's title (or
-    /// the profile's name) and the profile. <c>shell-titles</c> is about tab labels and isn't read here.
+    /// A one-tab pane header's title: what leads, and quieter text after it. At the prompt the folder leads and the
+    /// profile follows. Once a command has run <see cref="CommandLeadsAfter"/>, the command leads and the folder follows,
+    /// and a title the running program set (vim) leads at once. Without the marks, the program's title (or the profile's
+    /// name) leads and the profile follows. <c>shell-titles</c> is about tab labels and isn't read here.
     /// </summary>
     /// <param name="commandStarted">When the running command started, if one runs.</param>
     /// <param name="profileName">The tab's profile ("PowerShell").</param>
@@ -114,8 +117,8 @@ public static partial class ShellTitle
             ? Make(place, profileName, leadIsFolder: true)
             : Make(program.Length > 0 ? program : profileName, profileName);
 
-        // No quieter text the title already says: a program's title often names the folder itself (as the command
-        // center skips it), as written (~/dev/x) or in full (/home/jdoe/dev/x).
+        // Drops quieter text the title already says, because a program's title often names the folder itself, as
+        // written (~/dev/x) or in full (/home/jdoe/dev/x). The command center skips it the same way.
         HeaderTitle Make(string lead, string? detail, bool leadIsFolder = false, bool detailIsFolder = false)
         {
             var said = detail == null || Says(lead, detail) || (detailIsFolder && Says(lead, folder));
@@ -202,7 +205,10 @@ public static partial class ShellTitle
         return path;
     }
 
-    /// <summary>What follows <paramref name="root"/> in <paramref name="path"/> ("" for the root itself); null if it's elsewhere.</summary>
+    /// <summary>
+    /// What follows <paramref name="root"/> in <paramref name="path"/> ("" for the root itself), or null if the path is
+    /// elsewhere.
+    /// </summary>
     private static string? Under(string path, string root, char separator)
     {
         var trimmed = path.TrimEnd(separator);
@@ -214,7 +220,7 @@ public static partial class ShellTitle
         return trimmed.StartsWith(root + separator, StringComparison.OrdinalIgnoreCase) ? trimmed[(root.Length + 1)..] : null;
     }
 
-    /// <summary>C:\Users\x as MSYS writes it (/c/Users/x); null if it isn't a drive path.</summary>
+    /// <summary>C:\Users\x as MSYS writes it (/c/Users/x), or null if it isn't a drive path.</summary>
     private static string? MsysForm(string windows) =>
         windows.Length >= 3 && windows[1] == ':' && windows[2] == '\\'
             ? "/" + char.ToLowerInvariant(windows[0]) + windows[2..].Replace('\\', '/')
@@ -232,7 +238,8 @@ public static partial class ShellTitle
         return line.Length > 80 ? line[..79] + "…" : line;
     }
 
-    // A home in WSL or another Linux: /home/<name> (whoever it belongs to: the distro's user, nearly always) or /root.
+    // A home in WSL or another Linux: /home/<name> (whoever it belongs to, which is nearly always the distro's user)
+    // or /root.
     [GeneratedRegex(@"^(/home/[^/]+|/root)(?=/|$)")]
     private static partial Regex LinuxHome();
 }

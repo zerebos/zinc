@@ -2,8 +2,8 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// Finds a program's clipboard read (<c>OSC 52 ; &lt;where&gt; ; ? ST</c>) in its output, so the session
-/// can ask before libghostty answers it: the callback that answers must reply at once, while the
-/// terminal is locked, and a question can't be asked there. A request split across two reads isn't
+/// can ask before libghostty answers it. The callback that answers must reply at once, while the
+/// terminal is locked, so a question can't be asked there. A request split across two reads isn't
 /// seen here and gets the callback's safe answer (denied).
 /// </summary>
 public static class ClipboardReadRequest
@@ -45,7 +45,7 @@ public static class ClipboardReadRequest
                 }
             }
 
-            from = start + Start.Length; // a write (OSC 52 ; c ; <base64>), or incomplete: look further
+            from = start + Start.Length; // a write (OSC 52 ; c ; <base64>), or incomplete, so look further
         }
 
         start = end = -1;

@@ -44,9 +44,9 @@ public interface IPromptCells
 }
 
 /// <summary>
-/// Click to move the cursor in a shell's command line: what to send for a click. A port of
-/// Ghostty's <c>Screen.promptClickLine</c> (arrow-key counting within one logical line: input
-/// cells only, across soft wraps), plus the options on OSC 133's prompt mark.
+/// Click to move the cursor in a shell's command line, which works out what to send for a click. A port of
+/// Ghostty's <c>Screen.promptClickLine</c> (it counts arrow keys within one logical line, over input
+/// cells only and across soft wraps), plus the options on OSC 133's prompt mark.
 /// </summary>
 public static class PromptClick
 {
@@ -55,7 +55,7 @@ public static class PromptClick
 
     /// <summary>
     /// The click mode a prompt mark (<c>A</c> or <c>N</c>) announces, or null if it says nothing.
-    /// <c>click_events</c> wins over <c>cl</c>, as in Ghostty; every <c>cl</c> value moves by arrows
+    /// <c>click_events</c> wins over <c>cl</c>, as in Ghostty. Every <c>cl</c> value moves by arrows
     /// within the line (Ghostty does the same for <c>m</c>, <c>v</c> and <c>w</c>).
     /// </summary>
     public static PromptClickMode? Announced(IEnumerable<string> options)
@@ -91,10 +91,10 @@ public static class PromptClick
 
     /// <summary>
     /// Where to send a click event for a click at column <paramref name="col"/> of row
-    /// <paramref name="row"/>, so every shell does what arrow keys would: a click on the prompt goes
-    /// to the start of the input, one past the text (blanks, decoration, empty space) to just after
-    /// it. Shells ignore clicks outside their text (nushell does). The column as it is if the row has
-    /// no input.
+    /// <paramref name="row"/>, so every shell does what arrow keys would. A click on the prompt goes
+    /// to the start of the input, and one past the text (blanks, decoration, empty space) goes to just
+    /// after it, because some shells (nushell) ignore clicks outside their text. The column is returned
+    /// unchanged if the row has no input.
     /// </summary>
     public static int EventColumn(IPromptCells cells, int col, int row)
     {
@@ -150,7 +150,7 @@ public static class PromptClick
 
     /// <summary>
     /// The arrow presses that move the cursor at (<paramref name="cursorCol"/>, <paramref name="cursorRow"/>)
-    /// to the click: right presses if the click is after it, left presses if before. Only input
+    /// to the click, which are right presses if the click is after the cursor and left presses if before. Only input
     /// cells count (the shell's arrows skip prompt text), a wide character counts once, and only the
     /// cursor's own logical line is crossed. A click past the end of the text goes to its end.
     /// </summary>
@@ -188,7 +188,7 @@ public static class PromptClick
                     break;
                 }
 
-                // Past the cursor on its row; elsewhere from the first input cell (a shell may indent
+                // Past the cursor on its row, and elsewhere from the first input cell (a shell may indent
                 // continuation lines, and its arrows take the cursor to where the input starts).
                 var start = cols;
                 if (isCursorRow)
@@ -222,10 +222,10 @@ public static class PromptClick
             }
 
             // Line editors erase with spaces written as input (zsh clearing an autosuggestion), so the
-            // text ends at its last non-blank cell: a click on blanks after it, or past the line,
-            // goes to the end of the text and no further (one more arrow there could accept a suggestion).
+            // text ends at its last non-blank cell. A click on blanks after it, or past the line, goes to
+            // the end of the text and no further, because one more arrow there could accept a suggestion.
             // Some prompts also draw after marking input (powerlevel10k's frame corner "─╯" at the far
-            // right): text across a wide gap is decoration, as when reading a command's text back.
+            // right), so text across a wide gap is decoration, as when reading a command's text back.
             var lastText = -1;
             var previous = cursorRow * cols + cursorCol;
             for (var i = 0; i < after.Count; i++)
@@ -251,7 +251,7 @@ public static class PromptClick
                 return (0, clicked + 1);
             }
 
-            // To just past the last character: one more than the cells up to it if the cursor is on
+            // To just past the last character, which is one more than the cells up to it if the cursor is on
             // the text (there's text after it, or it's on a character itself).
             var cursorOnText = lastText >= 0 ||
                 (cells.Content(cursorRow, cursorCol) == CellSemanticContent.Input && !cells.IsBlank(cursorRow, cursorCol));

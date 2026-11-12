@@ -21,8 +21,8 @@ public sealed record SchemeEntry(string Name, string File, bool IsDark, bool You
 /// <summary>Every scheme for the color schemes page, read from disk, and the page's filters.</summary>
 public static class SchemeCatalog
 {
-    // Each scheme file's colors, by file and its last write: ~650 files are read once a run (by List, off the UI thread),
-    // then again only when edited.
+    // Each scheme file's colors, by file and its last write time. About 650 files are read once a run (by List, off the
+    // UI thread), then again only when edited.
     private static readonly ConcurrentDictionary<string, (DateTime Written, TerminalTheme Theme)> Themes = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Every scheme in <paramref name="themes"/>, sorted by name (yours over Zinc's of the same name).</summary>
@@ -58,10 +58,13 @@ public static class SchemeCatalog
             } && (query.Length == 0 || e.Name.Contains(query, StringComparison.OrdinalIgnoreCase)))];
     }
 
-    /// <summary>Whether scheme file <paramref name="file"/> has a dark background (no background: Zinc's own, dark).</summary>
+    /// <summary>Whether scheme file <paramref name="file"/> has a dark background (a file with no background gets Zinc's own, which is dark).</summary>
     public static bool IsDark(string file) => new Config { Theme = Theme(file) }.IsDark;
 
-    /// <summary>Scheme file <paramref name="file"/>'s colors (read once, and again after it changes); unreadable: Zinc's own.</summary>
+    /// <summary>
+    /// Scheme file <paramref name="file"/>'s colors (read once, and again after it changes), or Zinc's own if the file
+    /// can't be read.
+    /// </summary>
     public static TerminalTheme Theme(string file)
     {
         DateTime written;
@@ -83,7 +86,7 @@ public static class SchemeCatalog
         }
     }
 
-    // A folder's files by name; none if it's missing or can't be read.
+    // A folder's files by name, or none if the folder is missing or can't be read.
     private static Dictionary<string, string> Files(string folder)
     {
         var files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

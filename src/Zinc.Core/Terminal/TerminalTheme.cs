@@ -3,16 +3,16 @@ using Zinc.Ghostty;
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Colors 16-255 made from a scheme's 16 (Ghostty's <c>palette-generate</c>), and whether a light scheme's keep their
-/// order from background to text (<c>palette-harmonious</c>) instead of running dark to light.
+/// Colors 16-255 made from a scheme's 16 (Ghostty's <c>palette-generate</c>), and whether a light scheme's generated
+/// colors keep their order from background to text (<c>palette-harmonious</c>) instead of running dark to light.
 /// </summary>
 public readonly record struct PaletteGeneration(bool Generate, bool Harmonious);
 
 public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb Foreground, GhosttyColorRgb Cursor)
 {
     /// <summary>
-    /// Zinc's own colors: "Lit Cell", from the brand (phosphor green on near-black). Its 16 base
-    /// colors; the rest of the 256 are libghostty's.
+    /// Zinc's own colors, "Lit Cell" from the brand (phosphor green on near-black). It sets the 16 base
+    /// colors, and the rest of the 256 are libghostty's.
     /// </summary>
     public static TerminalTheme Default { get; } = new(
         GhosttyColorRgb.FromHex(0x0C110E),
@@ -50,23 +50,25 @@ public sealed record TerminalTheme(GhosttyColorRgb Background, GhosttyColorRgb F
     /// </summary>
     public static TerminalTheme SchemeBase { get; } = new(Default.Background, Default.Foreground, Default.Cursor);
 
-    /// <summary>Overrides for palette entries (0-255); the rest keep libghostty's defaults.</summary>
+    /// <summary>Overrides for palette entries (0-255), and the rest keep libghostty's defaults.</summary>
     public IReadOnlyDictionary<int, GhosttyColorRgb> Palette { get; init; } = new Dictionary<int, GhosttyColorRgb>();
 
-    /// <summary>Behind selected text; null: selection inverts the colors.</summary>
+    /// <summary>Behind selected text, or null for a selection that inverts the colors.</summary>
     public GhosttyColorRgb? SelectionBackground { get; init; }
 
-    /// <summary>Selected text; null: the text keeps its color (or inverts, without a selection background).</summary>
+    /// <summary>
+    /// Selected text, or null when the text keeps its color (or inverts, when there's no selection background).
+    /// </summary>
     public GhosttyColorRgb? SelectionForeground { get; init; }
 
     /// <summary>
-    /// The character under a block cursor; null: the cell's background. Drawing only (no escape
-    /// sequence sets it, so libghostty has no option for it), kept even when a program recolors the
+    /// The character under a block cursor, or null for the cell's background. Only the drawing uses it (no escape
+    /// sequence sets it, so libghostty has no option for it), and it's kept even when a program recolors the
     /// cursor (OSC 12), as in Ghostty.
     /// </summary>
     public GhosttyColorRgb? CursorText { get; init; }
 
-    /// <summary>The 16 base colors as a terminal shows them: this theme's, else libghostty's built-in ones.</summary>
+    /// <summary>The 16 base colors as a terminal shows them, this theme's or else libghostty's built-in ones.</summary>
     public IReadOnlyList<GhosttyColorRgb> BaseColors =>
         [.. Enumerable.Range(0, 16).Select(i => Palette.TryGetValue(i, out var c) ? c : TerminalSession.BuiltinBaseColors[i])];
 }

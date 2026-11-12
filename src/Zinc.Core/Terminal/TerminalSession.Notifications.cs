@@ -4,7 +4,7 @@ using Zinc.Ghostty;
 
 namespace Zinc.Terminal;
 
-/// <summary>A program's progress (OSC 9;4): <see cref="Value"/> is 0–100, or -1 when it didn't say.</summary>
+/// <summary>A program's progress (OSC 9;4), where <see cref="Value"/> is 0–100, or -1 when it didn't say.</summary>
 public readonly record struct TerminalProgress(TerminalProgressState State, int Value)
 {
     public static readonly TerminalProgress None = new(TerminalProgressState.Remove, -1);
@@ -13,8 +13,8 @@ public readonly record struct TerminalProgress(TerminalProgressState State, int 
 }
 
 // Programs asking for attention: desktop notifications (OSC 9 text, OSC 777 notify) and progress
-// reports (OSC 9;4, what winget and some build tools send; Windows Terminal shows them on the
-// taskbar). libghostty parses both and calls back mid-write; they're announced after it.
+// reports (OSC 9;4, which winget and some build tools send, and Windows Terminal shows on the
+// taskbar). libghostty parses both and calls back mid-write, and we announce them after the write.
 public sealed unsafe partial class TerminalSession
 {
     private readonly List<(string Title, string Body)> _notifications = [];
@@ -51,7 +51,7 @@ public sealed unsafe partial class TerminalSession
     private static void OnProgressReport(nint terminal, nint userdata, GhosttyTerminalProgressReport* report) =>
         FromUserdata(userdata)._progressReported = new TerminalProgress(report->State, report->Progress);
 
-    /// <summary>Raises what the last write collected; call after it, outside the lock.</summary>
+    /// <summary>Raises the events the last write collected. Call it after that write, outside the lock.</summary>
     private void AnnounceNotifications()
     {
         List<(string, string)>? notifications = null;

@@ -6,7 +6,7 @@ public enum NewTerminalFolder
     /// <summary>The focused terminal's current folder (as its shell last reported it), else the profile's.</summary>
     Current,
 
-    /// <summary>The profile's own folder, as before.</summary>
+    /// <summary>The profile's own folder.</summary>
     Profile,
 }
 
@@ -30,14 +30,15 @@ public enum StartSource
     /// <summary>Where the duplicated terminal started.</summary>
     Original,
 
-    /// <summary>The profile's folder (the last resort: always works).</summary>
+    /// <summary>The profile's folder (the last resort, which always works).</summary>
     Usual,
 }
 
 /// <summary>
 /// The folders a new terminal tries, in order (the first one its shell can reach wins). New tabs follow the
-/// workspace's folder; splits sit beside a terminal and start where it is; a duplicate starts where the original
-/// is now. Without a workspace folder, new tabs start where you are too, unless <see cref="NewTerminalFolder.Profile"/>.
+/// workspace's folder, splits sit beside a terminal and start where it is, and a duplicate starts where the original
+/// is now. Without a workspace folder, new tabs also start where you are, unless the setting is
+/// <see cref="NewTerminalFolder.Profile"/>.
 /// </summary>
 public static class NewTerminalStart
 {
@@ -57,9 +58,9 @@ public static class NewTerminalStart
     }
 
     /// <summary>
-    /// A terminal's current folder as a <see cref="WorkspaceFolder"/>, so any shell can be started there:
-    /// <paramref name="reported"/> is what its shell last reported (OSC 7 / 9;9), <paramref name="wslDistro"/> the
-    /// distro it runs in (null: not WSL). Null when nothing usable was reported.
+    /// A terminal's current folder as a <see cref="WorkspaceFolder"/>, so any shell can be started there.
+    /// <paramref name="reported"/> is what its shell last reported (OSC 7 / 9;9), and <paramref name="wslDistro"/> is
+    /// the distro it runs in (null when it isn't WSL). Null when nothing usable was reported.
     /// </summary>
     public static WorkspaceFolder? Current(string? reported, string? wslDistro)
     {
@@ -68,7 +69,7 @@ public static class NewTerminalStart
             return null;
         }
 
-        // A Linux path from a WSL shell belongs to its distro; Windows paths (and MSYS ones) stand alone.
+        // A Linux path from a WSL shell belongs to its distro, while Windows paths (and MSYS ones) stand alone.
         return new WorkspaceFolder(path, path.StartsWith('/') ? wslDistro : null);
     }
 }

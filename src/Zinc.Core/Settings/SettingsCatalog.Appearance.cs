@@ -82,8 +82,8 @@ public static partial class SettingsCatalog
             "If the scheme doesn't set one either, the text keeps its color, or inverts with the selection when \"Selection\" has no color either.",
             SettingKind.Color)
             { Binding = Bind.Color((c, v) => c with { Theme = c.Theme with { SelectionForeground = v } }) },
-        // A color, or how far the made fill stands from the background (PaneCard.HeaderLevel). The window shows the
-        // choices in a list with "Custom color" last; null (Standard) is the default.
+        // A color, or how far the made fill stands from the background (`HeaderLevel`). The window shows the
+        // choices in a list with "Custom color" last, and null (Standard) is the default.
         new("appearance", "Colors", "colors.pane-header", "Pane headers",
             "Behind pane titles and tabs. On cards, the border is a step stronger.", SettingKind.Color)
         {
@@ -253,7 +253,7 @@ public static partial class SettingsCatalog
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.PaddingBalance, (c, v) => c with { PaddingBalance = v }) },
     ];
 
-    // A property, not a field: a field in another partial file could be read before it's set.
+    // A property, not a field, because a field in another partial file could be read before it's set.
     private static SettingChoice[] WeightChoices =>
     [
         new("Thin", "thin"), new("Extra light", "extra-light"), new("Light", "light"), new("Normal", "normal"),

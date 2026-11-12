@@ -21,33 +21,33 @@ public enum HeaderLevel
 
 /// <summary>
 /// How a pane looks as a card (any gap above 0): rounded corners, a 2 px edge, and its header filled from its own
-/// scheme. At gap 0 panes stay flat, as they always were.
+/// scheme. At gap 0 panes stay flat.
 /// </summary>
 public static class PaneCard
 {
-    /// <summary>The card's corners (the mockup's 8 px).</summary>
+    /// <summary>The radius of the card's corners, in px.</summary>
     public const double Radius = 8;
 
     /// <summary>
-    /// The card's edge: the header fill, or the ring once the pane has focus, so focus never resizes a terminal
-    /// (decisions 21, 58).
+    /// The width of the card's edge. The edge shows the header fill, or the ring once the pane has focus, so focus never
+    /// resizes a terminal.
     /// </summary>
     public const double Edge = 2;
 
     /// <summary>
-    /// How far a Standard header's fill stands from its terminal (WCAG contrast ratio). A fixed step (e.g. 4% toward
-    /// white) was 1.06:1 on a black scheme and 1.135:1 on Dracula: faintest on the darkest schemes.
+    /// How far a Standard header's fill stands from its terminal (WCAG contrast ratio). A fixed step toward white
+    /// would be faintest on the darkest schemes, so the fill is found by its contrast instead.
     /// </summary>
     public const double HeaderContrast = 1.15;
 
     /// <summary>
-    /// A header this close to its terminal (Same as the terminal, or a custom color that near) doesn't tell the shown tab
-    /// apart, since the shown tab is drawn in the terminal's color: its hidden tabs take the Standard fill instead.
+    /// A header this close to its terminal ("Same as the terminal", or a custom color that near) doesn't tell the shown
+    /// tab apart, since the shown tab is drawn in the terminal's color. So its hidden tabs take the Standard fill instead.
     /// </summary>
     public const double SeamlessBelow = 1.05;
 
     /// <summary>
-    /// The contrast steps a card's border takes: one past its header's (Subtle -> Standard, Standard -> Strong, Strong -> 1.6:1).
+    /// The contrast steps a card's border takes, one past its header's (Subtle -> Standard, Standard -> Strong, Strong -> 1.6:1).
     /// </summary>
     private static readonly double[] EdgeSteps = [HeaderContrast, 1.3, 1.6];
 
@@ -83,7 +83,8 @@ public static class PaneCard
     /// <summary>
     /// A header's fill: its terminal's <paramref name="background"/> made lighter on a dark scheme, darker on a light one,
     /// just until it stands <paramref name="level"/>'s contrast apart (<see cref="ContrastOf"/>), so the header reads as
-    /// part of the card and still stands apart from the terminal the same way on every scheme. Terminal: the background.
+    /// part of the card and still stands apart from the terminal the same way on every scheme. At the Terminal level the
+    /// fill is the background itself.
     /// </summary>
     public static GhosttyColorRgb HeaderFill(GhosttyColorRgb background, HeaderLevel level = HeaderLevel.Standard) =>
         level == HeaderLevel.Terminal ? background : Away(background, background, ContrastOf(level));
@@ -104,8 +105,8 @@ public static class PaneCard
 
     /// <summary>
     /// A card's unfocused border: its <paramref name="header"/> fill pushed one step further from the terminal's
-    /// <paramref name="background"/> (<see cref="EdgeSteps"/>; past the last step, a quarter further), keeping a custom
-    /// color's hue. A seamless header gets none: the border is the terminal's color, so the card is all terminal.
+    /// <paramref name="background"/> (<see cref="EdgeSteps"/>, or a quarter further past the last step), keeping a custom
+    /// color's hue. A seamless header's card takes the terminal's color as its border, so the card is all terminal.
     /// </summary>
     public static GhosttyColorRgb EdgeFill(GhosttyColorRgb header, GhosttyColorRgb background)
     {
@@ -115,7 +116,8 @@ public static class PaneCard
             return background;
         }
 
-        // (A made fill lands a little past its step, in whole channel steps: 1.04 skips past its own.)
+        // A made fill moves in whole channel steps, so it lands a little past its contrast step. The factor 1.04 skips
+        // past the step the fill already took.
         var next = EdgeSteps.FirstOrDefault(step => step >= ratio * 1.04);
         return Away(header, background, next > 0 ? next : Math.Min(21, ratio * 1.25));
     }

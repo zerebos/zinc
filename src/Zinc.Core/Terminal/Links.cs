@@ -5,8 +5,8 @@ namespace Zinc.Terminal;
 /// <summary>
 /// A link under the pointer: an OSC 8 hyperlink (<see cref="Explicit"/>) or a URL found in
 /// the text. It runs from (<see cref="Row"/>, <see cref="StartCol"/>) to (<see cref="EndRow"/>,
-/// <see cref="EndCol"/>) inclusive, in viewport rows: more than one when it continues across
-/// soft wraps, and a row above the viewport (negative) when it started in the scrollback.
+/// <see cref="EndCol"/>) inclusive, in viewport rows. It spans more than one row when it continues
+/// across soft wraps, and starts on a row above the viewport (negative) when it started in the scrollback.
 /// </summary>
 public readonly record struct LinkMatch(string Uri, int Row, ushort StartCol, int EndRow, ushort EndCol, bool Explicit)
 {
@@ -18,7 +18,7 @@ public readonly record struct LinkMatch(string Uri, int Row, ushort StartCol, in
 /// <summary>Finds plain-text URLs in a row of terminal text.</summary>
 public static partial class UrlDetector
 {
-    // Stops at whitespace, quotes, angle brackets and backticks; trailing punctuation is
+    // Stops at whitespace, quotes, angle brackets and backticks. Trailing punctuation is
     // trimmed afterwards so "see https://x.org/a." doesn't take the period.
     [GeneratedRegex("""(?:https?|ftp|file)://[^\s<>"'`]+|mailto:[^\s<>"'`]+""", RegexOptions.IgnoreCase)]
     private static partial Regex Url();
@@ -49,7 +49,7 @@ public static partial class UrlDetector
             }
             else if (last is ')' or ']' or '}' && !Balanced(text.AsSpan(start, length), last))
             {
-                // "(see https://x.org/a)" keeps the parenthesis out; Wikipedia-style
+                // "(see https://x.org/a)" keeps the parenthesis out, but a Wikipedia-style
                 // "https://x.org/A_(b)" keeps it.
                 length--;
             }
@@ -81,19 +81,19 @@ public enum LinkAction
     /// <summary>Hand the URI to its default handler (browser, mail client).</summary>
     Open,
 
-    /// <summary>Show the local path in Explorer (select a file, open a folder); never run it.</summary>
+    /// <summary>Show the local path in Explorer (select a file, open a folder), and never run it.</summary>
     Reveal,
 
-    /// <summary>Do nothing: an unknown scheme or a file on another host.</summary>
+    /// <summary>Do nothing, for an unknown scheme or a file on another host.</summary>
     Reject,
 }
 
 /// <summary>
-/// Where a pane's file links point. Shells name this machine as the host but use their own
-/// paths: Git Bash/MSYS2 write <c>/c/Users/..</c> (and <c>/usr/..</c> under
-/// <see cref="PosixRoot"/>); WSL writes Linux paths inside <see cref="WslDistro"/>, with Windows
-/// drives under <see cref="WslMountRoot"/> (<see cref="WslConf.MountRoot"/>: <c>/mnt/</c> unless its
-/// wsl.conf says otherwise; null when it doesn't mount them).
+/// Where a pane's file links point. Shells name this machine as the host but use their own paths. Git Bash and
+/// MSYS2 write <c>/c/Users/..</c> (and <c>/usr/..</c> under <see cref="PosixRoot"/>). WSL writes Linux paths inside
+/// <see cref="WslDistro"/>, with Windows drives under <see cref="WslMountRoot"/>. That is the distro's
+/// <see cref="WslConf.MountRoot"/>, which is <c>/mnt/</c> unless its wsl.conf says otherwise, or null when the distro
+/// doesn't mount them.
 /// </summary>
 public sealed record LinkContext(string MachineName, string? WslDistro = null, string? PosixRoot = null,
     string? WslMountRoot = WslConf.DefaultMountRoot)
@@ -105,13 +105,13 @@ public static partial class LinkTarget
 {
     private static readonly string[] OpenSchemes = ["http", "https", "mailto", "ftp"];
 
-    // "/c", "/c/rest" (MSYS, Git Bash) or "/cygdrive/c/rest". (WSL's drives: WslConf.WindowsPath.)
+    // "/c", "/c/rest" (MSYS, Git Bash) or "/cygdrive/c/rest". (`WslConf.WindowsPath` handles WSL's drives.)
     [GeneratedRegex("^(?:/cygdrive)?/([a-zA-Z])(/.*)?$")]
     private static partial Regex MsysDrive();
 
     /// <summary>
     /// What Ctrl+click on <paramref name="uri"/> may do. Links come from whatever a program
-    /// prints, so only web/mail schemes open directly; file links are revealed rather than
+    /// prints, so only web and mail schemes open directly. File links are revealed rather than
     /// opened, so a link can't launch an executable.
     /// </summary>
     public static LinkAction Classify(string uri, LinkContext context, out string target)
@@ -134,7 +134,7 @@ public static partial class LinkTarget
             return LinkAction.Reject;
         }
 
-        // Not LocalPath: with a host that's the UNC path \\host\..., and /c/.. isn't a Windows path.
+        // Not LocalPath, because with a host that's the UNC path \\host\..., and /c/.. isn't a Windows path.
         // (Uri drops the leading slash of file:///C:/.., but keeps it after a host.)
         var path = Uri.UnescapeDataString(parsed.AbsolutePath);
         var windows = path.TrimStart('/');

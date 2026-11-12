@@ -14,7 +14,7 @@ public enum NoteKind { Heading, Bullet, Paragraph }
 /// </summary>
 public static partial class ReleaseNotes
 {
-    /// <summary>The entry for <paramref name="version"/> ("0.1.0-dev.229", no commit hash): what's under its heading.</summary>
+    /// <summary>The entry for <paramref name="version"/> ("0.1.0-dev.229", no commit hash), which is what's under its heading.</summary>
     public static string? Entry(string changelog, string version)
     {
         var lines = changelog.Replace("\r\n", "\n").Split('\n');
@@ -40,7 +40,7 @@ public static partial class ReleaseNotes
 
     /// <summary>
     /// Notes as pieces to show: "### X" a heading, "- x" a bullet (indented lines that follow continue it), other lines
-    /// paragraphs (consecutive ones joined). Backticks are dropped; the text is plain.
+    /// paragraphs (consecutive ones joined). Backticks are dropped, so the text is plain.
     /// </summary>
     public static IReadOnlyList<(NoteKind Kind, string Text)> Pieces(string notes)
     {

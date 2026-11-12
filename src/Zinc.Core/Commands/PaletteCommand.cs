@@ -5,10 +5,12 @@ namespace Zinc.Commands;
 /// <param name="Shortcut">Key chord shown on the right, if the command has one.</param>
 /// <param name="Run">What happens when it's chosen.</param>
 /// <param name="Remember">Whether choosing it makes it a recent command (not for entries that come and go, like tabs).</param>
-/// <param name="Icon">What the palette shows before the title (the app's own type; e.g. a profile).</param>
+/// <param name="Icon">What the palette shows before the title (the app's own type, such as a profile).</param>
 /// <param name="IsTab">A tab in the tab switcher ("@").</param>
 /// <param name="AsksArgument">Choosing it keeps the palette open to ask for its argument (its title ends in "…").</param>
-/// <param name="SearchWords">Other words that find it, not shown ("font size" for "Zoom in"); a match there ranks below title matches.</param>
+/// <param name="SearchWords">
+/// Other words that find it, not shown ("font size" for "Zoom in"). A match there ranks below title matches.
+/// </param>
 public sealed record PaletteCommand(string Title, string? Shortcut, Action Run, bool Remember = true, object? Icon = null,
     bool IsTab = false, bool AsksArgument = false, string? SearchWords = null);
 
@@ -22,7 +24,7 @@ public static class CommandFilter
 
     /// <summary>
     /// Matching commands, best first. An empty query keeps the original order (so the
-    /// caller controls how the full list reads); ties keep it too. With <paramref name="recent"/>,
+    /// caller controls how the full list reads), and so do ties. With <paramref name="recent"/>,
     /// an empty query starts with the recently used commands, and a typed one ranks them a
     /// little higher.
     /// </summary>
@@ -35,7 +37,7 @@ public static class CommandFilter
             var score = FuzzyMatch.Score(query, command.Title, out var positions);
             if (score == null && command.SearchWords != null && FuzzyMatch.Score(query, command.SearchWords, out _) is { } other)
             {
-                // Found by its other words: nothing in the title to highlight, and below title matches.
+                // Found by its other words, so nothing in the title is highlighted and it ranks below title matches.
                 score = other - 1_000_000;
                 positions = [];
             }
@@ -54,7 +56,7 @@ public static class CommandFilter
             return matches.OrderByDescending(m => m.Match.Score).ThenBy(m => m.Order).Select(m => m.Match).ToList();
         }
 
-        // Nothing typed: the few most recent first (most recent on top), then everything in order.
+        // With nothing typed, the few most recent come first (most recent on top), then everything in order.
         var leading = matches.Where(m => m.Match.Recent)
             .OrderBy(m => recent!.Rank(m.Match.Command.Title))
             .Take(RecentShown)
@@ -71,7 +73,7 @@ public static class CommandFilter
 }
 
 /// <summary>
-/// Recently run palette commands, most recent first, by title. Shared by every window; saved
+/// Recently run palette commands, most recent first, by title. Shared by every window and saved
 /// with the session.
 /// </summary>
 public sealed class RecentCommands
@@ -94,7 +96,7 @@ public sealed class RecentCommands
     /// <summary>Most recent first.</summary>
     public IReadOnlyList<string> Titles => _titles;
 
-    /// <summary>0 for the most recent; null if it isn't recent.</summary>
+    /// <summary>0 for the most recent, or null if it isn't recent.</summary>
     public int? Rank(string title)
     {
         var i = _titles.IndexOf(title);

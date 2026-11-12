@@ -6,7 +6,7 @@ namespace Zinc.Panes;
 /// <summary>What a pane's header shows, if it has one.</summary>
 public enum PaneHeaderKind
 {
-    /// <summary>No header: the terminal starts at the pane's top edge.</summary>
+    /// <summary>No header, so the terminal starts at the pane's top edge.</summary>
     None,
 
     /// <summary>The shown tab's title, drawn as the tab (a pane with one tab, or with pane tabs off).</summary>
@@ -21,8 +21,8 @@ public static class PaneHeader
 {
     /// <summary>
     /// The header for a pane holding <paramref name="tabs"/> tabs, in a workspace that's split or not. Several tabs show
-    /// as tabs; one tab (or any number with pane tabs off) as its title. With pane tabs off, With several tabs never
-    /// shows a header, as before headers had titles; Automatic and Always still do.
+    /// as tabs; one tab (or any number with pane tabs off) as its title. With pane tabs off, "With several tabs"
+    /// never shows a header, while Automatic and Always still do.
     /// </summary>
     public static PaneHeaderKind For(PaneHeaders mode, bool paneTabs, bool split, int tabs)
     {
@@ -38,22 +38,22 @@ public static class PaneHeader
     }
 
     /// <summary>
-    /// Whether a pane shows the accent line (<c>pane-focus = tab-accent</c>): on its shown tab whenever it has focus, as
-    /// tabs always did; on a title header or along the top of a pane without a header only when there are other panes
-    /// to tell it from (<paramref name="several"/>: split, nothing maximized).
+    /// Whether a pane shows the accent line (<c>pane-focus = tab-accent</c>). It shows on the shown tab whenever the pane
+    /// has focus. On a title header, or along the top of a pane without a header, it shows only when there are other
+    /// panes to tell the pane from (<paramref name="several"/>, which means split with nothing maximized).
     /// </summary>
     public static bool AccentLine(PaneFocus focus, PaneHeaderKind header, bool focused, bool several) =>
         focused && focus == PaneFocus.TabAccent && (header == PaneHeaderKind.Tabs || several);
 
     /// <summary>
-    /// Whether a pane shows the ring (<c>pane-focus = ring</c>): around the focused pane when there are others to tell it
-    /// from (<paramref name="several"/>), so not on a lone pane or a maximized one.
+    /// Whether a pane shows the ring (<c>pane-focus = ring</c>). The ring goes around the focused pane when there are
+    /// others to tell it from (<paramref name="several"/>), so not around a lone pane or a maximized one.
     /// </summary>
     public static bool Ring(PaneFocus focus, bool focused, bool several) => focused && several && focus == PaneFocus.Ring;
 
     /// <summary>
-    /// Whether a header shows its buttons (<c>pane-header-buttons</c>): always; the focused pane's and any under the
-    /// pointer; or only under the pointer. The pointer counts over the header, not the terminal (decision 40).
+    /// Whether a header shows its buttons (<c>pane-header-buttons</c>), which is always, on the focused pane and any
+    /// under the pointer, or only under the pointer. The pointer counts over the header, not over the terminal.
     /// </summary>
     public static bool ButtonsShown(PaneHeaderButtons mode, bool focused, bool hovered) => mode switch
     {
@@ -64,8 +64,8 @@ public static class PaneHeader
     };
 
     /// <summary>
-    /// What gives way in a narrow header (plan: "when narrow, Split and Maximize fold into ⋯ first"; the status slot
-    /// "drops its words before its icon"). <paramref name="content"/> is what the tabs or title want,
+    /// What gives way in a narrow header. Split and Maximize fold into ⋯ first, and then the status slot drops its words
+    /// but keeps its icon. <paramref name="content"/> is what the tabs or title want,
     /// <paramref name="fixedWidth"/> what never folds (+, ⋯, ×, the status icon), <paramref name="foldable"/> Split and
     /// Maximize, <paramref name="words"/> the status words.
     /// </summary>
@@ -81,14 +81,14 @@ public static class PaneHeader
     public const double ShortestTitle = 64;
 
     /// <summary>
-    /// How a pane's tabs fit in <paramref name="room"/> (decisions 49, 50). The others give way first: they shorten
+    /// How a pane's tabs fit in <paramref name="room"/>. The others give way first. They shorten
     /// (down to <see cref="ShortestTitle"/>, then the shown tab does too), then become an icon and a mark, then fold all
     /// at once into a count ("4 of 5") that takes the +'s place. Which of those stages applies depends only on the room
-    /// and the number of tabs, never on the titles: a title that changes (a new tab's profile name giving way to its
+    /// and the number of tabs, never on the titles. So a title that changes (a new tab's profile name giving way to its
     /// folder, a command) only lengthens or shortens tabs, and never flips the row between icons and the count.
     /// <paramref name="titles"/> are each tab's title width in full, <paramref name="chrome"/> a tab's width beside its
-    /// title, <paramref name="iconTab"/> a tab shown as its icon and mark; <paramref name="add"/> and
-    /// <paramref name="count"/> the + and the count, after the tabs. With <paramref name="menu"/> (<c>pane-tabs-as = menu</c>)
+    /// title, and <paramref name="iconTab"/> a tab shown as its icon and mark. <paramref name="add"/> and
+    /// <paramref name="count"/> are the + and the count, after the tabs. With <paramref name="menu"/> (<c>pane-tabs-as = menu</c>)
     /// the tabs are folded at every width.
     /// </summary>
     public static TabsFit FitTabs(double room, IReadOnlyList<double> titles, int shown, double chrome, double iconTab,
@@ -109,7 +109,7 @@ public static class PaneHeader
 
         if (titles.Count * ShortestTitle <= budget)
         {
-            // The others shorten while the shown tab stays whole; once they're all at the shortest, the shown tab shortens.
+            // The others shorten while the shown tab stays whole. Once they're all at the shortest, the shown tab shortens.
             var shortened = others.Sum(t => Math.Min(t, ShortestTitle));
             return shortened + titles[shown] <= budget
                 ? new TabsFit(TabsStage.Short, ShortCap(others, budget - titles[shown]), whole)
@@ -148,8 +148,8 @@ public static class PaneHeader
 
     /// <summary>
     /// The shown terminal's status in words for the status slot: its program's exit while the pane stays ("Exited
-    /// (code 1)", or "Exited" after a clean one; decision 48), else its progress (OSC 9;4): "40%", "Working", "Paused",
-    /// "Error". Null: nothing to say.
+    /// (code 1)", or "Exited" after a clean one), else its progress (OSC 9;4): "40%", "Working", "Paused",
+    /// "Error". Null when there's nothing to say.
     /// </summary>
     public static string? StatusWords(TerminalProgress progress, uint? exitCode = null) => exitCode switch
     {
@@ -185,5 +185,5 @@ public enum TabsStage
     Folded,
 }
 
-/// <summary>A stage, and how wide the other tabs' and the shown tab's titles may be (infinite: whole).</summary>
+/// <summary>A stage, and how wide the other tabs' and the shown tab's titles may be (infinite means whole).</summary>
 public readonly record struct TabsFit(TabsStage Stage, double OthersCap, double ShownCap);

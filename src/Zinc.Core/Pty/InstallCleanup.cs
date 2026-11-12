@@ -4,15 +4,16 @@ namespace Zinc.Pty;
 
 /// <summary>
 /// What an uninstall takes back from Windows before the installer removes Zinc's files: the sign-in entry
-/// (launch at login), the default-terminal registration and zn's PATH entry. Only what points into the install being removed:
-/// another copy (the dev install, a zip) may own them, and they stay its.
+/// (launch at login), the default-terminal registration, Explorer's "Open in Zinc" menu entry and zn's PATH entry. It
+/// takes back only what points into the install being removed, because another copy (the dev install, a zip) may own
+/// them, and they stay that copy's.
 /// </summary>
 public static class InstallCleanup
 {
     /// <summary>Where launch at login lives (LoginStartup writes it).</summary>
     public const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run", RunValue = "Zinc";
 
-    /// <summary>Removes what points into <paramref name="installDir"/>; returns what it did, for the log.</summary>
+    /// <summary>Removes what points into <paramref name="installDir"/>, and returns what it did, for the log.</summary>
     public static IReadOnlyList<string> Uninstall(RegistryKey root, string installDir)
     {
         var done = new List<string>();
@@ -50,7 +51,9 @@ public static class InstallCleanup
         return done;
     }
 
-    /// <summary>The program a command line starts: its quoted first part, else everything up to the first space.</summary>
+    /// <summary>
+    /// The program a command line starts, which is its quoted first part, else everything up to the first space.
+    /// </summary>
     public static string? ExeOf(string? command)
     {
         if (string.IsNullOrWhiteSpace(command))

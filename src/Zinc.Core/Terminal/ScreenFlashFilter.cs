@@ -3,12 +3,12 @@ namespace Zinc.Terminal;
 /// <summary>
 /// Catches "visible bells": a program that flashes the screen instead of ringing turns on reverse
 /// video (<c>CSI ? 5 h</c>) and off again (<c>CSI ? 5 l</c>) a moment later (readline's
-/// <c>bell-style visible</c>, as Git Bash ships). The filter holds the <c>h</c> back; if the
-/// <c>l</c> follows within <see cref="FlashMs"/>, both are dropped and it reports a bell.
+/// <c>bell-style visible</c>, as Git Bash ships). The filter holds the <c>h</c> back. If the
+/// <c>l</c> follows within <see cref="FlashMs"/>, both are dropped and the filter reports a bell.
 /// Otherwise the program wanted reverse video, and <see cref="TakeExpired"/> hands the held
-/// <c>h</c> back to be applied, late. Sequences split across reads are followed too; a read that
+/// <c>h</c> back to be applied, late. Sequences split across reads are followed too, and a read that
 /// ends partway into one is held until the next read (or the expiry).
-/// Not thread-safe: the session calls it under its own lock.
+/// Not thread-safe, because the session calls it under its own lock.
 /// </summary>
 public sealed class ScreenFlashFilter
 {
@@ -28,9 +28,9 @@ public sealed class ScreenFlashFilter
     public bool Waiting => _heldSince != null || _carry.Count > 0;
 
     /// <summary>
-    /// Whether <paramref name="input"/> holds either sequence or ends partway into one: if not, and nothing is
-    /// <see cref="Waiting"/>, <see cref="Filter"/> would return it unchanged, so it can skip the filter (which copies
-    /// every read: the bulk of the garbage heavy output made, 2026-10-02). No allocation.
+    /// Whether <paramref name="input"/> holds either sequence or ends partway into one. If not, and nothing is
+    /// <see cref="Waiting"/>, <see cref="Filter"/> would return it unchanged, so the caller can skip the filter, which
+    /// copies every read and would make most of the garbage under heavy output. No allocation.
     /// </summary>
     public static bool Concerns(ReadOnlySpan<byte> input)
     {
@@ -49,7 +49,7 @@ public sealed class ScreenFlashFilter
         return false;
     }
 
-    /// <summary>The output with caught flashes taken out; <paramref name="flashes"/> counts them.</summary>
+    /// <summary>The output with caught flashes taken out, with <paramref name="flashes"/> counting them.</summary>
     public byte[] Filter(ReadOnlySpan<byte> input, long nowMs, out int flashes)
     {
         flashes = 0;
@@ -79,7 +79,7 @@ public sealed class ScreenFlashFilter
             {
                 if (_heldSince != null)
                 {
-                    _heldSince = null; // on and off again: a flash, not reverse video
+                    _heldSince = null; // on and off again, so a flash and not reverse video
                     flashes++;
                 }
                 else

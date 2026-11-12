@@ -35,8 +35,8 @@ public sealed unsafe class SelectionGesture : IDisposable
     public const string GhosttyWordBoundaries = "\t '\"│`|:;,()[]{}<>$";
 
     /// <summary>
-    /// The characters that end a word on double-click for config <c>word-boundaries</c>: space
-    /// and tab, and each of <paramref name="text"/>'s; Ghostty's own set when it's null.
+    /// The characters that end a word on double-click for config <c>word-boundaries</c>, which are space, tab and
+    /// each character of <paramref name="text"/>, or Ghostty's own set when <paramref name="text"/> is null.
     /// </summary>
     public static uint[] Boundaries(string? text) =>
         [.. (text == null ? GhosttyWordBoundaries : " \t" + text).EnumerateRunes().Select(r => (uint)r.Value).Distinct()];
@@ -66,7 +66,7 @@ public sealed unsafe class SelectionGesture : IDisposable
     /// and applies the resulting selection to the terminal.
     /// </summary>
     /// <param name="xPx">Pointer position in surface pixels (including padding).</param>
-    /// <param name="timestampNs">Monotonic time; enables multi-click detection on press.</param>
+    /// <param name="timestampNs">Monotonic time, which enables multi-click detection on press.</param>
     /// <param name="repeatDistancePx">Max pointer travel between clicks of a multi-click.</param>
     public void Handle(GesturePhase phase, ushort col, uint row, double xPx, double yPx,
         GhosttySelectionGestureGeometry geometry, ulong timestampNs, double repeatDistancePx)

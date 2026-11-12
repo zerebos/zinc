@@ -5,7 +5,7 @@ using Zinc.Panes;
 namespace Zinc.Session;
 
 // What Zinc remembers between launches (session.json): which windows, workspaces, panes and
-// tabs exist, and what each tab runs and where — not what the terminals showed.
+// tabs exist, and what each tab runs and where, but not what the terminals showed.
 
 /// <summary>
 /// Everything to reopen: the normal windows (not the quick terminal), the command palette's recent
@@ -59,7 +59,7 @@ public sealed record PaneState(List<TabState> Tabs, int Shown, bool Focused);
 
 /// <summary>
 /// A tab: its profile, the command it ran, the folder it started in, and the folder its shell
-/// last reported (decoded; POSIX for WSL), which it reopens in when usable.
+/// last reported (decoded, and POSIX for WSL), which it reopens in when usable.
 /// </summary>
 public sealed record TabState(string Profile, string Command, string? StartDirectory, string? Directory, string? ColorScheme = null,
     string? Title = null);
@@ -72,7 +72,9 @@ internal sealed partial class SessionJson : JsonSerializerContext;
 /// <summary>Maps workspaces to and from their saved form. Pure, generic over the tab type, so it's unit-testable.</summary>
 public static class SessionLayout
 {
-    /// <summary>The saved form of <paramref name="workspace"/>'s layout; <paramref name="describe"/> saves one tab.</summary>
+    /// <summary>
+    /// The saved form of <paramref name="workspace"/>'s layout, where <paramref name="describe"/> saves one tab.
+    /// </summary>
     public static LayoutNode Capture<T>(Workspace<T> workspace, Func<T, TabState> describe) where T : class =>
         Capture(workspace.Layout.Root!, workspace, describe);
 
@@ -170,16 +172,16 @@ public static class SessionLayout
 /// <summary>Reads and writes session.json.</summary>
 public static class SessionStore
 {
-    // Readable when opened by hand: quotes and non-ASCII as themselves, not "-style escapes.
+    // Readable when opened by hand, with quotes and non-ASCII as themselves instead of \u-style escapes.
     private static readonly SessionJson Json = new(new JsonSerializerOptions(SessionJson.Default.Options)
     {
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     });
 
     /// <summary>
-    /// Where the session lives: <c>ZINC_SESSION</c> if set; otherwise next to the config in
-    /// %APPDATA%\Zinc — unless <c>ZINC_CONFIG</c> points elsewhere (a test run), where
-    /// nothing is saved or restored, so test instances never touch the real session.
+    /// Where the session lives, which is <c>ZINC_SESSION</c> if set, or else next to the config in
+    /// %APPDATA%\Zinc. When only <c>ZINC_CONFIG</c> is set (a test run), there's no path, so nothing is
+    /// saved or restored and test instances never touch the real session.
     /// </summary>
     public static string? DefaultPath(Func<string, string?>? getEnv = null) => Cli.CliPipe.SessionPath(getEnv);
 
@@ -191,7 +193,7 @@ public static class SessionStore
 
     public static string Serialize(SessionState state) => JsonSerializer.Serialize(state, Json.SessionState);
 
-    /// <summary>The session in <paramref name="json"/>; null if it's unreadable or from a newer version.</summary>
+    /// <summary>The session in <paramref name="json"/>, or null if it's unreadable or from a newer version.</summary>
     public static SessionState? Deserialize(string json)
     {
         try
@@ -221,7 +223,8 @@ public static class SessionStore
 
     /// <summary>
     /// A session imported from a settings backup (<see cref="Settings.SettingsBackup"/>) waits next to
-    /// <paramref name="path"/> until Zinc starts: it replaces the session then, before anything reads it. True if it did.
+    /// <paramref name="path"/> until Zinc starts, and then replaces the session before anything reads it. Returns true
+    /// if it did.
     /// </summary>
     public static bool TakeImported(string path)
     {
@@ -239,7 +242,7 @@ public static class SessionStore
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Runs while App is built: anything thrown here would stop every start.
+            // This runs while App is built, so anything thrown here would stop every start.
             Log.Write($"session: can't take the imported one: {ex.Message}");
             return false;
         }

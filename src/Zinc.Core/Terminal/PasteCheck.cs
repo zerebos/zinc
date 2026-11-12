@@ -5,13 +5,14 @@ namespace Zinc.Terminal;
 /// <summary>When a paste asks first. Config: <c>[terminal] paste-warning = auto | multiline | never</c>.</summary>
 public enum PasteWarning
 {
-    /// <summary>A paste with a line break the program isn't ready for (bracketed paste is off): each line would run.</summary>
+    /// <summary>
+    /// A paste with a line break the program isn't ready for (bracketed paste is off), so each line would run.
+    /// </summary>
     Auto,
 
     /// <summary>Any paste with a line break.</summary>
     Multiline,
 
-    /// <summary>Never.</summary>
     Never,
 }
 
@@ -30,12 +31,14 @@ public enum PasteConcern
 
 /// <summary>
 /// Whether a paste should ask first. A line break is only dangerous when the program hasn't
-/// turned on bracketed paste (mode 2004): then each one reaches the shell as Enter and runs what
-/// came before it (Ghostty's rule; inside a bracketed paste, escape bytes are stripped anyway).
+/// turned on bracketed paste (mode 2004), because then each one reaches the shell as Enter and runs
+/// what came before it. This is Ghostty's rule, and inside a bracketed paste escape bytes are stripped anyway.
 /// </summary>
 public static class PasteCheck
 {
-    /// <summary>A paste this long asks first (with <c>large-paste-warning</c>, on by default): 5 KB, as Windows Terminal.</summary>
+    /// <summary>
+    /// A paste longer than this asks first (with <c>large-paste-warning</c>, on by default). 5 KB, as in Windows Terminal.
+    /// </summary>
     public const int LargeBytes = 5 * 1024;
 
     public static PasteConcern? Concern(string text, bool bracketed, PasteWarning warning, bool warnLarge)

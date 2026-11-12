@@ -25,7 +25,7 @@ public sealed unsafe partial class ConPty : IDisposable
 
     /// <summary>
     /// True when the out-of-box ConPTY (conpty.dll + OpenConsole.exe from the
-    /// Microsoft.Windows.Console.ConPTY package) is next to the app; otherwise
+    /// Microsoft.Windows.Console.ConPTY package) is next to the app. Otherwise
     /// the inbox kernel32 implementation is used.
     /// </summary>
     public static bool UsesBundledConpty { get; } =
@@ -41,7 +41,7 @@ public sealed unsafe partial class ConPty : IDisposable
     /// <summary>Raised once, on a background thread, after the child exits and output is drained.</summary>
     public event Action<uint>? Exited;
 
-    /// <param name="environment">Variables to set (or, null, remove) for the child on top of ours.</param>
+    /// <param name="environment">Variables to set for the child on top of ours. A null value removes the variable.</param>
     public ConPty(string commandLine, string? workingDirectory, short cols, short rows,
         IReadOnlyDictionary<string, string?>? environment = null)
     {
@@ -69,7 +69,7 @@ public sealed unsafe partial class ConPty : IDisposable
         }
         catch
         {
-            // Nothing to run: let go of the pseudoconsole and our pipe ends before the caller hears why.
+            // Nothing to run, so let go of the pseudoconsole and our pipe ends before the caller hears why.
             if (UsesBundledConpty)
             {
                 ConptyClosePseudoConsole(_hpc);
@@ -92,7 +92,7 @@ public sealed unsafe partial class ConPty : IDisposable
         waiter.Start();
     }
 
-    /// <summary>A handed-over console: reading starts with <see cref="Begin"/>, once someone listens.</summary>
+    /// <summary>A handed-over console, which starts reading in <see cref="Begin"/> once someone listens.</summary>
     private ConPty(nint hpc, SafeFileHandle inputWrite, SafeFileHandle outputRead, SafeWaitHandle process, int processId)
     {
         (_hpc, _inputWrite, _outputRead, _process, ProcessId) = (hpc, inputWrite, outputRead, process, processId);
@@ -104,12 +104,12 @@ public sealed unsafe partial class ConPty : IDisposable
     private readonly Thread? _waiter;
 
     /// <summary>
-    /// Starts reading a handed-over console's output and waiting for its program (until then it
-    /// waits in the pipe, so none is lost while its pane is made). Started consoles read at once.
+    /// Starts reading a handed-over console's output and waiting for its program. Until then the output
+    /// waits in the pipe, so none is lost while its pane is made. Started consoles read at once.
     /// </summary>
     public void Begin()
     {
-        // (ThreadState is flags: a background thread not started yet is "Background, Unstarted".)
+        // ThreadState is a set of flags, so a background thread not started yet is "Background, Unstarted".
         if (_waiter is { } waiter && (waiter.ThreadState & ThreadState.Unstarted) != 0)
         {
             _reader.Start();
@@ -119,7 +119,7 @@ public sealed unsafe partial class ConPty : IDisposable
 
     /// <summary>
     /// A console handed over to Zinc as the default terminal (ITerminalHandoff3, from Windows
-    /// Terminal's OpenConsole): its handles become a pseudoconsole as one Zinc started would be
+    /// Terminal's OpenConsole). Its handles become a pseudoconsole as one Zinc started would be
     /// (ConptyPackPseudoConsole), with an input pipe and an output pipe. The handles given are the caller's (COM
     /// closes them after the call), so they're duplicated. <paramref name="theirInput"/> and
     /// <paramref name="theirOutput"/> are the pipes' other ends, to hand back.
@@ -155,7 +155,7 @@ public sealed unsafe partial class ConPty : IDisposable
             throw Marshal.GetExceptionForHR(hr)!;
         }
 
-        // Handed back: COM owns these now.
+        // Handed back, so COM owns these now.
         theirInput = inputRead.DangerousGetHandle();
         theirOutput = outputWrite.DangerousGetHandle();
         inputRead.SetHandleAsInvalid();
@@ -164,8 +164,8 @@ public sealed unsafe partial class ConPty : IDisposable
     }
 
     /// <summary>
-    /// A handed-over console's program (its exe's full path), or null. Not the console's title: started
-    /// from a shortcut, that's the shortcut's name ("Command Prompt").
+    /// A handed-over console's program (its exe's full path), or null. This isn't the console's title, because a
+    /// console started from a shortcut takes the shortcut's name ("Command Prompt") as its title.
     /// </summary>
     public string? ProgramPath { get; private init; }
 
@@ -192,7 +192,7 @@ public sealed unsafe partial class ConPty : IDisposable
             }
             catch (IOException)
             {
-                // Child went away; the exit path will report it.
+                // The child went away, and the exit path reports it.
             }
             catch (ObjectDisposedException)
             {
@@ -248,7 +248,7 @@ public sealed unsafe partial class ConPty : IDisposable
             }
             catch (Exception ex)
             {
-                // A bug in handling output (parsing, shell integration...) would otherwise end the
+                // A bug in handling output (parsing, shell integration and so on) would otherwise end the
                 // whole app from this background thread, silently. Record it and keep reading.
                 if (_outputFailures++ < 3)
                 {
@@ -275,7 +275,7 @@ public sealed unsafe partial class ConPty : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Crash("a terminal's program exiting", ex); // background thread: don't take the app down
+            Log.Crash("a terminal's program exiting", ex); // on a background thread, so don't take the app down
         }
     }
 
@@ -311,7 +311,7 @@ public sealed unsafe partial class ConPty : IDisposable
             TerminateProcess(_process, 1);
         }
 
-        // Closing may block while output drains; keep it off the UI thread.
+        // Closing may block while output drains, so keep it off the UI thread.
         ThreadPool.QueueUserWorkItem(_ => Close());
     }
 

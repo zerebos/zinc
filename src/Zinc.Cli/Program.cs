@@ -31,14 +31,14 @@ internal static class Program
 
         if (CliCommandLine.SendsStdin(request))
         {
-            // As is: no escapes (a file's backslashes are its own).
+            // Sent as is, with no escapes, because a file's backslashes are its own.
             Console.InputEncoding = new UTF8Encoding(false);
             request.Text = Console.In.ReadToEnd();
         }
 
         if (request.Cwd is { } cwd)
         {
-            // Relative to where zn runs (from WSL, a \\wsl.localhost\… path: Zinc maps it back).
+            // Relative to where zn runs. From WSL that's a \\wsl.localhost\… path, which Zinc maps back.
             request.Cwd = Path.GetFullPath(cwd);
         }
 
@@ -98,7 +98,7 @@ internal static class Program
         return CliExit.Done;
     }
 
-    /// <summary>The request's answer; null when no Zinc answers.</summary>
+    /// <summary>The request's answer, or null when no Zinc answers.</summary>
     private static CliReply? Send(CliRequest request)
     {
         if (CliPipe.Find() is not { } name)
@@ -114,7 +114,7 @@ internal static class Program
             using var writer = new StreamWriter(pipe, utf8, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
             using var reader = new StreamReader(pipe, utf8, false, leaveOpen: true);
             writer.WriteLine(CliProtocol.Write(request));
-            // No time limit: a close may wait on your answer to "a command is still running".
+            // No time limit, because a close may wait on your answer to "a command is still running".
             return reader.ReadLine() is { } line ? CliProtocol.ReadReply(line) ?? Garbled() : null;
         }
         catch (Exception ex) when (ex is TimeoutException or IOException or UnauthorizedAccessException)

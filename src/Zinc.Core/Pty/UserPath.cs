@@ -26,14 +26,15 @@ public sealed partial class UserPath(RegistryKey root)
     }
 
     /// <summary>
-    /// Puts <paramref name="folder"/> at the end of the user's PATH in place of the entry added before (null: just takes
-    /// that one away). True when PATH changed (programs started from Explorer then need telling: WM_SETTINGCHANGE).
+    /// Puts <paramref name="folder"/> at the end of the user's PATH in place of the entry added before, or with null just
+    /// takes that entry away. True when PATH changed, because programs started from Explorer then need telling with
+    /// WM_SETTINGCHANGE.
     /// </summary>
     public bool Apply(string? folder)
     {
         var previous = Entry;
         using var environment = root.CreateSubKey(EnvironmentKey);
-        // Unexpanded: %USERPROFILE%\bin stays written that way.
+        // Read unexpanded, so %USERPROFILE%\bin stays written that way.
         var raw = environment.GetValue(PathValue, null, RegistryValueOptions.DoNotExpandEnvironmentNames) as string;
         var entries = (raw ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries).ToList();
         var kept = entries.Where(e => !Same(e, previous) && !Same(e, folder)).ToList();
@@ -62,7 +63,7 @@ public sealed partial class UserPath(RegistryKey root)
         return changed;
     }
 
-    /// <summary>Tells running programs (Explorer, so what it starts next) that the environment changed.</summary>
+    /// <summary>Tells running programs (Explorer, so that what it starts next sees the change) that the environment changed.</summary>
     public static void Announce() =>
         SendMessageTimeoutW(0xFFFF /* HWND_BROADCAST */, 0x001A /* WM_SETTINGCHANGE */, 0, "Environment", 0x0002 /* SMTO_ABORTIFHUNG */,
             1000, out _);

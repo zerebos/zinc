@@ -1,10 +1,13 @@
 namespace Zinc.Shell;
 
-/// <summary>An icon for a jump list item: a file (an .ico, or an .exe/.dll and the icon's index in it); null = Zinc's.</summary>
+/// <summary>
+/// An icon for a jump list item, from a file (an .ico, or an .exe/.dll and the icon's index in it), or Zinc's when the
+/// path is null.
+/// </summary>
 public readonly record struct JumpIcon(string? Path, int Index = 0);
 
 /// <summary>
-/// One item: a launch of zinc.exe with <see cref="Arguments"/> (LaunchRequest's flags), shown as <see cref="Title"/>,
+/// One item, which launches zinc.exe with <see cref="Arguments"/> (LaunchRequest's flags), shown as <see cref="Title"/>,
 /// with <see cref="Description"/> as its tooltip.
 /// </summary>
 public sealed record JumpItem(string Title, string Arguments, string? Description, JumpIcon Icon);

@@ -6,7 +6,7 @@ namespace Zinc.Input;
 /// A key press, described by what the active keyboard layout produces for it
 /// under different modifier combinations (see <see cref="Keyboard.State.Translate"/>).
 /// </summary>
-/// <param name="Text">Text with all held modifiers; null for a dead key, "" for none.</param>
+/// <param name="Text">Text with all held modifiers, or null for a dead key and "" for none.</param>
 /// <param name="TextWithoutCtrlAlt">Text with Ctrl and Alt released.</param>
 /// <param name="TextUnshifted">Text with Ctrl, Alt and Shift released.</param>
 public readonly record struct KeyPress(
@@ -51,7 +51,7 @@ public static class KeyDecision
         request = default;
         if (key.Text == null)
         {
-            // Dead key: the system composes it and delivers the result as a character.
+            // A dead key. The system composes it and delivers the result as a character.
             return KeyRoute.Character;
         }
 

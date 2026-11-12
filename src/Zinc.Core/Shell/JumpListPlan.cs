@@ -6,18 +6,19 @@ namespace Zinc.Shell;
 public sealed record JumpProfile(string Id, string Name, JumpIcon Icon);
 
 /// <summary>
-/// What the taskbar button's jump list holds (pure; App writes it with JumpListWriter):
+/// What the taskbar button's jump list holds (pure, and App writes it with JumpListWriter):
 /// <list type="bullet">
 /// <item>Recent profiles: the ones opened lately, filled up from the profile order when there aren't enough yet.</item>
 /// <item>Recent folders: the folders shells reported lately, each opening a workspace there with the profile that was
 /// there.</item>
 /// <item>Tasks: New window, Quick terminal, Settings, and the reopen commands while there's something to reopen.</item>
 /// </list>
-/// Items the user removed from the list are left out (Windows refuses a category holding one); the next ones move up.
+/// Items the user removed from the list are left out, because Windows refuses a category holding one, and the next
+/// ones move up.
 /// </summary>
 public static class JumpListPlan
 {
-    /// <summary>Items per category: two make about the ten Windows shows by default.</summary>
+    /// <summary>Items per category, so two categories make about the ten Windows shows by default.</summary>
     public const int PerCategory = 5;
 
     public const string RecentProfilesTitle = "Recent profiles", RecentFoldersTitle = "Recent folders";

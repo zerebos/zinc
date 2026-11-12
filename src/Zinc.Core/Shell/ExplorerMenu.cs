@@ -3,8 +3,8 @@ using Microsoft.Win32;
 namespace Zinc.Shell;
 
 /// <summary>
-/// "Open in Zinc" on Explorer's menu for a folder, a folder's background and a drive (<c>[window] explorer-menu</c>):
-/// classic shell verbs under the user's Software\Classes, each starting zinc.exe with <c>--folder</c>. On Windows 11
+/// "Open in Zinc" on Explorer's menu for a folder, a folder's background and a drive (<c>[window] explorer-menu</c>).
+/// These are classic shell verbs under the user's Software\Classes, each starting zinc.exe with <c>--folder</c>. On Windows 11
 /// they're under "Show more options" (the new menu takes only packaged apps' commands). <paramref name="root"/> is
 /// HKCU, or a scratch key in tests.
 /// </summary>
@@ -12,7 +12,7 @@ public sealed class ExplorerMenu(RegistryKey root)
 {
     public const string Label = "Open in Zinc";
 
-    // The three places, and what each passes: a drive's %V is "C:\", which ends a quoted argument with \" (an escaped
+    // The three places, and what each passes. A drive's %V is "C:\", which ends a quoted argument with \" (an escaped
     // quote), so it passes "C:\." instead (LaunchRequest reads that back as C:\).
     private static readonly (string Key, string Folder)[] Places =
     [
@@ -21,7 +21,7 @@ public sealed class ExplorerMenu(RegistryKey root)
         (@"Software\Classes\Drive\shell\Zinc", "%V."),
     ];
 
-    /// <summary>Adds the entries for <paramref name="exe"/> (null: removes them); true if anything changed.</summary>
+    /// <summary>Adds the entries for <paramref name="exe"/>, or removes them when it's null. True if anything changed.</summary>
     public bool Apply(string? exe)
     {
         var changed = false;

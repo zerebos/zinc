@@ -3,16 +3,17 @@ using System.Runtime.InteropServices;
 namespace Zinc.Pty;
 
 /// <summary>
-/// The environment a new tab's program gets, as changes on top of Zinc's own (what <see cref="ConPty"/> takes): the
-/// variables Windows has now (<see cref="Fresh"/>: a PATH an installer changed since Zinc started), then the ones the
-/// config sets (<c>[environment]</c>, a profile's own over them).
+/// The environment a new tab's program gets, as changes on top of Zinc's own (what <see cref="ConPty"/> takes). It's
+/// the variables Windows has now (<see cref="Fresh"/>, which picks up a PATH an installer changed since Zinc started),
+/// then the ones the config sets (<c>[environment]</c>, with a profile's own over them).
 /// </summary>
 public static partial class ChildEnvironment
 {
     /// <summary>
-    /// The changes to <paramref name="ours"/>: each <paramref name="fresh"/> variable that's new or different (nothing
-    /// removed: what Zinc or whatever started it set stays), then <paramref name="configured"/> (an empty value removes
-    /// a variable; <c>%NAME%</c> in a value is that variable as the program would otherwise get it).
+    /// The changes to <paramref name="ours"/>: each <paramref name="fresh"/> variable that's new or different (nothing is
+    /// removed, so what Zinc or whatever started it set stays), then <paramref name="configured"/>. In
+    /// <paramref name="configured"/>, an empty value removes a variable, and <c>%NAME%</c> in a value is that variable
+    /// as the program would otherwise get it.
     /// </summary>
     public static Dictionary<string, string?> Changes(IReadOnlyDictionary<string, string> ours, IReadOnlyDictionary<string, string>? fresh,
         IReadOnlyDictionary<string, string> configured)
@@ -84,8 +85,8 @@ public static partial class ChildEnvironment
     }
 
     /// <summary>
-    /// The environment Windows would give a program started now (what Explorer does: the user's and the system's
-    /// variables from the registry, expanded); null if it can't be read.
+    /// The environment Windows would give a program started now, the way Explorer builds it from the user's and the
+    /// system's variables in the registry, expanded. Null if it can't be read.
     /// </summary>
     public static unsafe Dictionary<string, string>? Fresh()
     {
@@ -105,7 +106,7 @@ public static partial class ChildEnvironment
 
                 try
                 {
-                    // The block: NAME=value entries, each ending in a NUL, then one more NUL.
+                    // The block holds NAME=value entries, each ending in a NUL, then one more NUL.
                     var p = (char*)block;
                     var end = p;
                     while (end[0] != '\0' || end[1] != '\0')
@@ -131,7 +132,10 @@ public static partial class ChildEnvironment
         }
     }
 
-    /// <summary>An environment block's text (NAME=value entries ending in NUL) by name; the hidden <c>=C:</c> entries left out.</summary>
+    /// <summary>
+    /// An environment block's text (NAME=value entries ending in NUL) by name, with the hidden <c>=C:</c> entries left
+    /// out.
+    /// </summary>
     public static Dictionary<string, string> Parse(string block)
     {
         var variables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);

@@ -1,16 +1,17 @@
 namespace Zinc.Shaders;
 
 /// <summary>
-/// Shader file paths between config.toml and the disk: as written they may be relative to the config file's folder,
-/// start with <c>~</c> or hold %VARIABLES%; Settings writes them back as short as it can, with forward slashes (no
-/// escaping in TOML, and Windows takes them). A bare name ("crt": no folder, no extension) is a shader by name, as
-/// color schemes are: yours in <c>shaders\</c> next to the config, else one that comes with Zinc.
+/// Shader file paths between config.toml and the disk. As written, they may be relative to the config file's folder,
+/// start with <c>~</c> or hold %VARIABLES%. Settings writes them back as short as it can, with forward slashes, because
+/// those need no escaping in TOML and Windows takes them. A bare name ("crt", with no folder and no extension) is a
+/// shader by name, as color schemes are. It finds yours in <c>shaders\</c> next to the config, or else one that comes
+/// with Zinc.
 /// </summary>
 public static class ShaderPaths
 {
     private static string Home => Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-    /// <summary>The shaders that come with Zinc (<c>Shaders\</c> next to the exe; tests point it elsewhere).</summary>
+    /// <summary>The shaders that come with Zinc (<c>Shaders\</c> next to the exe, though tests point it elsewhere).</summary>
     public static string BundledFolder { get; set; } = Path.Combine(AppContext.BaseDirectory, "Shaders");
 
     /// <summary>Whether <paramref name="written"/> names a shader rather than giving a file.</summary>
@@ -31,7 +32,9 @@ public static class ShaderPaths
     public static bool IsBundled(string full) =>
         string.Equals(Path.GetDirectoryName(Path.GetFullPath(full)), Path.GetFullPath(BundledFolder).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The shaders that come with Zinc: name and what it does (its first comment line, after "Zinc: name.").</summary>
+    /// <summary>
+    /// The shaders that come with Zinc, each with its name and what it does (its first comment line, after "Zinc: name.").
+    /// </summary>
     public static IReadOnlyList<(string Name, string Description)> Bundled()
     {
         if (!Directory.Exists(BundledFolder))
@@ -86,15 +89,16 @@ public static class ShaderPaths
     }
 
     /// <summary>
-    /// How Settings writes <paramref name="full"/> into <paramref name="configFile"/>: relative to its folder when
-    /// inside it ("shaders/crt.glsl"), else from your home ("~/dev/shaders/crt.glsl"), else the whole path.
+    /// How Settings writes <paramref name="full"/> into <paramref name="configFile"/>. It's relative to the config's
+    /// folder when inside it ("shaders/crt.glsl"), else from your home ("~/dev/shaders/crt.glsl"), else the whole path.
+    /// One of Zinc's own shaders is written by name.
     /// </summary>
     public static string ForConfig(string full, string configFile)
     {
         full = Path.GetFullPath(full);
         if (IsBundled(full))
         {
-            return Path.GetFileNameWithoutExtension(full); // one of Zinc's: by name
+            return Path.GetFileNameWithoutExtension(full); // one of Zinc's, so it's written by name
         }
 
         var folder = Path.GetDirectoryName(Path.GetFullPath(configFile)) ?? "";

@@ -3,7 +3,7 @@ namespace Zinc;
 /// <summary>What a launch with Zinc's own flags asks for (the jump list's items are such launches).</summary>
 public enum LaunchAction
 {
-    /// <summary>No flag: the arguments, if any, are a command to run (Zinc's rule from the start).</summary>
+    /// <summary>With no flag, the arguments, if any, are a command to run (Zinc's rule from the start).</summary>
     None,
 
     /// <summary><c>--profile &lt;id&gt;</c>: a new workspace with that profile, in the window used last.</summary>
@@ -18,7 +18,7 @@ public enum LaunchAction
     /// <summary><c>--new-window</c>.</summary>
     NewWindow,
 
-    /// <summary><c>--quick-terminal</c>: shows or hides it.</summary>
+    /// <summary><c>--quick-terminal</c>: shows or hides the quick terminal.</summary>
     QuickTerminal,
 
     /// <summary><c>--settings</c>.</summary>
@@ -32,9 +32,9 @@ public enum LaunchAction
 }
 
 /// <summary>
-/// A launch's arguments, read: Zinc's flags (at the start of the line), or a command. Anything that doesn't start with
-/// a flag stays a command, as before (<c>zinc wsl.exe</c>); <c>zinc -- &lt;command&gt;</c> runs a command that would
-/// otherwise look like a flag.
+/// A launch's arguments, read as Zinc's flags (at the start of the line) or as a command. Anything that doesn't start
+/// with a flag stays a command, as before (<c>zinc wsl.exe</c>). <c>zinc -- &lt;command&gt;</c> runs a command that
+/// would otherwise look like a flag.
 /// </summary>
 public sealed record LaunchRequest(LaunchAction Action, string? Profile, string? Folder, IReadOnlyList<string> Command)
 {
@@ -95,7 +95,7 @@ public sealed record LaunchRequest(LaunchAction Action, string? Profile, string?
             }
         }
 
-        // A switch wins; else a folder (with or without a profile); else a profile. A flag without its value asks for
+        // A switch wins, else a folder (with or without a profile), else a profile. A flag without its value asks for
         // nothing (rather than running "--profile" as a program).
         action = action != LaunchAction.None ? action
             : folder != null ? LaunchAction.Folder
@@ -128,7 +128,8 @@ public sealed record LaunchRequest(LaunchAction Action, string? Profile, string?
         return string.Join(' ', parts);
     }
 
-    // Windows' command-line quoting (CommandLineToArgvW reads it back): quotes around, backslashes before a quote doubled.
+    // Windows' command-line quoting, which CommandLineToArgvW reads back. It puts quotes around the argument and doubles
+    // the backslashes before a quote.
     private static string Quote(string s)
     {
         if (s.Length > 0 && s.IndexOfAny([' ', '\t', '"']) < 0)

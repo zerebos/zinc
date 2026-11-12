@@ -12,12 +12,12 @@ namespace Zinc.Terminal;
 public readonly record struct ShellMark(char Kind, int? ExitCode = null, string? CommandLine = null, PromptClickMode? Click = null)
 {
     /// <summary>
-    /// A prompt mark's options as sent ("click_events=1", "aid=123", "" for none; null on other
-    /// marks). Each shell sends its own, so they tell nested shells apart.
+    /// A prompt mark's options as sent ("click_events=1", "aid=123", or "" for none, and null on
+    /// other marks). Each shell sends its own, so they tell nested shells apart.
     /// </summary>
     public string? Options { get; init; }
 
-    /// <summary>Reads the text after <c>ESC ] 133;</c> (up to the terminator); null if it isn't a mark.</summary>
+    /// <summary>Reads the text after <c>ESC ] 133;</c> (up to the terminator), or null if it isn't a mark.</summary>
     public static ShellMark? Parse(string payload)
     {
         if (payload.Length == 0)
@@ -42,7 +42,7 @@ public readonly record struct ShellMark(char Kind, int? ExitCode = null, string?
             }
         }
 
-        // C may carry the command line (kitty's cmdline_url, percent-encoded): better than reading it
+        // C may carry the command line (kitty's cmdline_url, percent-encoded), which is better than reading it
         // back from the screen, where a line editor's redraws can leave stray cells.
         string? commandLine = null;
         if (kind == 'C')
@@ -75,7 +75,7 @@ public readonly record struct ShellMark(char Kind, int? ExitCode = null, string?
 /// <summary>
 /// Finds OSC 133 marks in PTY output as it streams by, so the session can note where the cursor
 /// is at each one (libghostty parses them too, for its own prompt bookkeeping, but keeps no
-/// command history and ignores exit codes). Keeps state between chunks: a mark may be split
+/// command history and ignores exit codes). Keeps state between chunks, because a mark may be split
 /// across reads.
 /// </summary>
 public sealed class Osc133Scanner
@@ -93,7 +93,7 @@ public sealed class Osc133Scanner
 
     private State _state;
 
-    // The OSC's payload while it could still be a 133 (room for a command line; longer ones are dropped).
+    // The OSC's payload while it could still be a 133 (with room for a command line, and longer ones are dropped).
     private readonly byte[] _payload = new byte[4096];
     private int _length;
     private bool _candidate;
@@ -184,7 +184,7 @@ public sealed class Osc133Scanner
                     }
                     else
                     {
-                        // Another sequence cut this one off; the ESC starts it.
+                        // Another sequence cut this one off, and the ESC starts it.
                         _state = State.Escape;
                     }
 

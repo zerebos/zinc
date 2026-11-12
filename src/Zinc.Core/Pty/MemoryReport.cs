@@ -5,10 +5,10 @@ using System.Text;
 namespace Zinc.Pty;
 
 /// <summary>
-/// Where this process's memory goes, for Settings > About: its own private memory (with the .NET
-/// heap's share; the rest is native: WinUI, Direct3D and the graphics driver, libghostty's screens),
-/// and the programs it started (shells and their console hosts), which Task Manager adds to Zinc's
-/// row. Measured on demand; nothing runs in the background.
+/// Where this process's memory goes, for Settings > About. It covers the process's own private memory, with the .NET
+/// heap's share of it (the rest is native, such as WinUI, Direct3D and the graphics driver, and libghostty's screens),
+/// and the programs it started (shells and their console hosts), which Task Manager adds to Zinc's row. It's measured
+/// on demand, so nothing runs in the background.
 /// </summary>
 public sealed record MemoryReport(
     long PrivateBytes,
@@ -81,7 +81,9 @@ public static partial class ProcessTree
     /// <summary>The descendants of <paramref name="root"/> (id, exe name), children before grandchildren.</summary>
     public static IReadOnlyList<(int Id, string Name)> Descendants(int root) => Descendants(root, Snapshot());
 
-    /// <summary>The same over a given list of (id, parent, name); ids can be reused, so a cycle stops at the first repeat.</summary>
+    /// <summary>
+    /// The same over a given list of (id, parent, name). Ids can be reused, so a cycle stops at the first repeat.
+    /// </summary>
     public static IReadOnlyList<(int Id, string Name)> Descendants(int root, IReadOnlyList<(int Id, int Parent, string Name)> processes)
     {
         var byParent = processes.Where(p => p.Id != p.Parent).ToLookup(p => p.Parent);

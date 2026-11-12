@@ -1,7 +1,7 @@
 namespace Zinc.Terminal;
 
 /// <summary>
-/// A workspace's own folder (chosen on the new-workspace page): new tabs and splits in the
+/// A workspace's own folder (chosen on the new-workspace page). New tabs and splits in the
 /// workspace start there. <see cref="Path"/> is as the shell it was chosen for writes it: a Windows
 /// path, an MSYS one (<c>/c/src</c>), <c>~</c>, or, with <see cref="WslDistro"/>, a Linux path in
 /// that distro. Other shells get it in their own terms, or their usual folder when they can't
@@ -28,9 +28,9 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
     }
 
     /// <summary>
-    /// How <paramref name="command"/> starts in this folder (see <see cref="ShellDirectory.LaunchIn"/>);
-    /// <paramref name="commandDistro"/> is the distro a WSL command runs (null: its default, or not WSL).
-    /// Null when this shell can't reach the folder: the caller uses the profile's own.
+    /// How <paramref name="command"/> starts in this folder (see <see cref="ShellDirectory.LaunchIn"/>).
+    /// <paramref name="commandDistro"/> is the distro a WSL command runs (null for its default, or not WSL).
+    /// Null when this shell can't reach the folder, and then the caller uses the profile's own.
     /// </summary>
     public (string Command, string? WorkingDirectory)? LaunchFor(string command, string? commandDistro)
     {
@@ -49,7 +49,7 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
 
         if (ShellDirectory.IsWsl(command))
         {
-            // A Windows folder: the distro sees its drives under /mnt.
+            // A Windows folder, which the distro sees on its drives under /mnt.
             return windows && ShellDirectory.ResolveTyped(Path, command, "") is { } mounted
                 ? ShellDirectory.LaunchIn(command, mounted)
                 : null;
@@ -62,8 +62,8 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
 
         if (WslDistro != null)
         {
-            // A distro's folder from Windows: through its share (not "~": its home isn't known here), which cmd can't
-            // start in (it says so and starts in C:\Windows).
+            // A distro's folder from Windows: through its share (not "~", because its home isn't known here), which cmd
+            // can't start in (it says so and starts in C:\Windows).
             return Path.StartsWith('/') && !ShellDirectory.IsCmd(command)
                 ? (command, $@"\\wsl.localhost\{WslDistro}{Path.Replace('/', '\\')}")
                 : null;
@@ -83,9 +83,9 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
     }
 
     /// <summary>
-    /// A folder chosen in Windows (a folder dialog) for a shell: on <paramref name="distro"/>'s share
-    /// (<c>\\wsl.localhost\Fedora\home\jdoe</c>) it's that distro's own path (<c>/home/jdoe</c>);
-    /// otherwise the Windows path as is.
+    /// A folder chosen in Windows (a folder dialog) for a shell. On <paramref name="distro"/>'s share
+    /// (<c>\\wsl.localhost\Fedora\home\jdoe</c>) it becomes that distro's own path (<c>/home/jdoe</c>),
+    /// and otherwise it stays the Windows path as is.
     /// </summary>
     public static WorkspaceFolder FromWindows(string path, string? distro)
     {
@@ -113,8 +113,8 @@ public sealed record WorkspaceFolder(string Path, string? WslDistro = null)
 public sealed record RecentFolder(string Path, string Profile, string? WslDistro, DateTimeOffset When);
 
 /// <summary>
-/// Folders shells reported lately, newest first, one entry per folder and profile; shared by every
-/// window and saved with the session.
+/// Folders shells reported lately, newest first, one entry per folder and profile. They're shared by
+/// every window and saved with the session.
 /// </summary>
 public sealed class RecentFolders
 {
@@ -129,7 +129,7 @@ public sealed class RecentFolders
 
     public void Note(RecentFolder folder)
     {
-        // The same folder again soon (every prompt reports it): nothing new to keep.
+        // The same folder again soon (every prompt reports it), so there's nothing new to keep.
         if (_folders.Count > 0 && _folders[0].Path == folder.Path && _folders[0].Profile == folder.Profile &&
             folder.When - _folders[0].When < TimeSpan.FromMinutes(5))
         {
@@ -146,7 +146,7 @@ public sealed class RecentFolders
 
     /// <summary>
     /// The folders a profile can start in, newest first: its own, and Windows ones (any shell reaches
-    /// those; WSL through /mnt). One entry per path.
+    /// those, WSL through /mnt). One entry per path.
     /// </summary>
     public IEnumerable<RecentFolder> For(string profile, string? wslDistro) =>
         _folders.Where(f => f.Profile == profile || (wslDistro != null && f.WslDistro == wslDistro) ||

@@ -15,7 +15,7 @@ public sealed record BackupContents(IReadOnlyList<string> Files, bool HasSession
 /// </summary>
 public sealed record ImportResult(int Files, bool Session, string SafetyCopy, int Skipped = 0);
 
-/// <summary>An import that stopped after replacing <see cref="Written"/> files: the settings from before are in <see cref="SafetyCopy"/>.</summary>
+/// <summary>An import that stopped after replacing <see cref="Written"/> files, and the settings from before are in <see cref="SafetyCopy"/>.</summary>
 public sealed class ImportFailedException(string entry, int written, string safetyCopy, Exception inner)
     : IOException($"couldn't write {entry} ({inner.Message.TrimEnd('.', ' ')})", inner)
 {
@@ -28,8 +28,8 @@ public sealed class ImportFailedException(string entry, int written, string safe
 /// Settings backup (Settings > About): one zip with config.toml (and other .toml files under its folder, for includes), the
 /// user's color schemes (themes\) and shaders (shaders\), and the session (session.json). Paths inside are relative to
 /// the config folder, with forward slashes. An import first saves what's there into backups\, then writes the
-/// backup's files over (files it doesn't have stay); its session waits next to session.json for the next start
-/// (<see cref="Zinc.Session.SessionStore.TakeImported"/>), since the running app keeps saving its own.
+/// backup's files over it, and files the backup doesn't have stay. The backup's session waits next to session.json for
+/// the next start (<see cref="Zinc.Session.SessionStore.TakeImported"/>), since the running app keeps saving its own.
 /// </summary>
 public static partial class SettingsBackup
 {
@@ -39,7 +39,7 @@ public static partial class SettingsBackup
 
     private static readonly string[] Folders = ["themes", "shaders"];
 
-    /// <summary>Folders Zinc writes itself next to the config: never in a backup.</summary>
+    /// <summary>Folders Zinc writes itself next to the config, which never go in a backup.</summary>
     private static readonly string[] NotSettings = [BackupsFolder, "logs", "cache"];
 
     /// <summary>The files a backup of <paramref name="configFolder"/> holds: entry name and full path.</summary>
@@ -79,20 +79,20 @@ public static partial class SettingsBackup
         return files;
     }
 
-    /// <summary>Writes a backup into <paramref name="zip"/>; returns how many files it holds.</summary>
+    /// <summary>Writes a backup into <paramref name="zip"/>, and returns how many files it holds.</summary>
     public static int Write(Stream zip, string configFolder, string? sessionPath, string version, DateTimeOffset now)
     {
         var files = Gather(configFolder, sessionPath);
         using var archive = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true);
         foreach (var (entry, path) in files)
         {
-            // Shared reads: the session and the config may be mid-save by the app or an editor.
+            // Shared reads, because the session and the config may be mid-save by the app or an editor.
             using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var target = archive.CreateEntry(entry, CompressionLevel.Optimal).Open();
             source.CopyTo(target);
         }
 
-        // Written by hand: reflection-based JSON is off in trimmed publishes.
+        // Written by hand, because reflection-based JSON is off in trimmed publishes.
         using (var stream = archive.CreateEntry(Manifest).Open())
         using (var json = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
         {
@@ -107,8 +107,8 @@ public static partial class SettingsBackup
     }
 
     /// <summary>
-    /// What's in a backup, or why it isn't one: null contents with a reason for a zip that isn't Zinc's (no manifest,
-    /// no config.toml) or that names a place outside the config folder.
+    /// What's in a backup, or why it isn't one. The contents are null, with a reason, for a zip that isn't Zinc's (no
+    /// manifest and no config.toml). Entries that name a place outside the config folder are left out of the contents.
     /// </summary>
     public static (BackupContents? Contents, string? Problem) Read(Stream zip)
     {
@@ -133,7 +133,7 @@ public static partial class SettingsBackup
                     continue;
                 }
 
-                // Anything else is left out, not refused: a newer Zinc's backup may hold more, or a README was added.
+                // Anything else is left out, not refused, because a newer Zinc's backup may hold more, or a README was added.
                 if (IsSafe(entry.FullName))
                 {
                     files.Add(entry.FullName);
@@ -154,9 +154,9 @@ public static partial class SettingsBackup
     }
 
     /// <summary>
-    /// Restores a backup: what's there now goes into backups\before-import-&lt;time&gt;.zip first, then the backup's files
-    /// are written (folders made as needed); its session goes to <paramref name="sessionPath"/> + ".import" for the
-    /// next start (left out when <paramref name="sessionPath"/> is null: a run that keeps no session).
+    /// Restores a backup. What's there now goes into backups\before-import-&lt;time&gt;.zip first, then the backup's files
+    /// are written (folders made as needed). Its session goes to <paramref name="sessionPath"/> + ".import" for the
+    /// next start, and is left out when <paramref name="sessionPath"/> is null, which means a run that keeps no session.
     /// </summary>
     public static ImportResult Import(Stream zip, string configFolder, string? sessionPath, string version, DateTimeOffset now)
     {
@@ -207,13 +207,13 @@ public static partial class SettingsBackup
                 target = Path.Combine(configFolder, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
             }
 
-            // Through a temp file: the config watcher may read config.toml the moment it changes.
+            // Through a temp file, because the config watcher may read config.toml the moment it changes.
             var temp = target + ".tmp";
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                // entry.ExtractToFile is part ofSystem.IO.Compression.ZipFile, which a trimmed publish leaves out
-                // So we use entry.Open() and manually copy the contents to the temp file
+                // `entry.ExtractToFile` is part of System.IO.Compression.ZipFile, which a trimmed publish leaves out,
+                // so this copies `entry.Open()` into the temp file by hand.
                 using (var from = entry.Open())
                 using (var to = new FileStream(temp, FileMode.Create, FileAccess.Write))
                 {
@@ -225,7 +225,7 @@ public static partial class SettingsBackup
             }
             catch (Exception ex)
             {
-                // Some files may be replaced already (a locked file, a damaged entry), what was there before is in the safety copy.
+                // Some files may be replaced already (a locked file, a damaged entry), but what was there before is in the safety copy.
                 try { File.Delete(temp); } catch (IOException) { } catch (UnauthorizedAccessException) { }
                 throw new ImportFailedException(entry.FullName, written, safety, ex);
             }
@@ -251,8 +251,9 @@ public static partial class SettingsBackup
     public static string TakenAtStart(string sessionPath) => sessionPath + ".import";
 
     /// <summary>
-    /// An entry Zinc restores: a .toml beside the config, or a file under themes/ or shaders/, or the session; relative,
-    /// forward slashes, no "." or ".." parts, no drive or colon (a zip can name any path; this keeps it in the folder).
+    /// An entry Zinc restores, which is a .toml beside the config, a file under themes/ or shaders/, or the session. It
+    /// must be relative, with forward slashes, no "." or ".." parts, and no drive or colon, because a zip can name any
+    /// path and this keeps every entry in the folder.
     /// </summary>
     public static bool IsSafe(string entry)
     {
@@ -274,7 +275,7 @@ public static partial class SettingsBackup
             return true;
         }
 
-        // Config files anywhere but Zinc's own folders; anything under themes/ and shaders/.
+        // Config files anywhere but Zinc's own folders, and anything under themes/ and shaders/.
         return Folders.Contains(parts[0], StringComparer.OrdinalIgnoreCase) ||
             (entry.EndsWith(".toml", StringComparison.OrdinalIgnoreCase) && !NotSettings.Contains(parts[0], StringComparer.OrdinalIgnoreCase));
     }
@@ -311,7 +312,7 @@ public static partial class SettingsBackup
         var files = config.Files.Concat(configs.SelectMany(c => c.ShaderFiles).Where(s => !Zinc.Shaders.ShaderPaths.IsBundled(s)));
         var folders = configs.SelectMany(c => c.ShaderFolders);
 
-        // In the backup: what Gather takes (a folder: what's in it, as "<folder>/x" would be).
+        // Whether the path is in the backup, meaning Gather takes it. A folder counts by what's in it, as "<folder>/x" would.
         bool Kept(string path, string suffix)
         {
             var entry = Path.GetRelativePath(folder, Path.GetFullPath(path)).Replace('\\', '/');

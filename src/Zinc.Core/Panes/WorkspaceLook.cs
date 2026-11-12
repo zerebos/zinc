@@ -1,7 +1,7 @@
 namespace Zinc.Panes;
 
 /// <summary>
-/// Icons a workspace can have instead of its active tab's profile icon: a curated set of Segoe
+/// Icons a workspace can have instead of its active tab's profile icon, from a curated set of Segoe
 /// Fluent Icons glyphs (Windows 11's own icon font). Saved by name.
 /// </summary>
 public static class WorkspaceIcons
@@ -17,7 +17,7 @@ public static class WorkspaceIcons
         ("game", '\uE7FC'), ("music", '\uEC4F'), ("camera", '\uE722'), ("calculator", '\uE8EF'),
     ];
 
-    /// <summary>The glyph for a saved icon name; null if there's no such icon (any more).</summary>
+    /// <summary>The glyph for a saved icon name, or null if there's no such icon (any more).</summary>
     public static char? Glyph(string? name) =>
         All.FirstOrDefault(i => i.Name == name) is { Name: not null } icon ? icon.Glyph : null;
 }
@@ -27,7 +27,7 @@ public enum WorkspaceColorMode
 {
     Off,
 
-    /// <summary>From the workspace's folder: the same folder always gets the same color.</summary>
+    /// <summary>From the workspace's folder, so the same folder always gets the same color.</summary>
     Folder,
 
     /// <summary>Each new workspace takes the next color.</summary>
@@ -44,8 +44,8 @@ public static class WorkspaceColors
     ];
 
     /// <summary>
-    /// The color for a folder: always the same one for the same path (FNV-1a over the path, case
-    /// and trailing separators ignored, so C:\Src and c:\src\ agree).
+    /// The index in <see cref="All"/> of the color for a folder, which is always the same one for the same path (FNV-1a
+    /// over the path, with case and trailing separators ignored, so C:\Src and c:\src\ agree).
     /// </summary>
     public static int ForFolder(string path)
     {

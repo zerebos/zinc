@@ -5,7 +5,7 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// One terminal row as a string, with the string index where each cell starts, so matches
-/// found in the text (URLs, search hits) map back to columns. Blank cells read as spaces; the
+/// found in the text (URLs, search hits) map back to columns. Blank cells read as spaces. The
 /// second half of a wide character adds nothing (its column shares the next cell's start).
 /// </summary>
 internal sealed unsafe class RowText
@@ -46,7 +46,7 @@ internal sealed unsafe class RowText
             {
                 int wide;
                 // A wide char's second half, or the gap left at a row's end when a wide char
-                // wrapped to the next row: no text of their own.
+                // wrapped to the next row. Neither has text of its own.
                 if (Native.GridRefCell(&gridRef, out var cell) == GhosttyResult.Success &&
                     Native.CellGet(cell, CellData.Wide, &wide) == GhosttyResult.Success &&
                     wide is (int)CellWide.SpacerTail or (int)CellWide.SpacerHead)

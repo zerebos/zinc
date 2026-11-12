@@ -13,18 +13,18 @@ public enum WorkStyle
 }
 
 /// <summary>What the welcome page asks.</summary>
-/// <param name="Scheme">A color scheme's name; null keeps Zinc's own colors.</param>
+/// <param name="Scheme">A color scheme's name, or null to keep Zinc's own colors.</param>
 /// <param name="FontFamily">Null keeps the default (the bundled Cascadia Mono NF).</param>
-/// <param name="DefaultProfile">A profile id; null keeps the first one.</param>
-/// <param name="ToastWhenDone">A Windows notification (too) when a long command finishes out of view; null: not asked.</param>
-/// <param name="PaneStyle">Compact or Cards; null leaves the pane settings as they are (a mix of your own).</param>
+/// <param name="DefaultProfile">A profile id, or null to keep the first one.</param>
+/// <param name="ToastWhenDone">A Windows notification (too) when a long command finishes out of view, or null when not asked.</param>
+/// <param name="PaneStyle">Compact or Cards, or null to leave the pane settings as they are (a mix of your own).</param>
 public sealed record WelcomeChoices(WorkStyle Style, WorkspaceTabs WorkspacesOn, string? Scheme, string? FontFamily, string? DefaultProfile,
     bool? ToastWhenDone = null, PaneStyleKind? PaneStyle = null);
 
 /// <summary>Writes the welcome page's choices into config.toml.</summary>
 public static class FirstRun
 {
-    /// <summary>What a new config file starts with (kept short: the README has every setting).</summary>
+    /// <summary>What a new config file starts with (kept short, because the README has every setting).</summary>
     public const string Template =
         "# Zinc's settings. Changes apply when you save; the README lists every setting.\n" +
         "# Reopen the welcome page from the command palette (Ctrl+Shift+P): Welcome…\n";
@@ -32,7 +32,7 @@ public static class FirstRun
     /// <summary>
     /// <paramref name="text"/> (the current config, or null for a new one) with the choices set,
     /// everything else left as it was. With <paramref name="current"/> (the config in force),
-    /// only what the choices change is written: saving the page untouched leaves the file alone.
+    /// only what the choices change is written, so saving the page untouched leaves the file alone.
     /// </summary>
     public static string Apply(string? text, WelcomeChoices choices, ConfigFile? current = null)
     {
@@ -79,7 +79,7 @@ public static class FirstRun
             }
         }
 
-        // A pane style sets its five settings; Compact's are the defaults, so it removes them.
+        // A pane style sets its five settings. Compact's are the defaults, so Compact removes them.
         if (choices.PaneStyle is { } style && (current == null || PaneStyle.Of(current.ValueOf) != style))
         {
             foreach (var (key, value) in PaneStyle.Values(style))

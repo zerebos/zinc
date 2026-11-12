@@ -13,7 +13,7 @@ public static partial class SettingsCatalog
         new("profiles", "General", "hidden", "Hidden", "Kept out of the menus (its tabs still reopen).", SettingKind.Toggle, false),
     ];
 
-    /// <summary>Where Zinc looks for shells (<c>[discover]</c>): each on by default.</summary>
+    /// <summary>Where Zinc looks for shells (<c>[discover]</c>), each on by default.</summary>
     public static IReadOnlyList<SettingDef> Discovery { get; } =
     [
         new("profiles", "Find shells on this PC", "discover.wsl", "WSL distributions", "", SettingKind.Toggle, true),

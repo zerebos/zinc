@@ -7,12 +7,12 @@ public sealed record ShellLaunch(string CommandLine, IReadOnlyDictionary<string,
 /// Loads Zinc's shell integration (the scripts in <c>ShellIntegration\</c> next to the exe) into
 /// the shells Zinc starts, after the user's own startup files: prompt and command marks (OSC 133)
 /// and folder reports. A shell can't be told to load a file from outside, but how it starts can be
-/// changed. PowerShell gets <c>-NoExit -Command</c> (it runs after the profile); bash and zsh look
+/// changed. PowerShell gets <c>-NoExit -Command</c> (it runs after the profile). Bash and zsh look
 /// up their startup in environment variables (<c>PROMPT_COMMAND</c> runs once at the first prompt,
-/// <c>ZDOTDIR</c> points zsh at a .zshenv that restores the user's and loads theirs), passed into
-/// WSL through <c>WSLENV</c>. Each
-/// script stands down where the prompt already marks itself (powerlevel10k's own integration, or a
-/// hand-written one) and removes its variables so programs started from the shell don't inherit them.
+/// <c>ZDOTDIR</c> points zsh at a .zshenv that restores the user's and loads theirs), which are passed
+/// into WSL through <c>WSLENV</c>. Each script stands down where the prompt already marks itself
+/// (powerlevel10k's own integration, or a hand-written one) and removes its variables so programs
+/// started from the shell don't inherit them.
 /// </summary>
 public static class ShellIntegration
 {
@@ -41,15 +41,15 @@ public static class ShellIntegration
         {
             var (runs, noExit, command) = PowerShellArguments(args.Skip(1));
 
-            // A script block rather than a script file: execution policies (Windows PowerShell's
+            // A script block rather than a script file, because execution policies (Windows PowerShell's
             // default refuses .ps1 files) apply to files only.
             var file = Path.Combine(scripts, "pwsh", "zinc.ps1").Replace("'", "''");
             var load = $". ([scriptblock]::Create([IO.File]::ReadAllText('{file}')))";
             if (runs)
             {
                 // A -Command that stays open afterwards (Developer PowerShell for VS: -NoExit -Command "&{Enter-VsDevShell
-                // ...}") runs ours after it: PowerShell joins every argument after -Command into the command. Anything
-                // else that runs something (no -NoExit, -File, a script) is left alone.
+                // ...}") runs ours after it, because PowerShell joins every argument after -Command into the command.
+                // Anything else that runs something (no -NoExit, -File, a script) is left alone.
                 return noExit && command ? none with { CommandLine = $"{commandLine} \"; {load}\"" } : none;
             }
 
@@ -59,17 +59,17 @@ public static class ShellIntegration
             };
         }
 
-        // fish and nushell send their own marks, and never run the scripts that take our variables back out: they'd
-        // be left for every program started from them. Only when the command line says so (wsl.exe -- fish); a distro
-        // whose login shell is fish still gets them.
+        // fish and nushell send their own marks, and never run the scripts that take our variables back out, so the
+        // variables would be left for every program started from them. This applies only when the command line names
+        // them (wsl.exe -- fish), so a distro whose login shell is fish still gets the variables.
         if (MarksItself(exe) || (exe == "wsl" && ProgramAfterOptions(args) is { } program &&
                                  MarksItself(Path.GetFileNameWithoutExtension(program).ToLowerInvariant())))
         {
             return none;
         }
 
-        // elvish (Windows' own): started with -rc pointing at ours, which runs the user's rc.elv first (or the -rc they gave,
-        // passed in ZINC_ELVISH_RC). Left alone when it runs something (-c, a script) or reads no rc (-norc).
+        // elvish (the Windows build) starts with -rc pointing at ours, which runs the user's rc.elv first (or the -rc
+        // they gave, passed in ZINC_ELVISH_RC). Left alone when it runs something (-c, a script) or reads no rc (-norc).
         if (exe == "elvish" && ElvishArguments(args.Skip(1)) is var (elvishArgs, userRc))
         {
             var rcEnv = new Dictionary<string, string?>();
@@ -82,10 +82,10 @@ public static class ShellIntegration
             return new ShellLaunch(string.Join(' ', [ShellResolver.Quote(args[0]), "-rc", ShellResolver.Quote(ours), .. elvishArgs.Select(ShellResolver.Quote)]), rcEnv);
         }
 
-        // Forward slashes: MSYS programs read C:/x as a path, and WSLENV's /p translates it (/mnt/c/x).
+        // Forward slashes, because MSYS programs read C:/x as a path, and WSLENV's /p translates it (/mnt/c/x).
         var dir = scripts.Replace('\\', '/').TrimEnd('/');
 
-        // bash started directly (Git Bash, MSYS2's bash.exe): in POSIX mode with ENV pointing at our startup file, which
+        // bash started directly (Git Bash, MSYS2's bash.exe) runs in POSIX mode with ENV pointing at our startup file, which
         // reads the user's startup files as bash would and loads the integration after them, so a startup file that
         // assigns PROMPT_COMMAND outright can't drop it (the PROMPT_COMMAND bootstrap below, which bash started by
         // anything else gets, runs only if the startup files keep it).
@@ -115,7 +115,7 @@ public static class ShellIntegration
             return new ShellLaunch(string.Join(' ', [ShellResolver.Quote(args[0]), "--posix", .. bash.Args.Select(ShellResolver.Quote)]), bashEnv);
         }
 
-        // The rest (zsh, bash that runs a script, and wsl.exe, cmd.exe or a launcher script starting one): variables.
+        // The rest (zsh, bash that runs a script, and wsl.exe, cmd.exe or a launcher script starting one) get variables.
         var env = new Dictionary<string, string?>
         {
             ["ZINC_SHELL_INTEGRATION_DIR"] = dir,
@@ -131,7 +131,7 @@ public static class ShellIntegration
         var existing = environment("WSLENV") is { Length: > 0 } w ? w.Split(':', StringSplitOptions.RemoveEmptyEntries).ToList() : [];
         env["WSLENV"] = string.Join(':', existing.Concat(wsl.Where(v => !existing.Contains(v))));
 
-        // cmd: its PROMPT carries the marks (the variables above still reach a bash or zsh it starts). Under Clink,
+        // For cmd, its PROMPT carries the marks (the variables above still reach a bash or zsh it starts). Under Clink,
         // clink/zinc.lua (on CLINK_PATH, and only when ZINC_CMD_PROMPT says Zinc set this cmd up) strips PROMPT's marks
         // and sends its own, with exit codes and the command's text.
         if (exe == "cmd" && CmdPrompt(environment("PROMPT")) is { } prompt)
@@ -320,16 +320,19 @@ public static class ShellIntegration
         static bool Prefix(string name, string full) => name.Length > 0 && full.StartsWith(name, StringComparison.Ordinal);
     }
 
-    /// <summary>A command line split into arguments (double quotes group, and are removed).</summary>
+    /// <summary>Whether a shell sends its own prompt marks (fish and nushell do), so it needs none of ours.</summary>
     private static bool MarksItself(string exe) => exe is "fish" or "nu";
 
-    /// <summary>What wsl.exe is told to run (after <c>--</c>, <c>-e</c> or <c>--exec</c>); null for the login shell.</summary>
+    /// <summary>
+    /// What wsl.exe is told to run (after <c>--</c>, <c>-e</c> or <c>--exec</c>), or null for the login shell.
+    /// </summary>
     private static string? ProgramAfterOptions(List<string> args)
     {
         var at = args.FindIndex(1, a => a is "--" or "-e" or "--exec");
         return at >= 0 && at + 1 < args.Count ? args[at + 1] : null;
     }
 
+    /// <summary>A command line split into arguments (double quotes group, and are removed).</summary>
     internal static List<string> Split(string commandLine)
     {
         var args = new List<string>();

@@ -14,7 +14,10 @@ public enum SettingKind
     /// <summary>A number, in <see cref="SettingDef.Unit"/>s.</summary>
     Number,
 
-    /// <summary>Free text (a hotkey, "50%", "2m"); numbers are written as numbers when <see cref="SettingDef.NumbersAsNumbers"/>.</summary>
+    /// <summary>
+    /// Free text (a hotkey, "50%", "2m"). Numbers are written as numbers when <see cref="SettingDef.NumbersAsNumbers"/>
+    /// is set.
+    /// </summary>
     Text,
 
     /// <summary>"#rrggbb", or nothing (the scheme's).</summary>
@@ -26,13 +29,13 @@ public enum SettingKind
     /// <summary>A color scheme by name, or a light/dark pair.</summary>
     Scheme,
 
-    /// <summary>An ordered list of files (custom shaders): written as a list of paths, empty for none.</summary>
+    /// <summary>An ordered list of files (custom shaders), written as a list of paths, or empty for none.</summary>
     Files,
 }
 
 /// <summary>
-/// A choice's label (short: it's a menu item), the value written for it (null: the default, written
-/// as nothing), and what it means in more words, shown under the setting's name while it's chosen.
+/// A choice's label (short, because it's a menu item), the value written for it (null for the default, which is
+/// written as nothing), and what it means in more words, shown under the setting's name while it's chosen.
 /// </summary>
 public sealed record SettingChoice(string Label, object? Value, string? Detail = null);
 
@@ -72,18 +75,18 @@ public sealed record SettingDef(string Section, string Group, string Key, string
 
     public double Step { get; init; } = 1;
 
-    /// <summary>For Text: shown while empty.</summary>
+    /// <summary>For Text, shown while empty.</summary>
     public string? Placeholder { get; init; }
 
     /// <summary>A color setting's "no color" choice, if not "Use the scheme's color".</summary>
     public string? NullLabel { get; init; }
 
-    /// <summary>For Text: "10" is written as the number 10, "30s" as a string.</summary>
+    /// <summary>For Text, "10" is written as the number 10 and "30s" as a string.</summary>
     public bool NumbersAsNumbers { get; init; }
 
     /// <summary>
-    /// Read and tested, but kept out of the settings window (and the README) until the app does what it says
-    /// ZINC_TEST_UNFINISHED_SETTINGS=1 shows them.
+    /// Read and tested, but kept out of the settings window (and the README) until the app does what it says.
+    /// <c>ZINC_TEST_UNFINISHED_SETTINGS=1</c> shows them.
     /// </summary>
     public bool Unfinished { get; init; }
 
@@ -95,8 +98,8 @@ public sealed record SettingDef(string Section, string Group, string Key, string
 }
 
 /// <summary>
-/// Settings folded into one card: under <paramref name="Lead"/> (its card is the fold's header), or,
-/// without one, under <paramref name="Title"/> and <paramref name="Description"/>.
+/// Settings folded into one card, either under <paramref name="Lead"/> (its card is the fold's header) or,
+/// without a lead, under <paramref name="Title"/> and <paramref name="Description"/>.
 /// </summary>
 public sealed record SettingFold(string? Title, string? Description, string? Lead, IReadOnlyList<string> Children);
 
@@ -157,7 +160,7 @@ public static partial class SettingsCatalog
             : throw new ArgumentException($"{key} isn't a setting with a binding", nameof(key));
 
     /// <summary>
-    /// Settings shown folded into one card: under the setting they depend on (<see cref="SettingFold.Lead"/>),
+    /// Settings shown folded into one card, either under the setting they depend on (<see cref="SettingFold.Lead"/>)
     /// or together under a title of their own. Each fold's settings are in one group, in catalog order.
     /// </summary>
     public static IReadOnlyList<SettingFold> Folds { get; } =
@@ -191,8 +194,8 @@ public static partial class SettingsCatalog
     };
 
     /// <summary>
-    /// What <paramref name="text"/> (typed into a Text or Number setting) is written as: a number
-    /// where the setting takes one, else the text; null for empty (the default).
+    /// What <paramref name="text"/> (typed into a Text or Number setting) is written as, which is a number
+    /// where the setting takes one, else the text, or null when it's empty (the default).
     /// </summary>
     public static object? FromText(SettingDef setting, string text)
     {
@@ -205,7 +208,7 @@ public static partial class SettingsCatalog
         if ((setting.Kind == SettingKind.Number || setting.NumbersAsNumbers) &&
             double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
         {
-            // Whole numbers as integers ("12", not "12.0"): the reader takes either.
+            // Whole numbers are written as integers ("12", not "12.0"), and the reader takes either.
             return number == Math.Floor(number) && Math.Abs(number) < long.MaxValue ? (object)(long)number : number;
         }
 
@@ -214,7 +217,7 @@ public static partial class SettingsCatalog
 
     /// <summary>
     /// Why <paramref name="value"/> wouldn't work for <paramref name="setting"/>, from the config
-    /// reader itself (null: fine). Scheme names are looked up in <paramref name="themes"/>.
+    /// reader itself, or null when it's fine. Scheme names are looked up in <paramref name="bundledThemes"/>.
     /// </summary>
     public static string? Problem(SettingDef setting, object value, string? bundledThemes = null)
     {

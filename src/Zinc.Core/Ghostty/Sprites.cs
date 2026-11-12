@@ -2,8 +2,11 @@ using System.Runtime.InteropServices;
 
 namespace Zinc.Ghostty;
 
-/// <summary>A shape Ghostty drew for one cell: 8-bit coverage, placed relative to the cell's top-left (it may reach past the cell).</summary>
-/// <param name="X">Left edge, in pixels from the cell's left (negative: it starts in the cell before).</param>
+/// <summary>
+/// A shape Ghostty drew for one cell, as 8-bit coverage placed relative to the cell's top-left (it may reach past the
+/// cell).
+/// </summary>
+/// <param name="X">Left edge, in pixels from the cell's left (negative when it starts in the cell before).</param>
 /// <param name="Y">Top edge, in pixels from the cell's top.</param>
 public sealed record SpriteImage(byte[] Coverage, int Width, int Height, int X, int Y);
 
@@ -11,7 +14,7 @@ public sealed record SpriteImage(byte[] Coverage, int Width, int Height, int X, 
 /// Ghostty's sprite rasterizer (zinc-sprite.dll, built from the pinned Ghostty by
 /// scripts/build/sprites.ps1): box drawing, block elements, Symbols for Legacy Computing,
 /// Powerline and Braille, drawn pixel-exact for a cell size instead of taken from a font, so
-/// they meet their neighbours in any font. Thread-safe: each call draws on its own canvas.
+/// they meet their neighbors in any font. Thread-safe, because each call draws on its own canvas.
 /// </summary>
 public static partial class Sprites
 {
@@ -29,9 +32,8 @@ public static partial class Sprites
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<uint, bool> Known = new();
 
     /// <summary>
-    /// Whether Ghostty draws <paramref name="codepoint"/> itself. Not its "branch drawing" set
-    /// (U+F5D0–F60D, kitty's git-graph glyphs): that's private use, where older Nerd Fonts keep
-    /// icons, so those stay with the font.
+    /// Whether Ghostty draws <paramref name="codepoint"/> itself. Its "branch drawing" set (U+F5D0–F60D, kitty's
+    /// git-graph glyphs) stays with the font, because that range is private use, where older Nerd Fonts keep icons.
     /// </summary>
     public static bool Has(uint codepoint) =>
         codepoint >= 0x2500 && codepoint is not (>= 0xF5D0 and <= 0xF60D) && Known.GetOrAdd(codepoint, cp => NativeHas(cp));

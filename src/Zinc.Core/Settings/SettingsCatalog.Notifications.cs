@@ -46,7 +46,7 @@ public static partial class SettingsCatalog
             },
     ];
 
-    // A property, not a field: a field in another partial file could be read before it's set.
+    // A property, not a field, because a field in another partial file could be read before it's set.
     private static SettingChoice[] NotifyChoices =>
     [
         new("Tab dot", "badge", "A dot on its tab. The taskbar button also flashes if Zinc is in the background."),

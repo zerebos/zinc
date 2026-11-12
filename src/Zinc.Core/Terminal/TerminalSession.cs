@@ -32,7 +32,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private bool _bell;
     private bool _disposed;
 
-    /// <summary>New output was parsed; the view should redraw. Raised on the reader thread.</summary>
+    /// <summary>New output was parsed, so the view should redraw. Raised on the reader thread.</summary>
     public event Action? OutputProcessed;
 
     /// <summary>The OSC 0/2 title changed. Raised on the reader thread.</summary>
@@ -40,7 +40,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     /// <summary>
     /// The shell reported a different working directory (<see cref="ReportedDirectory"/>), or reports started or
-    /// stopped coming from another machine (<see cref="RemoteHost"/>); raised after the write.
+    /// stopped coming from another machine (<see cref="RemoteHost"/>). Raised after the write.
     /// </summary>
     public event Action? DirectoryChanged;
 
@@ -63,9 +63,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public Func<string?>? ClipboardReader { get; set; }
 
     /// <summary>
-    /// With <c>clipboard-read = ask</c>: asked before each clipboard read a program sends, and it
-    /// may block for the answer (the program's output waits; the terminal isn't locked). It's called
-    /// on the thread feeding output. Null: <see cref="ClipboardReader"/> alone decides.
+    /// With <c>clipboard-read = ask</c>, this is asked before each clipboard read a program sends, and it
+    /// may block for the answer (the program's output waits, but the terminal isn't locked). It's called
+    /// on the thread feeding output. When it's null, <see cref="ClipboardReader"/> alone decides.
     /// </summary>
     public Func<bool>? ClipboardConsent { get; set; }
 
@@ -101,7 +101,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             (delegate* unmanaged[Cdecl]<nint, nint, GhosttyClipboardRead*, void>)&OnClipboardRead);
         InstallNotificationCallbacks(); // OSC 9 / 777 notifications, OSC 9;4 progress
 
-        // libghostty's own palette, before a theme changes it: reading its "default" palette
+        // libghostty's own palette, read before a theme changes it, because reading its "default" palette
         // later returns whatever was last set, so a theme change couldn't restore entries.
         fixed (GhosttyColorRgb* p = _builtinPalette)
         {
@@ -112,21 +112,21 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
         if (ConPty.UsesBundledConpty)
         {
-            // The bundled ConPTY measures widths by grapheme cluster; do the same
-            // so emoji sequences (ZWJ, flags, skin tones) occupy matching cells.
+            // The bundled ConPTY measures widths by grapheme cluster, so we do the same
+            // and emoji sequences (ZWJ, flags, skin tones) occupy matching cells.
             var grapheme = new GhosttyTerminalModeConfig { Mode = GhosttyMode.GraphemeCluster, Value = 1 };
             Native.TerminalSet(_terminal, TerminalOption.ModeDefault, &grapheme);
         }
 
         nuint scrollback = Config.DefaultScrollbackLines;
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &scrollback);
-        // libghostty prunes at whichever limit comes first, and its default byte limit kept
-        // only ~700 rows of history at 120 columns. Lines are the limit users think in.
+        // libghostty prunes at whichever limit comes first, and its default byte limit keeps
+        // only about 700 rows of history at 120 columns. Lines are the limit users think in.
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxBytes, null);
 
-        // Kitty graphics: on once storage is allowed. Besides inline data (t=d), programs may
-        // name a file to load (t=f; fastfetch's kitty-direct) or a temp file we delete after
-        // (t=t, only inside %TEMP%). A program can read those files itself anyway; paths from
+        // Kitty graphics are on once storage is allowed. Besides inline data (t=d), programs may
+        // name a file to load (t=f, as fastfetch's kitty-direct does) or a temp file we delete after
+        // (t=t, only inside %TEMP%). A program can read those files itself anyway. Paths from
         // WSL or a remote host simply fail to load. Shared memory stays off.
         KittyImages.InstallPngDecoder();
         var storageLimit = KittyImages.StorageLimit;
@@ -141,20 +141,20 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
         Check(Native.KittyPlacementIteratorNew(0, out _placements));
 
-        // ConPTY keeps its own screen without scrollback: a resize must not pull rows back out of
+        // ConPTY keeps its own screen without scrollback, so a resize must not pull rows back out of
         // our scrollback, or the two disagree about what's on screen (libghostty names ConPTY as
         // the reason for this option).
         byte pullScrollback = 0;
         Native.TerminalSet(_terminal, TerminalOption.ResizePullScrollback, &pullScrollback);
 
         // Who we are, for programs that ask (XTVERSION, CSI > q): "zinc <version>", lowercase
-        // like TERM_PROGRAM (and Ghostty's own "ghostty 1.x"). Default: "libghostty".
+        // like TERM_PROGRAM (and Ghostty's own "ghostty 1.x"). libghostty's default is "libghostty".
         Native.TerminalSet(_terminal, TerminalOption.Xtversion, (delegate* unmanaged[Cdecl]<nint, nint, GhosttyString>)&OnXtversion);
 
-        // Light or dark, for programs that ask (CSI ? 996 n): see SetColorScheme.
+        // Light or dark, for programs that ask (CSI ? 996 n). See `SetColorScheme`.
         Native.TerminalSet(_terminal, TerminalOption.ColorScheme, (delegate* unmanaged[Cdecl]<nint, nint, ColorScheme*, byte>)&OnColorScheme);
 
-        // Synchronized output (mode 2026): see RenderHold.
+        // Synchronized output (mode 2026). See `RenderHeld`.
         Native.TerminalSet(_terminal, TerminalOption.RenderHold, (delegate* unmanaged[Cdecl]<nint, nint, byte, void>)&OnRenderHold);
 
         Check(Native.KeyEncoderNew(0, out _keyEncoder));
@@ -184,7 +184,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     internal Action<byte[]>? PtyReplyObserver;
 
     /// <param name="environment">
-    /// Variables to set (or, null, remove) for this child only, over <see cref="ChildEnvironment.Terminal"/>.
+    /// Variables to set (or remove, when the value is null) for this child only, over
+    /// <see cref="ChildEnvironment.Terminal"/>.
     /// </param>
     public void Start(string commandLine, string? workingDirectory, ushort cols, ushort rows,
         IReadOnlyDictionary<string, string?>? environment = null)
@@ -198,12 +199,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
 
         Attach(new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, child));
-        _ptySentSize = ((short)cols, (short)rows); // (a handed-over console's size is unknown: Attach leaves it unset)
+        _ptySentSize = ((short)cols, (short)rows); // (a handed-over console's size is unknown, so Attach leaves it unset)
     }
 
     /// <summary>
     /// Takes a console Zinc didn't start (one handed over as the default terminal) and starts
-    /// reading it; resize the session after, so its program learns the pane's size.
+    /// reading it. Resize the session after, so its program learns the pane's size.
     /// </summary>
     public void Attach(ConPty pty)
     {
@@ -251,7 +252,6 @@ public sealed unsafe partial class TerminalSession : IDisposable
         Feed(data);
     }
 
-    /// <summary>Parses output, then acts on what it changed (title, directory, bell).</summary>
     /// <summary>
     /// Programs' screen flashes (reverse video on and straight off) ring the bell instead of
     /// inverting the screen (<see cref="ScreenFlashFilter"/>). Config: <c>screen-flash-bell</c>.
@@ -266,8 +266,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private Timer? _flashTimer;
 
     /// <summary>
-    /// Output from the program (or ours): with <see cref="ClipboardConsent"/>, each clipboard read
-    /// waits for its answer, and is then fed on its own, carrying it.
+    /// Feeds output from the program (or ours). With <see cref="ClipboardConsent"/> set, each clipboard read
+    /// waits for its answer and is then fed on its own, with that answer in <see cref="_readConsented"/>.
     /// </summary>
     private void Feed(ReadOnlySpan<byte> data)
     {
@@ -305,7 +305,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (_flashLock)
         {
-            // Nothing held and no flash sequence in sight (nearly every read): straight through, no copies.
+            // With nothing held and no flash sequence in sight (nearly every read), the data goes straight through
+            // without copies.
             if (!_flash.Waiting && (!CatchScreenFlash || !ScreenFlashFilter.Concerns(data)))
             {
                 Process(data, flashBell: false);
@@ -314,7 +315,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
             var now = Environment.TickCount64;
             var flashes = 0;
-            // (Turned off while something is held: let it go first, then as usual.)
+            // (When the filter is turned off while something is held, the held bytes go first, then the data as usual.)
             var filtered = CatchScreenFlash ? _flash.Filter(data, now, out flashes) : [.. _flash.TakeExpired(long.MaxValue), .. data];
             Process(filtered, flashBell: flashes > 0);
             if (_flash.Waiting)
@@ -325,7 +326,10 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    /// <summary>The flash filter's wait is over: apply what it held (reverse video after all, a partial sequence).</summary>
+    /// <summary>
+    /// Runs when the flash filter's wait is over, and applies what it held (reverse video after all, or a partial
+    /// sequence).
+    /// </summary>
     private void ExpireFlash()
     {
         try
@@ -346,11 +350,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
         catch (Exception ex)
         {
-            // A thread-pool callback: an escaped exception would end the process.
+            // This is a thread-pool callback, where an escaped exception would end the process.
             Log.Write($"screen flash: {ex.Message}");
         }
     }
 
+    /// <summary>Parses output, then acts on what it changed (title, directory, bell).</summary>
     private void Process(ReadOnlySpan<byte> data, bool flashBell)
     {
         var titleChanged = false;
@@ -370,7 +375,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
             // Callbacks fire mid-parse, so read derived state only once the
             // write has finished.
-            // Only noted here: the title is read when the view gets to it (TakeTitle), once per notice.
+            // The title change is only noted here. The view reads the title when it gets to it (`TakeTitle`), once
+            // per notice.
             if (_titleDirty)
             {
                 _titleDirty = false;
@@ -435,10 +441,12 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// The cursor programs get until they choose one (DECSCUSR) and after they reset it; applies
+    /// The cursor programs get until they choose one (DECSCUSR) and after they reset it. It applies
     /// at once while the cursor is still the default.
     /// </summary>
-    /// <param name="atPrompt">The shape while the shell waits at its prompt (shell integration's marks say when); null: the same.</param>
+    /// <param name="atPrompt">
+    /// The shape while the shell waits at its prompt (shell integration's marks say when), or null for the same shape.
+    /// </param>
     public void SetCursorDefaults(TerminalCursorStyle style, bool blink, TerminalCursorStyle? atPrompt = null)
     {
         lock (Lock)
@@ -451,7 +459,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private (TerminalCursorStyle Style, bool Blink, TerminalCursorStyle? AtPrompt) _cursorDefaults = (TerminalCursorStyle.Block, false, null);
 
     /// <summary>
-    /// The default cursor for now: the prompt's while the shell waits at one, else the usual. A
+    /// Applies the default cursor for now, which is the prompt's while the shell waits at one, or else the usual. A
     /// program's own choice (DECSCUSR: vim, a shell's vi mode) wins over either. Hold the lock.
     /// </summary>
     private void ApplyCursorDefaults()
@@ -469,8 +477,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// Whether this pane's colors are dark, as programs are told: they ask (CSI ? 996 n), or
-    /// subscribe to changes (mode 2031), which this then reports (CSI ? 997 ; 1|2 n).
+    /// Whether this pane's colors are dark, as programs are told. Programs ask (CSI ? 996 n), or
+    /// subscribe to changes (mode 2031), which this method then reports (CSI ? 997 ; 1|2 n).
     /// </summary>
     public void SetColorScheme(bool dark)
     {
@@ -530,7 +538,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     private static readonly Lazy<GhosttyColorRgb[]> BuiltinBase = new(() =>
     {
-        // Read from a throwaway terminal: libghostty's own palette, before any theme.
+        // libghostty's own palette, read from a throwaway terminal before any theme changes it.
         var palette = new GhosttyColorRgb[256];
         if (Native.TerminalNew(0, out var terminal, 1, 1) == GhosttyResult.Success)
         {
@@ -574,8 +582,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
             if (_generation.Generate)
             {
-                // 16-255 from the scheme's 16 and its colors (Ghostty's palette-generate), except entries the scheme
-                // or the config set themselves.
+                // Colors 16-255 are made from the scheme's 16 and its background and foreground (Ghostty's
+                // palette-generate), except entries the scheme or the config set themselves.
                 var skip = stackalloc ulong[4];
                 foreach (var index in theme.Palette.Keys.Where(i => i is >= 16 and < 256))
                 {
@@ -591,21 +599,23 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     /// <summary>
     /// The working directory the shell last reported on this PC (OSC 7's file:// URI, or OSC 9;9 / 1337's
-    /// bare path), as sent; null until it reports one or after it clears it. Decode with
+    /// bare path), as sent, or null until the shell reports one or after it clears it. Decode it with
     /// <see cref="Zinc.Terminal.ShellDirectory.Parse"/>. A report from another machine (ssh) leaves it as it
-    /// was, so new tabs still start where you ran ssh from; that machine is <see cref="RemoteHost"/>.
+    /// was, so new tabs still start where you ran ssh from. That machine is <see cref="RemoteHost"/>.
     /// </summary>
     public string? ReportedDirectory { get; private set; }
 
-    /// <summary>The machine the last folder report came from when it wasn't this PC (a shell over ssh); else null.</summary>
+    /// <summary>The machine the last folder report came from when it wasn't this PC (a shell over ssh), or null.</summary>
     public string? RemoteHost { get; private set; }
 
-    /// <summary>That report, as sent: <see cref="RecheckReportedDirectory"/> takes it once its host is known to be local.</summary>
+    /// <summary>
+    /// That remote report, as sent. <see cref="RecheckReportedDirectory"/> takes it once its host is known to be local.
+    /// </summary>
     private string? _remoteReport;
 
     /// <summary>
-    /// Notes a folder report (under the lock); true when <see cref="ReportedDirectory"/> or <see cref="RemoteHost"/>
-    /// changed (going into ssh changes no local folder, but what the tab shows).
+    /// Notes a folder report (under the lock). True when <see cref="ReportedDirectory"/> or <see cref="RemoteHost"/>
+    /// changed, because going into ssh changes no local folder but does change what the tab shows.
     /// </summary>
     private bool TakeReportedDirectory(string? reported)
     {
@@ -632,18 +642,22 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     /// <summary>
     /// The prompt-mark options of the shell last prompting while folder reports were local (see
-    /// <see cref="NoteLocalPrompt"/>); null until one has.
+    /// <see cref="NoteLocalPrompt"/>), or null until one has.
     /// </summary>
     private string? _localPromptSignature;
 
-    /// <summary>Set when a prompt ended the ssh session (<see cref="NoteLocalPrompt"/>): raises <see cref="DirectoryChanged"/> after the write.</summary>
+    /// <summary>
+    /// Set when a prompt ended the ssh session (<see cref="NoteLocalPrompt"/>), so <see cref="DirectoryChanged"/> is
+    /// raised after the write.
+    /// </summary>
     private bool _leftRemote;
 
     /// <summary>
-    /// A prompt (under the lock; <paramref name="entered"/>: of a shell just started from a command). Back at the
-    /// prompt of the shell that prompted while folders were local, ssh has ended: a shell that reports its folder
-    /// only when it changes (zsh's) wouldn't say so. Two shells with the same mark options (no aid) look alike, as
-    /// they do to command tracking: the remote one's prompt then ends it early.
+    /// Notes a prompt (under the lock), where <paramref name="entered"/> means it's the prompt of a shell just started
+    /// from a command. Back at the prompt of the shell that prompted while folder reports were local, the ssh session
+    /// has ended. This catches that, because a shell that reports its folder only when it changes (zsh does) wouldn't
+    /// say so. Two shells with the same mark options (no <c>aid</c>) look alike here, as they do to command tracking,
+    /// so the remote shell's prompt then ends the ssh session early.
     /// </summary>
     private void NoteLocalPrompt(string signature, bool entered)
     {
@@ -694,11 +708,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private int _titleNoticePending;
 
     /// <summary>
-    /// After <see cref="TitleChanged"/>: the title, or null if it's back to what it was last time. Programs retitle
-    /// themselves constantly (cmd running a loop under ConPTY: ~14,000 different titles a second, the command line
-    /// with its counter), and reading each one on the reader thread, a string and a UI update apiece, churned
-    /// ~20 MB a second of garbage (2026-10-02). Now there's one notice until the view takes the title, so it's read
-    /// at most once per UI tick. Any thread.
+    /// Takes the title after <see cref="TitleChanged"/>, or null if it's back to what it was last time. Programs can
+    /// retitle themselves thousands of times a second (cmd running a loop under ConPTY puts the command line with its
+    /// counter in the title), and reading each title on the reader thread would cost a string and a UI update apiece.
+    /// So there's one notice until the view takes the title, and the title is read at most once per UI tick. Safe on
+    /// any thread.
     /// </summary>
     public string? TakeTitle()
     {
@@ -760,7 +774,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     public void SendInput(string text) => SendInput(Encoding.UTF8.GetBytes(text));
 
-    /// <param name="atOnce">Tell the shell now instead of once the size settles: a resize known to be the only one
+    /// <param name="atOnce">Tell the shell now instead of once the size settles, for a resize known to be the only one
     /// (a pane held at its size through a layout animation).</param>
     public void Resize(ushort cols, ushort rows, uint cellWidthPx, uint cellHeightPx, bool atOnce = false)
     {
@@ -782,7 +796,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             return;
         }
 
-        // The shell hears of the size once a resize settles: dragging a window's edge goes through
+        // The shell hears of the size once a resize settles, because dragging a window's edge goes through
         // dozens of sizes, and a prompt redrawn for each while the lines reflow piles up stale
         // copies (powerlevel10k's frame, in Windows Terminal as well). The view reflows live.
         lock (_ptyResizeGate)
@@ -793,7 +807,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    /// <summary>How long a resize must stay put before the shell is told (tests: zero).</summary>
+    /// <summary>How long a resize must stay put before the shell is told (zero in tests).</summary>
     internal static TimeSpan PtyResizeSettle { get; set; } = TimeSpan.FromMilliseconds(100);
 
     private readonly object _ptyResizeGate = new();
@@ -822,7 +836,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Crash("pty resize", ex); // a timer thread: nothing above to catch it
+            Log.Crash("pty resize", ex); // a timer thread, with nothing above to catch it
         }
     }
 
@@ -844,7 +858,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public void ScrollToRow(ulong row) =>
         ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Row, Value = (nint)row });
 
-    /// <summary>Rows written so far: those scrolled into the scrollback, and the screen's down to the cursor's.</summary>
+    /// <summary>
+    /// Rows written so far, which are those scrolled into the scrollback plus the screen's rows down to the cursor's.
+    /// </summary>
     public int RowsUsed()
     {
         GhosttyTerminalScrollbar sb;
@@ -945,7 +961,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     /// <summary>
     /// Encodes a key event using the terminal's current keyboard modes
-    /// (cursor key mode, kitty flags, ...). Returns an empty array when the
+    /// (cursor key mode, kitty flags and the rest). Returns an empty array when the
     /// key produces no input.
     /// </summary>
     public byte[] EncodeKey(KeyAction action, GhosttyKey key, GhosttyMods mods, GhosttyMods consumedMods,
@@ -1100,8 +1116,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     /// <summary>
     /// What <c>zn terminal read</c> prints: the live screen (not the scrollback), or with <paramref name="lines"/> the
-    /// last that many lines, scrollback included. Blank rows at the bottom don't count. <paramref name="styled"/>: with
-    /// colors and styles as VT sequences.
+    /// last that many lines, scrollback included. Blank rows at the bottom don't count. With <paramref name="styled"/>,
+    /// the text keeps its colors and styles as VT sequences.
     /// </summary>
     public string ReadText(int? lines = null, bool styled = false)
     {
@@ -1115,7 +1131,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             var options = GhosttyFormatterTerminalOptions.Init();
             options.Emit = styled ? 1 : 0; // GHOSTTY_FORMATTER_FORMAT_VT : _PLAIN
             options.Trim = 1;
-            // One line per row, scrollback first; the formatter leaves out the blank rows at the bottom.
+            // One line per row, scrollback first. The formatter leaves out the blank rows at the bottom.
             var all = Format(options).Replace("\r\n", "\n").Split('\n');
             GhosttyTerminalScrollbar sb;
             Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
@@ -1126,7 +1142,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     /// <summary>
     /// Finds <paramref name="pattern"/> in the active screen and its scrollback, oldest first.
-    /// Matches may span soft wraps but not real line breaks. Rows are screen rows: 0 is the
+    /// Matches may span soft wraps but not real line breaks. Rows are screen rows, where 0 is the
     /// oldest scrollback row, in the scrollbar's units.
     /// </summary>
     public void Search(Regex pattern, List<SearchMatch> into, int limit = 10_000)
@@ -1138,7 +1154,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return;
             }
 
-            // Find candidate lines fast in the formatted text (soft wraps joined: one line per
+            // Find candidate lines fast in the formatted text (soft wraps joined, so one line per
             // logical line), then map matches to cells on those lines only. Lines are matched
             // without their trailing blanks, so "$" means the end of the text.
             var options = GhosttyFormatterTerminalOptions.Init();
@@ -1150,7 +1166,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             GhosttyTerminalScrollbar sb;
             Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
 
-            // Logical line k covers screen rows [start, start + count): rows continue while wrapped.
+            // Logical line k covers screen rows [start, start + count), because rows continue while wrapped.
             var row = 0ul;
             for (var k = 0; k < lines.Length && row < sb.Total && into.Count < limit; k++)
             {
@@ -1202,7 +1218,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private sealed class LogicalLine
     {
         private readonly RowText[] _rows;
-        private readonly int[] _offsets; // where each row's text starts; one past the end last
+        private readonly int[] _offsets; // where each row's text starts, then the text's end
 
         private LogicalLine(RowText[] rows, int[] offsets, string text)
         {
@@ -1282,7 +1298,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public string? GetSelectionText() => FormatSelection(0);
 
     /// <summary>
-    /// The selection as HTML for the clipboard (copy with formatting): its colors and styles, in the terminal's
+    /// The selection as HTML for the clipboard (copy with formatting), with its colors and styles, in the terminal's
     /// background, text color and font (see <see cref="ClipboardHtml"/>). Null when nothing is selected.
     /// </summary>
     public string? GetSelectionHtml(string fontFamily, double fontPoints)
@@ -1297,7 +1313,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         {
             if (!_disposed)
             {
-                // The effective colors: a program's OSC 10/11 change included. (Kept as they are when it has none.)
+                // The effective colors, including a program's OSC 10/11 change. (The defaults stay when it has none.)
                 Native.TerminalGet(_terminal, TerminalData.ColorForeground, &fg);
                 Native.TerminalGet(_terminal, TerminalData.ColorBackground, &bg);
             }
@@ -1345,8 +1361,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private const int MaxLinkRows = 32;
 
     /// <summary>
-    /// The link at viewport cell (<paramref name="col"/>, <paramref name="row"/>): an OSC 8
-    /// hyperlink, else a URL in the text. Both may continue across soft wraps, including up into
+    /// The link at viewport cell (<paramref name="col"/>, <paramref name="row"/>), which is an OSC 8
+    /// hyperlink, or else a URL in the text. Both may continue across soft wraps, including up into
     /// the scrollback.
     /// </summary>
     public LinkMatch? LinkAt(ushort col, uint row)
@@ -1365,7 +1381,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return null;
             }
 
-            // Screen rows (scrollback included) from here on; the viewport starts at Offset.
+            // Screen rows (scrollback included) from here on, where the viewport starts at `Offset`.
             GhosttyTerminalScrollbar sb;
             Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
             var top = (long)sb.Offset;
@@ -1374,7 +1390,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
             if (HyperlinkAt(col, at) is { Length: > 0 } uri)
             {
-                // The link's extent: neighboring cells carrying the same URI, across wraps.
+                // The link's extent is the neighboring cells carrying the same URI, across wraps.
                 var (sr, sc) = (at, col);
                 for (var i = 0; i < cols * MaxLinkRows && PreviousCell(sr, sc, cols) is { } p && HyperlinkAt(p.Col, p.Row) == uri; i++)
                 {
@@ -1390,7 +1406,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return new LinkMatch(uri, Viewport(sr), sc, Viewport(er), ec, Explicit: true);
             }
 
-            // Plain text: the URL covering this cell in its logical line (soft-wrapped rows joined).
+            // In plain text, the link is the URL covering this cell in its logical line (soft-wrapped rows joined).
             var first = at;
             while (first > 0 && at - first < MaxLinkRows && IsWrapped(first - 1))
             {
@@ -1503,7 +1519,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 uint placementId = 0, columns = 0, rows = 0;
                 if (isVirtual != 0)
                 {
-                    // Shown by placeholder cells wherever they are; the renderer needs its grid.
+                    // Placeholder cells show a virtual placement wherever they are, so the renderer needs its grid.
                     Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.PlacementId, &placementId);
                     Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.Columns, &columns);
                     Native.KittyPlacementGet(_placements, KittyGraphicsPlacementData.Rows, &rows);
@@ -1571,7 +1587,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnWritePty(nint terminal, nint userdata, byte* data, nuint len)
     {
-        // Replies to queries (DSR, DA, DECRQM...). ConPTY itself sends a DSR
+        // Replies to queries (DSR, DA, DECRQM and others). ConPTY itself sends a DSR
         // cursor position query at startup and waits for this answer.
         var session = FromUserdata(userdata);
         var bytes = new ReadOnlySpan<byte>(data, (int)len);
@@ -1602,7 +1618,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void OnBell(nint terminal, nint userdata) => FromUserdata(userdata)._bell = true;
 
-    /// <summary>"zinc 1.0.0+abc1234": the app's version, with a short commit hash if it has one.</summary>
+    /// <summary>The app's version, with a short commit hash if it has one, such as "zinc 1.0.0+abc1234".</summary>
     public static string Version { get; } = ComputeVersion();
 
     private static string ComputeVersion()
@@ -1624,7 +1640,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <summary>
     /// A program holds the screen while it draws a frame (synchronized output, mode 2026), so
     /// the renderer should keep showing what was on screen when the hold began. Set on the
-    /// reader thread, under <see cref="Lock"/>; see <see cref="RenderHoldBegan"/>.
+    /// reader thread, under <see cref="Lock"/>. See <see cref="RenderHoldBegan"/>.
     /// </summary>
     public bool RenderHeld { get; private set; }
 
@@ -1664,7 +1680,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>
-    /// Gives up on a hold the program never released (it crashed mid-frame, say): turns
+    /// Gives up on a hold the program never released (it crashed mid-frame, say) by turning
     /// synchronized output off, as libghostty's docs advise. Call under <see cref="Lock"/>.
     /// </summary>
     public void EndRenderHold()
@@ -1702,7 +1718,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             return ClipboardWriteResult.Denied;
         }
 
-        // Windows has one clipboard; X11's selection/primary have no counterpart.
+        // Windows has one clipboard, so X11's selection and primary have no counterpart.
         if (write->Location != ClipboardLocation.Standard)
         {
             return ClipboardWriteResult.Unsupported;
@@ -1718,7 +1734,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             }
         }
 
-        // No text representation, or a request to clear: leave the clipboard alone.
+        // With no text representation, or a request to clear, leave the clipboard alone.
         return write->ContentsLen == 0 ? ClipboardWriteResult.Success : ClipboardWriteResult.Unsupported;
     }
 
@@ -1730,8 +1746,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
         try
         {
             var session = FromUserdata(userdata);
-            // Asking first: only a read the user just allowed (anything else, e.g. one split
-            // across reads or OSC 5522, is denied).
+            // When asking first, only a read the user just allowed goes through. Anything else (one split
+            // across reads, for example, or OSC 5522) is denied.
             if (session.ClipboardReader is { } reader && (session.ClipboardConsent == null || session._readConsented))
             {
                 text = read->Location == ClipboardLocation.Standard ? reader() : null;

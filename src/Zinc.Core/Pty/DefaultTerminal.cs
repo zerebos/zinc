@@ -3,13 +3,13 @@ using Microsoft.Win32;
 namespace Zinc.Pty;
 
 /// <summary>
-/// Zinc as Windows' default terminal: console programs started outside a terminal (a script
+/// Zinc as Windows' default terminal, so console programs started outside a terminal (a script
 /// double-clicked, Run, an installer) open in a Zinc tab. Windows hands each new console to the
-/// two COM classes named in <c>HKCU\Console\%%Startup</c>: a console host (<c>DelegationConsole</c>:
-/// Windows Terminal's OpenConsole) and a terminal (<c>DelegationTerminal</c>), which receives the
+/// two COM classes named in <c>HKCU\Console\%%Startup</c>: a console host (<c>DelegationConsole</c>,
+/// which is Windows Terminal's OpenConsole) and a terminal (<c>DelegationTerminal</c>), which receives the
 /// console as pipes (ITerminalHandoff3). Zinc is the terminal half only, registered for this user
-/// without a package; the console half stays an installed Windows Terminal's, so one must be set as the
-/// default terminal first. No package check is involved: packages only fill Windows' Settings dropdown.
+/// without a package. The console half stays an installed Windows Terminal's, so Windows Terminal must be set as
+/// the default terminal first. No package check is involved, because packages only fill Windows' Settings dropdown.
 /// </summary>
 public sealed class DefaultTerminal(RegistryKey root)
 {
@@ -40,7 +40,7 @@ public sealed class DefaultTerminal(RegistryKey root)
         /// <summary>Another terminal does, with a console host Zinc can work with (Windows Terminal's).</summary>
         Other,
 
-        /// <summary>Windows decides, or the old console window: there's no console host to hand over to Zinc.</summary>
+        /// <summary>Windows decides, or the old console window, so there's no console host to hand over to Zinc.</summary>
         NoConsoleHost,
     }
 
@@ -60,7 +60,7 @@ public sealed class DefaultTerminal(RegistryKey root)
     }
 
     /// <summary>
-    /// Makes Zinc the terminal half (the console host stays); <paramref name="exe"/> is what
+    /// Makes Zinc the terminal half (the console host stays). <paramref name="exe"/> is what
     /// Windows starts when Zinc isn't running. False if there's no console host to keep.
     /// </summary>
     public bool Enable(string exe)
@@ -101,7 +101,7 @@ public sealed class DefaultTerminal(RegistryKey root)
             }
             else
             {
-                // Nothing to give back: let Windows decide (both halves, as its Settings page writes them).
+                // Nothing to give back, so let Windows decide (both halves, as its Settings page writes them).
                 startup.SetValue(ConsoleValue, Default.ToString("B"));
                 startup.SetValue(TerminalValue, Default.ToString("B"));
             }
@@ -111,8 +111,8 @@ public sealed class DefaultTerminal(RegistryKey root)
     }
 
     /// <summary>
-    /// Points Zinc's class at <paramref name="exe"/> (every start does, while Zinc is the
-    /// default: installs are versioned folders).
+    /// Points Zinc's class at <paramref name="exe"/>. Every start does this while Zinc is the
+    /// default, because installs are versioned folders.
     /// </summary>
     public void Register(string exe)
     {
@@ -124,7 +124,7 @@ public sealed class DefaultTerminal(RegistryKey root)
         }
     }
 
-    /// <summary>The exe Zinc's class starts (null: not registered).</summary>
+    /// <summary>The exe Zinc's class starts, or null if the class isn't registered.</summary>
     public string? RegisteredExe()
     {
         using var server = root.OpenSubKey(ClassKey + @"\LocalServer32");

@@ -1,8 +1,8 @@
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Text that reads against its background (<c>minimum-contrast</c>, as in Ghostty): a WCAG contrast
-/// ratio from 1 (anything goes) to 21 (black on white); text below it turns black or white,
+/// Text that reads against its background (<c>minimum-contrast</c>, as in Ghostty). The setting is a WCAG
+/// contrast ratio from 1 (anything goes) to 21 (black on white), and text below it turns black or white,
 /// whichever reads better.
 /// </summary>
 public static class MinimumContrast

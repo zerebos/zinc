@@ -3,8 +3,8 @@ using System.Buffers.Binary;
 namespace Zinc.Shaders;
 
 /// <summary>
-/// The uniform block of Ghostty's shader prefix (<see cref="ShaderSource.Prefix"/>) as the bytes of a constant buffer:
-/// std140, the layout SPIRV-Cross keeps in its HLSL (packoffsets; ShaderTests checks every offset against it).
+/// The uniform block of Ghostty's shader prefix (<see cref="ShaderSource.Prefix"/>) as the bytes of a constant buffer.
+/// It's std140, the layout SPIRV-Cross keeps in its HLSL (packoffsets), and ShaderTests checks every offset against it.
 /// Positions are in pixels with y down (Ghostty's Metal convention, which Direct3D shares).
 /// </summary>
 public sealed class ShaderUniforms
@@ -15,7 +15,7 @@ public sealed class ShaderUniforms
     /// <summary>The buffer, ready to copy into the GPU's.</summary>
     public byte[] Bytes { get; } = new byte[Size];
 
-    /// <summary>Byte offsets by uniform name (arrays: their first element; each element takes a register).</summary>
+    /// <summary>Byte offsets by uniform name (an array's is its first element's, and each element takes a register).</summary>
     public static IReadOnlyDictionary<string, int> Offsets { get; } = new Dictionary<string, int>
     {
         ["iResolution"] = 0 * 16,
@@ -47,7 +47,7 @@ public sealed class ShaderUniforms
         ["iSelectionBackgroundColor"] = 280 * 16,
     };
 
-    /// <summary>The picture's size in pixels: iResolution and iChannelResolution[0] (the terminal's picture).</summary>
+    /// <summary>The picture's size in pixels, set in iResolution and iChannelResolution[0] (the terminal's picture).</summary>
     public void SetResolution(float width, float height)
     {
         Floats("iResolution", width, height, 1);
@@ -76,10 +76,10 @@ public sealed class ShaderUniforms
     }
 
     /// <summary>
-    /// The cursor as drawn this frame, in pixels: its left edge, its bottom edge (Ghostty's "+Y edge" with y down: a
+    /// The cursor as drawn this frame, in pixels: its left edge, its bottom edge (Ghostty's "+Y edge" with y down, so a
     /// shader's rectangle is x..x+w, y-h..y), its size, its color (0-1, alpha included). As in Ghostty, a change of
     /// place or color makes the old one iPreviousCursor and stamps iTimeCursorChange with <paramref name="time"/>
-    /// (cursor trails animate from there). Not called for frames without a cursor drawn (blink, hidden): the last stays.
+    /// (cursor trails animate from there). Not called for frames without a cursor drawn (blink, hidden), so the last one stays.
     /// </summary>
     public void SetCursor(float x, float y, float width, float height, float r, float g, float b, float a, float time)
     {
@@ -126,7 +126,7 @@ public sealed class ShaderUniforms
         }
     }
 
-    /// <summary>A vec3 color uniform from 0-255 components (iBackgroundColor, iCursorColor...).</summary>
+    /// <summary>A vec3 color uniform from 0-255 components (such as iBackgroundColor and iCursorColor).</summary>
     public void SetColor(string name, byte r, byte g, byte b) => Floats(name, r / 255f, g / 255f, b / 255f);
 
     /// <summary>

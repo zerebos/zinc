@@ -52,7 +52,9 @@ public struct GhosttyString
     public nuint Len;
 }
 
-/// <summary>OSC 9 / OSC 777: a program asks for a desktop notification. Strings are borrowed for the callback.</summary>
+/// <summary>
+/// A program's request for a desktop notification (OSC 9 or OSC 777). Strings are borrowed for the callback.
+/// </summary>
 [StructLayout(LayoutKind.Explicit, Size = 40)]
 public struct GhosttyTerminalDesktopNotification
 {
@@ -77,7 +79,7 @@ public enum TerminalProgressState : int
     Pause = 4,
 }
 
-/// <summary>OSC 9;4: a program's progress.</summary>
+/// <summary>A program's progress (OSC 9;4).</summary>
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GhosttyTerminalProgressReport
 {
@@ -121,7 +123,7 @@ public struct GhosttyClipboardContent
     [FieldOffset(16)] public GhosttyString Data;
 }
 
-/// <summary>An OSC 52 / 1337 / 5522 clipboard write; answer it by calling <see cref="Reply"/>.</summary>
+/// <summary>An OSC 52 / 1337 / 5522 clipboard write, which is answered by calling <see cref="Reply"/>.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 72)]
 public struct GhosttyClipboardWrite
 {
@@ -144,7 +146,7 @@ public struct GhosttyClipboardWriteReply
     [FieldOffset(12)] public byte Remember;
 }
 
-/// <summary>An OSC 52 "?" / 5522 clipboard read; answer it by calling <see cref="Reply"/>.</summary>
+/// <summary>An OSC 52 "?" / 5522 clipboard read, which is answered by calling <see cref="Reply"/>.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 80)]
 public struct GhosttyClipboardRead
 {
@@ -655,7 +657,9 @@ public enum RowData : int
     SemanticPrompt = 6,
 }
 
-/// <summary>Whether a row holds a prompt (GhosttyRowSemanticPrompt): its first line, or a continuation line.</summary>
+/// <summary>
+/// Whether a row holds a prompt, and if so its first line or a continuation line (GhosttyRowSemanticPrompt).
+/// </summary>
 public enum RowSemanticPrompt : int
 {
     None = 0,
@@ -714,7 +718,7 @@ public enum SelectionGestureEventOption : int
     TimeNs = 3,
     RepeatIntervalNs = 4,
 
-    /// <summary>Characters that end a word (GhosttyCodepoints*); unset: Ghostty's defaults.</summary>
+    /// <summary>Characters that end a word (GhosttyCodepoints*), or Ghostty's defaults when unset.</summary>
     WordBoundaryCodepoints = 5,
     Geometry = 8,
 }
@@ -966,7 +970,10 @@ public static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "ghostty_paste_encode")]
     public static partial GhosttyResult PasteEncode(byte* data, nuint dataLen, byte bracketed, byte* buf, nuint bufLen, out nuint outWritten);
 
-    /// <summary>Derives the 216-color cube and grayscale ramp (16-255) from the base 16 and the colors; set bits in <paramref name="skip"/> (4 words) keep those entries.</summary>
+    /// <summary>
+    /// Derives the 216-color cube and grayscale ramp (16-255) from the base 16 and the colors. Set bits in
+    /// <paramref name="skip"/> (4 words) keep those entries.
+    /// </summary>
     [LibraryImport(Lib, EntryPoint = "ghostty_color_palette_generate")]
     public static partial void ColorPaletteGenerate(GhosttyColorRgb* basePalette, ulong* skip, GhosttyColorRgb* background, GhosttyColorRgb* foreground,
         byte harmonious, GhosttyColorRgb* output);

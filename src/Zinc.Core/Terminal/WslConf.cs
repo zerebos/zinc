@@ -1,16 +1,17 @@
 namespace Zinc.Terminal;
 
 /// <summary>
-/// Where a WSL distro mounts Windows drives: its /etc/wsl.conf's <c>[automount] root</c>,
-/// <c>/mnt/</c> by default. File drops and file links translate drive paths with it. Also its own host name.
+/// Where a WSL distro mounts Windows drives, which is its /etc/wsl.conf's <c>[automount] root</c>, or
+/// <c>/mnt/</c> by default. File drops and file links translate drive paths with it. It also reads the distro's own
+/// host name.
 /// </summary>
 public static class WslConf
 {
     public const string DefaultMountRoot = "/mnt/";
 
     /// <summary>
-    /// The <c>[automount] root</c> (with a trailing slash); <see cref="DefaultMountRoot"/> without
-    /// one (or without the file); null with <c>enabled = false</c> (drives aren't mounted).
+    /// The <c>[automount] root</c> (with a trailing slash), or <see cref="DefaultMountRoot"/> without
+    /// one (or without the file). Null with <c>enabled = false</c>, because then drives aren't mounted.
     /// </summary>
     public static string? MountRoot(string? conf)
     {
@@ -37,7 +38,7 @@ public static class WslConf
     }
 
     /// <summary>
-    /// The distro's own host name, <c>[network] hostname</c>; null without one (it then has the PC's name).
+    /// The distro's own host name, <c>[network] hostname</c>, or null without one (the distro then has the PC's name).
     /// Its shells name it in their folder reports (OSC 7), so it counts as this PC (<see cref="LocalHosts"/>).
     /// </summary>
     public static string? Hostname(string? conf) =>
@@ -69,13 +70,15 @@ public static class WslConf
         }
     }
 
-    /// <summary><c>C:\a</c> as the distro sees it under <paramref name="root"/> (<c>/mnt/c/a</c>); null if it isn't on a drive.</summary>
+    /// <summary>
+    /// <c>C:\a</c> as the distro sees it under <paramref name="root"/> (<c>/mnt/c/a</c>), or null if it isn't on a drive.
+    /// </summary>
     public static string? DrivePath(string windowsPath, string root) =>
         windowsPath.Length >= 2 && char.IsAsciiLetter(windowsPath[0]) && windowsPath[1] == ':'
             ? root + char.ToLowerInvariant(windowsPath[0]) + windowsPath[2..].Replace('\\', '/')
             : null;
 
-    /// <summary>A Linux path in a drive folder under <paramref name="root"/> as a Windows path; null otherwise.</summary>
+    /// <summary>A Linux path in a drive folder under <paramref name="root"/> as a Windows path, or null otherwise.</summary>
     public static string? WindowsPath(string linuxPath, string root)
     {
         var at = root.Length;
@@ -88,7 +91,7 @@ public static class WslConf
         return char.ToUpperInvariant(linuxPath[at]) + @":\" + linuxPath[(at + 1)..].TrimStart('/').Replace('/', '\\');
     }
 
-    /// <summary>A value's trailing <c># comment</c>, if any (a # inside quotes stays).</summary>
+    /// <summary>The value without its trailing <c># comment</c>, if any (a # inside quotes stays).</summary>
     private static string StripComment(string value)
     {
         var quoted = false;

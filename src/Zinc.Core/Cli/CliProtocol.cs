@@ -3,19 +3,19 @@ using System.Text.Json.Serialization;
 
 namespace Zinc.Cli;
 
-// What zn and Zinc say to each other over the pipe: one JSON line each way. Shared source: zn.exe compiles
-// these files in (it doesn't reference Core), so they use nothing but the base library.
+// What zn and Zinc say to each other over the pipe, as one JSON line each way. zn.exe compiles these files in as
+// shared source (it doesn't reference Core), so they use nothing but the base library.
 
 /// <summary>A command for the running Zinc.</summary>
 public sealed class CliRequest
 {
-    /// <summary>The protocol's version: a newer Zinc keeps answering an older zn.</summary>
+    /// <summary>The protocol's version, so a newer Zinc keeps answering an older zn.</summary>
     public int V { get; set; } = CliProtocol.Version;
 
     /// <summary>"version", "list", "action", or a thing and its verb: "pane split", "terminal new".</summary>
     public string Cmd { get; set; } = "";
 
-    /// <summary>The terminal zn runs in (ZINC_TERMINAL_ID); null outside Zinc.</summary>
+    /// <summary>The terminal zn runs in (ZINC_TERMINAL_ID), or null outside Zinc.</summary>
     public int? Caller { get; set; }
 
     // Targets given with --terminal, --pane, --workspace, --window.
@@ -48,19 +48,23 @@ public sealed class CliRequest
     /// <summary>The program to run instead of the profile's shell (what follows <c>--</c>), as one command line.</summary>
     public string? CommandLine { get; set; }
 
-    /// <summary>close: without asking, even with commands running.</summary>
+    /// <summary>For close, whether to close without asking, even with commands running.</summary>
     public bool Force { get; set; }
 
     /// <summary>terminal send's text, escapes already turned into characters.</summary>
     public string? Text { get; set; }
 
-    /// <summary>terminal send: as a paste (bracketed when the program asked), not as typed.</summary>
+    /// <summary>
+    /// For terminal send, whether to send the text as a paste (bracketed when the program asked) instead of as typed.
+    /// </summary>
     public bool Paste { get; set; }
 
-    /// <summary>terminal read: the last this many lines, scrollback included; null: the screen.</summary>
+    /// <summary>
+    /// For terminal read, how many of the last lines to read, scrollback included, or null for the screen.
+    /// </summary>
     public int? Lines { get; set; }
 
-    /// <summary>terminal read: with colors and styles (VT sequences).</summary>
+    /// <summary>For terminal read, whether to include colors and styles (VT sequences).</summary>
     public bool Ansi { get; set; }
 
     /// <summary>terminal title's text ("" gives the title back to the program).</summary>
@@ -72,7 +76,7 @@ public sealed class CliRequest
     /// <summary>workspace icon: an icon's name, or "none".</summary>
     public string? Icon { get; set; }
 
-    /// <summary>terminal move: the pane to move into.</summary>
+    /// <summary>For terminal move, the pane to move into.</summary>
     public int? ToPane { get; set; }
 
     /// <summary>workspace move: a window's id, or "new".</summary>
@@ -179,7 +183,7 @@ public sealed class CliTerminal
 
     public string Title { get; set; } = "";
 
-    /// <summary>The folder its shell last reported; null if it never did.</summary>
+    /// <summary>The folder its shell last reported, or null if it never did.</summary>
     public string? Folder { get; set; }
 
     /// <summary>Its profile's id.</summary>
@@ -216,7 +220,7 @@ public static class CliProtocol
 
     public static string Write(CliReply reply) => JsonSerializer.Serialize(reply, CliJson.Default.CliReply);
 
-    /// <summary>A request; null if the line isn't one.</summary>
+    /// <summary>A request, or null if the line isn't one.</summary>
     public static CliRequest? ReadRequest(string line)
     {
         try
@@ -241,7 +245,10 @@ public static class CliProtocol
         }
     }
 
-    /// <summary>zn's exit code for a reply: 0 done, 1 refused or failed, 2 wrong usage, 4 remote control off (3 = no Zinc, zn's own).</summary>
+    /// <summary>
+    /// zn's exit code for a reply: 0 done, 1 refused or failed, 2 wrong usage, 4 remote control off. zn sets 3 (no Zinc)
+    /// on its own.
+    /// </summary>
     public static int ExitCodeFor(CliReply reply) => reply.Ok ? 0 : reply.Code switch
     {
         CliCodes.Usage => CliExit.Usage,

@@ -3,8 +3,8 @@ namespace Zinc;
 /// <summary>
 /// Where Zinc keeps what's yours: <c>%APPDATA%\Zinc</c> holds the config, schemes, session, logs, crash log
 /// and icon cache. <c>%LOCALAPPDATA%\Zinc</c> is the installer's folder (Velopack's install root, replaced on
-/// install and removed on uninstall), so nothing of yours may live there. Logs and the cache used to;
-/// <see cref="MoveOldLocalData"/> moves them across once.
+/// install and removed on uninstall), so nothing of yours may live there. Logs and the cache used to live there,
+/// and <see cref="MoveOldLocalData"/> moves them across once.
 /// </summary>
 public static class AppFolders
 {
@@ -12,7 +12,9 @@ public static class AppFolders
     public static string Data { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zinc");
 
-    /// <summary>%LOCALAPPDATA%\Zinc: where logs and the icon cache lived before (and where the installer installs).</summary>
+    /// <summary>
+    /// %LOCALAPPDATA%\Zinc, where logs and the icon cache lived before (and where the installer installs).
+    /// </summary>
     public static string OldLocal { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Zinc");
 
@@ -20,10 +22,11 @@ public static class AppFolders
     public static readonly string[] MovedItems = ["logs", "crash.log", "cache"];
 
     /// <summary>
-    /// Moves <see cref="MovedItems"/> from <paramref name="from"/> into <paramref name="to"/>: a folder's files
-    /// one by one (one already there stays, and the old copy is dropped), files that can't be moved (in use)
-    /// stay for the next start. Removes <paramref name="from"/> if that left it empty; anything else in it (an
-    /// installed Zinc) is never touched. Returns how many files moved.
+    /// Moves <see cref="MovedItems"/> from <paramref name="from"/> into <paramref name="to"/>, moving a folder's
+    /// files one by one. When a file is already in <paramref name="to"/>, that copy stays and the old one is
+    /// dropped. A file that can't be moved (because it's in use) stays for the next start. Removes
+    /// <paramref name="from"/> if that left it empty, and never touches anything else in it (an installed Zinc).
+    /// Returns how many files moved.
     /// </summary>
     public static int MoveOldLocalData(string from, string to)
     {
@@ -72,7 +75,7 @@ public static class AppFolders
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return false; // in use: next start
+            return false; // in use, so it waits for the next start
         }
     }
 

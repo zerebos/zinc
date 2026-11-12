@@ -7,7 +7,7 @@ public enum TerminalAction
 {
     Copy,
 
-    /// <summary>Copy when there is a selection; otherwise the key goes to the app (Ctrl+C).</summary>
+    /// <summary>Copy when there is a selection, and otherwise let the key go to the app (Ctrl+C).</summary>
     CopyIfSelection,
 
     /// <summary>Copy the selection with its colors and styles (HTML next to the text).</summary>
@@ -37,7 +37,7 @@ public enum TerminalAction
     NextTab,
     PreviousTab,
 
-    /// <summary>Go to tab <see cref="ActionInvocation.Index"/> (0-based; -1 = last).</summary>
+    /// <summary>Go to tab <see cref="ActionInvocation.Index"/> (0-based, or -1 for the last).</summary>
     SwitchToTab,
     NewWindow,
     ReopenWorkspace,
@@ -72,15 +72,15 @@ public enum TerminalAction
     QuitFresh,
 
     /// <summary>
-    /// Switch the workspace list's mode: <see cref="ActionInvocation.Index"/> -1 cycles full → rail →
-    /// auto-hide; otherwise it's a <see cref="SidebarMode"/> to toggle with full.
+    /// Switch the workspace list's mode. <see cref="ActionInvocation.Index"/> -1 cycles full → rail →
+    /// auto-hide, and any other index is a <see cref="SidebarMode"/> to toggle with full.
     /// </summary>
     ToggleSidebar,
 
     /// <summary>Title bar shown ↔ auto-hidden.</summary>
     ToggleTitleBar,
 
-    /// <summary>Auto-hide both the title bar and the workspace list; again to bring them back.</summary>
+    /// <summary>Auto-hide both the title bar and the workspace list. Running it again brings them back.</summary>
     FocusMode,
 
     /// <summary>Scroll to the previous (<see cref="ActionInvocation.Index"/> -1) or next (+1) prompt.</summary>
@@ -95,7 +95,10 @@ public enum TerminalAction
     /// <summary>The command palette searching this window's tabs (its "@" mode).</summary>
     TabSwitcher,
 
-    /// <summary>Go to the next tab with a dot (a failed command first, then programs' notifications, then finished ones).</summary>
+    /// <summary>
+    /// Go to the next tab with a dot. Programs that exited with an error come first, then failed commands, the bell,
+    /// programs' notifications and finished commands.
+    /// </summary>
     NextAttention,
 }
 
@@ -153,7 +156,7 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
 
     /// <summary>
     /// The form config.toml takes ("ctrl+shift+t", "alt+shift+plus"), which <see cref="Parse"/>
-    /// reads back; null for a key it has no name for.
+    /// reads back. Null for a key it has no name for.
     /// </summary>
     public string? ToConfig()
     {
@@ -226,7 +229,7 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
 
 /// <summary>
 /// Chords pressed one after another, like a tmux prefix: <c>"ctrl+a>c"</c> (spaces around the
-/// <c>&gt;</c> are fine). The first chord is the leader: it starts the sequence instead of doing
+/// <c>&gt;</c> are fine). The first chord is the leader, which starts the sequence instead of doing
 /// anything itself.
 /// </summary>
 public sealed class KeySequence : IEquatable<KeySequence>
@@ -274,25 +277,27 @@ public sealed class KeySequence : IEquatable<KeySequence>
 /// <summary>What a key press means to a <see cref="KeySequencer"/>.</summary>
 public enum KeyStep
 {
-    /// <summary>No sequence going, and this key starts none: handle it as usual.</summary>
+    /// <summary>No sequence is going and this key starts none, so handle it as usual.</summary>
     NotMine,
 
-    /// <summary>A sequence started or went on: wait for the next key (show what can come next).</summary>
+    /// <summary>A sequence started or went on, so wait for the next key (show what can come next).</summary>
     Waiting,
 
-    /// <summary>A sequence completed: run its action.</summary>
+    /// <summary>A sequence completed, so run its action.</summary>
     Ran,
 
-    /// <summary>Escape, or a key no sequence continues with: the sequence ends, the key is dropped.</summary>
+    /// <summary>Escape, or a key no sequence continues with. The sequence ends and the key is dropped.</summary>
     Cancelled,
 
-    /// <summary>The leader pressed twice (and not bound that way): the sequence ends, the key goes to the terminal.</summary>
+    /// <summary>
+    /// The leader pressed twice (and not bound that way). The sequence ends and the key goes to the terminal.
+    /// </summary>
     PassThrough,
 }
 
 /// <summary>
-/// Follows the keys of a sequence as they're pressed (one per pane): a leader starts one, the
-/// following keys continue or complete it. No timeout: it waits until the next key.
+/// Follows the keys of a sequence as they're pressed (each pane has its own sequencer). A leader starts a sequence,
+/// and the following keys continue or complete it. There's no timeout, so it waits until the next key.
 /// </summary>
 public sealed class KeySequencer(Keybindings bindings)
 {
@@ -385,7 +390,7 @@ public sealed class Keybindings
     /// <summary>Every key sequence, in binding order.</summary>
     public IReadOnlyList<(KeySequence Keys, ActionInvocation Action)> Sequences => _sequences;
 
-    /// <summary>Whether <paramref name="chord"/> is a leader: it starts a sequence (and does nothing else).</summary>
+    /// <summary>Whether <paramref name="chord"/> is a leader, which starts a sequence (and does nothing else).</summary>
     public bool StartsSequence(KeyChord chord) => _sequences.Any(s => s.Keys.Keys[0] == chord);
 
     /// <summary>The sequence that is exactly <paramref name="keys"/>.</summary>
@@ -420,7 +425,9 @@ public sealed class Keybindings
                 : null))
             .ToList();
 
-    /// <summary>The shortcut to show for an action: its first chord, else its first sequence ("Ctrl+A, C").</summary>
+    /// <summary>
+    /// The shortcut to show for an action, which is its first chord, else its first sequence ("Ctrl+A > C").
+    /// </summary>
     public string? ShortcutFor(ActionInvocation action) =>
         ChordFor(action)?.ToString() ?? _sequences.Where(s => s.Action == action).Select(s => s.Keys.ToString()).FirstOrDefault();
 
@@ -432,7 +439,7 @@ public sealed class Keybindings
     }
 
     /// <summary>
-    /// Takes <paramref name="other"/>'s bindings in place (a config reload): every window and
+    /// Takes <paramref name="other"/>'s bindings in place (a config reload). Every window and
     /// pane holds this same instance, so they all see the change.
     /// </summary>
     public void CopyFrom(Keybindings other)
@@ -449,9 +456,9 @@ public sealed class Keybindings
     }
 
     /// <summary>
-    /// The defaults with a <c>[keys]</c> table on top: each entry binds a chord to an action
+    /// The defaults with a <c>[keys]</c> table on top. Each entry binds a chord to an action
     /// string (<see cref="Actions.Parse"/>), or unbinds it with "none". Problems go to
-    /// <paramref name="warnings"/> prefixed with the entry's location; the entry is skipped.
+    /// <paramref name="warnings"/> prefixed with the entry's location, and the entry is skipped.
     /// </summary>
     public static Keybindings Configure(IEnumerable<(string Chord, string Action, string Where)> entries, List<string> warnings)
     {
@@ -499,7 +506,7 @@ public sealed class Keybindings
             }
         }
 
-        // A leader only starts sequences: a chord bound on its own too loses that binding.
+        // A leader only starts sequences, so a chord that is also bound on its own loses that binding.
         foreach (var (keys, _) in bindings.Sequences.DistinctBy(s => s.Keys.Keys[0]).ToList())
         {
             var leader = keys.Keys[0];
@@ -560,7 +567,7 @@ public sealed class Keybindings
 
     public bool TryGet(KeyChord chord, out ActionInvocation action) => _map.TryGetValue(chord, out action);
 
-    /// <summary>The chord to show for an action, if it has one: the first bound for it.</summary>
+    /// <summary>The chord to show for an action, which is the first one bound to it, or null if it has none.</summary>
     public KeyChord? ChordFor(ActionInvocation action) =>
         _order.Where(c => _map[c] == action).Select(c => (KeyChord?)c).FirstOrDefault();
 
@@ -600,7 +607,7 @@ public sealed class Keybindings
         b.Bind("ctrl+shift+o", TerminalAction.TabSwitcher);
         b.Bind("ctrl+shift+f", TerminalAction.Find);
         b.Bind("ctrl+shift+b", new ActionInvocation(TerminalAction.ToggleSidebar, -1));
-        // Windows Terminal scrolls a line with these; prompts are the better stops (and without
+        // Windows Terminal scrolls a line with these. Prompts are the better stops (and without
         // shell integration they still scroll a line).
         b.Bind("ctrl+shift+up", new ActionInvocation(TerminalAction.JumpToPrompt, -1));
         b.Bind("ctrl+shift+down", new ActionInvocation(TerminalAction.JumpToPrompt, 1));

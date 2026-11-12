@@ -9,7 +9,7 @@ namespace Zinc;
 
 /// <summary>
 /// Changes one setting in config.toml text and leaves every other character as it was: comments,
-/// blank lines, order, quoting, line endings. The syntax tree only locates things; edits are
+/// blank lines, order, quoting, line endings. The syntax tree only locates things, and edits are
 /// spliced into the text. A setting is replaced where it is (under its table, as a dotted key,
 /// or inside an inline table), else added at the end of the table it belongs to, else in a new
 /// table at the end (root keys go above the first table).
@@ -32,14 +32,14 @@ public static partial class ConfigEditor
         var formatted = FormatValue(value);
         var nl = text.Contains("\r\n") ? "\r\n" : "\n";
 
-        // 1. Already set: replace the value.
+        // 1. Already set, so replace the value.
         if (Find(doc).FirstOrDefault(e => e.Path.SequenceEqual(path)) is { } existing)
         {
             var span = existing.KeyValue.Value!.Span;
             return text[..span.Offset] + formatted + text[(span.Offset + span.Length)..];
         }
 
-        // 2. Inside an inline table that holds its siblings: font = { size = 12 } + font.family.
+        // 2. Inside an inline table that holds its siblings, such as font = { size = 12 } + font.family.
         foreach (var inline in Find(doc).Where(e => e.KeyValue.Value is InlineTableSyntax && IsPrefix(e.Path, path)))
         {
             var table = (InlineTableSyntax)inline.KeyValue.Value!;
@@ -61,13 +61,13 @@ public static partial class ConfigEditor
         if (tables.Where(t => t.Path.Count < path.Count && IsPrefix(t.Path, path)).OrderByDescending(t => t.Path.Count).FirstOrDefault() is { Table: not null } home)
         {
             var line = $"{FormatKey(path.Skip(home.Path.Count))} = {formatted}";
-            // A key-value's span includes its line break: anchor on its value (or the header's name).
+            // A key-value's span includes its line break, so anchor on its value (or on the header's name).
             var anchor = home.Table.Items.Any() ? (SyntaxNode)home.Table.Items.Last().Value! : home.Table.Name!;
             var at = EndOfLine(text, anchor.Span.Offset + anchor.Span.Length);
             return InsertLine(text, at, line, nl);
         }
 
-        // 4. A root key: above the first table (after the file's opening comments).
+        // 4. A root key goes above the first table (after the file's opening comments).
         if (path.Count == 1)
         {
             var line = $"{FormatKey(path)} = {formatted}";
@@ -82,7 +82,7 @@ public static partial class ConfigEditor
         }
 
         // 5. A new table at the end. Profiles get their own [profile.<id>] section, after the
-        //    last one there is (so it joins the others rather than follow unrelated sections).
+        //    last one there is (so it joins the others rather than following unrelated sections).
         var headerLength = path[0] == "profile" && path.Count > 2 ? 2 : path.Count - 1;
         var header = FormatKey(path.Take(headerLength));
         var body = $"{FormatKey(path.Skip(headerLength))} = {formatted}";
@@ -98,7 +98,10 @@ public static partial class ConfigEditor
         return end + gap + $"[{header}]" + nl + body + nl;
     }
 
-    /// <summary><paramref name="text"/> without the line setting <paramref name="path"/>; unchanged if it isn't set on a line of its own.</summary>
+    /// <summary>
+    /// <paramref name="text"/> without the line setting <paramref name="path"/>, or the text unchanged if
+    /// <paramref name="path"/> isn't set on a line of its own.
+    /// </summary>
     public static string Remove(string text, IReadOnlyList<string> path)
     {
         var doc = Parse(text);
@@ -126,8 +129,8 @@ public static partial class ConfigEditor
 
     /// <summary>
     /// <paramref name="text"/> without the table <paramref name="path"/> (e.g. <c>[profile.x]</c>)
-    /// and its sub-tables (<c>[profile.x.font]</c>): each from its header to the next table's,
-    /// less the comment lines just above that one (they introduce it). Keys set elsewhere as
+    /// and its sub-tables (<c>[profile.x.font]</c>). Each one goes from its header to the next table's,
+    /// minus the comment lines just above the next header, because they introduce it. Keys set elsewhere as
     /// dotted keys (<c>profile.x.name = …</c> at the top) aren't touched.
     /// </summary>
     public static string RemoveTable(string text, IReadOnlyList<string> path)
@@ -297,7 +300,7 @@ public static partial class ConfigEditor
     private static string FormatKey(IEnumerable<string> parts) =>
         string.Join('.', parts.Select(p => BareKey().IsMatch(p) ? p : FormatString(p)));
 
-    /// <summary>A value as TOML: paths with backslashes as 'literal strings', the rest as "basic" ones.</summary>
+    /// <summary>A value as TOML, with paths that have backslashes as 'literal strings' and the rest as "basic" ones.</summary>
     public static string FormatValue(object value) => value switch
     {
         string s => s.Contains('\\') && !s.Contains('\'') && !s.Contains('\n') ? $"'{s}'" : FormatString(s),

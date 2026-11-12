@@ -1,8 +1,8 @@
 namespace Zinc.Cli;
 
 /// <summary>
-/// Where the running Zinc listens: a named pipe per session file (the same key that keeps Zinc to one running copy),
-/// so a test Zinc and yours never answer each other's zn. A run without a session (tests with only ZINC_CONFIG) gets
+/// Where the running Zinc listens, which is a named pipe per session file (the same key that keeps Zinc to one
+/// running copy), so a test Zinc and yours never answer each other's zn. A run without a session (tests with only ZINC_CONFIG) gets
 /// one per process, which only its own terminals know (ZINC_PIPE).
 /// </summary>
 public static class CliPipe
@@ -47,7 +47,10 @@ public static class CliPipe
     /// <summary>The pipe of a Zinc without a session (a test run).</summary>
     public static string ForProcess(int processId) => $"Zinc.p{processId}.cli";
 
-    /// <summary>The pipe zn talks to: its terminal's Zinc (ZINC_PIPE), else the one that owns the session; null if neither.</summary>
+    /// <summary>
+    /// The pipe zn talks to, which is its terminal's Zinc (ZINC_PIPE), else the one that owns the session, or null if
+    /// neither.
+    /// </summary>
     public static string? Find(Func<string, string?>? getEnv = null)
     {
         getEnv ??= Environment.GetEnvironmentVariable;

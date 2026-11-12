@@ -8,7 +8,7 @@ public sealed record CliParse(CliRequest? Request, bool Json = false, string? He
 
 /// <summary>
 /// zn's command line: <c>zn &lt;thing&gt; &lt;verb&gt; [options] [-- command]</c>, plus <c>zn list</c>, <c>zn action</c> and
-/// <c>zn version</c>. Parsed by hand: a few things with a few verbs each.
+/// <c>zn version</c>. Parsed by hand, because there are only a few things with a few verbs each.
 /// </summary>
 public static class CliCommandLine
 {
@@ -110,7 +110,7 @@ public static class CliCommandLine
         var allowed = verb.Options.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var json = false;
         string? positional = null;
-        var literal = false; // after --: the text as given, even "-"
+        var literal = false; // after --, the text is taken as given, even "-"
         for (var i = at + 1; i < args.Count; i++)
         {
             var arg = args[i];
@@ -274,7 +274,7 @@ public static class CliCommandLine
             case "text" when string.IsNullOrEmpty(positional):
                 return Usage("What to send? For example: zn terminal send \"ls\\r\" (or - to read it from stdin).");
             case "text":
-                request.Text = positional == "-" && !literal ? null : Unescape(positional); // "-": zn reads stdin
+                request.Text = positional == "-" && !literal ? null : Unescape(positional); // "-" means zn reads stdin
                 break;
             case "title" or "name" when positional == null:
                 return Usage($"Which {verb.Positional}? \"\" goes back to the program's title.");
@@ -369,7 +369,7 @@ public static class CliCommandLine
             ? value
             : null;
 
-    /// <summary>A pane share: "30%" or "0.3", between 10% and 90%; null if it isn't one.</summary>
+    /// <summary>A pane share such as "30%" or "0.3", between 10% and 90%, or null if the text isn't one.</summary>
     public static double? ParseSize(string text)
     {
         var percent = text.EndsWith('%');

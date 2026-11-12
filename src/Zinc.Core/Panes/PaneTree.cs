@@ -19,12 +19,12 @@ public enum SplitOrientation
 
 public static class PaneDirections
 {
-    /// <summary>Windows Terminal's "auto" split: along the pane's longer side.</summary>
+    /// <summary>Windows Terminal's "auto" split, which splits along the pane's longer side.</summary>
     public static PaneDirection Auto(double width, double height) =>
         width >= height ? PaneDirection.Right : PaneDirection.Down;
 }
 
-/// <summary>A rectangle in layout space, where the whole tab is (0, 0, 1, 1).</summary>
+/// <summary>A rectangle in layout space, where the whole workspace is (0, 0, 1, 1).</summary>
 public readonly record struct PaneRect(double X, double Y, double Width, double Height)
 {
     public double Right => X + Width;
@@ -60,7 +60,7 @@ public sealed class PaneSplit : PaneNode
 }
 
 /// <summary>
-/// The panes of one tab: a binary tree of splits with leaves holding pane content.
+/// The panes of one workspace, as a binary tree of splits with leaves holding pane content.
 /// Pure layout logic (no UI), so splitting, closing, focus navigation and resizing
 /// are unit-testable.
 /// </summary>
@@ -70,10 +70,12 @@ public sealed class PaneTree<T> where T : class
 
     public PaneTree(T content) => Root = new PaneLeaf<T>(content);
 
-    /// <summary>A tree around an already-built <paramref name="root"/> (a restored layout; parents set).</summary>
+    /// <summary>A tree around an already-built <paramref name="root"/> (a restored layout, with its parents already set).</summary>
     internal PaneTree(PaneNode root) => Root = root;
 
-    /// <summary>Builds a split node for a restored layout: <paramref name="first"/> gets <paramref name="ratio"/> of the space.</summary>
+    /// <summary>
+    /// Builds a split node for a restored layout, where <paramref name="first"/> gets <paramref name="ratio"/> of the space.
+    /// </summary>
     internal static PaneSplit Join(SplitOrientation orientation, PaneNode first, PaneNode second, double ratio)
     {
         var split = new PaneSplit(orientation, first, second, Math.Clamp(ratio, MinRatio, MaxRatio));
@@ -113,7 +115,7 @@ public sealed class PaneTree<T> where T : class
 
     /// <summary>
     /// Moves all of <paramref name="other"/>'s panes into this tree beside
-    /// <paramref name="target"/> on side <paramref name="where"/>, keeping their arrangement;
+    /// <paramref name="target"/> on side <paramref name="where"/>, keeping their arrangement.
     /// <paramref name="other"/> is left empty.
     /// </summary>
     public void Graft(PaneLeaf<T> target, PaneDirection where, PaneTree<T> other, double newShare = 0.5)
@@ -137,7 +139,7 @@ public sealed class PaneTree<T> where T : class
     }
 
     /// <summary>
-    /// Removes a pane; its sibling takes the freed space. Returns the pane that should
+    /// Removes a pane, and its sibling takes the freed space. Returns the pane that should
     /// get focus next (the sibling side's pane nearest the removed one), or null if the
     /// tree is now empty.
     /// </summary>
@@ -172,8 +174,8 @@ public sealed class PaneTree<T> where T : class
     }
 
     /// <summary>
-    /// The pane next to <paramref name="from"/> in <paramref name="direction"/>: among panes
-    /// that lie on that side and share some of its extent, the closest, then the one that
+    /// The pane next to <paramref name="from"/> in <paramref name="direction"/>. Among the panes
+    /// that lie on that side and share some of its extent, it's the closest, then the one that
     /// overlaps it most.
     /// </summary>
     public PaneLeaf<T>? Neighbor(PaneLeaf<T> from, PaneDirection direction)

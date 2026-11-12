@@ -2,11 +2,11 @@ namespace Zinc.Session;
 
 /// <summary>
 /// A workspace you closed, as a session saves an open one (layout, tabs and their folders, title,
-/// color, folder), so it can be reopened; <see cref="Name"/> is what its tab showed.
+/// color, folder), so it can be reopened. <see cref="Name"/> is what its tab showed.
 /// </summary>
 public sealed record ClosedWorkspace(string Name, WorkspaceState State, DateTimeOffset When)
 {
-    /// <summary>What it had, for a chip: "3 tabs, split", "1 tab".</summary>
+    /// <summary>What it had, for a chip, such as "3 tabs, split" or "1 tab".</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public string Summary
     {
@@ -25,7 +25,7 @@ public sealed record ClosedWorkspace(string Name, WorkspaceState State, DateTime
 }
 
 /// <summary>
-/// Workspaces closed lately, newest first (every window's; saved with the session): the
+/// Workspaces closed lately in every window, newest first, saved with the session. The
 /// new-workspace page offers them under Reopen.
 /// </summary>
 public sealed class ClosedWorkspaces
@@ -47,23 +47,23 @@ public sealed class ClosedWorkspaces
         }
     }
 
-    /// <summary>Takes <paramref name="closed"/> off the list (it's being reopened); false if it's gone already.</summary>
+    /// <summary>Takes <paramref name="closed"/> off the list (it's being reopened), or returns false if it's gone already.</summary>
     public bool Take(ClosedWorkspace closed) => _closed.Remove(closed);
 }
 
 /// <summary>
 /// A window you closed, as a session saves an open one (place, size, its workspaces), so it can be
-/// reopened; <see cref="Name"/> names its workspaces.
+/// reopened. <see cref="Name"/> names its workspaces.
 /// </summary>
 public sealed record ClosedWindow(string Name, WindowState State, DateTimeOffset When)
 {
     /// <summary>
-    /// It was the last window open: the session still has it, and brings it back on the next start
-    /// or tray click, which takes it off this list (else it could open twice).
+    /// Whether it was the last window open. The session still has that window and brings it back on the
+    /// next start or tray click, which takes it off this list so it can't open twice.
     /// </summary>
     public bool WasLast { get; init; }
 
-    /// <summary>What it had, for a menu: "3 workspaces", "1 workspace".</summary>
+    /// <summary>What it had, for a menu, such as "3 workspaces" or "1 workspace".</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public string Summary => $"{State.Workspaces.Count} workspace{(State.Workspaces.Count == 1 ? "" : "s")}";
 
@@ -78,7 +78,7 @@ public sealed record ClosedWindow(string Name, WindowState State, DateTimeOffset
     };
 }
 
-/// <summary>Windows closed lately, newest first (saved with the session): "Reopen closed window" brings them back.</summary>
+/// <summary>Windows closed lately, newest first, saved with the session. "Reopen closed window" brings them back.</summary>
 public sealed class ClosedWindows
 {
     public const int Capacity = 5;
@@ -98,6 +98,6 @@ public sealed class ClosedWindows
         }
     }
 
-    /// <summary>Takes <paramref name="closed"/> off the list (it's being reopened); false if it's gone already.</summary>
+    /// <summary>Takes <paramref name="closed"/> off the list (it's being reopened), or returns false if it's gone already.</summary>
     public bool Take(ClosedWindow closed) => _closed.Remove(closed);
 }

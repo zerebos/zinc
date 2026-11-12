@@ -1,13 +1,15 @@
 namespace Zinc;
 
 /// <summary>
-/// Named color schemes: the user's (a themes folder next to the config file) over the ones that
-/// ship with Zinc. Files use Ghostty's theme format (as iTerm2-Color-Schemes publishes it):
-/// <c>key = value</c> lines, of which the colors apply.
+/// Named color schemes, with the user's (a themes folder next to the config file) taking precedence over the ones
+/// that ship with Zinc. Files use Ghostty's theme format (as iTerm2-Color-Schemes publishes it), which is
+/// <c>key = value</c> lines, of which only the colors apply.
 /// </summary>
 public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 {
-    /// <summary>The library for a config file: its folder's <c>themes</c>, then <paramref name="bundledFolder"/>.</summary>
+    /// <summary>
+    /// The library for a config file, which looks in its folder's <c>themes</c>, then in <paramref name="bundledFolder"/>.
+    /// </summary>
     public static ThemeLibrary For(string configPath, string bundledFolder) =>
         new(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? ".", "themes"), bundledFolder);
 
@@ -18,7 +20,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
     /// <summary>
     /// A theme that follows Windows' light/dark mode, written as Ghostty does:
-    /// <c>"light:Catppuccin Latte,dark:Catppuccin Mocha"</c> (either order; a missing side uses
+    /// <c>"light:Catppuccin Latte,dark:Catppuccin Mocha"</c> (in either order, and a missing side uses
     /// the other). False for a plain scheme name.
     /// </summary>
     public static bool TryParsePair(string value, out string light, out string dark)
@@ -54,10 +56,10 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
     }
 
     /// <summary>
-    /// A light scheme to pair with <paramref name="dark"/>: its obvious counterpart where the
+    /// A light scheme to pair with <paramref name="dark"/>. That's its obvious counterpart where the
     /// collection has one ("Catppuccin Mocha" → "Catppuccin Latte", "Solarized Dark" → "Solarized
     /// Light", "Tokyo Night" → "Tokyo Night Day", "Rose Pine" → "Rose Pine Dawn", "Lit Cell" → "Lit Cell
-    /// Light"); for Zinc's own colors (null), Lit Cell Light; else Catppuccin Latte.
+    /// Light"). For Zinc's own colors (null) it's Lit Cell Light, and otherwise Catppuccin Latte.
     /// </summary>
     public static string? LightCounterpart(string? dark, IReadOnlyList<string> names)
     {
@@ -92,7 +94,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
     private IEnumerable<string> Folders => [userFolder, bundledFolder];
 
-    /// <summary>Every scheme's name, sorted; a user's scheme hides a bundled one of the same name.</summary>
+    /// <summary>Every scheme's name, sorted. A user's scheme hides a bundled one of the same name.</summary>
     public IReadOnlyList<string> Names() =>
         Folders.SelectMany(Files)
             .Select(f => Path.GetFileName(f))
@@ -100,7 +102,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    /// <summary>A folder's files; none if it's missing or can't be read (a scheme folder isn't worth failing over).</summary>
+    /// <summary>A folder's files, or none if it's missing or can't be read (a scheme folder isn't worth failing over).</summary>
     private static IReadOnlyList<string> Files(string folder)
     {
         try
@@ -122,7 +124,8 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             return null;
         }
 
-        // The file's own spelling (the file system would find "dracula" as "Dracula" too, spelled as asked).
+        // Return the file's own spelling, because the file system also finds "Dracula" when asked for "dracula" and a
+        // path built from the name would keep the spelling as asked.
         return File.Exists(Path.Combine(folder, name))
             ? Files(folder).FirstOrDefault(f => Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase))
             : null;
@@ -135,8 +138,8 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
     public bool ReplacesBundled(string name) => IsUsers(name) && In(bundledFolder, name) != null;
 
     /// <summary>
-    /// The file to edit for scheme <paramref name="name"/>: the user's, or else a copy of the bundled
-    /// one made in their themes folder (which then stands in for it everywhere it's used); null if
+    /// The file to edit for scheme <paramref name="name"/>. That's the user's, or else a copy of the bundled
+    /// one made in their themes folder, which then stands in for it everywhere it's used. Null if
     /// there's no such scheme.
     /// </summary>
     public string? Customize(string name)
@@ -157,7 +160,10 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         return copy;
     }
 
-    /// <summary>Why <paramref name="name"/> can't be a new scheme's name ("Name it", "taken", a character a file name can't have), or null.</summary>
+    /// <summary>
+    /// Why <paramref name="name"/> can't be a new scheme's name (it's empty, it's taken, or it has a character a file
+    /// name can't have), or null.
+    /// </summary>
     public string? NameProblem(string name)
     {
         name = name.Trim();
@@ -176,7 +182,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
     /// <summary>
     /// A new scheme of the user's, <paramref name="name"/>, starting as a copy of scheme
-    /// <paramref name="from"/>; its file, or null if the name won't do or there's no such scheme.
+    /// <paramref name="from"/>. Returns its file, or null if the name won't do or there's no such scheme.
     /// </summary>
     public string? Create(string name, string from)
     {
@@ -192,7 +198,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         return file;
     }
 
-    /// <summary>Deletes one of the user's own schemes (not a copy of a bundled one: see <see cref="BackToOriginal"/>).</summary>
+    /// <summary>Deletes one of the user's own schemes (not a copy of a bundled one, which <see cref="BackToOriginal"/> removes).</summary>
     public void Delete(string name)
     {
         if (!ReplacesBundled(name) && In(userFolder, name) is { } own)
@@ -210,7 +216,9 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         }
     }
 
-    /// <summary>The file for scheme <paramref name="name"/> (the user's first; names match case-insensitively), or null.</summary>
+    /// <summary>
+    /// The file for scheme <paramref name="name"/> (the user's first, with names matched case-insensitively), or null.
+    /// </summary>
     public string? Find(string name)
     {
         if (name.Length == 0 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -236,7 +244,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         return null;
     }
 
-    /// <summary><paramref name="config"/> with scheme <paramref name="name"/>'s colors; null if there's no such scheme.</summary>
+    /// <summary><paramref name="config"/> with scheme <paramref name="name"/>'s colors, or null if there's no such scheme.</summary>
     public Config? Apply(Config config, string name)
     {
         if (Find(name) is not { } file)
@@ -246,7 +254,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 
         try
         {
-            // One scheme, whatever came before: its colors replace the theme's, not add to them.
+            // One scheme, whatever came before, so its colors replace the theme's instead of adding to them.
             return ApplyFile(config with { Theme = Zinc.Terminal.TerminalTheme.SchemeBase }, file) with { PairedDark = null };
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

@@ -32,13 +32,13 @@ public static partial class DroppedPaths
         {
             if (WslShare().Match(path) is { Success: true } share)
             {
-                // The distro's own files; another distro's stay a Windows path (not mounted here).
+                // The distro's own files, while another distro's files stay Windows paths because they aren't mounted here.
                 return share.Groups[1].Value.Equals(distro, StringComparison.OrdinalIgnoreCase)
                     ? "/" + share.Groups[2].Value.Replace('\\', '/')
                     : path;
             }
 
-            // Drives where its wsl.conf mounts them; a Windows path where it doesn't.
+            // A drive path goes where the distro's wsl.conf mounts drives, or stays a Windows path when it can't.
             return context.WslMountRoot is { } mounts ? WslConf.DrivePath(path, mounts) ?? path : path;
         }
 
@@ -68,7 +68,7 @@ public static partial class DroppedPaths
         _ => WindowsSafe().IsMatch(path) ? path : "\"" + path + "\"",
     };
 
-    /// <summary><c>C:\a\b</c> → <c>{prefix}c/a/b</c>; null if it isn't on a drive.</summary>
+    /// <summary><c>C:\a\b</c> → <c>{prefix}c/a/b</c>, or null if the path isn't on a drive.</summary>
     private static string? DrivePath(string path, string prefix) =>
         path.Length >= 2 && char.IsAsciiLetter(path[0]) && path[1] == ':'
             ? prefix + char.ToLowerInvariant(path[0]) + path[2..].Replace('\\', '/')

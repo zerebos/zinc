@@ -7,7 +7,7 @@ namespace Zinc;
 /// <summary>A profile found on this machine: its id, the name shown, and what it runs.</summary>
 public sealed record DiscoveredProfile(string Id, string Name, string Command, string? Icon = null);
 
-/// <summary>Which sources to look in; config: <c>[discover]</c>, each true by default.</summary>
+/// <summary>Which sources to look in, each true by default. Config: <c>[discover]</c>.</summary>
 public sealed record DiscoverySettings(
     bool Wsl = true, bool PowerShell = true, bool Cmd = true, bool GitBash = true, bool Msys2 = true, bool Ssh = true,
     bool VisualStudio = true);
@@ -16,7 +16,7 @@ public sealed record DiscoverySettings(
 /// Finds the shells installed here, as Windows Terminal does: WSL distros, PowerShell, cmd,
 /// Git Bash, MSYS2 (its UCRT64 environment), Visual Studio's developer shells, and the hosts in
 /// ~/.ssh/config. Ids name where each came from (<c>wsl:Fedora</c>, <c>ssh:buildbox</c>), so a
-/// <c>[profile."wsl:Fedora"]</c> section can change one; the sources run on every config load.
+/// <c>[profile."wsl:Fedora"]</c> section can change one. The sources run on every config load.
 /// </summary>
 public static class ProfileDiscovery
 {
@@ -119,13 +119,14 @@ public static class ProfileDiscovery
         return WslProfiles(distros, defaultId, Path.Combine(Environment.SystemDirectory, "wsl.exe"));
     }
 
-    /// <summary>Profiles for registered distros: the default first, Docker Desktop's internal ones left out.</summary>
+    /// <summary>Profiles for registered distros, with the default first and Docker Desktop's internal ones left out.</summary>
     public static IEnumerable<DiscoveredProfile> WslProfiles(IEnumerable<(string Id, string Name)> distros, string? defaultId, string wslExe) =>
         distros
             .Where(d => !d.Name.StartsWith("docker-desktop", StringComparison.OrdinalIgnoreCase))
             .OrderBy(d => string.Equals(d.Id, defaultId, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            // By registration id, so renaming the distro doesn't break the profile.
+            // The command names the distro by registration id, so it still starts the distro after a rename. The
+            // profile's own id holds the name, so a rename does change that.
             .Select(d => new DiscoveredProfile($"wsl:{d.Name}", d.Name, $"{wslExe} --distribution-id {d.Id} --cd ~"));
 
     // ------------------------------------------------------------ Windows shells
@@ -179,7 +180,7 @@ public static class ProfileDiscovery
 
     /// <summary>
     /// Developer PowerShell and Developer Command Prompt for each Visual Studio install
-    /// (vswhere). Asked once per run: it starts a process, and installs rarely change.
+    /// (vswhere). Asked once per run, because asking starts a process and installs rarely change.
     /// </summary>
     private static IEnumerable<DiscoveredProfile> VisualStudio()
     {
@@ -239,7 +240,7 @@ public static class ProfileDiscovery
         return hosts.Select(h => new DiscoveredProfile($"ssh:{h}", $"SSH - {h}", $"ssh.exe {h}"));
     }
 
-    /// <summary>Files an ssh <c>Include</c> names (relative to ~/.ssh; <c>*</c> within a folder).</summary>
+    /// <summary>Files an ssh <c>Include</c> names (relative to ~/.ssh, where <c>*</c> matches within a folder).</summary>
     private static IEnumerable<string> ReadIncludes(string sshDir, string pattern)
     {
         var expanded = pattern.StartsWith('~')
@@ -256,8 +257,8 @@ public static class ProfileDiscovery
     }
 
     /// <summary>
-    /// The concrete hosts in an ssh config: every <c>Host</c> name without wildcards or negation,
-    /// in order, once each; <c>Include</c>d files are read in place (via
+    /// The concrete hosts in an ssh config, which are every <c>Host</c> name without wildcards or negation,
+    /// in order, once each. <c>Include</c>d files are read in place (via
     /// <paramref name="readInclude"/>, which returns their contents).
     /// </summary>
     public static IReadOnlyList<string> SshHosts(string config, Func<string, IEnumerable<string>> readInclude)

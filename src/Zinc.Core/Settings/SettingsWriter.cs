@@ -25,7 +25,7 @@ public sealed class SettingsWriter
 
     /// <summary>
     /// How many settings differ from <see cref="Original"/> (a key added, removed or changed, in any
-    /// section): what Undo would put back.
+    /// section), which is what Undo would put back.
     /// </summary>
     public int ChangeCount()
     {
@@ -50,7 +50,7 @@ public sealed class SettingsWriter
         return values;
     }
 
-    /// <summary>Sets <paramref name="setting"/> to <paramref name="value"/>; null or its default removes the key.</summary>
+    /// <summary>Sets <paramref name="setting"/> to <paramref name="value"/>. Null or the setting's default removes the key.</summary>
     public void Set(SettingDef setting, object? value) => Set([(setting, value)]);
 
     /// <summary>Sets several settings in one write (a preset), each as <see cref="Set(SettingDef, object?)"/> would.</summary>
@@ -80,7 +80,7 @@ public sealed class SettingsWriter
     {
         var updated = value is null ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
 
-        // A renamed or replaced key's old spellings go: the file keeps one name for it (ConfigFile.RenamedKeys, ReplacedKeys).
+        // A renamed or replaced key's old spellings go, so the file keeps one name for it (ConfigFile.RenamedKeys, ReplacedKeys).
         if (path.Count >= 2)
         {
             foreach (var old in ConfigFile.OldNames($"{path[^2]}.{path[^1]}"))
@@ -92,7 +92,7 @@ public sealed class SettingsWriter
         return updated;
     }
 
-    /// <summary>Removes a whole table (a profile: <c>["profile", id]</c>) and its sub-tables.</summary>
+    /// <summary>Removes a whole table (such as a profile, <c>["profile", id]</c>) and its sub-tables.</summary>
     public void RemoveTable(IReadOnlyList<string> path)
     {
         var text = Current();

@@ -1,6 +1,8 @@
 namespace Zinc.Panes;
 
-/// <summary>How a workspace started from the new-workspace page is split: every pane runs the same profile, in the same folder.</summary>
+/// <summary>
+/// How a workspace started from the new-workspace page is split. Every pane runs the same profile, in the same folder.
+/// </summary>
 public enum StartLayout
 {
     One,
@@ -35,7 +37,9 @@ public static class StartLayouts
         _ => 4,
     };
 
-    /// <summary>A workspace in <paramref name="layout"/>, each pane from <paramref name="newPane"/>; the first (top left) has focus.</summary>
+    /// <summary>
+    /// A workspace in <paramref name="layout"/>, each pane from <paramref name="newPane"/>. The first (top left) has focus.
+    /// </summary>
     public static Workspace<T> Build<T>(StartLayout layout, Func<T> newPane) where T : class
     {
         var workspace = new Workspace<T>(newPane());

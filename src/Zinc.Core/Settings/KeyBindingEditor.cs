@@ -11,7 +11,7 @@ public sealed record KeyEdit(string Chord, string? Value)
 /// <summary>
 /// What the settings' keyboard page writes to [keys] to add, remove or reset an action's keys,
 /// given the lines already there (chord as written → action). The defaults (Windows Terminal's)
-/// stay underneath: taking away a default key writes <c>"chord" = "none"</c>, giving a default
+/// stay underneath, so taking away a default key writes <c>"chord" = "none"</c>, giving a default
 /// key back removes that line, and a chord already written in another spelling
 /// (<c>shift+ctrl+c</c>) is edited where it is instead of written twice.
 /// </summary>
@@ -28,7 +28,7 @@ public static class KeyBindingEditor
         var line = LineFor(lines, chord);
         if (Keybindings.Default.TryGet(chord, out var byDefault) && byDefault == action)
         {
-            return line == null ? [] : [new KeyEdit(line, null)]; // the default has it: no line needed
+            return line == null ? [] : [new KeyEdit(line, null)]; // the default has it, so no line is needed
         }
 
         return [new KeyEdit(line ?? chord.ToConfig() ?? throw new ArgumentException($"{chord} can't be written to config.toml", nameof(chord)),
@@ -52,7 +52,7 @@ public static class KeyBindingEditor
         lines.Keys.Where(t => KeySequence.IsSequence(t) && TryParse(t) is { } s && s.Equals(sequence)).Select(t => new KeyEdit(t, null)).ToList();
 
     /// <summary>
-    /// Back to the defaults for <paramref name="action"/>: its own lines, and the "none"s that took
+    /// Back to the defaults for <paramref name="action"/>, by removing its own lines and the "none"s that took
     /// its default keys away. Key sequences stay (they're added in the file, not here).
     /// </summary>
     public static IReadOnlyList<KeyEdit> Reset(IReadOnlyDictionary<string, string> lines, ActionInvocation action) =>

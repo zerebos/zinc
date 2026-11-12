@@ -1,15 +1,19 @@
 namespace Zinc.Cli;
 
-/// <summary>What every terminal's shell learns for zn: its own id and its Zinc's pipe (passed into WSL too), and where zn is.</summary>
+/// <summary>
+/// What every terminal's shell learns for zn, which is its own id, its Zinc's pipe (passed into WSL too), and where zn
+/// is.
+/// </summary>
 public static class CliEnvironment
 {
     /// <summary>zn.exe's full path, for WSL shells (WSLENV translates it).</summary>
     public const string ZnVariable = "ZINC_ZN";
 
     /// <summary>
-    /// Adds the variables to <paramref name="environment"/> (a launch's, maybe with shell integration's WSLENV already
-    /// in it; else <paramref name="inherited"/>'s WSLENV is the base). <paramref name="znFolder"/>, zn's folder, goes at
-    /// the end of PATH: found by name, but never in place of a command of yours (WSL appends Windows' PATH too).
+    /// Adds the variables to <paramref name="environment"/>, a launch's environment that may already hold shell
+    /// integration's WSLENV. When it doesn't, <paramref name="inherited"/>'s WSLENV is the base.
+    /// <paramref name="znFolder"/>, zn's folder, goes at the end of PATH, so zn is found by name but never runs in place
+    /// of a command of yours (WSL appends Windows' PATH too).
     /// </summary>
     public static void Add(IDictionary<string, string?> environment, int terminalId, string pipe, Func<string, string?> inherited,
         string? znFolder = null)
@@ -23,8 +27,8 @@ public static class CliEnvironment
                 environment["PATH"] = string.Join(';', entries.Append(znFolder));
             }
 
-            // For WSL, whose PATH may not include Windows' (appendWindowsPath = false): the shell integration makes
-            // `zn` run this (translated to /mnt/c/...).
+            // For WSL, whose PATH may not include Windows' (appendWindowsPath = false), so the shell integration makes
+            // `zn` run this path (translated to /mnt/c/...).
             environment[ZnVariable] = Path.Combine(znFolder, "zn.exe");
         }
 

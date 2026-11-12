@@ -4,7 +4,7 @@ namespace Zinc.Terminal;
 
 /// <summary>
 /// A command as the shell marked it with OSC 133. Rows are screen rows (0 = the top of the
-/// scrollback; the scrollbar's units), valid until the terminal next changes.
+/// scrollback, in the scrollbar's units), valid until the terminal next changes.
 /// </summary>
 /// <param name="PromptRow">Where its prompt starts.</param>
 /// <param name="OutputRow">Where its output starts (null until it runs).</param>
@@ -38,9 +38,9 @@ public sealed unsafe partial class TerminalSession
     private bool _commandsChanged;
     private List<ShellCommand>? _commandSnapshot;
 
-    // Output since the snapshot was made: its rows may have moved (the scrollback pruned) and the running command's
-    // end follows the cursor. Checked on the next read instead of rebuilding per write: during output the list was
-    // made anew every frame (up to 2,000 commands: ~220 KB of garbage a frame at 144 Hz).
+    // Output since the snapshot was made, so its rows may have moved (when the scrollback prunes) and the running
+    // command's end follows the cursor. It's checked on the next read instead of rebuilding the list on every write,
+    // because rebuilding up to 2,000 commands every frame during output makes a lot of garbage.
     private bool _commandSnapshotMoved;
 
     // How to check the snapshot: the first listed command's index and prompt row (rows only shift all together, when
@@ -61,7 +61,7 @@ public sealed unsafe partial class TerminalSession
         public int? Exit;
         public string? Text;
 
-        /// <summary>Its prompt row was erased: left out of snapshots, and freed at the next prune.</summary>
+        /// <summary>Its prompt row was erased, so it's left out of snapshots and freed at the next prune.</summary>
         public bool Erased;
         public bool Closed;
 
@@ -82,10 +82,10 @@ public sealed unsafe partial class TerminalSession
     private readonly EraseWatch _eraseWatch = new();
 
     /// <summary>
-    /// Rows were erased: finished commands whose prompt went with them are gone, failure bars and all. Checked now,
-    /// before the next prompt (often on the same row: <c>clear</c> puts it at the top) flags that row again. A wiped
-    /// scrollback forgets every finished command (their rows' places aren't reliable after it). Ones still running stay
-    /// (the <c>clear</c> itself, a nested shell's host): their D and the next prompt close them.
+    /// Rows were erased, so finished commands whose prompt went with them are gone, failure bars and all. This is checked
+    /// now, before the next prompt (often on the same row, because <c>clear</c> puts it at the top) flags that row again.
+    /// A wiped scrollback forgets every finished command, because their rows' places aren't reliable after it. Commands
+    /// still running stay (the <c>clear</c> itself, a nested shell's host), and their D and the next prompt close them.
     /// </summary>
     private void NoteErased(Erased erased)
     {
@@ -95,9 +95,10 @@ public sealed unsafe partial class TerminalSession
             return;
         }
 
-        // Erasing part of a row (from the cursor) clears its cells but not its prompt flag: the cursor's row counts as
-        // erased when nothing is left on it. Only that row: an old prompt's first row can be empty by design (themes
-        // that start with a blank line), and only after a clear is an old prompt ever on the cursor's row.
+        // Erasing part of a row (from the cursor) clears its cells but not its prompt flag, so the cursor's row counts as
+        // erased when nothing is left on it. Only that row counts this way, because an old prompt's first row can be
+        // empty by design (themes that start with a blank line), and only after a clear is an old prompt ever on the
+        // cursor's row.
         nuint history = 0;
         ushort cursorY = 0, cols = 0;
         Native.TerminalGet(_terminal, TerminalData.ScrollbackRows, &history);
@@ -147,7 +148,7 @@ public sealed unsafe partial class TerminalSession
             var chunk = end < 0 ? data : data[..end];
             var primaryBefore = OnPrimaryScreen();
 
-            // Enter was pressed at a prompt of a shell that sends no C (cmd): the command's output starts on the line
+            // Enter was pressed at a prompt of a shell that sends no C (cmd), and the command's output starts on the line
             // after the one the shell echoes, so that's where Zinc puts its C.
             if (_enterPending && chunk.IndexOf((byte)'\n') is var newline and >= 0)
             {
@@ -190,7 +191,8 @@ public sealed unsafe partial class TerminalSession
             data = data[end..];
         }
 
-        // Screen rows shift as the scrollback fills and prunes, and a running command grows: checked at the next read.
+        // Screen rows shift as the scrollback fills and prunes, and a running command grows, so the snapshot is checked
+        // at the next read.
         _commandSnapshotMoved = true;
     }
 
@@ -209,10 +211,10 @@ public sealed unsafe partial class TerminalSession
 
     /// <summary>
     /// Writes output ending in a prompt-start mark (A or N), minus its fresh line. Per the spec (FinalTerm, kitty),
-    /// libghostty starts a new line for one that arrives mid-line; under ConPTY that's a move ConPTY never hears of, so
-    /// the two screens disagree from there on: a tester's prompt, drawn with Write-Host before PowerShell's marks, left
+    /// libghostty starts a new line for one that arrives mid-line. Under ConPTY that's a move ConPTY never hears of, so
+    /// the two screens would disagree from there on. A prompt drawn with Write-Host before PowerShell's marks would leave
     /// the cursor (and the typing PSReadLine draws) a line below the prompt. Windows Terminal does no fresh line either.
-    /// Mid-line, libghostty gets a plain prompt start (P) instead; Zinc's own tracking reads the mark as sent.
+    /// Mid-line, libghostty gets a plain prompt start (P) instead, while Zinc's own tracking reads the mark as sent.
     /// <para>
     /// A mark that doesn't say whether its shell redraws the prompt after a resize gets `redraw=1`, which is what the
     /// Ghostty app assumes. libghostty's C API assumes the opposite, and this option is the only way to turn the clearing
@@ -280,14 +282,14 @@ public sealed unsafe partial class TerminalSession
                 var entered = false;
                 if (signature != Signature(_nested.Count) && OuterLevel(signature) is { } outer)
                 {
-                    // Back at a shell further out: the nested one has ended.
+                    // Back at a shell further out, so the nested one has ended.
                     LeaveNested(outer, lastD);
                     last = _commands.Count > 0 && !_commands[^1].Closed ? _commands[^1] : null;
                 }
                 else if (last is { Started: not null } && signature != Signature(_nested.Count) && _nested.Count < MaxNesting)
                 {
-                    // Another shell's prompt while a command runs: the command started that shell
-                    // (fish from zsh). It runs until that shell ends; the new shell's commands are its own.
+                    // Another shell's prompt while a command runs means the command started that shell
+                    // (fish from zsh). The command runs until that shell ends, and the new shell's commands are its own.
                     _nested.Add((signature, last));
                     last = null;
                     entered = true;
@@ -297,7 +299,7 @@ public sealed unsafe partial class TerminalSession
 
                 if (last != null)
                 {
-                    // No D: it ended anyway (the shell doesn't send one, or it was interrupted).
+                    // No D, but it ended anyway (the shell doesn't send one, or it was interrupted).
                     last.Closed = true;
                     last.Ended ??= last.Started != null ? Clock() : null;
                 }
@@ -334,15 +336,17 @@ public sealed unsafe partial class TerminalSession
     }
 
     /// <summary>
-    /// The prompt-mark option of a shell that can't send C (cmd: its PROMPT has no hook for Enter; Zinc's PROMPT says
-    /// so): Zinc marks the command's start itself when Enter is pressed at its prompt.
+    /// The prompt-mark option of a shell that can't send C (cmd, whose PROMPT has no hook for Enter, and Zinc's PROMPT
+    /// sends this option). Zinc marks the command's start itself when Enter is pressed at its prompt.
     /// </summary>
     public const string COnEnter = "zinc_c=enter";
 
     /// <summary>The last prompt was a <see cref="COnEnter"/> shell's.</summary>
     private bool _cOnEnter;
 
-    /// <summary>Enter went to a <see cref="COnEnter"/> shell typing a command: its C goes after the next line break of output.</summary>
+    /// <summary>
+    /// Enter went to a <see cref="COnEnter"/> shell typing a command, so its C goes after the next line break of output.
+    /// </summary>
     private bool _enterPending;
 
     /// <summary>A command starts (C): where its output begins, when, and its text (the mark's, else read back).</summary>
@@ -353,7 +357,9 @@ public sealed unsafe partial class TerminalSession
         command.Text = string.IsNullOrWhiteSpace(commandLine) ? ReadCommandLine(command) : commandLine.Trim();
     }
 
-    /// <summary>Notes Enter on its way to the shell (input holding a CR): a <see cref="COnEnter"/> shell's command starts there.</summary>
+    /// <summary>
+    /// Notes Enter on its way to the shell (input holding a CR), where a <see cref="COnEnter"/> shell's command starts.
+    /// </summary>
     private void NoteEnter(ReadOnlySpan<byte> input)
     {
         if (!_cOnEnter || input.IndexOf((byte)'\r') < 0)
@@ -387,7 +393,7 @@ public sealed unsafe partial class TerminalSession
     /// <summary>
     /// Shells started from a command of the shell around them (fish from zsh), innermost last: each
     /// one's prompt-mark options, which tell it from the others, and the command it runs in. Two shells
-    /// whose prompts look alike (zsh in zsh) can't be told apart; Zinc's own scripts send their
+    /// whose prompts look alike (zsh in zsh) can't be told apart. Zinc's own scripts send their
     /// process id (aid) so theirs always differ.
     /// </summary>
     private readonly List<(string Signature, CommandRefs Host)> _nested = [];
@@ -395,10 +401,13 @@ public sealed unsafe partial class TerminalSession
     /// <summary>The outermost shell's prompt-mark options (from its first prompt).</summary>
     private string? _outerSignature;
 
-    /// <summary>The D mark just before this one, and the command it closed: an ending nested shell's, if an outer prompt follows.</summary>
+    /// <summary>
+    /// The D mark just before this one, and the command it closed. If an outer prompt follows, that D reports how a nested
+    /// shell ended.
+    /// </summary>
     private (CommandRefs? Closed, int? Exit)? _lastD;
 
-    /// <summary>The prompt-mark options of the shell <paramref name="level"/> deep (0: the outermost).</summary>
+    /// <summary>The prompt-mark options of the shell <paramref name="level"/> deep (0 for the outermost).</summary>
     private string? Signature(int level) => level == 0 ? _outerSignature : _nested[level - 1].Signature;
 
     /// <summary>The innermost shell further out than the current one whose prompts look like <paramref name="signature"/>.</summary>
@@ -416,9 +425,9 @@ public sealed unsafe partial class TerminalSession
     }
 
     /// <summary>
-    /// Back at shell <paramref name="level"/>: every shell inside it has ended, and so have the
-    /// commands they ran in. A D just before is that shell's report on its command's exit: if it
-    /// closed a command of the nested shell (its "exit"), that was the wrong one.
+    /// Back at shell <paramref name="level"/>, so every shell inside it has ended, and so have the
+    /// commands they ran in. A D just before is that shell's report on its command's exit. If that D
+    /// closed a command of the nested shell (its "exit"), it closed the wrong one.
     /// </summary>
     private void LeaveNested(int level, (CommandRefs? Closed, int? Exit)? lastD)
     {
@@ -434,7 +443,7 @@ public sealed unsafe partial class TerminalSession
             var host = _nested[i].Host;
             host.Closed = true;
             host.Ended = Clock();
-            // The D comes from the shell we're back at, about its own command: the outermost one ending.
+            // The D comes from the shell we're back at, about its own command, which is the outermost one ending.
             if (i == level && lastD is var (closed, exit))
             {
                 host.Exit = exit;
@@ -444,7 +453,7 @@ public sealed unsafe partial class TerminalSession
                 }
             }
 
-            // No End: the command's rows stop where the nested shell's first prompt starts.
+            // No End, because the command's rows stop where the nested shell's first prompt starts.
         }
 
         _nested.RemoveRange(level, _nested.Count - level);
@@ -459,7 +468,10 @@ public sealed unsafe partial class TerminalSession
         return Native.TerminalGridRefTrack(_terminal, point, out var tracked) == GhosttyResult.Success ? tracked : null;
     }
 
-    /// <summary>Whether screen row <paramref name="y"/> still holds a prompt (libghostty flags the row a prompt mark lands on; erasing it clears that).</summary>
+    /// <summary>
+    /// Whether screen row <paramref name="y"/> still holds a prompt (libghostty flags the row a prompt mark lands on, and
+    /// erasing the row clears the flag).
+    /// </summary>
     private bool IsPromptRow(long y)
     {
         var gridRef = GhosttyGridRef.Init();
@@ -491,9 +503,9 @@ public sealed unsafe partial class TerminalSession
 
         // Some prompts draw decoration after marking input (powerlevel10k's frame corner "─╯" at
         // the far right). Typing starts where the prompt ends, so text far from there, or across
-        // a wide gap from the command (which commands rarely have), is decoration. Row by row: a
-        // command of several lines (bash's "\" continuations, an open quote) has the rest of each
-        // row blank, which is no gap in the command.
+        // a wide gap from the command (which commands rarely have), is decoration. This goes row by
+        // row, because a command of several lines (bash's "\" continuations, an open quote) has the
+        // rest of each row blank, which isn't a gap in the command.
         const string Gap = "        ";
         var text = new System.Text.StringBuilder();
         var wrapped = false;
@@ -519,7 +531,7 @@ public sealed unsafe partial class TerminalSession
                 part = part[..cut];
             }
 
-            // Across a soft wrap the row goes on; across a line break, a space.
+            // Across a soft wrap the row goes on, and across a line break a space goes between.
             if (!wrapped && text.Length > 0 && part.Length > 0)
             {
                 text.Append(' ');
@@ -574,7 +586,7 @@ public sealed unsafe partial class TerminalSession
 
     /// <summary>
     /// After output: if nothing moved (the first listed prompt is where it was), only the end of a command still running
-    /// is brought up to the cursor; otherwise the snapshot is dropped, to be made anew.
+    /// is brought up to the cursor. Otherwise the snapshot is dropped, to be made anew.
     /// </summary>
     private void RefreshSnapshot(List<ShellCommand> snapshot)
     {
@@ -621,7 +633,7 @@ public sealed unsafe partial class TerminalSession
 
             if (c.Erased)
             {
-                continue; // its rows were erased: nothing of it to show
+                continue; // its rows were erased, so there's nothing of it to show
             }
 
             long? output = TryScreen(c.Output, out var o) ? o.Y : null;
@@ -639,7 +651,7 @@ public sealed unsafe partial class TerminalSession
                 lastRow = cursorRow;
             }
 
-            // The last one listed decides: whether its end is the cursor (refreshed after output) or a fixed row.
+            // The last one listed decides whether its end is the cursor (refreshed after output) or a fixed row.
             _snapshotEndsAtCursor = lastRow == cursorRow && !TryScreen(c.End, out _) &&
                 !(i + 1 < _commands.Count && TryScreen(_commands[i + 1].Prompt, out _));
             _snapshotAnchor ??= (i, prompt.Y);
@@ -697,8 +709,8 @@ public sealed unsafe partial class TerminalSession
     }
 
     /// <summary>
-    /// The command that ran on viewport row <paramref name="viewportRow"/> (its prompt, command line or output: what a
-    /// right-click there means), or null.
+    /// The command that ran on viewport row <paramref name="viewportRow"/> (its prompt, command line or output, which is
+    /// what a right-click there means), or null.
     /// </summary>
     public ShellCommand? CommandAt(int viewportRow)
     {
@@ -718,7 +730,7 @@ public sealed unsafe partial class TerminalSession
         return null;
     }
 
-    /// <summary>Selects a command's output (trailing blank rows left out); false if it has none.</summary>
+    /// <summary>Selects a command's output (trailing blank rows left out), or false if it has none.</summary>
     public bool SelectOutput(ShellCommand command)
     {
         if (command.OutputRow is not { } first || command.LastRow < first)
@@ -762,7 +774,7 @@ public sealed unsafe partial class TerminalSession
         }
     }
 
-    /// <summary>Raises <see cref="CommandsChanged"/> if a mark arrived; call after the write, outside the lock.</summary>
+    /// <summary>Raises <see cref="CommandsChanged"/> if a mark arrived. Call it after the write, outside the lock.</summary>
     private void AnnounceCommands(bool changed)
     {
         if (changed)

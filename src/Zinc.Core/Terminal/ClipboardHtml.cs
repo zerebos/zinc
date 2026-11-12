@@ -16,7 +16,7 @@ public static partial class ClipboardHtml
 {
     public static string Make(string ghosttyHtml, GhosttyColorRgb foreground, GhosttyColorRgb background, string fontFamily, double fontPoints)
     {
-        // The palette from the style block only: the copied text can contain "--vt-palette-1: #000000" too in theory
+        // The palette from the style block only, because in theory the copied text can contain "--vt-palette-1: #000000" too
         var block = StyleBlock().Match(ghosttyHtml);
         var palette = new Dictionary<string, string>();
         foreach (Match m in PaletteEntry().Matches(block.Value)) {
@@ -25,8 +25,9 @@ public static partial class ClipboardHtml
 
         var html = block.Success ? ghosttyHtml.Remove(block.Index, block.Length) : ghosttyHtml;
 
-        // The wrapper libghostty writes around each page of the terminal's memory (the rest are inline runs)
-        // Between two pages it closes one and opens the next with no line break, the closing div being one in a browser
+        // The wrapper libghostty writes around each page of the terminal's memory (the rest are inline runs).
+        // Between two pages it closes one wrapper and opens the next with no line break, because in a browser the
+        // closing div already breaks the line.
         var wrapper = OuterOpen().Match(html).Value;
         var body = wrapper.Length > 0 ? html[wrapper.Length..].Replace("</div>" + wrapper, "\n", StringComparison.Ordinal) : html;
         if (body.EndsWith("</div>", StringComparison.Ordinal)) {

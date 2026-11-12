@@ -9,7 +9,9 @@ public enum Erased
     /// <summary><c>CSI J</c>, <c>CSI 1 J</c>, <c>CSI 2 J</c>: part or all of the screen.</summary>
     Display = 1,
 
-    /// <summary><c>CSI 3 J</c> (the scrollback: what <c>clear</c> sends in bash and PowerShell) or a full reset (<c>ESC c</c>).</summary>
+    /// <summary>
+    /// <c>CSI 3 J</c> (the scrollback, which <c>clear</c> erases in bash and PowerShell) or a full reset (<c>ESC c</c>).
+    /// </summary>
     Scrollback = 2,
 
     /// <summary>A full reset (<c>ESC c</c>), which wipes both screens, whichever one is showing.</summary>
@@ -17,9 +19,9 @@ public enum Erased
 }
 
 /// <summary>
-/// Spots output that erases rows as it streams by, split across reads included, so the commands Zinc tracked on erased
-/// rows go with them: a tester saw failure bars stay on the blank screen after <c>clear</c> (2026-10-03). Scans from
-/// escape to escape; keeps three bytes of state between reads; allocates nothing.
+/// Spots output that erases rows as it streams by, including sequences split across reads, so the commands Zinc tracked
+/// on erased rows go with them and their failure bars don't stay on the screen that <c>clear</c> blanked. It scans from
+/// escape to escape, keeps three bytes of state between reads and allocates nothing.
 /// </summary>
 public sealed class EraseWatch
 {

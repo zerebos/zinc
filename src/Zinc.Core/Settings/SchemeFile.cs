@@ -33,8 +33,8 @@ public static partial class SchemeFile
     }
 
     /// <summary>
-    /// <paramref name="text"/> with <paramref name="key"/> set to <paramref name="value"/> (null:
-    /// removed): its line edited in place, else added at the end. Line endings are kept.
+    /// <paramref name="text"/> with <paramref name="key"/> set to <paramref name="value"/> (or removed when
+    /// it's null). The key's line is edited in place, or else added at the end. Line endings are kept.
     /// </summary>
     public static string Set(string text, string key, string? value)
     {
