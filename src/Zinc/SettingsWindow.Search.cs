@@ -62,7 +62,7 @@ internal sealed partial class SettingsWindow
 
             foreach (var setting in sectionSettings)
             {
-                var card = AddSettingCards(setting, null);
+                var card = AddSettingCard(setting, null);
                 AddGoTo(card, $"Show in {where}", () => GoTo(id, null, setting.Key));
             }
         }
@@ -98,7 +98,7 @@ internal sealed partial class SettingsWindow
             _page.Children.Add(GroupTitle(where));
             foreach (var setting in settings)
             {
-                var card = AddSettingCards(setting, profile.Id);
+                var card = AddSettingCard(setting, profile.Id);
                 var id = profile.Id;
                 AddGoTo(card, $"Show in {profile.Name}", () => GoTo("profiles", id, setting.Key));
             }
@@ -131,8 +131,8 @@ internal sealed partial class SettingsWindow
         }
     }
 
-    /// <summary>Adds <paramref name="setting"/>'s card(s) to the page and returns its main card.</summary>
-    private Border AddSettingCards(SettingDef setting, string? profile)
+    /// <summary>Adds <paramref name="setting"/>'s card to the page and returns it.</summary>
+    private Border AddSettingCard(SettingDef setting, string? profile)
     {
         var card = setting.Kind == SettingKind.Scheme ? SchemeCard(setting, profile)
             : setting.Kind == SettingKind.Files ? ShaderFilesCard(setting, profile)

@@ -463,9 +463,7 @@ internal sealed partial class GroupView : Grid
         {
             var shownTab = tab == group.Active;
             _items[tab].Show(TitleOf(tab), tab.TitleIsFolder, shownTab, accentLine, accent, tab.Attention,
-                shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress,
-                closeOnHover: false, // every tab keeps its ×, on cards too, because hiding it leaves its slot empty
-                hiddenFill: hiddenTabFill);
+                shownTab && _progress.Active ? TerminalProgress.None : tab.Control.Progress, hiddenTabFill);
         }
 
         _shown = group.Active;
@@ -841,7 +839,7 @@ internal sealed partial class GroupView : Grid
         private SolidColorBrush _background;
         private readonly Brush _clear = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
         private Brush _hidden; // a hidden tab's background, which is clear, or a fill when the header matches the terminal
-        private bool _active, _hovered, _closeOnHover;
+        private bool _active, _hovered;
         private Attention _attention;
         private string? _name;
         private TerminalProgress _progress = TerminalProgress.None;
@@ -963,18 +961,16 @@ internal sealed partial class GroupView : Grid
             _dot.ShowProgress(_progress);
             var dot = _dot.HasContent && !_hovered;
             _dot.Opacity = dot ? 1 : 0; // hidden, not removed, so showing it again doesn't re-pulse
-            // With `_closeOnHover`, only the shown tab keeps its ×, and the others show one under the pointer.
-            // Without it every tab keeps its ×.
-            var close = !dot && (!_closeOnHover || _active || _hovered);
-            _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
+            // Every tab keeps its ×, on cards too, because hiding it would leave its slot empty. The dot takes the slot
+            // while there is one and the pointer is elsewhere.
+            _close.Visibility = dot ? Visibility.Collapsed : Visibility.Visible;
         }
 
         /// <param name="accentLine">The tab carries the accent line (its pane is focused: <see cref="PaneHeader.AccentLine"/>).</param>
         /// <param name="folder">The title is the shell's folder.</param>
-        /// <param name="closeOnHover">A hidden tab shows its × only under the pointer.</param>
         /// <param name="hiddenFill">A hidden tab's fill, when the header matches the terminal (<see cref="PaneCard.HiddenTabFill"/>).</param>
         public void Show(string title, bool folder, bool active, bool accentLine, Brush accent, Attention attention,
-            TerminalProgress progress, bool closeOnHover = false, Color? hiddenFill = null)
+            TerminalProgress progress, Color? hiddenFill = null)
         {
             var hidden = hiddenFill is { } fill
                 ? _hidden is SolidColorBrush { } was && was.Color == fill ? _hidden : new SolidColorBrush(fill)
@@ -983,7 +979,6 @@ internal sealed partial class GroupView : Grid
             _attention = attention;
             _progress = progress;
             _active = active;
-            _closeOnHover = closeOnHover;
             ShowSlot();
             // The title, and what its dot means, for the tooltip and screen readers.
             var words = AttentionWords.For(attention, _tab.FailedExit);
