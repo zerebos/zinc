@@ -5,9 +5,9 @@ using Microsoft.UI.Xaml;
 namespace Zinc;
 
 /// <summary>
-/// Stops Windows from beeping on Alt+letter shortcuts (Alt+Shift+D...). Alt plus a
+/// Stops Windows from beeping on Alt+letter shortcuts (Alt+Shift+D, for example). Alt plus a
 /// character key makes DefWindowProc look for a menu mnemonic (WM_SYSCOMMAND /
-/// SC_KEYMENU); Zinc has no menu bar, so the lookup always fails and beeps, even
+/// SC_KEYMENU). Zinc has no menu bar, so the lookup always fails and beeps, even
 /// though our key handler already ran the action. Alt+Space (the window's system
 /// menu) and a bare Alt tap still reach Windows.
 /// </summary>

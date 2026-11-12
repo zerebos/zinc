@@ -16,10 +16,10 @@ namespace Zinc;
 
 /// <summary>
 /// The welcome page: shown instead of a terminal on first launch (no config file yet), and later
-/// from the palette (Welcome…). Asks how you like to work (Simple: tabs on top; Workspaces: in a
-/// sidebar, or on top), how panes look (Compact or Cards), colors and font (previewed), and the default shell, then raises
-/// <see cref="Finished"/> with the answers (null: skipped or closed) for App to write into
-/// config.toml. A window of its own: its layout choice decides how the main window is built.
+/// from the palette (Welcome…). Asks how you like to work (Simple puts tabs on top, and Workspaces puts them in a
+/// sidebar or on top), how panes look (Compact or Cards), colors and font (previewed), and the default shell. Then it
+/// raises <see cref="Finished"/> with the answers (null if it was skipped or closed) for App to write into config.toml.
+/// It's a window of its own, because its layout choice decides how the main window is built.
 /// </summary>
 internal sealed partial class WelcomeWindow : Window
 {
@@ -30,14 +30,14 @@ internal sealed partial class WelcomeWindow : Window
     private WorkStyle _style;
     private WorkspaceTabs _workspacesOn = WorkspaceTabs.Left;
     private string? _scheme;   // the scheme, or with _follow the dark side
-    private bool _follow;      // follow Windows light/dark: _light by day, _scheme by night
+    private bool _follow;      // follow Windows light/dark, with _light by day and _scheme by night
     private string? _light;
     private bool _toast;       // a Windows notification when a long command finishes out of view
     private string? _font;
     private string? _profile;
     private bool _finished;
 
-    private PaneStyleKind? _paneStyle; // null means a mix of your own aka left alone
+    private PaneStyleKind? _paneStyle; // null means a mix of your own, which is left alone
     private readonly Button _simpleCard, _workspacesCard, _compactCard, _cardsCard;
     private readonly StackPanel _workspacesOnRow;
     private readonly Border _preview = new() { CornerRadius = new CornerRadius(8), Padding = new Thickness(14, 12, 14, 12) };
@@ -67,14 +67,14 @@ internal sealed partial class WelcomeWindow : Window
         _firstRun = firstRun;
         if (TestHooks.Deterministic)
         {
-            // Each page focuses Next; whether its focus outline shows depends on how Windows took the last input
-            // (UI Automation's invoke, while the window may or may not be in front), so captures differed run to run.
+            // Each page focuses Next, and whether its focus outline shows depends on how Windows took the last input
+            // (UI Automation's invoke, while the window may or may not be in front), so captures would differ run to run.
             _next.UseSystemFocusVisuals = false;
             _back.UseSystemFocusVisuals = false;
         }
 
-        // Start from what's in force; on first run, workspaces in the sidebar (Zinc at its most
-        // itself; Simple is one click away).
+        // Start from what's in force. On first run, start with workspaces in the sidebar, because that's Zinc
+        // at its most itself, and Simple is one click away.
         var global = config.Global;
         _style = firstRun || global.PaneTabs || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkStyle.Workspaces : WorkStyle.Simple;
         _workspacesOn = firstRun || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkspaceTabs.Left : WorkspaceTabs.Top;
@@ -87,7 +87,8 @@ internal sealed partial class WelcomeWindow : Window
 
         _toast = !firstRun && global.NotifyCommandFinished is NotifyMode.Toast or NotifyMode.ToastAlways;
         _profile = config.DefaultProfile.Id;
-        // Compact on first run which are the built-in defaults (which style new users get is still open).
+        // Compact on first run, because that's the built-in default
+        // TODO: decide if we want card style to be default for new users
         var paneStyle = firstRun ? PaneStyleKind.Compact : PaneStyle.Of(config.ValueOf);
         _paneStyle = paneStyle == PaneStyleKind.Custom ? null : paneStyle;
 
@@ -235,7 +236,7 @@ internal sealed partial class WelcomeWindow : Window
         cards.Children.Add(simple);
         cards.Children.Add(workspaces);
 
-        // Where the workspaces go: the sidebar by default, or tabs along the top.
+        // Where the workspaces go, which is the sidebar by default, or tabs along the top.
         var left = new RadioButton { Content = "In a sidebar", GroupName = "on", IsChecked = _workspacesOn == WorkspaceTabs.Left };
         var top = new RadioButton { Content = "Along the top", GroupName = "on", IsChecked = _workspacesOn == WorkspaceTabs.Top };
         left.Checked += (_, _) => { _workspacesOn = WorkspaceTabs.Left; ShowStyle(); };
@@ -267,7 +268,7 @@ internal sealed partial class WelcomeWindow : Window
         return (page, simple, workspaces, onRow);
     }
 
-    /// <summary>A layout choice: a button (keyboard, screen readers), drawn as a card.</summary>
+    /// <summary>A layout choice, which is a button (for the keyboard and screen readers) drawn as a card.</summary>
     private static Button Card(string title, string text, FrameworkElement picture)
     {
         var card = new Button
@@ -294,11 +295,13 @@ internal sealed partial class WelcomeWindow : Window
         return card;
     }
 
-    /// <summary>A little drawing of the layout: tab strip or sidebar, and a terminal (split, for workspaces).</summary>
+    /// <summary>
+    /// A little drawing of the layout, with a tab strip or sidebar and a terminal (split, for workspaces).
+    /// </summary>
     private static FrameworkElement Mockup(bool sidebar, bool panes)
     {
         Brush Fill(string key) => (Brush)Application.Current.Resources[key];
-        // On a light card the usual control fill is near white: a grey that shows instead.
+        // On a light card the usual control fill is near white, so this uses a gray that shows.
         var blockKey = Application.Current.RequestedTheme == ApplicationTheme.Light ? "ControlStrongStrokeColorDisabledBrush" : "ControlFillColorSecondaryBrush";
         Border Block(double w, double h, string? key = null) =>
             new() { Width = w, Height = h, CornerRadius = new CornerRadius(3), Background = Fill(key ?? blockKey) };
@@ -386,9 +389,9 @@ internal sealed partial class WelcomeWindow : Window
     }
 
     /// <summary>
-    /// A little drawing of two split panes, the left one focused: edge to edge with a divider, a header only on the pane
-    /// with two tabs and an accent line on the focused one (Compact); or rounded cards with a gap, a header on each and a
-    /// ring around the focused one (Cards).
+    /// A little drawing of two split panes, with the left one focused. Compact draws them edge to edge with a divider, a
+    /// header only on the pane with two tabs, and an accent line on the focused one. Cards draws rounded cards with a
+    /// gap, a header on each, and a ring around the focused one.
     /// </summary>
     private static FrameworkElement PanesMockup(bool cards)
     {
@@ -414,7 +417,7 @@ internal sealed partial class WelcomeWindow : Window
             pane.RowDefinitions.Add(new RowDefinition());
             if (cards || !focused)
             {
-                // The header: its tabs (two on Compact's, which is why it has one), or one title on a card.
+                // The header shows its tabs (two on Compact's, which is why it has a header), or one title on a card.
                 var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Height = 14, Padding = new Thickness(5, 0, 5, 0) };
                 header.Children.Add(Block(28, focused ? null : "TextFillColorTertiaryBrush"));
                 header.Children.Add(Block(cards ? 14 : 22, cards ? null : blockKey));
@@ -490,7 +493,7 @@ internal sealed partial class WelcomeWindow : Window
         }
 
         search.TextChanged += (_, _) => Fill();
-        // The page is laid out only once it's shown: bring the chosen scheme into view then.
+        // The page is laid out only once it's shown, so bring the chosen scheme into view then.
         void FirstLayout(object sender, SizeChangedEventArgs e)
         {
             list.SizeChanged -= FirstLayout;
@@ -525,7 +528,7 @@ internal sealed partial class WelcomeWindow : Window
             UpdatePreview();
         };
 
-        // Follow Windows light/dark: the list above picks the dark side, this one the light side.
+        // When following Windows light/dark, the list above picks the dark side and this picker the light side.
         var listLabel = new TextBlock { Text = _follow ? "Dark scheme" : "Scheme", Opacity = 0.8 };
         var lightPicker = new SchemePicker(_config.Themes, names, null, "Light scheme")
         {
@@ -551,7 +554,7 @@ internal sealed partial class WelcomeWindow : Window
             _follow = follow.IsOn;
             if (_follow)
             {
-                // A pair names two schemes: Zinc's own becomes Catppuccin Mocha, and the light
+                // A pair names two schemes, so Zinc's own becomes Catppuccin Mocha, and the light
                 // side starts from the dark one's counterpart.
                 if (_scheme == null && names.FirstOrDefault(n => n == "Catppuccin Mocha") is { } mocha)
                 {
@@ -609,7 +612,7 @@ internal sealed partial class WelcomeWindow : Window
     /// <summary>A little shell session in the chosen colors and font (a Nerd Font icon included).</summary>
     private void UpdatePreview()
     {
-        // Following Windows: the side for its current mode.
+        // When following Windows, show the side for its current mode.
         var shownScheme = _follow && ConfigFile.SystemScheme == Zinc.Ghostty.ColorScheme.Light ? _light : _scheme;
         var theme = (shownScheme is { } name ? _config.Themes.Apply(new Config(), name)?.Theme : null) ?? TerminalTheme.Default;
         Color Ansi(int index) => theme.Palette.TryGetValue(index, out var c) ? ToColor(c) : AnsiDefaults[index];
@@ -692,8 +695,8 @@ internal sealed partial class WelcomeWindow : Window
         shells.SelectedItem = shells.Items.OfType<StackPanel>().FirstOrDefault(r => (string)r.Tag == _profile) ?? shells.Items.FirstOrDefault();
         shells.SelectionChanged += (_, _) => _profile = (shells.SelectedItem as StackPanel)?.Tag as string;
 
-        // A long command finishing out of view: a dot on its tab either way; in the background,
-        // the taskbar button flashes or (toast) a Windows notification shows.
+        // A long command that finishes out of view puts a dot on its tab either way. When Zinc is in the
+        // background, the taskbar button also flashes, or (toast) a Windows notification shows.
         var flash = new RadioButton { Content = "Flash the taskbar button", GroupName = "done", IsChecked = !_toast };
         var toast = new RadioButton { Content = "Show a Windows notification", GroupName = "done", IsChecked = _toast };
         AutomationProperties.SetName(toast, "Show a Windows notification");
@@ -757,7 +760,7 @@ internal sealed partial class WelcomeWindow : Window
         _next.Loaded += (_, _) => _next.Focus(FocusState.Programmatic);
 
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { _back, _next } };
-        // Coming back later to change one thing: save from any page.
+        // When you come back later to change one thing, you can save from any page.
         if (!_firstRun)
         {
             _save = new Button { Content = "Save settings", MinWidth = 96 };
@@ -779,7 +782,7 @@ internal sealed partial class WelcomeWindow : Window
         return row;
     }
 
-    /// <summary>A page dot: a button (click, keyboard, screen readers) with no chrome of its own.</summary>
+    /// <summary>A page dot, which is a button (click, keyboard, screen readers) with no chrome of its own.</summary>
     private Button Dot(int page)
     {
         var dot = new Button
@@ -787,7 +790,7 @@ internal sealed partial class WelcomeWindow : Window
             Padding = new Thickness(5, 8, 5, 8),
             BorderThickness = new Thickness(0),
             Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-            // Its own brush, so the color can fade (ShowDots); starts as an unselected dot.
+            // Its own brush, so the color can fade (ShowDots). It starts as an unselected dot.
             Content = new Border
             {
                 Height = 8,
@@ -807,8 +810,9 @@ internal sealed partial class WelcomeWindow : Window
     }
 
     /// <summary>
-    /// The current page's dot is a wider accent pill; the others, small grey dots. A page change slides between them: the
-    /// new pill widens and takes the accent while the old one shrinks back (200 ms; at once with Windows' animations off).
+    /// The current page's dot is a wider accent pill, and the others are small gray dots. A page change slides between
+    /// them, so the new pill widens and takes the accent while the old one shrinks back. That takes 200 ms, or happens at
+    /// once with Windows' animations off.
     /// </summary>
     private void ShowDots()
     {

@@ -50,9 +50,9 @@ internal static class ShellEnvironment
     }
 
     /// <summary>
-    /// Where <paramref name="distro"/> mounts Windows drives, from its /etc/wsl.conf (read through
-    /// its share; the pane asking is running it). Unreadable: the default. A host name of its own
-    /// joins <see cref="LocalHosts"/>, so its shells' folder reports count.
+    /// Where <paramref name="distro"/> mounts Windows drives, from its /etc/wsl.conf (read through its share, which
+    /// works because the pane asking is running it). If the file is unreadable, it's the default. A host name of its
+    /// own joins <see cref="LocalHosts"/>, so its shells' folder reports count.
     /// </summary>
     private static string? MountRoot(string distro)
     {
@@ -77,14 +77,15 @@ internal static class ShellEnvironment
         }
     }
 
-    /// <summary>Per host name not known to be this PC: whether a running distro turned out to be named that.</summary>
+    /// <summary>For each host name not known to be this PC, whether a running distro turned out to be named that.</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Task<bool>> Learning = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Runs <paramref name="then"/> (in the background) if <paramref name="host"/>, a folder report's host not known to
-    /// be this PC, is a running WSL distro's own name (wsl.conf <c>[network] hostname</c>): its panes may run it
+    /// be this PC, is a running WSL distro's own name (wsl.conf <c>[network] hostname</c>). Its panes may run it
     /// without wsl.exe (ubuntu.exe, or wsl from another shell), so their wsl.conf wasn't read. Only running distros are
-    /// read (the share would start a stopped one, and a distro sending reports is running); once per host name.
+    /// read, because the share would start a stopped one, and a distro sending reports is running. Each host name is
+    /// checked once.
     /// </summary>
     public static void WhenWslHost(string host, Action then) =>
         Learning.GetOrAdd(host, name => Task.Run(() => LearnWslHost(name)))
@@ -137,7 +138,9 @@ internal static class ShellEnvironment
         }
     }
 
-    /// <summary>The distro a WSL command line runs (its -d/--distribution-id, else the default); null if it isn't WSL.</summary>
+    /// <summary>
+    /// The distro a WSL command line runs (its -d/--distribution-id, else the default). Null if it isn't WSL.
+    /// </summary>
     public static string? WslDistroOf(string commandLine)
     {
         try

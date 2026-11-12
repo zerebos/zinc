@@ -8,7 +8,7 @@ namespace Zinc;
 
 /// <summary>
 /// <c>backdrop = acrylic</c> ("Frosted glass") with its tint under the config's control
-/// (<c>backdrop-tint</c>): WinUI's DesktopAcrylicBackdrop has fixed tints. Kept glassy while the window
+/// (<c>backdrop-tint</c>), because WinUI's DesktopAcrylicBackdrop has fixed tints. Kept glassy while the window
 /// is inactive too (Windows' default turns acrylic solid then, which loses the look).
 /// </summary>
 internal sealed class GlassBackdrop(Color tint, double tintOpacity) : SystemBackdrop
@@ -28,7 +28,7 @@ internal sealed class GlassBackdrop(Color tint, double tintOpacity) : SystemBack
         {
             TintColor = tint,
             TintOpacity = (float)tintOpacity,
-            LuminosityOpacity = (float)Math.Max(tintOpacity, 0.05), // how much the wallpaper's light shows: with the tint
+            LuminosityOpacity = (float)Math.Max(tintOpacity, 0.05), // how much the wallpaper's light shows, set with the tint
             FallbackColor = tint,
         };
         _controller.AddSystemBackdropTarget(connectedTarget);

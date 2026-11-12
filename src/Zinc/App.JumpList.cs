@@ -3,11 +3,13 @@ using Zinc.Shell;
 
 namespace Zinc;
 
-// The taskbar button's jump list (Core's JumpListPlan, written by JumpListWriter) and the launches its items make
-// (LaunchRequest: zinc.exe with Zinc's flags, handed to the running Zinc like any later launch).
+// The taskbar button's jump list (Core's JumpListPlan, written by JumpListWriter) and the launches its items make.
+// A LaunchRequest is zinc.exe run with Zinc's flags, which is handed to the running Zinc like any later launch.
 public partial class App
 {
-    /// <summary>The profiles opened lately (saved with the session): the jump list's "Recent profiles".</summary>
+    /// <summary>
+    /// The profiles opened lately (saved with the session), which the jump list shows as "Recent profiles".
+    /// </summary>
     internal RecentProfiles RecentProfiles { get; private set; } = new();
 
     // What the list was last written as (Core's key), and the profiles' icon files (finding them probes the disk).

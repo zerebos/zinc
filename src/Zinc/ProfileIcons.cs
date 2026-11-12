@@ -55,7 +55,7 @@ internal static class ProfileIcons
 
         if (FindExecutable(exe) is { } path)
         {
-            // Git Bash's bash.exe has a generic icon; Git for Windows ships its own.
+            // Git Bash's bash.exe has a generic icon, but Git for Windows ships its own.
             var gitIcon = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, "..", "mingw64", "share", "git", "git-for-windows.ico"));
             if (name == "bash" && File.Exists(gitIcon))
             {
@@ -72,8 +72,9 @@ internal static class ProfileIcons
     }
 
     /// <summary>
-    /// The profile's icon as a file the taskbar's jump list can show (an .ico, or an .exe's own icon): found as the
-    /// tab icon is, without the glyph fallbacks (null: Zinc's icon). A PNG given as the icon is wrapped in an .ico.
+    /// The profile's icon as a file the taskbar's jump list can show (an .ico, or an .exe's own icon). It's found the
+    /// way the tab icon is, without the glyph fallbacks, and a null path means Zinc's icon. A PNG given as the icon is
+    /// wrapped in an .ico.
     /// </summary>
     internal static Zinc.Shell.JumpIcon JumpIconFor(Profile profile)
     {
@@ -101,7 +102,9 @@ internal static class ProfileIcons
         return new(name == "bash" && File.Exists(gitIcon) ? gitIcon : path);
     }
 
-    /// <summary>A PNG as a one-image .ico (the format holds PNG data as it is), cached; null if it can't be written.</summary>
+    /// <summary>
+    /// A PNG as a one-image .ico (the format holds PNG data as it is), cached. Null if it can't be written.
+    /// </summary>
     private static string? PngAsIco(string png)
     {
         try
@@ -141,14 +144,13 @@ internal static class ProfileIcons
     private static IconSource Bitmap(string path) =>
         new BitmapIconSource { UriSource = new Uri(Small(path)), ShowAsMonochrome = false };
 
-    /// <summary>The largest an icon is kept: tabs show it at 16-20 DIPs, so 64 px covers 300% scaling.</summary>
+    /// <summary>The largest size an icon is kept at. Tabs show it at 16-20 DIPs, so 64 px covers 300% scaling.</summary>
     private const int IconPixels = 64;
 
     /// <summary>
     /// A picture used as an icon, shrunk to <see cref="IconPixels"/> (cached by path and timestamp), or the file
     /// itself when it's small already or an .ico (Windows picks an .ico's frame by size). Every place an icon
-    /// shows decodes its file at full size: a 2089x2050 PNG cost 16 MB per tab header and strip, ~400 MB with
-    /// 9 workspaces (2026-10-02).
+    /// shows decodes its file at full size, so a large picture would cost megabytes per tab header and strip.
     /// </summary>
     private static string Small(string path)
     {

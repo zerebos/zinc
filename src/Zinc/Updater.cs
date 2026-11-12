@@ -19,21 +19,21 @@ internal enum UpdateStatus
     Checking,
     Downloading,
 
-    /// <summary>A newer version is downloaded: it installs on restart, or when Zinc quits.</summary>
+    /// <summary>A newer version is downloaded, and it installs on restart or when Zinc quits.</summary>
     Ready,
 
     UpToDate,
 
-    /// <summary>The last check or download failed (no network, the address gone); the next one tries again.</summary>
+    /// <summary>The last check or download failed (no network, the address gone), and the next one tries again.</summary>
     Failed,
 }
 
 /// <summary>
-/// Updates for copies the installer put in place (Velopack): a check a minute after startup and every day after
-/// (<c>[updates] check</c>), or when asked (About); a newer version downloads in the background and waits. It
-/// installs when Zinc quits, or at once through <see cref="RestartNow"/> (App's quit: confirmation, session
-/// saved), never by surprise. The address is built into release builds (<c>ZincUpdateUrl</c>, release.ps1);
-/// <c>ZINC_UPDATE_URL</c> (a folder or a URL) overrides it for tests. Everything here runs on the UI thread.
+/// Updates for copies the installer put in place (Velopack). Zinc checks a minute after startup and every day after
+/// that (<c>[updates] check</c>), or when asked (About), and a newer version downloads in the background and waits. It
+/// installs when Zinc quits, or at once through <see cref="RestartNow"/> (App's quit, with its confirmation and the
+/// session saved), never by surprise. The address is built into release builds (<c>ZincUpdateUrl</c>, release.ps1),
+/// and <c>ZINC_UPDATE_URL</c> (a folder or a URL) overrides it for tests. Everything here runs on the UI thread.
 /// </summary>
 internal static class Updater
 {
@@ -68,10 +68,12 @@ internal static class Updater
 
     public static string? Error { get; private set; }
 
-    /// <summary>The ready update's notice was put off ("Later"): windows don't show it again this run.</summary>
+    /// <summary>The ready update's notice was put off ("Later"), so windows don't show it again this run.</summary>
     public static bool NoticeDismissed { get; private set; }
 
-    /// <summary>"Later" on the notice: every window hides it; the update still installs when Zinc quits.</summary>
+    /// <summary>
+    /// Handles "Later" on the notice. Every window hides the notice, and the update still installs when Zinc quits.
+    /// </summary>
     public static void DismissNotice()
     {
         NoticeDismissed = true;
@@ -119,7 +121,9 @@ internal static class Updater
     /// <summary>The installed version (null when this copy can't update).</summary>
     public static string? CurrentVersion => Manager?.CurrentVersion?.ToString();
 
-    /// <summary>Starts or stops the daily check (<c>[updates] check</c>); call at startup and on every config reload.</summary>
+    /// <summary>
+    /// Starts or stops the daily check (<c>[updates] check</c>). Call it at startup and on every config reload.
+    /// </summary>
     public static void Schedule(bool automatic)
     {
         if (Manager == null)
@@ -135,7 +139,7 @@ internal static class Updater
 
         if (_timer == null)
         {
-            // A field, not a local: a timer only a local holds is collected and stops firing.
+            // A field, not a local, because a timer only a local holds is collected and stops firing.
             _timer = DispatcherQueue.GetForCurrentThread().CreateTimer();
             _timer.Interval = FirstCheck;
             _timer.OnTick(timer =>
@@ -151,7 +155,7 @@ internal static class Updater
         }
     }
 
-    /// <summary>Checks, and downloads a newer version; does nothing while busy or once one is ready.</summary>
+    /// <summary>Checks, and downloads a newer version. It does nothing while busy or once one is ready.</summary>
     public static async Task CheckAsync()
     {
         if (Manager is not { } manager || Status is UpdateStatus.Checking or UpdateStatus.Downloading or UpdateStatus.Ready)
@@ -199,7 +203,7 @@ internal static class Updater
     }
 
     /// <summary>
-    /// Called last thing as Zinc quits: hands a ready update to the installer, which waits for this process to end,
+    /// Called last thing as Zinc quits, and hands a ready update to the installer, which waits for this process to end,
     /// installs it, and starts the new version if <paramref name="restart"/>.
     /// </summary>
     public static void ApplyOnExit(bool restart)
@@ -229,8 +233,8 @@ internal static class Updater
         UpdateStatus.NotInstalled => "Updates come with Zinc's installer: this copy wasn't installed by it.",
         UpdateStatus.Idle => $"Version {CurrentVersion}.",
         UpdateStatus.Checking => "Checking for updates…",
-        // No number until there is one: a server that doesn't say how big a file is (compressed on the fly) leaves
-        // Velopack at 0 until the end, and a tester watched "0%" the whole download.
+        // No number until there is one, because a server that doesn't say how big a file is (compressed on the fly)
+        // leaves Velopack at 0 until the end.
         UpdateStatus.Downloading => Progress > 0 ? $"Downloading {NewVersion}: {Progress}%" : $"Downloading {NewVersion}…",
         UpdateStatus.Ready => $"{NewVersion} is ready: it installs when you restart Zinc, or the next time you quit.",
         UpdateStatus.UpToDate => $"Up to date ({CurrentVersion}). Checked {LastChecked:t}.",

@@ -14,14 +14,16 @@ internal static class WorkspaceLookPickers
 {
     public static Windows.UI.Color ToColor(uint rgb) => Windows.UI.Color.FromArgb(0xFF, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
 
-    /// <summary>"Profile's icon" (none of its own) and every icon; <paramref name="picked"/> gets the name (null: none).</summary>
+    /// <summary>
+    /// "Profile's icon" (none of its own) and every icon. <paramref name="picked"/> gets the name, or null for none.
+    /// </summary>
     public static FrameworkElement Icons(string? current, Action<string?> picked)
     {
         var grid = new GridView
         {
             SelectionMode = ListViewSelectionMode.Single,
-            // Arrow keys move between cells; Enter, Space or a click picks. (Following focus, each arrow picked the next
-            // cell, which closed the flyout.)
+            // Arrow keys move between cells, and Enter, Space or a click picks. (If selection followed focus, each arrow
+            // would pick the next cell, which closes the flyout.)
             SingleSelectionFollowsFocus = false,
             IsItemClickEnabled = true,
             MaxWidth = 7 * 46,
@@ -60,15 +62,15 @@ internal static class WorkspaceLookPickers
 
     /// <summary>
     /// A swatch per color and "No color", as a GridView like the icons (arrow keys move, screen readers hear the
-    /// selection); <paramref name="picked"/> gets the color (null: none).
+    /// selection). <paramref name="picked"/> gets the color, or null for none.
     /// </summary>
     public static FrameworkElement Colors(Windows.UI.Color? current, Action<Windows.UI.Color?> picked)
     {
         var grid = new GridView
         {
             SelectionMode = ListViewSelectionMode.Single,
-            // Arrow keys move between cells; Enter, Space or a click picks. (Following focus, each arrow picked the next
-            // cell, which closed the flyout.)
+            // Arrow keys move between cells, and Enter, Space or a click picks. (If selection followed focus, each arrow
+            // would pick the next cell, which closes the flyout.)
             SingleSelectionFollowsFocus = false,
             IsItemClickEnabled = true,
             MaxWidth = (WorkspaceColors.All.Count + 1) * 40,

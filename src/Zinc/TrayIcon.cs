@@ -3,12 +3,12 @@ using System.Runtime.InteropServices;
 namespace Zinc;
 
 /// <summary>
-/// Zinc's notification-area icon: left click raises <see cref="Activated"/>, right click
-/// shows the menu built by <see cref="BuildMenu"/>. Re-added when Explorer restarts.
+/// Zinc's notification-area icon. A left click raises <see cref="Activated"/>, and a right click
+/// shows the menu built by <see cref="BuildMenu"/>. The icon is added again when Explorer restarts.
 /// </summary>
 internal sealed unsafe partial class TrayIcon : IDisposable
 {
-    /// <summary>A menu entry; a null entry is a separator.</summary>
+    /// <summary>A menu entry. A null entry is a separator.</summary>
     public sealed record MenuItem(string Label, Action Run, bool Enabled = true);
 
     private const uint CallbackMessage = 0x8000 + 0x50; // WM_APP + 'P'
@@ -38,7 +38,7 @@ internal sealed unsafe partial class TrayIcon : IDisposable
     {
         var data = Data(NifMessage | NifIcon | NifTip | NifShowTip);
         _added = ShellNotifyIconW(NimAdd, &data);
-        // Version 4: clicks arrive as NIN_SELECT / WM_CONTEXTMENU with the anchor point.
+        // With version 4, clicks arrive as NIN_SELECT or WM_CONTEXTMENU with the anchor point.
         data.uVersion = 4;
         ShellNotifyIconW(NimSetVersion, &data);
         Log.Write($"tray: added {_added}");
@@ -150,7 +150,7 @@ internal sealed unsafe partial class TrayIcon : IDisposable
     /// <summary>
     /// Shows a Windows notification from the tray icon (no app registration needed, unlike app
     /// notifications, whose identity would follow each install's versioned path). It respects
-    /// Do Not Disturb; clicking it raises <see cref="NotificationClicked"/>.
+    /// Do Not Disturb, and clicking it raises <see cref="NotificationClicked"/>.
     /// </summary>
     public void ShowNotification(string title, string body)
     {

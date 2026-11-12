@@ -19,14 +19,14 @@ internal sealed partial class WorkspaceList : Grid
 {
     public const double DefaultWidth = 220;
 
-    /// <summary>The width as a rail: icons only.</summary>
+    /// <summary>The width as a rail, which shows icons only.</summary>
     public const double RailWidth = 52;
 
     private readonly StackPanel _items = new() { Spacing = 2, Padding = new Thickness(6, 6, 6, 6) };
     private readonly Dictionary<MainWindow.WorkspaceTab, Item> _byTab = new();
 
-    // The selection pill: one for the list, sliding to the selected workspace when the selection
-    // changes (and jumping when the list itself does). It lives in the scrolled content.
+    // The selection pill. There's one for the list, which slides to the selected workspace when the selection
+    // changes (and jumps when the list itself does). It lives in the scrolled content.
     private readonly SlidingPill _pill = new((Brush)Application.Current.Resources["SystemControlHighlightAccentBrush"]);
     private MainWindow.WorkspaceTab? _selected;
     private List<MainWindow.WorkspaceTab> _shown = [];
@@ -104,7 +104,10 @@ internal sealed partial class WorkspaceList : Grid
     /// <summary>An item's drag ended, with what the drop target did.</summary>
     public event Action<MainWindow.WorkspaceTab, DataPackageOperation>? ItemDragCompleted;
 
-    /// <summary>A drag is over the list at a drop position (and over an item, or null); the handler says whether it would be accepted.</summary>
+    /// <summary>
+    /// A drag is over the list at a drop position (and over an item, or null). The handler says whether it would be
+    /// accepted.
+    /// </summary>
     public event Func<DragEventArgs, int, MainWindow.WorkspaceTab?, bool>? ListDragOver;
 
     /// <summary>Something was dropped on the list at a position (0 = before the first item).</summary>
@@ -136,10 +139,13 @@ internal sealed partial class WorkspaceList : Grid
     public FrameworkElement? ElementFor(MainWindow.WorkspaceTab tab) => _byTab.GetValueOrDefault(tab);
 
     /// <summary>
-    /// Shows the workspaces in order with the selected one highlighted; <paramref name="colors"/>
+    /// Shows the workspaces in order with the selected one highlighted. <paramref name="colors"/>
     /// gives each one's tab color (if set) and its focused pane's background.
     /// </summary>
-    /// <param name="page">Whether the new-workspace page is open (its entry goes last), and <paramref name="pageSelected"/> shown.</param>
+    /// <param name="page">
+    /// Whether the new-workspace page is open (its entry goes last). <paramref name="pageSelected"/> says whether it's
+    /// shown.
+    /// </param>
     public void Update(IReadOnlyList<MainWindow.WorkspaceTab> tabs, MainWindow.WorkspaceTab? selected,
         Func<MainWindow.WorkspaceTab, (Color? Color, Color Pane)> colors, bool page = false, bool pageSelected = false)
     {
@@ -191,7 +197,7 @@ internal sealed partial class WorkspaceList : Grid
             }
         }
 
-        // Another workspace in the same list: slide. Workspaces added, closed or moved: jump.
+        // The pill slides to another workspace in the same list, and jumps when workspaces were added, closed or moved.
         if (selected != _selected && _selected != null && _shown.SequenceEqual(tabs))
         {
             _pill.SlideNext();
@@ -236,7 +242,7 @@ internal sealed partial class WorkspaceList : Grid
         return item;
     }
 
-    /// <summary>The pill at the selected item's left edge, centered on it (as each item's own pill was).</summary>
+    /// <summary>The pill at the selected item's left edge, centered on it.</summary>
     private void PlacePill()
     {
         FrameworkElement? item = _pageSelected ? _page : _selected != null ? _byTab.GetValueOrDefault(_selected) : null;
@@ -267,7 +273,7 @@ internal sealed partial class WorkspaceList : Grid
         }
     }
 
-    /// <summary>The drop position under the pointer: how many items lie above it.</summary>
+    /// <summary>The drop position under the pointer, which is how many items lie above it.</summary>
     private int IndexAt(DragEventArgs e)
     {
         var y = e.GetPosition(_items).Y;
@@ -323,8 +329,9 @@ internal sealed partial class WorkspaceList : Grid
         _marker.Visibility = Visibility.Visible;
     }
 
-    /// <summary>One workspace: icon + title, close button (the list draws the selection pill).</summary>
-    /// <summary>The new-workspace page's entry: + and "New workspace", highlighted while shown, with a close button.</summary>
+    /// <summary>
+    /// The new-workspace page's entry, with + and "New workspace", highlighted while shown, and a close button.
+    /// </summary>
     private sealed partial class PageItem : Grid, ISelectableItem
     {
         private readonly StackPanel _label;
@@ -415,11 +422,12 @@ internal sealed partial class WorkspaceList : Grid
         }
     }
 
+    /// <summary>One workspace, with its icon, title and close button (the list draws the selection pill).</summary>
     private sealed partial class Item : Grid, ISelectableItem
     {
         private readonly Button _close;
 
-        // The close button and the attention dot share one slot: hovering swaps them, so nothing
+        // The close button and the attention dot share one slot, and hovering swaps them, so nothing
         // beside them moves (VS Code's unsaved-file dot does the same).
         private readonly Grid _slot = new() { Width = 26, Margin = new Thickness(0, 0, 4, 0), Visibility = Visibility.Collapsed };
         private readonly AttentionDot _slotDot = new() { Corner = false };
@@ -466,7 +474,7 @@ internal sealed partial class WorkspaceList : Grid
             tab.Header.AttentionChanged += Restyle;
             tab.Header.PulseRequested += _slotDot.PulseIfShown;
 
-            // Title room: the item less its left margin, icon (16 + 10), close button and pill.
+            // Room for the title, which is the item minus its left margin, icon (16 + 10), close button and pill.
             SizeChanged += (_, e) => tab.Header.TitleMaxWidth = e.NewSize.Width - 12 - 26 - 32;
 
             PointerEntered += (_, _) =>
@@ -522,14 +530,14 @@ internal sealed partial class WorkspaceList : Grid
 
         private void Restyle()
         {
-            // Selected: the tab color, else the focused pane's background (as the title-bar tab
-            // flows into its terminal). Others: a tint of their color, or a hover highlight.
+            // A selected item takes the tab color, else the focused pane's background (as the title-bar tab
+            // flows into its terminal). Others take a tint of their color, or a hover highlight.
             Background = _selected
                 ? new SolidColorBrush(_color ?? _pane)
                 : _color is { } c
                     ? new SolidColorBrush(Color.FromArgb(0x80, c.R, c.G, c.B))
                     : _hovered ? (Brush)Application.Current.Resources["SubtleFillColorSecondaryBrush"] : _clear;
-            // On a light selection (a light scheme, a yellow workspace), dark text.
+            // A light selection (a light scheme, a yellow workspace) gets dark text.
             var text = _selected ? Contrast.TextOn(_color ?? _pane) : null;
             _header.TextForeground = text;
             if (text != null)
@@ -540,13 +548,13 @@ internal sealed partial class WorkspaceList : Grid
             {
                 _close.ClearValue(Control.ForegroundProperty);
             }
-            // The rail has no room for either (its dot sits on the icon): middle click and the
+            // The rail has no room for either (its dot sits on the icon), but middle click and the
             // context menu still close.
             _slotDot.Show(_compact ? Attention.None : _header.Attention, _header.AttentionCount);
             _slotDot.ShowProgress(_compact ? Zinc.Terminal.TerminalProgress.None : _header.Progress);
             var dot = _slotDot.HasContent && !_hovered;
             var close = !_compact && (_hovered || (_selected && !_slotDot.HasContent));
-            _slotDot.Opacity = dot ? 1 : 0; // hidden, not removed: showing it again mustn't re-pulse
+            _slotDot.Opacity = dot ? 1 : 0; // hidden, not removed, because showing it again mustn't re-pulse
             _close.Visibility = close ? Visibility.Visible : Visibility.Collapsed;
             _slot.Visibility = dot || close ? Visibility.Visible : Visibility.Collapsed;
         }

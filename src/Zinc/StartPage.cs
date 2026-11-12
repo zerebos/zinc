@@ -12,25 +12,27 @@ using Zinc.Terminal;
 namespace Zinc;
 
 /// <summary>
-/// The new-workspace page (<c>new-workspace-page</c>): shown in a new workspace's tab until it
-/// starts. Pick a profile and a folder (typing filters both; a typed path can be used as is), name
-/// it or keep the folder's name, then Enter or Start. Untouched, Enter starts the default profile
-/// in its usual folder, as a new workspace did before. A chosen folder becomes the workspace's own
-/// (<see cref="WorkspaceFolder"/>): its new tabs and splits start there.
-/// </summary>
-/// <summary>
-/// What the page starts: <see cref="Color"/> counts only when <see cref="ColorChosen"/> (else the
-/// automatic colors decide); a null <see cref="Icon"/> keeps the profile's icon.
+/// What the page starts. <see cref="Color"/> counts only when <see cref="ColorChosen"/>, or else the
+/// automatic colors decide. A null <see cref="Icon"/> keeps the profile's icon.
 /// </summary>
 internal sealed record StartChoice(Profile Profile, WorkspaceFolder? Folder, string? Name, StartLayout Layout,
     string? Icon, Windows.UI.Color? Color, bool ColorChosen);
 
+/// <summary>
+/// The new-workspace page (<c>new-workspace-page</c>), shown in a new workspace's tab until it
+/// starts. Pick a profile and a folder (typing filters both, and a typed path can be used as is), name
+/// it or keep the folder's name, then press Enter or Open workspace. Untouched, Enter starts the default profile
+/// in its usual folder, as a new workspace does without this page. A chosen folder becomes the workspace's own
+/// (<see cref="WorkspaceFolder"/>), so its new tabs and splits start there.
+/// </summary>
 internal sealed partial class StartPage : UserControl
 {
     private readonly IReadOnlyList<Profile> _profiles;
     private readonly Profile _default;
     private readonly RecentFolders _recent;
-    /// <summary>A folder dialog starting in the given folder (null: its own choice); returns the choice or null.</summary>
+    /// <summary>
+    /// A folder dialog starting in the given folder (or where it chooses, for null), which returns the choice or null.
+    /// </summary>
     private readonly Func<string?, string?> _browse;
     private readonly Dictionary<Profile, string?> _distros = [];
 
@@ -181,7 +183,7 @@ internal sealed partial class StartPage : UserControl
 
             if (choice.Browse)
             {
-                // (Once this selection change has settled: the dialog is modal.)
+                // Once this selection change has settled, because the dialog is modal.
                 await Task.Yield();
                 Ui.Guard("browsing for a folder", Browse);
                 return;
@@ -203,13 +205,16 @@ internal sealed partial class StartPage : UserControl
         Fill();
     }
 
-    /// <summary>Start: the profile, the chosen folder (null: its usual one) and the name (null: from the folder, or the shell).</summary>
+    /// <summary>
+    /// Start was asked for, with the profile, the chosen folder (null for its usual one) and the name (null to take it
+    /// from the folder, or the shell).
+    /// </summary>
     public event Action<StartChoice>? Started;
 
-    /// <summary>A closed workspace's chip under Reopen: bring it back as it was.</summary>
+    /// <summary>A closed workspace's chip under Reopen was clicked, so bring it back as it was.</summary>
     public event Action<ClosedWorkspace>? Reopen;
 
-    /// <summary>Esc: leave without starting.</summary>
+    /// <summary>Esc was pressed, so leave without starting.</summary>
     public event Action? Cancelled;
 
     /// <summary>The "Show this page" box changed.</summary>
@@ -217,7 +222,7 @@ internal sealed partial class StartPage : UserControl
 
     public void FocusFilter()
     {
-        // Not in test captures: the focused look (caret, underline) showed only when the window happened to be in front.
+        // Not in test captures, because the focused look (caret, underline) shows only when the window happens to be in front.
         if (TestHooks.Deterministic)
         {
             return;
@@ -280,7 +285,7 @@ internal sealed partial class StartPage : UserControl
             var shown = _profiles.Where(p => Query.Length == 0 || p.Name.Contains(Query, StringComparison.OrdinalIgnoreCase)).ToList();
             if (shown.Count == 0)
             {
-                shown = [.. _profiles]; // a typed folder, most likely: keep every profile to choose from
+                shown = [.. _profiles]; // a typed folder, most likely, so keep every profile to choose from
             }
 
             foreach (var profile in shown)
@@ -338,8 +343,8 @@ internal sealed partial class StartPage : UserControl
                 _folderList.Items.Add(FolderItem(choice));
             }
 
-            // A typed folder is the choice (typing it chooses it); else keep the choice if it's
-            // still offered, else the first.
+            // A typed folder is the choice (typing it chooses it). Otherwise keep the choice if it's
+            // still offered, or else take the first.
             var keep = choices[0].Detail == "typed" ? choices[0]
                        : choices.FirstOrDefault(c => !c.Browse && c.Folder == _folder.Folder && c.Label == _folder.Label)
                          ?? choices.FirstOrDefault(c => !c.Browse && c.Folder?.Path == _folder.Folder?.Path)
@@ -371,8 +376,8 @@ internal sealed partial class StartPage : UserControl
     }
 
     /// <summary>
-    /// Browse: for a WSL profile the dialog opens in that distro (its share, at the folder last used
-    /// there, else its root), and a folder chosen there comes back as the distro's own path.
+    /// Browses for a folder. For a WSL profile the dialog opens in that distro (its share, at the folder last used
+    /// there, or else its root), and a folder chosen there comes back as the distro's own path.
     /// </summary>
     private void Browse()
     {
@@ -432,8 +437,8 @@ internal sealed partial class StartPage : UserControl
     }
 
     /// <summary>
-    /// "Reopen": a chip per workspace closed lately (the newest few). Unlike the lists above, a chip
-    /// doesn't select: it's a whole workspace already, so it reopens at once. Null without any.
+    /// The "Reopen" row, with a chip per workspace closed lately (the newest few). Unlike the lists above, a chip
+    /// doesn't select. It's a whole workspace already, so it reopens at once. Null when there are none.
     /// </summary>
     private WrapPanel? ReopenRow(IReadOnlyList<ClosedWorkspace> closed)
     {
@@ -483,7 +488,9 @@ internal sealed partial class StartPage : UserControl
         return row;
     }
 
-    /// <summary>The icon and color buttons by the name: each opens its chooser (shared with the workspace menu).</summary>
+    /// <summary>
+    /// Sets up the icon and color buttons by the name, each of which opens its chooser (shared with the workspace menu).
+    /// </summary>
     private void SetUpLookButtons()
     {
         AutomationProperties.SetName(_iconButton, "Workspace icon");
@@ -507,7 +514,10 @@ internal sealed partial class StartPage : UserControl
         ShowLook();
     }
 
-    /// <summary>The buttons show the choices: the icon (or the profile's, dimmed), the color (or an empty ring: automatic or none).</summary>
+    /// <summary>
+    /// The buttons show the choices: the icon (or the profile's, dimmed), and the color (or an empty ring for automatic
+    /// or none).
+    /// </summary>
     private void ShowLook()
     {
         _iconButton.Content = _icon is { } name && Zinc.Panes.WorkspaceIcons.Glyph(name) is { } glyph
@@ -584,7 +594,9 @@ internal sealed partial class StartPage : UserControl
         return grid;
     }
 
-    /// <summary>The name box's hint: the name the workspace gets if you type none (the folder's, else the shell's).</summary>
+    /// <summary>
+    /// Sets the name box's hint to the name the workspace gets if you type none (the folder's, or else the shell's).
+    /// </summary>
     private void UpdateNameHint()
     {
         _name.PlaceholderText = _folder.Folder?.Name ?? "Automatic";

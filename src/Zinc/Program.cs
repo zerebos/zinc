@@ -8,18 +8,18 @@ using Zinc.Session;
 namespace Zinc;
 
 /// <summary>
-/// Entry point (replaces WinUI's generated Main; DISABLE_XAML_GENERATED_MAIN). Zinc runs once
-/// per session file: a second launch hands its activation — command line included — to the
-/// running instance, which opens a window for it (see <see cref="App.OnRedirectedLaunch"/>), and
-/// exits. Runs without a session (tests: ZINC_CONFIG set) stay separate processes.
+/// Entry point, which replaces WinUI's generated Main (DISABLE_XAML_GENERATED_MAIN). Zinc runs once
+/// per session file. A second launch hands its activation, command line included, to the
+/// running instance, which opens a window for it (see <see cref="App.OnRedirectedLaunch"/>), and then the second
+/// launch exits. Runs without a session (tests, with ZINC_CONFIG set) stay separate processes.
 /// </summary>
 public static partial class Program
 {
     [STAThread]
     private static int Main()
     {
-        // First thing (Velopack's rule): the installer starts zinc.exe with its own arguments after install,
-        // before uninstall and around updates; Run handles those and exits. Normal launches go on.
+        // This comes first (Velopack's rule), because the installer starts zinc.exe with its own arguments after
+        // install, before uninstall and around updates. Run handles those and exits, and normal launches go on.
         VelopackApp.Build()
             .OnBeforeUninstallFastCallback(_ => BeforeUninstall())
             .Run();
@@ -30,8 +30,8 @@ public static partial class Program
             return 0;
         }
 
-        // Only in the process that runs (not a launch handed to a running Zinc, which may still be writing
-        // them), and not in test runs.
+        // Old local data moves only in the process that runs (not a launch handed to a running Zinc, which may still
+        // be writing those files), and not in test runs.
         if (Environment.GetEnvironmentVariable("ZINC_CONFIG") is not { Length: > 0 })
         {
             MoveOldLocalData();
@@ -55,9 +55,9 @@ public static partial class Program
 
     /// <summary>
     /// The folder of another Zinc that owns this session, when this copy came from the installer and that one runs from
-    /// somewhere else: a zip copy left open while installing. The two don't hand launches to each other (an installed
-    /// copy has an app identity of its own), so without this the new one would open without the windows while the old
-    /// one kept running in the tray. Null otherwise; test runs (no session) never check.
+    /// somewhere else, such as a zip copy left open while installing. The two don't hand launches to each other (an
+    /// installed copy has an app identity of its own), so without this the new one would open without the windows while
+    /// the old one kept running in the tray. It's null otherwise. Test runs (no session) never check.
     /// </summary>
     private static string? OlderCopyRunning()
     {
@@ -102,7 +102,10 @@ public static partial class Program
     [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
     private static partial int MessageBoxW(nint hwnd, string text, string caption, uint type);
 
-    /// <summary>Logs, crash log and icon cache used to live in %LOCALAPPDATA%\Zinc, now the installer's folder (AppFolders).</summary>
+    /// <summary>
+    /// Moves the logs, crash log and icon cache from %LOCALAPPDATA%\Zinc, where they used to live, to the installer's
+    /// folder (AppFolders).
+    /// </summary>
     private static void MoveOldLocalData()
     {
         try
@@ -116,14 +119,14 @@ public static partial class Program
     }
 
     /// <summary>
-    /// The installer is about to remove this install (it gives us 30 seconds): take back the sign-in entry and the
-    /// default-terminal registration where they point into it. Another copy's (the dev install's) stay.
+    /// The installer is about to remove this install (it gives us 30 seconds), so this takes back the sign-in entry and
+    /// the default-terminal registration where they point into it. Another copy's entries (the dev install's) stay.
     /// </summary>
     private static void BeforeUninstall()
     {
         try
         {
-            // The install root: the locator's, else the folder above this exe's ("current").
+            // The install root is the locator's, or else the folder above this exe's ("current").
             var root = (VelopackLocator.IsCurrentSet ? VelopackLocator.Current.RootAppDir : null)
                 ?? Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory))!;
             Log.Write($"uninstall: taking back what points into {root}");
@@ -141,8 +144,8 @@ public static partial class Program
     }
 
     /// <summary>
-    /// Registers this process as its session's instance, or — when another already is — passes
-    /// this launch to it. True when this process should exit.
+    /// Registers this process as its session's instance, or passes this launch to the instance when another process
+    /// already is one. Returns true when this process should exit.
     /// </summary>
     private static bool RedirectToRunningInstance()
     {
@@ -156,7 +159,7 @@ public static partial class Program
             var instance = AppInstance.FindOrRegisterForKey(SessionStore.InstanceKey(sessionPath));
             if (instance.IsCurrent)
             {
-                // Later launches arrive here, on a background thread; App marshals them.
+                // Later launches arrive here, on a background thread, and App marshals them.
                 instance.Activated += (_, args) => App.OnRedirectedLaunch(args);
                 return false;
             }

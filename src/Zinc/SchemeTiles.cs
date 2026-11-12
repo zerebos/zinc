@@ -25,7 +25,9 @@ internal static class SchemeTiles
     // Schemes are read once per library (a config reload makes a new library, so edits show).
     private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ThemeLibrary, Dictionary<string, TerminalTheme?>> Cache = [];
 
-    /// <summary>Scheme <paramref name="name"/>'s colors (null: Zinc's own), or null if there's no such scheme.</summary>
+    /// <summary>
+    /// Scheme <paramref name="name"/>'s colors (a null name means Zinc's own), or null if there's no such scheme.
+    /// </summary>
     public static TerminalTheme? ThemeOf(ThemeLibrary themes, string? name)
     {
         if (name == null)
@@ -93,7 +95,10 @@ internal static class SchemeTiles
         };
     }
 
-    /// <summary>Makes <paramref name="list"/> (items: scheme names) show each as its tile, built when it's scrolled into view.</summary>
+    /// <summary>
+    /// Makes <paramref name="list"/>, whose items are scheme names, show each as its tile, built when it's scrolled into
+    /// view.
+    /// </summary>
     public static void ShowAsTiles(ListViewBase list, ThemeLibrary themes, string? defaultLabel)
     {
         list.ItemContainerStyle = new Style(typeof(ListViewItem))
@@ -105,7 +110,7 @@ internal static class SchemeTiles
                 new Setter(FrameworkElement.MinHeightProperty, 0.0),
             },
         };
-        // Each item's template is an empty presenter; its tile is built when the item is shown.
+        // Each item's template is an empty presenter, and its tile is built when the item is shown.
         list.ItemTemplate = (DataTemplate)Microsoft.UI.Xaml.Markup.XamlReader.Load(
             "<DataTemplate xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><ContentPresenter HorizontalAlignment='Stretch'/></DataTemplate>");
         list.ContainerContentChanging += (_, e) =>
@@ -124,8 +129,8 @@ internal static class SchemeTiles
 }
 
 /// <summary>
-/// Picks a color scheme: a button showing the chosen scheme's tile, opening a list of every
-/// scheme as a tile with a filter box. <see cref="Picked"/> reports the choice (null: the default
+/// Picks a color scheme with a button that shows the chosen scheme's tile and opens a list of every
+/// scheme as a tile with a filter box. <see cref="Picked"/> reports the choice (null for the default
 /// entry, when there is one).
 /// </summary>
 internal sealed partial class SchemePicker : Button
@@ -133,10 +138,10 @@ internal sealed partial class SchemePicker : Button
     private readonly ThemeLibrary _themes;
     private readonly IReadOnlyList<string> _names;
     private readonly string? _defaultLabel;
-    // Arrow keys move through the list (previewing, see Highlighted); Space or Enter picks.
+    // Arrow keys move through the list (previewing, see Highlighted). Space or Enter picks.
     private readonly ListView _list = new() { Height = 360, SelectionMode = ListViewSelectionMode.Single, SingleSelectionFollowsFocus = false };
     private readonly TextBox _filter = new();
-    // Under the button's right edge; allowed past the window's edges, or WinUI moves it beside the
+    // Under the button's right edge. It's allowed past the window's edges, or WinUI moves it beside the
     // button when the window is short.
     private readonly Flyout _flyout = new()
     {
@@ -171,7 +176,7 @@ internal sealed partial class SchemePicker : Button
         SchemeTiles.ShowAsTiles(_list, themes, defaultLabel);
         _list.ContainerContentChanging += (_, e) =>
         {
-            // Under the pointer or keyboard focus: previewed (containers are reused: hooked once).
+            // An item under the pointer or with keyboard focus is previewed. Containers are reused, so each is hooked once.
             if (!e.InRecycleQueue && e.ItemContainer.Tag is not "hooked")
             {
                 e.ItemContainer.Tag = "hooked";
@@ -212,7 +217,7 @@ internal sealed partial class SchemePicker : Button
         };
         _flyout.Closed += (_, _) =>
         {
-            // Closed without a pick: whatever was previewed goes back. (A pick is written, and the
+            // When closed without a pick, whatever was previewed goes back. (A pick is written, and the
             // reload that follows shows it.)
             Log.Write($"scheme picker: closed ({(_picked ? "picked" : $"previewed {_highlighted ?? "nothing"}")})");
             if (!_picked && _highlighted != null)
@@ -231,13 +236,15 @@ internal sealed partial class SchemePicker : Button
         };
     }
 
-    /// <summary>The user picked a scheme (null: the default entry).</summary>
+    /// <summary>The user picked a scheme (null for the default entry).</summary>
     public event Action<string?>? Picked;
 
-    /// <summary>A scheme in the open list is under the pointer or has keyboard focus (null: the default entry), for a preview.</summary>
+    /// <summary>
+    /// A scheme in the open list is under the pointer or has keyboard focus (null for the default entry), for a preview.
+    /// </summary>
     public event Action<string?>? Highlighted;
 
-    /// <summary>The list closed without a pick: take back the preview.</summary>
+    /// <summary>The list closed without a pick, so the preview should be taken back.</summary>
     public event Action? HighlightEnded;
 
     private void HighlightItem(object container)
@@ -249,7 +256,7 @@ internal sealed partial class SchemePicker : Button
         }
     }
 
-    /// <summary>The scheme shown (null: the default entry, or nothing).</summary>
+    /// <summary>The scheme shown, or null for the default entry or nothing.</summary>
     public string? Selected { get; private set; }
 
     /// <summary>Whether a scheme (or the default entry) is shown, rather than the placeholder.</summary>
@@ -270,7 +277,10 @@ internal sealed partial class SchemePicker : Button
 
     public bool Contains(string name) => _names.Contains(name);
 
-    /// <summary>Shows <paramref name="name"/> (null with <paramref name="selected"/>: the default entry) without reporting a pick.</summary>
+    /// <summary>
+    /// Shows <paramref name="name"/> without reporting a pick. A null name with <paramref name="selected"/> shows the
+    /// default entry.
+    /// </summary>
     public void Show(string? name, bool selected = true)
     {
         HasSelection = selected && (name == null ? _defaultLabel != null : _names.Contains(name));
@@ -309,16 +319,16 @@ internal sealed partial class SchemePicker : Button
 }
 
 /// <summary>
-/// A scheme's sample on the color schemes page's cards: three lines of terminal colored as programs color them (a prompt; a
-/// diff line with a selected word; a code line with the cursor), then its 16 colors as a band along the bottom edge (normal
-/// over bright). Text on the scheme's background says more than color chips: low contrast shows. Shown again with another
-/// scheme when its card is reused (only brushes change).
+/// A scheme's sample on the color schemes page's cards: three lines of terminal colored as programs color them (a prompt,
+/// a diff line with a selected word, and a code line with the cursor), then its 16 colors as a band along the bottom edge
+/// (normal over bright). Text on the scheme's background says more than color chips, because low contrast shows. It's
+/// shown again with another scheme when its card is reused (only brushes change).
 /// </summary>
 internal sealed class SchemeSample
 {
     private const double BandHeight = 8;
 
-    // A TextBlock drops a trailing space: these stay (before the selected word and the cursor).
+    // A TextBlock drops a trailing space, but these stay (before the selected word and the cursor).
     private const string Space = "\u00A0";
 
     /// <summary>What goes on the card.</summary>
@@ -415,7 +425,7 @@ internal sealed class SchemeSample
         _background.Color = SchemeTiles.ToColor(theme.Background);
         _foreground.Color = SchemeTiles.ToColor(theme.Foreground);
         _cursor.Color = SchemeTiles.ToColor(theme.Cursor);
-        // No selection colors in the scheme: Zinc inverts the text's.
+        // When the scheme has no selection colors, Zinc inverts the text's.
         _selectionBackground.Color = SchemeTiles.ToColor(theme.SelectionBackground ?? theme.Foreground);
         _selectionForeground.Color = SchemeTiles.ToColor(theme.SelectionForeground ?? (theme.SelectionBackground == null ? theme.Background : theme.Foreground));
         var colors = theme.BaseColors;

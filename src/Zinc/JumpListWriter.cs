@@ -5,16 +5,16 @@ using Zinc.Shell;
 namespace Zinc;
 
 /// <summary>
-/// Writes the taskbar button's jump list (ICustomDestinationList: the WinRT JumpList needs a packaged app). Each item is
-/// a shell link to zinc.exe with LaunchRequest's flags; a click starts zinc.exe, which hands the flags to the running
-/// Zinc. Items the user removed from the list come back from BeginList and must be left out: Windows refuses a category
-/// holding one.
+/// Writes the taskbar button's jump list (with ICustomDestinationList, because the WinRT JumpList needs a packaged app).
+/// Each item is a shell link to zinc.exe with LaunchRequest's flags. A click starts zinc.exe, which hands the flags to
+/// the running Zinc. Items the user removed from the list come back from BeginList and must be left out, because Windows
+/// refuses a category holding one.
 /// </summary>
 internal static class JumpListWriter
 {
     /// <summary>
     /// Replaces the list. <paramref name="build"/> gets the arguments of the items the user removed (to leave out) and
-    /// returns what the list holds. False if Windows refused (no Explorer, say): the old list stays.
+    /// returns what the list holds. Returns false if Windows refused (no Explorer, say), and the old list stays.
     /// </summary>
     public static bool Write(string exe, Func<IReadOnlySet<string>, JumpListContent> build)
     {

@@ -9,7 +9,7 @@ namespace Zinc;
 
 /// <summary>
 /// Where zn's requests arrive: a named pipe only your Windows account can open (and never over the network), one
-/// request per connection. The pipe side only reads, waits and writes; the work runs on the UI thread
+/// request per connection. The pipe side only reads, waits and writes. The work runs on the UI thread
 /// (<see cref="App"/>'s handler).
 /// </summary>
 internal static class CliServer
@@ -17,14 +17,14 @@ internal static class CliServer
     private static int s_lastTerminalId;
     private static CancellationTokenSource? s_stop;
 
-    /// <summary>This Zinc's pipe (every terminal's ZINC_PIPE); null until it listens.</summary>
+    /// <summary>This Zinc's pipe (every terminal's ZINC_PIPE), or null until it listens.</summary>
     public static string? PipeName { get; private set; }
 
     /// <summary>zn's folder (bin\ next to zinc.exe), if this copy has one.</summary>
     public static string? ZnFolder { get; } = Path.Combine(AppContext.BaseDirectory, "bin") is var bin && File.Exists(Path.Combine(bin, "zn.exe"))
         ? bin : null;
 
-    /// <summary>A new terminal's id; its shell will start with it and the pipe's name in its environment.</summary>
+    /// <summary>A new terminal's id. Its shell will start with the id and the pipe's name in its environment.</summary>
     public static int NewTerminal(TerminalControl control)
     {
         var id = Interlocked.Increment(ref s_lastTerminalId);
@@ -38,7 +38,9 @@ internal static class CliServer
         return id;
     }
 
-    /// <summary>Listens on <paramref name="name"/>; each request goes to <paramref name="handle"/>, whose task gives the reply.</summary>
+    /// <summary>
+    /// Listens on <paramref name="name"/>. Each request goes to <paramref name="handle"/>, whose task gives the reply.
+    /// </summary>
     public static void Start(string name, Func<CliRequest, Task<CliReply>> handle)
     {
         PipeName = name;
@@ -73,7 +75,8 @@ internal static class CliServer
             }
             catch (Exception ex)
             {
-                // E.g. the name taken by another program: try again, slower, and give up after a while.
+                // For example, another program has taken the name. Try again, more slowly each time, and give up after a
+                // while.
                 Log.Write($"cli: pipe trouble ({ex.Message})");
                 if (++failures >= 10)
                 {
@@ -90,7 +93,9 @@ internal static class CliServer
         }
     }
 
-    /// <summary>Your account may connect; connections from the network may not (a pipe is reachable over SMB otherwise).</summary>
+    /// <summary>
+    /// Your account may connect, but connections from the network may not, because otherwise a pipe is reachable over SMB.
+    /// </summary>
     private static PipeSecurity Security()
     {
         var security = new PipeSecurity();
@@ -134,7 +139,9 @@ internal static class CliServer
         }
     }
 
-    /// <summary>One line, at most <see cref="CliProtocol.MaxLine"/> characters; null if the other side stops first.</summary>
+    /// <summary>
+    /// One line, at most <see cref="CliProtocol.MaxLine"/> characters. Null if the other side stops first.
+    /// </summary>
     private static async Task<string?> ReadLine(StreamReader reader, CancellationToken cancel)
     {
         var sb = new StringBuilder();

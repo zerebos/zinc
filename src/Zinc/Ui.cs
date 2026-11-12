@@ -4,10 +4,10 @@ namespace Zinc;
 
 /// <summary>
 /// Running work where an exception mustn't end the app. A DispatcherQueue callback or a
-/// DispatcherQueueTimer tick doesn't go through Application.UnhandledException: an exception
-/// escaping one ends the process on the spot, with nothing logged (seen with test:throw). Every
-/// such callback goes through <see cref="Guard"/>: the exception is recorded (crash.log) and
-/// shown, and the app carries on.
+/// DispatcherQueueTimer tick doesn't go through Application.UnhandledException, so an exception
+/// escaping one ends the process on the spot, with nothing logged (test:throw shows this). Every
+/// such callback goes through <see cref="Guard"/>, which records the exception (crash.log) and
+/// shows it, and the app carries on.
 /// </summary>
 internal static class Ui
 {

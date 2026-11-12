@@ -7,10 +7,10 @@ namespace Zinc;
 
 /// <summary>
 /// The drawing benchmark (Settings > About): a window of its own with one terminal that runs no
-/// program; each <see cref="BenchmarkWorkload"/> is written into it from a background thread for
+/// program. Each <see cref="BenchmarkWorkload"/> is written into it from a background thread for
 /// <see cref="Seconds"/>, as fast as it takes it (the way a busy program writes), while every frame
-/// it draws is timed. Optionally all again with software rendering (Direct2D on the processor), the
-/// nearest thing to a slow machine. ConPTY isn't in the way: this measures Zinc's own side.
+/// it draws is timed. Optionally it runs them all again with software rendering (Direct2D on the processor), the
+/// nearest thing to a slow machine. ConPTY isn't in the way, so this measures Zinc's own side.
 /// </summary>
 internal sealed class BenchmarkWindow : Window
 {
@@ -27,7 +27,9 @@ internal sealed class BenchmarkWindow : Window
         Closed += (_, _) => _closed = true;
     }
 
-    /// <summary>Runs the benchmark with <paramref name="config"/>'s look; null if the window was closed before it finished.</summary>
+    /// <summary>
+    /// Runs the benchmark with <paramref name="config"/>'s look. Null if the window was closed before it finished.
+    /// </summary>
     public static async Task<BenchmarkReport?> Run(Config config, bool software, Window? owner)
     {
         var window = new BenchmarkWindow();
@@ -90,7 +92,10 @@ internal sealed class BenchmarkWindow : Window
         return new BenchmarkReport(DateTime.Now, Log.About, grid.Cols, grid.Rows, scale, results);
     }
 
-    /// <summary>The terminal's grid once its session has started (it starts when the canvas has its size); null if closed or it never does.</summary>
+    /// <summary>
+    /// The terminal's grid once its session has started (the session starts when the canvas has its size). Null if the
+    /// window closed or the session never starts.
+    /// </summary>
     private async Task<(int Cols, int Rows)?> GridOf(TerminalControl terminal)
     {
         for (var i = 0; i < 100 && !_closed; i++)
@@ -115,7 +120,7 @@ internal sealed class BenchmarkWindow : Window
 
         output.Next(workload, 0); // makes the color frames before the clock starts
         terminal.WriteForBenchmark(BenchmarkWorkloads.Start(workload));
-        await Task.Delay(300); // settles: the switch to the alternate screen is drawn outside the measurement
+        await Task.Delay(300); // lets it settle, so the switch to the alternate screen is drawn outside the measurement
         perf.Reset();
 
         var closed = () => _closed;

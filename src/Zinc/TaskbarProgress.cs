@@ -5,8 +5,8 @@ using Zinc.Terminal;
 namespace Zinc;
 
 /// <summary>
-/// A window's progress on its taskbar button (ITaskbarList3), from a program's OSC 9;4 report:
-/// Windows Terminal does the same. Green filling, yellow paused, red error, or a sweep when the
+/// A window's progress on its taskbar button (ITaskbarList3), from a program's OSC 9;4 report,
+/// as Windows Terminal does. Green filling, yellow paused, red error, or a sweep when the
 /// program gave no number.
 /// </summary>
 internal static class TaskbarProgress

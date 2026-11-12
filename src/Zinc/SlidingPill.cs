@@ -10,11 +10,11 @@ using Windows.UI;
 namespace Zinc;
 
 /// <summary>
-/// A sidebar's selection pill that slides from item to item: one element on an overlay
+/// A sidebar's selection pill that slides from item to item. It's one element on an overlay
 /// <see cref="Layer"/>, moved by a composition animation that starts from wherever it is (a new
 /// selection mid-slide just turns it). The owner says where the pill goes (<see cref="MoveTo"/>,
-/// in the layer's coordinates) and whether the next move is a selection (<see cref="SlideNext"/>);
-/// other moves (items added, reordered, resized) jump, so the pill doesn't glide while things
+/// in the layer's coordinates) and whether the next move is a selection (<see cref="SlideNext"/>).
+/// Other moves (items added, reordered, resized) jump, so the pill doesn't glide while things
 /// shift under it. Used by the settings window's sidebar and the workspace list.
 /// </summary>
 internal sealed class SlidingPill
@@ -36,7 +36,7 @@ internal sealed class SlidingPill
         _visual = ElementCompositionPreview.GetElementVisual(_pill);
     }
 
-    /// <summary>The overlay the pill is drawn on: lay it over the items, in the same coordinates.</summary>
+    /// <summary>The overlay the pill is drawn on, which the owner lays over the items in the same coordinates.</summary>
     public Canvas Layer { get; } = new() { IsHitTestVisible = false };
 
     /// <summary>Keeps the pill visible on what the selected item is filled with (a tab color close to the accent).</summary>
@@ -49,7 +49,7 @@ internal sealed class SlidingPill
         }
     }
 
-    /// <summary>The next move is a selection: slide to it.</summary>
+    /// <summary>Marks the next move as a selection, so the pill slides to it.</summary>
     public void SlideNext() => _slideNext = true;
 
     public void Hide()
@@ -61,7 +61,7 @@ internal sealed class SlidingPill
 
     /// <summary>
     /// Puts the pill's top-left at <paramref name="target"/> (<paramref name="width"/> ×
-    /// <paramref name="height"/>): sliding there after <see cref="SlideNext"/>, else at once.
+    /// <paramref name="height"/>). It slides there after <see cref="SlideNext"/>, or else moves at once.
     /// Returns whether it moved.
     /// </summary>
     public bool MoveTo(Vector2 target, double width, double height)

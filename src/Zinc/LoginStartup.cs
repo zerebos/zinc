@@ -4,7 +4,7 @@ using Zinc.Terminal;
 namespace Zinc;
 
 /// <summary>
-/// <c>launch-at-login</c>: a "Zinc" value in the user's Run key starting this exe with
+/// <c>launch-at-login</c> sets a "Zinc" value in the user's Run key that starts this exe with
 /// <see cref="ShellResolver.LoginFlag"/>. Kept in step with the setting at every start and reload,
 /// with this exe's own path, so the value follows the exe when a new install puts it in another folder.
 /// Test runs (ZINC_CONFIG) never touch it, as they never touch the saved windows.

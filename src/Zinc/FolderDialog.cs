@@ -5,7 +5,7 @@ namespace Zinc;
 /// <summary>
 /// Windows' folder dialog (IFileOpenDialog with FOS_PICKFOLDERS), which can open in any folder,
 /// a WSL distro's share included. The WinRT FolderPicker can only start at a few known folders.
-/// Modal: returns the chosen folder, or null if cancelled.
+/// It's modal, and returns the chosen folder, or null if cancelled.
 /// </summary>
 internal static class FolderDialog
 {

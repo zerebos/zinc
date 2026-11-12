@@ -6,7 +6,7 @@ namespace Zinc;
 /// <summary>
 /// A hidden, never-shown top-level window on the UI thread that receives the app's
 /// system-level messages (global hotkey, tray icon), so those keep working however
-/// Zinc's visible windows come and go. Top-level rather than message-only: only
+/// Zinc's visible windows come and go. Top-level rather than message-only, because only
 /// top-level windows get Explorer's "TaskbarCreated" broadcast.
 /// </summary>
 internal sealed unsafe partial class MessageWindow : IDisposable

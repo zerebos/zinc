@@ -13,9 +13,9 @@ internal interface ISelectableItem
 }
 
 /// <summary>
-/// Makes a panel-based item a list or tab item to UI Automation: panels have no automation peer, so screen readers
-/// skipped them, and the name (title and what its dot means) set on them went nowhere. Selecting it does what a click
-/// does. The name is the element's AutomationProperties.Name.
+/// Makes a panel-based item a list or tab item to UI Automation, because panels have no automation peer. Without one,
+/// screen readers skip them, and the name set on them (the title and what its dot means) goes nowhere. Selecting the
+/// item does what a click does. The name is the element's AutomationProperties.Name.
 /// </summary>
 internal sealed partial class SelectableItemPeer(FrameworkElement owner, AutomationControlType type)
     : FrameworkElementAutomationPeer(owner), ISelectionItemProvider

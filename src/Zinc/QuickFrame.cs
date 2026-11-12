@@ -3,16 +3,17 @@ using System.Runtime.InteropServices;
 namespace Zinc;
 
 /// <summary>
-/// The quick terminal's frame: a real resizing frame drawn nowhere. WM_NCCALCSIZE makes the whole window client area
-/// (no light strip across the top, no margins), and border regions on its edges (InputNonClientPointerSource, set by
-/// the window) make Windows treat them as borders: its own resize pointer, its own press-drag-release loop. Each step's
-/// rectangle comes from <see cref="Sizing"/> (centered stays centered).
+/// The quick terminal's frame, which is a real resizing frame drawn nowhere. WM_NCCALCSIZE makes the whole window client
+/// area (no light strip across the top, no margins), and border regions on its edges (InputNonClientPointerSource, set
+/// by the window) make Windows treat them as borders, with its own resize pointer and its own press-drag-release loop.
+/// Each step's rectangle comes from <see cref="Sizing"/> (centered stays centered).
 /// </summary>
 /// <remarks>
-/// Why not XAML strips that move the window: every window move makes Windows refresh the pointer, and XAML answered
-/// with the arrow, which flickered against the resize shape all drag long (a pane divider, which only changes layout,
-/// held its shape). Windows' loop driven from XAML failed too: WinUI's press never reaches Windows' button state, so
-/// the loop ran click-to-finish, and a Win32 capture got no moves (WinUI's input doesn't come as window messages).
+/// This doesn't use XAML strips that move the window, because every window move makes Windows refresh the pointer, and
+/// XAML answers with the arrow, which flickers against the resize shape all drag long (a pane divider, which only changes
+/// layout, keeps its shape). Driving Windows' loop from XAML doesn't work either. WinUI's press never reaches Windows'
+/// button state, so the loop runs click-to-finish, and a Win32 capture gets no moves (WinUI's input doesn't come as
+/// window messages).
 /// </remarks>
 internal static unsafe partial class QuickFrame
 {
@@ -25,7 +26,10 @@ internal static unsafe partial class QuickFrame
     /// <summary>A drag on a border began (WM_ENTERSIZEMOVE).</summary>
     public static Action? Started { get; set; }
 
-    /// <summary>Each step of a drag: the edge (WMSZ_*: 1 left ... 8 bottom-right); returns the rectangle to use.</summary>
+    /// <summary>
+    /// Each step of a drag gets the edge (WMSZ_*, from 1 for left to 8 for bottom-right) and the proposed rectangle, and
+    /// returns the rectangle to use.
+    /// </summary>
     public static Func<int, Rect, Rect>? Sizing { get; set; }
 
     /// <summary>A drag ended (WM_EXITSIZEMOVE).</summary>
@@ -37,7 +41,7 @@ internal static unsafe partial class QuickFrame
     public static void Attach(nint hwnd) => SetWindowSubclass(hwnd, &Proc, SubclassId, 0);
 
     /// <summary>
-    /// Zinc is placing the window (summoning it, a reset): the moves and resizes it makes go through. Any other comes
+    /// Zinc is placing the window (summoning it, a reset), so the moves and resizes it makes go through. Any other comes
     /// from Windows' snapping (Win+arrows snap any window with a resizing frame) and is refused, except a border drag.
     /// </summary>
     public static bool Placing { get; set; }
@@ -55,9 +59,9 @@ internal static unsafe partial class QuickFrame
             {
                 case 0x0083 when wParam != 0: // WM_NCCALCSIZE: the client area is the whole window (no frame drawn)
                     return 0;
-                case 0x0085: // WM_NCPAINT: no frame to paint (Windows painted a white one on a DPI change, around the fade)
+                case 0x0085: // WM_NCPAINT: no frame to paint (Windows would paint a white one on a DPI change, around the fade)
                     return 0;
-                case 0x0086: // WM_NCACTIVATE: the same on losing focus; lParam -1 = don't repaint the frame
+                case 0x0086: // WM_NCACTIVATE: the same on losing focus, and lParam -1 means don't repaint the frame
                     return DefSubclassProc(hwnd, msg, wParam, -1);
                 case 0x0046 when !Placing && !_dragging: // WM_WINDOWPOSCHANGING from someone else: stay put
                     ((WindowPos*)lParam)->Flags |= 0x0001 | 0x0002; // SWP_NOSIZE | SWP_NOMOVE
@@ -73,7 +77,7 @@ internal static unsafe partial class QuickFrame
                     _dragging = false;
                     Sized?.Invoke();
                     break;
-                case 0x00A3 when wParam is >= 10 and <= 17: // WM_NCLBUTTONDBLCLK on a border (HTLEFT ... HTBOTTOMRIGHT)
+                case 0x00A3 when wParam is >= 10 and <= 17: // WM_NCLBUTTONDBLCLK on a border (HTLEFT to HTBOTTOMRIGHT)
                     DoubleClicked?.Invoke();
                     return 0;
             }

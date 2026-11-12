@@ -8,7 +8,7 @@ namespace Zinc;
 
 /// <summary>
 /// Sizes and places windows in DIPs (AppWindow works in physical pixels, so a size meant for 100%
-/// came out two-thirds as big at 150%), kept within the screen's work area.
+/// would come out two-thirds as big at 150%), kept within the screen's work area.
 /// </summary>
 internal static partial class WindowPlacement
 {
@@ -41,7 +41,7 @@ internal static partial class WindowPlacement
 
     /// <summary>
     /// Sizes <paramref name="window"/> in DIPs and centers it on the screen <paramref name="owner"/>
-    /// is on (none: the main screen), as onboarding windows are.
+    /// is on (or the main screen without an owner), as onboarding windows are.
     /// </summary>
     public static void CenterOnScreen(Window window, double width, double height, Window? owner = null)
     {

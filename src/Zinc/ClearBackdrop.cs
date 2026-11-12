@@ -7,14 +7,14 @@ using Microsoft.UI.Xaml.Media;
 namespace Zinc;
 
 /// <summary>
-/// <c>backdrop = none</c> ("Clear glass"): a window backdrop that's a see-through color brush (the tint,
-/// at <c>backdrop-tint</c>'s opacity), so the windows behind show as they are (WinUI ships Mica and
-/// Acrylic only). A transparent brush alone shows black: the window must also be made see-through,
-/// as WinUIEx's TransparentTintBackdrop does it: DWM "blur behind" with an empty region (per-pixel
-/// alpha, nothing blurred), the frame extended by nothing, and the window's own background erased to
-/// black (transparent once blur-behind is on); set up again when DWM's composition changes.
-/// The brush comes from the system compositor (Windows.UI.Composition), which needs a Windows.System
-/// dispatcher queue on this thread: WinUI's own (Microsoft.UI.Dispatching) isn't one, so one is made.
+/// <c>backdrop = none</c> ("Clear glass") is a window backdrop that's a see-through color brush (the tint, at
+/// <c>backdrop-tint</c>'s opacity), so the windows behind show as they are. WinUI ships only Mica and Acrylic.
+/// A transparent brush alone shows black, so the window must also be made see-through, the way WinUIEx's
+/// TransparentTintBackdrop does it. That means DWM "blur behind" with an empty region (per-pixel alpha with
+/// nothing blurred), the frame extended by nothing, and the window's own background erased to black, which is
+/// transparent once blur-behind is on. This is set up again when DWM's composition changes.
+/// The brush comes from the system compositor (Windows.UI.Composition), which needs a Windows.System dispatcher
+/// queue on this thread. WinUI's own queue (Microsoft.UI.Dispatching) isn't one, so this class makes one.
 /// </summary>
 internal sealed unsafe partial class ClearBackdrop(Windows.UI.Color tint) : SystemBackdrop
 {
@@ -96,7 +96,7 @@ internal sealed unsafe partial class ClearBackdrop(Windows.UI.Color tint) : Syst
         }
         catch (Exception ex)
         {
-            Log.Crash("clear backdrop", ex); // a window procedure: nothing above to catch it
+            Log.Crash("clear backdrop", ex); // a window procedure, so nothing above catches it
         }
 
         return DefSubclassProc(hwnd, msg, wParam, lParam);
@@ -111,7 +111,7 @@ internal sealed unsafe partial class ClearBackdrop(Windows.UI.Color tint) : Syst
 
         var options = new DispatcherQueueOptions { Size = Marshal.SizeOf<DispatcherQueueOptions>(), ThreadType = 2 /* current */, ApartmentType = 2 /* STA */ };
         Marshal.ThrowExceptionForHR(CreateDispatcherQueueController(options, out var controller));
-        _queueController = controller; // kept: the queue lives as long as its controller
+        _queueController = controller; // kept, because the queue lives only as long as its controller
     }
 
     [StructLayout(LayoutKind.Sequential)]

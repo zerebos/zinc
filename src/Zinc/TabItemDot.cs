@@ -6,10 +6,10 @@ using Microsoft.UI.Xaml.Media;
 namespace Zinc;
 
 /// <summary>
-/// Workspaces along the top: the attention dot takes the close button's place in the TabViewItem, as in
-/// the sidebar and the pane tabs (one slot; hovering swaps them, so nothing moves). The close button
-/// is in TabView's template, so the dot goes into the template's own grid, in the close button's cell;
-/// the button turns transparent rather than collapsing, keeping the tab's width. Until the template is
+/// For workspaces along the top, the attention dot takes the close button's place in the TabViewItem, as in
+/// the sidebar and the pane tabs (one slot, and hovering swaps them, so nothing moves). The close button
+/// is in TabView's template, so the dot goes into the template's own grid, in the close button's cell.
+/// The button turns transparent rather than collapsing, which keeps the tab's width. Until the template is
 /// there, or if it has no close button, the dot stays after the title (<see cref="TabHeader"/>).
 /// </summary>
 internal sealed class TabItemDot
@@ -31,7 +31,9 @@ internal sealed class TabItemDot
         header.PulseRequested += () => _dot.PulseIfShown();
     }
 
-    /// <summary>Finds the template's close button and puts the dot in its cell (once; Loaded runs again on every reload).</summary>
+    /// <summary>
+    /// Finds the template's close button and puts the dot in its cell (once, because Loaded runs again on every reload).
+    /// </summary>
     private void Attach()
     {
         if (_close != null)
@@ -65,7 +67,7 @@ internal sealed class TabItemDot
 
         _dot.Show(_header.Attention, _header.AttentionCount);
         _dot.ShowProgress(_header.Progress);
-        // The close button keeps its place (and still works when hovered); the dot covers it otherwise.
+        // The close button keeps its place (and still works when hovered), and the dot covers it otherwise.
         var dot = _dot.HasContent && !_hovered;
         _dot.Visibility = dot ? Visibility.Visible : Visibility.Collapsed;
         _close.Opacity = dot ? 0 : 1;

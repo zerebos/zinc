@@ -5,7 +5,7 @@ using Microsoft.UI.Xaml.Input;
 namespace Zinc;
 
 /// <summary>
-/// Diagnostics for a pointer shape that flickers (palette: "Trace the pointer (15 s)"; logging must be on). For a while
+/// Diagnostics for a pointer shape that flickers (the palette's "Trace the pointer (15 s)", with logging on). For a while
 /// it logs, as "pointer: ...": every change of the cursor on screen (polled every 2 ms on a thread of its own, with the
 /// window under it), every WM_SETCURSOR one of Zinc's windows gets (hit-test code, what it answered, the cursor after),
 /// and which XAML element pointer moves reach in each window. Then it takes everything back.

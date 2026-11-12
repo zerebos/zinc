@@ -10,12 +10,12 @@ namespace Zinc;
 /// transition) and re-decodes the icon, which blinks when focus moves between panes of
 /// different profiles. Here the title is one TextBlock whose Text changes, and each
 /// profile's icon is decoded once and just shown or hidden. A dot after the title flags a
-/// command that finished out of view (on the icon's corner when there's no title: the rail).
+/// command that finished out of view (on the icon's corner when there's no title, as on the rail).
 /// </summary>
 internal sealed partial class TabHeader : Grid
 {
     private readonly Grid _icons = new() { Width = 16, Height = 16, Margin = new Thickness(0, 0, 10, 0) };
-    // Left: a MaxWidth (TitleMaxWidth) narrower than its column would otherwise center it.
+    // Aligned left, because a MaxWidth (TitleMaxWidth) narrower than its column would otherwise center it.
     private readonly TextBlock _title = new()
     {
         TextTrimming = TextTrimming.CharacterEllipsis,
@@ -46,7 +46,7 @@ internal sealed partial class TabHeader : Grid
     }
 
     /// <summary>
-    /// A command finished (or failed) here while you weren't looking; <paramref name="count"/> tabs want you;
+    /// A command finished (or failed) here while you weren't looking, and <paramref name="count"/> tabs want you.
     /// <paramref name="words"/> says so (<see cref="AttentionWords.Summary"/>) for the tooltip and screen readers.
     /// </summary>
     public void SetAttention(Attention attention, int count = 1, string? words = null)
@@ -71,7 +71,7 @@ internal sealed partial class TabHeader : Grid
     /// <summary>How many tabs want you (the number in the dot, from 2).</summary>
     public int AttentionCount => _attentionCount;
 
-    /// <summary>A program's progress in this workspace: a ring where the dot goes, while there's no dot.</summary>
+    /// <summary>A program's progress in this workspace, shown as a ring where the dot goes while there's no dot.</summary>
     public void SetProgress(Zinc.Terminal.TerminalProgress progress)
     {
         if (progress == _progress)
@@ -93,8 +93,8 @@ internal sealed partial class TabHeader : Grid
     public event Action? PulseRequested;
 
     /// <summary>
-    /// The host shows the dot in a place of its own (the sidebar: in the close button's slot, so
-    /// hovering swaps them without moving anything); the header keeps it only on the rail.
+    /// The host shows the dot in a place of its own (in the sidebar that's the close button's slot, so
+    /// hovering swaps them without moving anything). The header keeps it only on the rail.
     /// </summary>
     public bool DotElsewhere
     {
@@ -127,7 +127,9 @@ internal sealed partial class TabHeader : Grid
 
     public string Title => _title.Text;
 
-    /// <summary>The title's color where its surface needs one (a light selection in the sidebar); null inherits.</summary>
+    /// <summary>
+    /// The title's color where its surface needs one (a light selection in the sidebar), or null to inherit.
+    /// </summary>
     public Microsoft.UI.Xaml.Media.Brush? TextForeground
     {
         set
@@ -143,7 +145,7 @@ internal sealed partial class TabHeader : Grid
         }
     }
 
-    /// <summary>Just the icon, centered (the sidebar's rail); the title stays in the tooltip.</summary>
+    /// <summary>Just the icon, centered (the sidebar's rail). The title stays in the tooltip.</summary>
     public bool Compact
     {
         set
@@ -157,7 +159,7 @@ internal sealed partial class TabHeader : Grid
         }
     }
 
-    /// <summary>After the title; on the icon's corner when there's no title.</summary>
+    /// <summary>After the title, or on the icon's corner when there's no title.</summary>
     private void PlaceDot()
     {
         _icons.Children.Remove(_dot); // (Parent is null for Panel children added in code)
@@ -205,7 +207,7 @@ internal sealed partial class TabHeader : Grid
         UpdateToolTip();
     }
 
-    /// <summary>The title, and what its dot means (the rail shows no number); the accessible name says the same.</summary>
+    /// <summary>The title, and what its dot means (the rail shows no number). The accessible name says the same.</summary>
     private void UpdateToolTip()
     {
         ToolTipService.SetToolTip(_owner, AttentionWords.ToolTip(_title.Text, _attentionWords));
@@ -228,7 +230,9 @@ internal sealed partial class TabHeader : Grid
         ShowIcon();
     }
 
-    /// <summary>The workspace's own icon (a Segoe Fluent Icons glyph), shown instead of the profile's; null: the profile's.</summary>
+    /// <summary>
+    /// The workspace's own icon (a Segoe Fluent Icons glyph), shown instead of the profile's. Null shows the profile's.
+    /// </summary>
     public void SetIcon(char? glyph)
     {
         if (glyph is { } g)

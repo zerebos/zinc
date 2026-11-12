@@ -18,7 +18,7 @@ public partial class App : Application
     }
     private ConfigFile _config = null!;
 
-    // One instance shared by every window and pane; a reload copies the new bindings into it.
+    // One instance shared by every window and pane, and a reload copies the new bindings into it.
     private Keybindings _keybindings = null!;
     private MessageWindow? _messageWindow;
     private HotkeyListener? _hotkey;
@@ -27,18 +27,20 @@ public partial class App : Application
     private MainWindow? _quick;
     private bool _quitting;
 
-    /// <summary>Zinc is quitting: windows close for real (the quick terminal too, which otherwise hides when closed).</summary>
+    /// <summary>
+    /// Zinc is quitting, so windows close for real (the quick terminal too, which otherwise hides when closed).
+    /// </summary>
     internal bool Quitting => _quitting;
 
     public App()
     {
         InitializeComponent();
 
-        // The config is read here, not in OnLaunched: an app's light or dark theme can only be set in its
+        // The config is read here, not in OnLaunched, because an app's light or dark theme can only be set in its
         // constructor (WinUI throws later), and every window, menu, dialog and code-fetched brush follows it.
-        WatchSystemScheme(); // before the first read: a light/dark theme pair picks its side from it
+        WatchSystemScheme(); // before the first read, because a light/dark theme pair picks its side from it
         _config = ConfigFile.Load();
-        // ZINC_TEST_APPEARANCE=light|dark: captures of either look, whatever Windows and the config say.
+        // ZINC_TEST_APPEARANCE=light|dark forces either look for captures, whatever Windows and the config say.
         var appearance = Config.TryMode<ChromeAppearance>(Environment.GetEnvironmentVariable("ZINC_TEST_APPEARANCE") ?? "", out var forced)
             ? forced : _config.Global.Appearance;
         RequestedTheme = appearance switch
@@ -49,9 +51,9 @@ public partial class App : Application
         };
 
         // Every exception that escapes leaves a record (crash.log, even without ZINC_LOG).
-        // One on the UI thread is survived: a crash would take every terminal with it, and
+        // One on the UI thread is survived, because a crash would take every terminal with it, and
         // most such failures belong to one action (a menu item, a palette command). Background
-        // threads and XAML's own fail-fasts can't be survived; they're at least recorded.
+        // threads and XAML's own fail-fasts can't be survived, but they're at least recorded.
         // A layout cycle stops part of a window repainting for good, and the exception alone doesn't say which elements
         // kept resizing. XAML describes the cycle in the debug output, which `DebugOutput` keeps for the report.
         DebugOutput.Start();
@@ -93,14 +95,14 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        // Zinc decides when to exit (see OnWindowClosed): closing the last window may
+        // Zinc decides when to exit (see OnWindowClosed), because closing the last window may
         // leave it running in the tray for the quick terminal.
         DispatcherShutdownMode = DispatcherShutdownMode.OnExplicitShutdown;
         Log.SetEnabled(_config.Global.Logging);
         AttentionDot.SetColors(_config.Global);
         if (_config.Global.ZincAccent)
         {
-            Brand.ApplyAccent(Resources); // before any window: controls resolve the accent when they're made
+            Brand.ApplyAccent(Resources); // before any window, because controls resolve the accent when they're made
         }
 
         CanvasLifetime.SoftwareRendering = _config.Global.SoftwareRendering;
@@ -113,13 +115,14 @@ public partial class App : Application
             Log.Write($"config: {warning}"); // shown in the window once settings reload on save
         }
         _messageWindow = new MessageWindow();
-        StartCliServer(); // before any terminal starts: each gets the pipe's name
+        StartCliServer(); // before any terminal starts, because each gets the pipe's name
         var profile = _config.DefaultProfile;
-        // A command given on our command line (or ZINC_SHELL) is asked for explicitly: open
+        // A command given on our command line (or ZINC_SHELL) is asked for explicitly, so open
         // it rather than the saved session. Otherwise reopen what was open last time.
         var explicitCommand = ShellResolver.OwnArguments().Length > 0 ||
                               Environment.GetEnvironmentVariable("ZINC_SHELL") is { Length: > 0 };
-        // Zinc's own flags (a jump list item while Zinc wasn't running): the usual start, then what they ask.
+        // With Zinc's own flags (a jump list item while Zinc wasn't running), Zinc starts as usual and then does what
+        // the flags ask.
         var launch = LaunchRequest.Parse(ShellResolver.LaunchArguments());
         LoginStartup.Apply(_config.Global.LaunchAtLogin);
         ExplorerIntegration.Apply(_config.Global.ExplorerMenu);
@@ -128,8 +131,8 @@ public partial class App : Application
         ListenForConsoles();
         if (ShellResolver.LaunchedForHandoff && !explicitCommand)
         {
-            // Started by Windows to receive a console (default terminal): its window opens when it
-            // arrives; with none after a while, there's nothing to stay for.
+            // Started by Windows to receive a console (as the default terminal). Its window opens when the console
+            // arrives, and with none after a while, there's nothing to stay for.
             Log.Write("default terminal: started to receive a console");
             _handoffStartTimer = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
             _handoffStartTimer.Interval = TimeSpan.FromSeconds(20);
@@ -146,20 +149,20 @@ public partial class App : Application
         }
         else if (ShellResolver.LaunchedAtLogin && !explicitCommand && _config.Global.LaunchAtLogin == LaunchAtLogin.Tray)
         {
-            // Signed in with "start in the tray": no window; the tray icon brings back the saved ones.
+            // Signed in with "start in the tray", so there's no window. The tray icon brings back the saved ones.
             Log.Write("login: started in the tray");
         }
         else if (!explicitCommand && !File.Exists(_config.Path))
         {
-            // First launch: the welcome page, then the first window, built the way it asks for.
+            // On first launch, show the welcome page, then the first window, built the way the page asks for.
             ShowWelcome(firstRun: true);
         }
         else if ((explicitCommand || !RestoreSession()) &&
                  launch.Action is not (LaunchAction.Profile or LaunchAction.Folder or LaunchAction.NewWindow or
                      LaunchAction.ReopenWindow or LaunchAction.QuickTerminal))
         {
-            // Our own arguments / ZINC_SHELL override the first tab's command only. (Nothing saved to reopen and a flag
-            // that opens a window, or the quick terminal: that's what opens, not a default window too.)
+            // Our own arguments or ZINC_SHELL override only the first tab's command. When there's nothing saved to
+            // reopen and a flag opens a window or the quick terminal, that's what opens, without a default window too.
             OpenWindow(profile, ShellResolver.Resolve(profile.Config));
         }
 
@@ -187,11 +190,6 @@ public partial class App : Application
 
     private WelcomeWindow? _welcome;
 
-    /// <summary>
-    /// The welcome page (on first launch, and from the palette): writes its answers into
-    /// config.toml, in place. On first launch it then opens the first window; later, the reload
-    /// that follows the save applies colors, font and shell (the layout applies to new windows).
-    /// </summary>
     private SettingsWindow? _settings;
 
     /// <summary>Logs what sets the pointer's shape, in every window, for 15 seconds (PointerTrace).</summary>
@@ -201,7 +199,6 @@ public partial class App : Application
         PointerTrace.Start(roots.ToList(), TimeSpan.FromSeconds(15));
     }
 
-    /// <summary>The settings window: opened, or brought forward if it's open.</summary>
     /// <summary>Opens (or brings back) the settings window, on <paramref name="section"/> if given.</summary>
     internal void ShowSettings(string? section = null)
     {
@@ -216,8 +213,8 @@ public partial class App : Application
             return;
         }
 
-        // It comes back where it was (saved with the session), else over the window you're in;
-        // during a run, on the section it was left on.
+        // It comes back where it was (saved with the session), or else over the window you're in.
+        // During a run, it opens on the section it was left on.
         var settings = _settings = new SettingsWindow(_config, section ?? _settingsSection) { PreviewHidden = _settingsPreviewHidden };
         settings.PreviewHiddenChanged += hidden => _settingsPreviewHidden = hidden;
         if (!WindowPlacement.Restore(settings, _settingsBounds))
@@ -249,6 +246,11 @@ public partial class App : Application
         settings.Activate();
     }
 
+    /// <summary>
+    /// The welcome page (on first launch, and from the palette) writes its answers into
+    /// config.toml, in place. On first launch it then opens the first window. Later, the reload
+    /// that follows the save applies colors, font and shell (the layout applies to new windows).
+    /// </summary>
     internal void ShowWelcome(bool firstRun)
     {
         if (_welcome != null)
@@ -258,7 +260,7 @@ public partial class App : Application
         }
 
         _welcome = new WelcomeWindow(_config, firstRun);
-        // Centered on the screen: the main one on first run, else the one your window is on.
+        // Centered on the main screen on first run, or else on the screen your window is on.
         WindowPlacement.CenterOnScreen(_welcome, 940, 720, _windows.LastOrDefault(w => w.AppWindow is { IsVisible: true }));
         _welcome.Finished += choices =>
         {
@@ -267,7 +269,7 @@ public partial class App : Application
             try
             {
                 var existing = File.Exists(path) ? File.ReadAllText(path) : null;
-                // Skipped on first launch: an almost empty config, so the page doesn't come back.
+                // Skipped on first launch, so this writes an almost empty config and the page doesn't come back.
                 var text = choices == null ? existing ?? FirstRun.Template : FirstRun.Apply(existing, choices, existing != null ? _config : null);
                 if (text != existing)
                 {
@@ -303,7 +305,9 @@ public partial class App : Application
     internal void OpenWindow(Profile profile, string? command = null) =>
         Track(new MainWindow(_config, _keybindings, profile, command ?? ShellResolver.ForProfile(profile.Config)));
 
-    /// <summary>A new window, as you ask for one (New window): on the new-workspace page when it's on.</summary>
+    /// <summary>
+    /// A new window, as you ask for one (New window), which opens on the new-workspace page when that page is on.
+    /// </summary>
     internal void OpenNewWindow() => Track(new MainWindow(_config, _keybindings));
 
     /// <summary>Opens a window for a workspace moved out of another one.</summary>
@@ -322,7 +326,7 @@ public partial class App : Application
             }
 
             _drag = value;
-            // While a pane or its tab is dragged, workspace tabs must stay put: TabView's reordering
+            // While a pane or its tab is dragged, workspace tabs must stay put, because TabView's reordering
             // slides them apart under any drag (moving the one being rested on to switch to it)
             // and overrides the drop's caption with its own "Move".
             var reorder = value?.Tab is not (MainWindow.TerminalTab or Panes.TabGroup<MainWindow.TerminalTab>);
@@ -374,7 +378,7 @@ public partial class App : Application
         return window;
     }
 
-    /// <summary>A normal window was activated: it's the one the tray icon brings back first.</summary>
+    /// <summary>A normal window was activated, so it's the one the tray icon brings back first.</summary>
     internal void NoteActivated(MainWindow window)
     {
         if (_windows.Remove(window))
@@ -384,8 +388,8 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// After a window closes: with no normal windows left, quit, unless the quick terminal
-    /// can still be summoned or is showing (quit-after-last-window-closed overrides).
+    /// After a window closes with no normal windows left, quits, unless the quick terminal
+    /// can still be summoned or is showing. <c>quit-after-last-window-closed</c> overrides this.
     /// </summary>
     private void OnWindowClosed()
     {
@@ -404,13 +408,12 @@ public partial class App : Application
         }
     }
 
-    /// <summary>Closes every window (ending their shells) and exits.</summary>
-    /// <summary>Quits when you ask to: first asks, in the front window, if commands are running.</summary>
+    /// <summary>Quits when you ask to, first asking in the front window if commands are running.</summary>
     internal void AskQuit() => AskQuit(fresh: false);
 
     /// <summary>
-    /// Quits (asking first if commands are running); <paramref name="fresh"/>: without saving the
-    /// windows, so the next start opens a new one; <paramref name="restartForUpdate"/>: the ready update
+    /// Quits, asking first if commands are running. With <paramref name="fresh"/>, it quits without saving the
+    /// windows, so the next start opens a new one. With <paramref name="restartForUpdate"/>, the ready update
     /// installs and Zinc starts again (Updater.RestartNow).
     /// </summary>
     internal async void AskQuit(bool fresh, bool restartForUpdate = false)
@@ -427,13 +430,14 @@ public partial class App : Application
         Ui.Guard("quitting", () => Quit(fresh, restartForUpdate));
     }
 
+    /// <summary>Closes every window (ending their shells) and exits.</summary>
     internal void Quit() => Quit(fresh: false);
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _handoffStartTimer;
 
     /// <summary>
     /// Receives consoles Windows hands over while Zinc is the default terminal (registered with
-    /// COM whenever Zinc runs: harmless otherwise, as only that setting points Windows here), and
+    /// COM whenever Zinc runs, which is harmless otherwise because only that setting points Windows here), and
     /// keeps the registration pointing at this exe (installs are versioned folders). Test runs
     /// (ZINC_CONFIG) don't, unless ZINC_DEFTERM_TEST=1, so they never take a real console.
     /// </summary>
@@ -463,7 +467,7 @@ public partial class App : Application
         TerminalHandoff.StartListening(test ? Zinc.Pty.DefaultTerminal.TestClsid : Zinc.Pty.DefaultTerminal.Clsid);
     }
 
-    /// <summary>A console handed over: a tab in the window used last, or a window of its own.</summary>
+    /// <summary>Opens a console handed over, as a tab in the window used last or in a window of its own.</summary>
     private void OpenHandedOver(Zinc.Pty.ConPty pty, string title)
     {
         _handoffStartTimer?.Stop();
@@ -521,7 +525,7 @@ public partial class App : Application
     private static Microsoft.UI.Dispatching.DispatcherQueue? _launchQueue;
 
     /// <summary>
-    /// Another launch of Zinc was handed to this process (Program): open what it asked
+    /// Another launch of Zinc was handed to this process (Program), so this opens what it asked
     /// for. Called on a background thread, possibly before startup has finished.
     /// </summary>
     internal static void OnRedirectedLaunch(Microsoft.Windows.AppLifecycle.AppActivationArguments args)
@@ -557,8 +561,8 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// What a later launch opens: its command, if it gave one; otherwise the saved windows when
-    /// none is open (Zinc was in the tray), else a new window.
+    /// Opens what a later launch asks for. That's its command, if it gave one. Otherwise it's the saved windows
+    /// when none is open (Zinc was in the tray), or else a new window.
     /// </summary>
     private void OpenForLaunch(string[] argv)
     {
@@ -569,7 +573,7 @@ public partial class App : Application
 
         if (argv.Contains(Zinc.Pty.DefaultTerminal.EmbeddingFlag))
         {
-            // Started by COM for a console while this one runs: the console comes here through COM.
+            // Started by COM for a console while this process runs, and the console comes here through COM.
             return;
         }
 
@@ -584,7 +588,7 @@ public partial class App : Application
         var profile = _config.DefaultProfile;
         if (argv.Length > 0)
         {
-            // Its ZINC_SHELL stayed with the other process; only its arguments came over.
+            // Its ZINC_SHELL stayed with the other process, and only its arguments came over.
             OpenWindow(profile, ShellResolver.Resolve(profile.Config, argv,
                 name => name == "ZINC_SHELL" ? null : Environment.GetEnvironmentVariable(name)));
         }
@@ -641,7 +645,7 @@ public partial class App : Application
 
     private FileSystemWatcher? _configWatcher;
 
-    // In a field: an unreferenced DispatcherQueueTimer is collected and stops firing.
+    // In a field, because an unreferenced DispatcherQueueTimer is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _reloadTimer;
 
     /// <summary>
@@ -659,7 +663,7 @@ public partial class App : Application
         var folder = Path.GetDirectoryName(_config.Path);
         if (folder == null || !Directory.Exists(folder))
         {
-            return; // no config folder yet: nothing to watch until Zinc is restarted
+            return; // no config folder yet, so nothing to watch until the welcome page or settings window creates it
         }
 
         var queue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
@@ -671,7 +675,8 @@ public partial class App : Application
         var themes = Path.Combine(folder, "themes") + Path.DirectorySeparatorChar;
         void OnChange(object sender, FileSystemEventArgs e)
         {
-            // The folder also holds session.json, rewritten as windows change: ignore it.
+            // The folder also holds session.json, which is rewritten as windows change, so only .toml files and
+            // themes count.
             var path = e.FullPath;
             if (path.EndsWith(".toml", StringComparison.OrdinalIgnoreCase) || path.StartsWith(themes, StringComparison.OrdinalIgnoreCase))
             {
@@ -695,16 +700,12 @@ public partial class App : Application
         _configWatcher.EnableRaisingEvents = true;
     }
 
-    /// <summary>
-    /// Reads the config again and applies it to every window. A file that isn't valid TOML (a
-    /// save mid-edit) is only reported: the settings in force stay.
-    /// </summary>
-    // Held here: it's what raises ColorValuesChanged.
+    // Held here, because it's what raises ColorValuesChanged.
     private Windows.UI.ViewManagement.UISettings? _uiSettings;
 
     /// <summary>
-    /// Follows Windows' app light/dark mode (Settings > Personalization > Colors): a
-    /// <c>light:…,dark:…</c> theme switches sides when it flips, through a config reload.
+    /// Follows Windows' app light/dark mode (Settings > Personalization > Colors). A
+    /// <c>light:…,dark:…</c> theme switches sides through a config reload when the mode flips.
     /// </summary>
     private void WatchSystemScheme()
     {
@@ -714,7 +715,7 @@ public partial class App : Application
         _uiSettings.ColorValuesChanged += (_, _) => dispatcher.SafeEnqueue(() => SetSystemScheme(CurrentSystemScheme()));
     }
 
-    /// <summary>Windows is light or dark now (or a test says so: test:appearance-light / -dark).</summary>
+    /// <summary>Windows is light or dark now (or a test says so with test:appearance-light or -dark).</summary>
     internal void SetSystemScheme(Ghostty.ColorScheme scheme)
     {
         if (scheme == ConfigFile.SystemScheme)
@@ -737,6 +738,10 @@ public partial class App : Application
         return background.R + background.G + background.B > 3 * 128 ? Ghostty.ColorScheme.Light : Ghostty.ColorScheme.Dark;
     }
 
+    /// <summary>
+    /// Reads the config again and applies it to every window. A file that isn't valid TOML (a
+    /// save mid-edit) is only reported, and the settings in force stay.
+    /// </summary>
     internal void ReloadConfig()
     {
         if (_quitting)
@@ -790,7 +795,10 @@ public partial class App : Application
 
     private readonly string? _sessionPath = OwnSession(SessionStore.DefaultPath());
 
-    /// <summary>The session file this run keeps (null: a test run, or another process owns it), for settings backups.</summary>
+    /// <summary>
+    /// The session file this run keeps, for settings backups. It's null for a test run, or when another process owns
+    /// the file.
+    /// </summary>
     internal string? SessionPath => _sessionPath;
 
     /// <summary>Writes the session now if it changed (a settings backup takes the file as it is).</summary>
@@ -804,7 +812,7 @@ public partial class App : Application
     private string? _settingsSection;
     private string? _savedSession;
 
-    /// <summary>The command palette's recently run commands, shared by every window; saved with the session.</summary>
+    /// <summary>The command palette's recently run commands, shared by every window (saved with the session).</summary>
     internal Zinc.Commands.RecentCommands RecentCommands { get; private set; } = new();
 
     /// <summary>Folders shells reported lately, for the new-workspace page (saved with the session).</summary>
@@ -812,7 +820,7 @@ public partial class App : Application
 
     private int _nextWorkspaceColor;
 
-    /// <summary>For <c>workspace-colors = cycle</c>: the next color's turn (shared by every window).</summary>
+    /// <summary>The next color's turn for <c>workspace-colors = cycle</c> (shared by every window).</summary>
     internal int NextWorkspaceColor() => _nextWorkspaceColor++;
 
     /// <summary>Workspaces closed lately, for reopening (saved with the session).</summary>
@@ -825,8 +833,8 @@ public partial class App : Application
     internal QuickTerminalSizes QuickTerminalSizes { get; private set; } = new();
 
     /// <summary>
-    /// A window is closing (before its terminals end): it can be reopened. Not when quitting
-    /// (the session keeps every window) or when its last workspace left (nothing to bring back).
+    /// Notes a window that's closing (before its terminals end), so it can be reopened. It doesn't when quitting
+    /// (the session keeps every window) or when the window's last workspace left (nothing to bring back).
     /// </summary>
     internal void NoteClosedWindow(MainWindow window)
     {
@@ -880,15 +888,14 @@ public partial class App : Application
         _settingsPreviewHidden = saved?.SettingsPreviewHidden ?? false;
     }
 
-    // Held here: a DispatcherQueueTimer nothing references is garbage-collected and stops
-    // firing (saves silently stopped after the first GC, 2026-09-27).
+    // Held here, because a DispatcherQueueTimer nothing references is garbage-collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _sessionTimer;
     private static Mutex? _sessionOwner;
 
     /// <summary>
-    /// The session file this process may restore and save: only the first Zinc process running
-    /// gets it. Normally a second launch never gets this far (Program redirects it to the running
-    /// one); this is the backstop if that fails, so two processes can't both reopen every window
+    /// The session file this process may restore and save. Only the first Zinc process running
+    /// gets it. Normally a second launch never gets this far, because Program redirects it to the running
+    /// one. This is the backstop if that fails, so two processes can't both reopen every window
     /// and overwrite each other's saves.
     /// </summary>
     private static string? OwnSession(string? path)
@@ -911,7 +918,7 @@ public partial class App : Application
         return path;
     }
 
-    /// <summary>Reopens the windows saved last time; false if there were none (or none reopened).</summary>
+    /// <summary>Reopens the windows saved last time, or returns false if there were none (or none reopened).</summary>
     private bool RestoreSession()
     {
         if (_sessionPath == null || !_config.Global.SaveState || SessionStore.Load(_sessionPath) is not { } session)
@@ -944,7 +951,7 @@ public partial class App : Application
         Log.Write($"session: reopened {opened} of {session.Windows.Count} window(s)");
         if (opened > 0)
         {
-            // The last window closed came back with the session: it can't be reopened again.
+            // The last window closed came back with the session, so it can't be reopened again.
             foreach (var back in ClosedWindows.All.Where(c => c.WasLast).ToList())
             {
                 ClosedWindows.Take(back);
@@ -955,7 +962,7 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Saves the open windows every couple of seconds when they changed (cheap: a few dozen
+    /// Saves the open windows every couple of seconds when they changed (cheap, since it's a few dozen
     /// tabs), so a crash or power loss keeps the layout too. Quit saves once more first.
     /// </summary>
     private void StartSavingSession()
@@ -976,10 +983,9 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Writes the open windows to session.json if they changed. With no windows open (the last
-    /// one was closed, the app stays in the tray) the previous save stands, so that window comes back.
+    /// Forgets the saved windows (recent commands and the settings window's place stay), so the next start opens a
+    /// new window.
     /// </summary>
-    /// <summary>The saved windows go (recent commands and the settings window's place stay): the next start opens a new window.</summary>
     private void ForgetWindows()
     {
         if (_sessionPath == null)
@@ -1001,6 +1007,10 @@ public partial class App : Application
         }
     }
 
+    /// <summary>
+    /// Writes the open windows to session.json if they changed. With no windows open (the last
+    /// one was closed, the app stays in the tray) the previous save stands, so that window comes back.
+    /// </summary>
     private void SaveSession()
     {
         if (_sessionPath == null || _quitting || !_config.Global.SaveState)
@@ -1058,7 +1068,6 @@ public partial class App : Application
         };
     }
 
-    /// <summary>Tray click: bring back the most recently used window, or the saved ones, or open one.</summary>
     private Action? _notificationClicked;
 
     /// <summary>
@@ -1077,6 +1086,9 @@ public partial class App : Application
         Log.Write($"notify: {title} / {body}");
     }
 
+    /// <summary>
+    /// On a tray click, brings back the most recently used window, or else the saved ones, or else opens one.
+    /// </summary>
     private void ShowWindows()
     {
         if (_windows.Count == 0)
@@ -1100,7 +1112,7 @@ public partial class App : Application
 
     private void ToggleQuickTerminalFromTray()
     {
-        // The menu has focus, so the quick window is never "active" here: go by visibility.
+        // The menu has focus, so the quick window is never "active" here, so this goes by visibility.
         if (_quick?.IsQuickShown == true)
         {
             _quick.HideQuick();
@@ -1133,7 +1145,7 @@ public partial class App : Application
     /// <summary>
     /// Null when the quick terminal hotkey is registered (or disabled); otherwise its
     /// display name, e.g. "Win+`", so windows can say it's taken. Retries registration
-    /// first: another app may have released it since.
+    /// first, because another app may have released it since.
     /// </summary>
     internal string? UnavailableQuickTerminalHotkey()
     {

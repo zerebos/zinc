@@ -22,7 +22,7 @@ internal sealed partial class HotkeyListener : IDisposable
 
     public bool IsRegistered { get; private set; }
 
-    /// <summary>Tries to claim the hotkey; false if another app holds it.</summary>
+    /// <summary>Tries to claim the hotkey, and returns false if another app holds it.</summary>
     public bool TryRegister()
     {
         if (!IsRegistered && _window.Hwnd != 0)

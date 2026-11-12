@@ -11,7 +11,7 @@ namespace Zinc;
 /// </summary>
 internal static class Brand
 {
-    /// <summary>Phosphor green: the accent on dark.</summary>
+    /// <summary>Phosphor green, the accent on dark.</summary>
     public static readonly Color Green = Color.FromArgb(0xFF, 0x3D, 0xF2, 0xA0);
 
     /// <summary>The accent on light (4.9:1 on Mica).</summary>
@@ -39,8 +39,9 @@ internal static class Brand
     public static Color OnAccent(bool dark) => dark ? Screen : Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
 
     /// <summary>
-    /// The caption buttons (minimize, maximize, close) of a window drawing its own title bar: glyphs in
-    /// the app's light or dark ink, a faint tint of it on hover and press, the background left to the window.
+    /// Styles the caption buttons (minimize, maximize, close) of a window drawing its own title bar. The glyphs use
+    /// the app's light or dark ink, with a faint tint of that ink on hover and press, and the background is left to
+    /// the window.
     /// </summary>
     public static void StyleCaptionButtons(Microsoft.UI.Windowing.AppWindowTitleBar titleBar)
     {
@@ -58,9 +59,9 @@ internal static class Brand
 
     /// <summary>
     /// Replaces Windows' accent with Zinc's for every control in the app (switches, checkboxes,
-    /// selections, focus lines, progress, links). WinUI's theme brushes are built from these colors:
-    /// dark themes fill with Light2 and write text with Light3, light themes fill with Dark1 and write
-    /// with Dark2/Dark3. Set before any window exists (controls resolve them when they're made).
+    /// selections, focus lines, progress, links). WinUI's theme brushes are built from these colors.
+    /// Dark themes fill with Light2 and write text with Light3, and light themes fill with Dark1 and write
+    /// with Dark2 or Dark3. Call it before any window exists, because controls resolve the colors when they're made.
     /// </summary>
     public static void ApplyAccent(ResourceDictionary resources)
     {

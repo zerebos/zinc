@@ -20,13 +20,15 @@ internal enum Attention
     /// <summary>A program sent a notification (OSC 9 / 777) out of view.</summary>
     Notified,
 
-    /// <summary>The bell rang out of view: something wants you (the brand's caution color).</summary>
+    /// <summary>The bell rang out of view, so something wants you (the brand's caution color).</summary>
     Bell,
 
     /// <summary>A long command failed out of view.</summary>
     Failed,
 
-    /// <summary>The tab's own program exited with an error out of view, and the tab stays (a dropped ssh session; decision 46).</summary>
+    /// <summary>
+    /// The tab's own program exited with an error out of view, and the tab stays (a dropped ssh session, for example).
+    /// </summary>
     Exited,
 }
 
@@ -77,13 +79,13 @@ internal static class AttentionWords
 /// while a program reports progress (OSC 9;4). After a tab's title, or on its icon's corner (ringed
 /// in the background color) where there's no title. It fades 100% → 35% → 100% every 1.6 s until
 /// you look (still when Windows' animations are off). A workspace with two or more tabs to look
-/// at shows how many in a pill instead (not on a corner: no room).
+/// at shows how many in a pill instead (not on a corner, because there's no room).
 /// </summary>
 internal sealed partial class AttentionDot : Grid
 {
     private static readonly Windows.UI.ViewManagement.UISettings Animations = new();
 
-    // [notify] finished-color, bell-color, failed-color (null: the brand's, per theme). Dots shown with an
+    // [notify] finished-color, bell-color, failed-color (null means the brand's, per theme). Dots shown with an
     // older set recolor the next time they're shown (MainWindow.ApplyConfig shows them all again).
     private static Color? _finished, _bell, _failed;
     private static int _colorsVersion;
@@ -136,7 +138,7 @@ internal sealed partial class AttentionDot : Grid
         Corner = true;
     }
 
-    /// <summary>Never pulses: a status shown where you're looking (a header's status slot), not news.</summary>
+    /// <summary>Never pulses, because it's a status shown where you're looking (a header's status slot), not news.</summary>
     public bool Steady { get; init; }
 
     /// <summary>On an icon's corner (true), or on its own after a title.</summary>
@@ -145,8 +147,8 @@ internal sealed partial class AttentionDot : Grid
         set
         {
             _corner = value;
-            // After a title about the size of the tab's close glyph (the guide's 6 epx was easy to miss); on an
-            // icon's corner a little bigger, with its ring.
+            // After a title it's about the size of the tab's close glyph (the guide's 6 epx was easy to miss). On an
+            // icon's corner it's a little bigger, with its ring.
             var size = value ? 9.0 : 8.0;
             _dot.Width = _dot.Height = size;
             _dot.RadiusX = _dot.RadiusY = size * 0.12 + (value ? 1.5 : 0); // the lit cell's corner (the ring rounds it out)
@@ -163,7 +165,7 @@ internal sealed partial class AttentionDot : Grid
     /// <summary>Whether it shows anything (a dot or a ring).</summary>
     public bool HasContent => _shown != Attention.None || _progress.Active;
 
-    /// <param name="count">How many tabs it stands for (a workspace's): 2 or more shows the number.</param>
+    /// <param name="count">How many tabs it stands for (a workspace's). Two or more shows the number.</param>
     public void Show(Attention attention, int count = 1)
     {
         count = attention == Attention.None ? 0 : Math.Max(1, count);
@@ -204,7 +206,9 @@ internal sealed partial class AttentionDot : Grid
         }
     }
 
-    /// <summary>A program's progress: a ring (filling, or spinning when it gave no number) while there's no dot.</summary>
+    /// <summary>
+    /// A program's progress, shown as a ring (filling, or spinning when it gave no number) while there's no dot.
+    /// </summary>
     public void ShowProgress(TerminalProgress progress)
     {
         if (progress == _progress)
@@ -247,9 +251,8 @@ internal sealed partial class AttentionDot : Grid
     }
 
     /// <summary>
-    /// The brand's pulse: opacity 100% → 35% → 100% over 1.6 s, until you look; it never scales,
-    /// bounces or flashes (the old pulse grew twice and stopped). Held steady when Windows'
-    /// "Animation effects" are off.
+    /// The brand's pulse, which fades the opacity 100% → 35% → 100% over 1.6 s until you look. It never scales, bounces
+    /// or flashes. It's held steady when Windows' "Animation effects" are off.
     /// </summary>
     private void Pulse()
     {
@@ -259,7 +262,7 @@ internal sealed partial class AttentionDot : Grid
             return;
         }
 
-        // The dot's and pill's own opacity, never this element's: hosts hide the dot by its Opacity (the
+        // The dot's and pill's own opacity, never this element's, because hosts hide the dot by its Opacity (the
         // sidebar and pane tabs, when hovering swaps it for the close button), and an animation running
         // on that property would override them.
         _pulse = new Storyboard();

@@ -10,7 +10,10 @@ namespace Zinc;
 /// <summary>What a zn command acts on: a window, and (unless it shows the new-workspace page) a workspace, pane and terminal.</summary>
 internal sealed record CliTarget(MainWindow Window, WorkspaceTab? Workspace, TabGroup<TerminalTab>? Pane, TerminalTab? Terminal)
 {
-    /// <summary>Found by nothing the command said (run outside Zinc, no flags): zn tells the user what it picked.</summary>
+    /// <summary>
+    /// True when nothing in the command picked the target (run outside Zinc, with no flags), so zn tells the user what
+    /// it picked.
+    /// </summary>
     public bool Defaulted { get; init; }
 }
 
@@ -34,8 +37,9 @@ public partial class App
     }
 
     /// <summary>
-    /// <c>[cli] path</c>: zn's folder on the user's PATH (this copy's: installs are versioned folders), or off it. At every
-    /// start and reload; never in test runs (ZINC_CONFIG), as they never touch the sign-in entry either.
+    /// <c>[cli] path</c>: puts zn's folder on the user's PATH, or takes it off. The folder is this copy's, because
+    /// installs are versioned folders. Runs at every start and reload, but never in test runs (ZINC_CONFIG), because
+    /// they never touch the sign-in entry either.
     /// </summary>
     private static void ApplyZnPath(bool on)
     {
@@ -57,7 +61,7 @@ public partial class App
             if (path.Apply(folder))
             {
                 Log.Write(folder != null ? $"cli: zn on PATH: {folder}" : "cli: zn taken off PATH");
-                _ = Task.Run(Zinc.Pty.UserPath.Announce); // a broadcast: kept off the UI thread
+                _ = Task.Run(Zinc.Pty.UserPath.Announce); // a broadcast, so it runs off the UI thread
             }
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException or System.Security.SecurityException)
@@ -66,7 +70,7 @@ public partial class App
         }
     }
 
-    /// <summary>Every exception is caught here: this runs as queued work, where one would end the process.</summary>
+    /// <summary>Every exception is caught here, because this runs as queued work, where one would end the process.</summary>
     private async void RunCli(CliRequest request, TaskCompletionSource<CliReply> done)
     {
         try
@@ -82,7 +86,7 @@ public partial class App
 
     private async Task<CliReply> HandleCli(CliRequest request)
     {
-        // What and where, never what's typed (session 2's terminal send leaves its text out).
+        // What and where, never what's typed (so `terminal send` leaves its text out).
         Log.Write($"cli: {request.Cmd}{(request.Direction is { } d ? " " + d : "")} from " +
                   (request.Caller is { } caller ? $"terminal {caller}" : "outside Zinc"));
         if (request.Cmd == "version")
@@ -132,7 +136,10 @@ public partial class App
     /// <summary>Windows zn can see: the normal ones, then the quick terminal's.</summary>
     private IEnumerable<MainWindow> CliWindows => _quick != null ? _windows.Append(_quick) : _windows;
 
-    /// <summary>A profile by id or name (any case); <paramref name="fallback"/> when none was named; null if there's no such profile.</summary>
+    /// <summary>
+    /// A profile by id or name (any case), or <paramref name="fallback"/> when none was named. Null if there's no such
+    /// profile.
+    /// </summary>
     internal Profile? CliProfile(string? name, Profile fallback) =>
         name == null ? fallback
         : _config.FindProfile(name) ?? _config.Profiles.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -141,8 +148,8 @@ public partial class App
         CliReply.Fail(CliCodes.Usage, $"No profile \"{name}\". Settings > Profiles lists them; use a profile's id (wsl:Fedora) or name.");
 
     /// <summary>
-    /// What a command means: the flag's thing (the biggest picks its focused parts), else zn's own terminal, else the
-    /// window used last. Null if a flag names something that isn't open.
+    /// What a command acts on. That's the thing its flag names (a window, workspace or pane brings its focused parts
+    /// along), else zn's own terminal, else the window used last. Null if a flag names something that isn't open.
     /// </summary>
     private CliTarget? FindCliTarget(CliRequest request)
     {
@@ -174,7 +181,7 @@ public partial class App
 
         if (request.Window is { } windowId)
         {
-            // A window showing the new-workspace page: the window alone.
+            // A window showing the new-workspace page has no workspace, so the target is the window alone.
             return CliWindows.FirstOrDefault(w => w.Id == windowId) is { } only ? new CliTarget(only, null, null, null) : null;
         }
 
@@ -221,7 +228,9 @@ public partial class App
         };
     }
 
-    /// <summary>Everything open, for list; "focused" marks the way to the terminal keys go to in the window used last.</summary>
+    /// <summary>
+    /// Everything open, for zn list. "Focused" marks the path to the terminal that keys go to in the window used last.
+    /// </summary>
     private CliTree CliTree()
     {
         var front = _windows.LastOrDefault();

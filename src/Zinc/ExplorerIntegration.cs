@@ -4,7 +4,7 @@ using Zinc.Shell;
 namespace Zinc;
 
 /// <summary>
-/// <c>explorer-menu</c>: "Open in Zinc" on Explorer's folder menu (<see cref="ExplorerMenu"/>), kept in step with the
+/// Keeps <c>explorer-menu</c>'s "Open in Zinc" on Explorer's folder menu (<see cref="ExplorerMenu"/>) in step with the
 /// setting at every start and reload, with this exe's own path (installs are versioned folders). Test runs (ZINC_CONFIG)
 /// never touch it, as with the sign-in entry.
 /// </summary>
@@ -20,7 +20,7 @@ internal static class ExplorerIntegration
         try
         {
             var menu = new ExplorerMenu(Registry.CurrentUser);
-            // Off: only take back entries that start this copy or are gone stale; another copy's stay its own.
+            // When off, only take back entries that start this copy or have gone stale, because another copy's are its own.
             if (!on && menu.RegisteredExe() is { } registered && !registered.Equals(exe, StringComparison.OrdinalIgnoreCase) && File.Exists(registered))
             {
                 return;

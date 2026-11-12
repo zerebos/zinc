@@ -6,7 +6,7 @@ namespace Zinc;
 /// <summary>
 /// Text on the chrome's pane-colored surfaces (the selected tab flows into its terminal, so it
 /// takes the terminal's background or the tab's color). Dark chrome has white text, which a light
-/// surface (a light scheme, a yellow tab) turns dark; light chrome has dark text, which a dark surface
+/// surface (a light scheme, a yellow tab) turns dark. Light chrome has dark text, which a dark surface
 /// (a dark scheme in a light window) turns white. Accent marks (selection pills, focus lines) on those
 /// surfaces are kept visible the same way.
 /// </summary>
@@ -27,7 +27,9 @@ internal static class Contrast
     public static bool IsLight(Color background) =>
         0.2126 * background.R + 0.7152 * background.G + 0.0722 * background.B > 150;
 
-    /// <summary>Text for <paramref name="background"/> where the chrome's own would be hard to read; null keeps the chrome's.</summary>
+    /// <summary>
+    /// Text for <paramref name="background"/> where the chrome's own would be hard to read, or null to keep the chrome's.
+    /// </summary>
     public static Brush? TextOn(Color background) => IsLight(background) == LightChrome ? null : IsLight(background) ? Dark : Light;
 
     /// <summary>

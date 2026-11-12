@@ -4,10 +4,10 @@ using Zinc.Pty;
 namespace Zinc;
 
 /// <summary>
-/// Receiving consoles as the default terminal (<see cref="DefaultTerminal"/>): Zinc's COM class,
-/// registered with COM while Zinc runs (CoRegisterClassObject) on a thread of its own in the
+/// Receives consoles as the default terminal (<see cref="DefaultTerminal"/>) with Zinc's COM class,
+/// which is registered with COM while Zinc runs (CoRegisterClassObject) on a thread of its own in the
 /// multithreaded apartment, so calls don't wait for the UI. Windows Terminal's OpenConsole creates
-/// it and calls <see cref="ITerminalHandoff3.EstablishPtyHandoff"/> with the console's handles; the
+/// the class and calls <see cref="ITerminalHandoff3.EstablishPtyHandoff"/> with the console's handles. The
 /// console becomes a ConPty (<see cref="ConPty.FromHandoff"/>) and a tab opens on the UI thread.
 /// </summary>
 internal static class TerminalHandoff
@@ -15,7 +15,7 @@ internal static class TerminalHandoff
     private static Thread? _thread;
     private static readonly ManualResetEventSlim Stop = new();
 
-    /// <summary>Called on a COM thread with each console: open it (on the UI thread).</summary>
+    /// <summary>Called on a COM thread with each console, and hands the console to the UI thread to open.</summary>
     public static Action<ConPty, string>? Received { get; set; }
 
     public static void StartListening(Guid clsid)
@@ -52,7 +52,7 @@ internal static class TerminalHandoff
     private static extern int CoRevokeClassObject(int cookie);
 }
 
-// COM sees only public types: these are what OpenConsole talks to (see TerminalHandoff).
+// These are public because COM sees only public types. They're what OpenConsole talks to (see TerminalHandoff).
 
 [ComVisible(true), Guid("6F23DA90-15C5-4203-9DB0-64E73F1B1B00"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 public interface ITerminalHandoff3
@@ -79,7 +79,7 @@ public sealed class TerminalHandoffObject : ITerminalHandoff3
         input = output = 0;
         try
         {
-            // TERMINAL_STARTUP_INFO starts with the title (a BSTR): the program's path, or a shortcut's name.
+            // TERMINAL_STARTUP_INFO starts with the title (a BSTR), which is the program's path or a shortcut's name.
             var title = startupInfo != 0 ? Marshal.PtrToStringBSTR(Marshal.ReadIntPtr(startupInfo)) ?? "" : "";
             var pty = ConPty.FromHandoff(server, reference, signal, client, out input, out output);
             Log.Write($"default terminal: a console arrived: {title} ({pty.ProgramPath}, pid {pty.ProcessId})");

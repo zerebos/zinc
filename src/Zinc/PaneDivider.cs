@@ -10,7 +10,8 @@ namespace Zinc;
 
 /// <summary>
 /// The draggable band between two panes of a split. Sits in the middle row/column of the split's Grid and rewrites the
-/// Grid's star sizes while dragged. At gap 0 it's the divider (a 1 px line in a 5 px band); above it, the gap itself.
+/// Grid's star sizes while dragged. At gap 0 it's the divider (a 1 px line in a 5 px band). Above gap 0 it's the gap
+/// itself.
 /// </summary>
 internal sealed partial class PaneDivider : Grid
 {
@@ -64,10 +65,11 @@ internal sealed partial class PaneDivider : Grid
     }
 
     /// <summary>
-    /// Shows one side of the split alone (<paramref name="first"/> true or false: a maximized pane is on that side), or
-    /// both at the split's ratio (null), with a band for <paramref name="gap"/> between them. The other side and the
-    /// divider are collapsed, never taken out of the Grid: removing panes is what froze them (Win2D's Loaded/Unloaded
-    /// count), and a collapsed terminal keeps its rows and columns (it skips a 0 size) instead of reflowing.
+    /// Shows one side of the split alone (<paramref name="first"/> true or false, when a maximized pane is on that
+    /// side), or both at the split's ratio (null), with a band for <paramref name="gap"/> between them. The other side
+    /// and the divider are collapsed, never taken out of the Grid, because removing panes would freeze them (Win2D's
+    /// Loaded/Unloaded count). A collapsed terminal also keeps its rows and columns (it skips a 0 size) instead of
+    /// reflowing.
     /// </summary>
     public static void ShowOnly(Grid grid, PaneSplit split, bool? first, int gap)
     {
