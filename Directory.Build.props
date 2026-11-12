@@ -8,6 +8,8 @@
   -->
   <PropertyGroup>
     <ZincVersion>0.1.0</ZincVersion>
+    <!-- The GitHub repository whose releases a release build updates from (scripts/release/release.ps1). -->
+    <ZincRepositoryUrl>https://github.com/zerebos/zinc</ZincRepositoryUrl>
     <Version>$(ZincVersion)</Version>
     <!-- The SDK's own "+<full commit>" suffix is replaced by ours. -->
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

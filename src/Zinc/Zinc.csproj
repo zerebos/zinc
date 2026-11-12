@@ -92,8 +92,8 @@
     <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
   </ItemGroup>
 
-  <!-- Where release builds look for updates (scripts/release/release.ps1 -UpdateUrl); dev builds have none
-       (Updater.Source). -->
+  <!-- Where release builds look for updates (scripts/release/release.ps1 -UpdateSource, which defaults to
+       ZincRepositoryUrl). Dev builds have none (Updater.Source). -->
   <ItemGroup Condition="'$(ZincUpdateUrl)' != ''">
     <AssemblyMetadata Include="ZincUpdateUrl" Value="$(ZincUpdateUrl)" />
   </ItemGroup>

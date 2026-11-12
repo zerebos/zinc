@@ -54,11 +54,13 @@ runs directly.
 
 ## Sharing a build
 
-`pwsh scripts/release/release.ps1 -UpdateUrl <address>` makes a release in
+`pwsh scripts/release/release.ps1` makes a release in
 `dist\release` with [Velopack](https://velopack.io): `Zinc-win-Setup.exe` (a per-user install, no admin
 prompt), the update packages, `releases.win.json` (what installed copies check daily) and
-`Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are inside (about 77 MB). Put the
-folder's contents at the address; installed copies then update themselves (Settings > About > Updates).
+`Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are inside (about 77 MB). Installed copies
+update themselves (Settings > About > Updates) from the releases of the GitHub repository that
+`Directory.Build.props` names (`ZincRepositoryUrl`). `-UpdateSource <address>` builds in another place to look
+instead, which is a folder or a web address that holds the folder's contents.
 `-From <address>` fetches the previous release first so the new one also gets a small delta package.
 `README.txt` (from `scripts/release/package-readme.txt`) tells testers how to install past SmartScreen (the
 build isn't signed), how updates work, where settings and logs go, how to send a debug log and

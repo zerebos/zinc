@@ -8,8 +8,12 @@
   the previous release is there, a delta package with only what changed, releases.win.json (the list a
   running Zinc checks for updates) and Zinc-win-Portable.zip.
 
-  -UpdateUrl is built into the release as the address it checks for updates (the folder testers download from).
-  A Zinc release needs one. Test packages (-PackId Zinc.Test) find theirs through ZINC_UPDATE_URL.
+  -UpdateSource is built into the release as the address it checks for updates. For a Zinc release it defaults to
+  the GitHub repository in Directory.Build.props (ZincRepositoryUrl), whose releases hold the updates. Test packages
+  (-PackId Zinc.Test) get none and find theirs through ZINC_UPDATE_URL.
+
+  -UpdateUrl is the folder this release is uploaded to and that testers' installed copies still check (the feed
+  from before GitHub Releases). -Publish needs it, to refuse a version that isn't above the one published there.
 
   Deltas need the previous release in -Out. -From fetches it first, from the address testers update from (an
   https URL) or from a local folder.
@@ -37,7 +41,7 @@
 
 .EXAMPLE
   pwsh scripts/release/release.ps1 -Publish                                                             # the real thing
-  pwsh scripts/release/release.ps1 -UpdateUrl https://example.com/zinc/ -From https://example.com/zinc/ # build only
+  pwsh scripts/release/release.ps1 -From https://example.com/zinc/                                      # build only
   pwsh scripts/release/release.ps1 -PackId Zinc.Test -Version 0.1.0-test.1 -AllowDirty -Out C:\Temp\feed  # tests
 #>
 param(
@@ -45,6 +49,7 @@ param(
     [string]$From,
     [string]$PackId = 'Zinc',
     [string]$UpdateUrl,
+    [string]$UpdateSource,
     [string]$Version,
     [switch]$AllowDirty,
     # Where shortcuts go at install ('' for none, because test packages must not touch the Start Menu).
@@ -70,7 +75,10 @@ if ($Publish) {
 
 New-Item -ItemType Directory -Force $Out | Out-Null
 
-if ($PackId -eq 'Zinc' -and -not $UpdateUrl) { throw 'A release needs -UpdateUrl: where it will look for updates.' }
+if ($PackId -eq 'Zinc' -and -not $UpdateSource) {
+    $UpdateSource = [regex]::Match((Get-Content (Join-Path $repo 'Directory.Build.props') -Raw), '<ZincRepositoryUrl>(.+?)</ZincRepositoryUrl>').Groups[1].Value
+    if (-not $UpdateSource) { throw 'A release needs -UpdateSource, or ZincRepositoryUrl in Directory.Build.props, to know where to look for updates.' }
+}
 
 if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
     throw 'native\x64\ghostty-vt.dll missing: run scripts/build/libghostty.ps1 first.'
@@ -154,7 +162,7 @@ try {
     # vcvarsall.bat or put another `link` ahead of MSVC's, and zn's Native AOT link then fails. The rest of the script
     # keeps the inherited PATH (curl).
     $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateUrl" 2>&1
+    $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateSource" 2>&1
     $failed = $LASTEXITCODE -ne 0
 } finally {
     $env:PATH = $inheritedPath

@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.UI.Dispatching;
 using Velopack;
+using Velopack.Sources;
 
 namespace Zinc;
 
@@ -32,8 +33,9 @@ internal enum UpdateStatus
 /// Updates for copies the installer put in place (Velopack). Zinc checks a minute after startup and every day after
 /// that (<c>[updates] check</c>), or when asked (About), and a newer version downloads in the background and waits. It
 /// installs when Zinc quits, or at once through <see cref="RestartNow"/> (App's quit, with its confirmation and the
-/// session saved), never by surprise. The address is built into release builds (<c>ZincUpdateUrl</c>, release.ps1),
-/// and <c>ZINC_UPDATE_URL</c> (a folder or a URL) overrides it for tests. Everything here runs on the UI thread.
+/// session saved), never by surprise. The address is built into release builds (<c>ZincUpdateUrl</c>, release.ps1).
+/// It names the GitHub repository whose releases hold the updates, and <c>ZINC_UPDATE_URL</c> overrides it for tests
+/// with a folder or a web address that serves the release files themselves. Everything here runs on the UI thread.
 /// </summary>
 internal static class Updater
 {
@@ -68,11 +70,14 @@ internal static class Updater
 
     public static string? Error { get; private set; }
 
-    /// <summary>The ready update's notice was put off ("Later"), so windows don't show it again this run.</summary>
+    /// <summary>
+    /// The ready update's notice was put off ("Install when I quit"), so windows don't show it again this run.
+    /// </summary>
     public static bool NoticeDismissed { get; private set; }
 
     /// <summary>
-    /// Handles "Later" on the notice. Every window hides the notice, and the update still installs when Zinc quits.
+    /// Handles "Install when I quit" on the notice. Every window hides the notice, and the update still installs when
+    /// Zinc quits.
     /// </summary>
     public static void DismissNotice()
     {
@@ -98,7 +103,7 @@ internal static class Updater
                 _managerTried = true;
                 try
                 {
-                    if (Source is { } source && new UpdateManager(source) is { IsInstalled: true } manager)
+                    if (Source is { } source && ManagerFor(source) is { IsInstalled: true } manager)
                     {
                         _manager = manager;
                     }
@@ -117,6 +122,15 @@ internal static class Updater
             return _manager;
         }
     }
+
+    /// <summary>
+    /// The update manager for an address. A GitHub repository's updates are its releases, leaving out the ones marked
+    /// as pre-releases. Any other address is a folder or a web address that serves the release files themselves.
+    /// </summary>
+    private static UpdateManager ManagerFor(string source) =>
+        UpdateFeed.GitHubRepository(source) is { } repository
+            ? new UpdateManager(new GithubSource(repository, accessToken: null, prerelease: false))
+            : new UpdateManager(source);
 
     /// <summary>The installed version (null when this copy can't update).</summary>
     public static string? CurrentVersion => Manager?.CurrentVersion?.ToString();
