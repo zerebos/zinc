@@ -33,7 +33,7 @@ public static partial class SettingsCatalog
             SettingKind.Text)
             {
                 Placeholder = "Symbols Nerd Font, Noto Sans JP",
-                Binding = Bind.Custom((c, v) => Config.FallbackList(v) is { } fonts ? c with { FontFallback = fonts } : null,
+                Binding = Bind.Custom((c, v) => Config.NormalizeFallback(v) is { } fonts ? c with { FontFallback = fonts } : null,
                     [Accepts.Text(), Accepts.List([Accepts.Text()])], c => c.FontFallback is { Length: > 0 } fonts ? fonts : null),
             },
         new("appearance", "Font", "font.adjust-cell-height", "Line height",

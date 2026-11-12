@@ -369,7 +369,7 @@ public sealed partial class MainWindow : Window
             UpdateFocusBorders(tab); // group strips show titles too
         };
         Action header = () => UpdateFocusBorders(tab); // a one-tab pane's header title
-        Action close = () => ClosePane(tab, pane);
+        Action close = () => ClosePaneTab(tab, pane);
         Action directory = () =>
         {
             UpdateTitle(tab, fromShell: true); // the command center shows the folder
@@ -436,7 +436,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Closes one terminal tab; an emptied group, then workspace, goes with it.</summary>
-    private void ClosePane(WorkspaceTab tab, TerminalTab pane)
+    private void ClosePaneTab(WorkspaceTab tab, TerminalTab pane)
     {
         if (tab.Workspace.GroupOf(pane) == null || CloseAnimated(tab, pane))
         {
@@ -590,7 +590,7 @@ public sealed partial class MainWindow : Window
             view.MoreRequested += anchor => WithTabOf(group, t => ShowPaneMenu(t, group, anchor));
             // Groups can move between workspaces, so look the workspace up when it's needed.
             view.TabClicked += pane => WithTabOf(group, t => ShowGroupTab(t, pane));
-            view.TabCloseClicked += pane => WithTabOf(group, t => AskClosePane(t, pane));
+            view.TabCloseClicked += pane => WithTabOf(group, t => AskClosePaneTab(t, pane));
             view.NewTabClicked += () => WithTabOf(group, t => NewTabInGroup(t, group, group.Active.Profile));
             view.TabMenuRequested += (pane, anchor) => WithTabOf(group, t => ShowGroupTabMenu(t, pane, anchor));
             view.TabDragStarting += (pane, e) =>
@@ -895,10 +895,10 @@ public sealed partial class MainWindow : Window
         var group = tab.Workspace.GroupOf(pane);
         var alone = tab.Workspace.Tabs.Count() == 1;
         var menu = new MenuFlyout();
-        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.ClosePane), () => AskClosePane(tab, pane)));
+        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.CloseTab), () => AskClosePaneTab(tab, pane)));
         if (group is { Tabs.Count: > 1 })
         {
-            menu.Items.Add(Item("Close other tabs", null, null, () => AskClosePanes(tab, group.Tabs.Where(t => t != pane).ToList())));
+            menu.Items.Add(Item("Close other tabs", null, null, () => AskClosePaneTabs(tab, group.Tabs.Where(t => t != pane).ToList())));
         }
 
         menu.Items.Add(new MenuFlyoutSeparator());
@@ -947,12 +947,12 @@ public sealed partial class MainWindow : Window
         menu.Items.Add(Item("Rename tab…", "", null, () => ShowRenameTab(tab, pane, anchor)));
         AddMoveTabItems(menu, tab, pane, tab.Workspace.Tabs.Count() == 1);
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.ClosePane), () => AskClosePane(tab, pane)));
+        menu.Items.Add(Item("Close tab", "", Shortcut(TerminalAction.CloseTab), () => AskClosePaneTab(tab, pane)));
         if (group.Tabs.Count > 1)
         {
-            menu.Items.Add(Item("Close other tabs", null, null, () => AskClosePanes(tab, group.Tabs.Where(t => t != pane).ToList())));
+            menu.Items.Add(Item("Close other tabs", null, null, () => AskClosePaneTabs(tab, group.Tabs.Where(t => t != pane).ToList())));
             menu.Items.Add(Item($"Close pane ({group.Tabs.Count} tabs)", null, Shortcut(TerminalAction.CloseGroup),
-                () => AskClosePanes(tab, [.. group.Tabs], "pane")));
+                () => AskClosePaneTabs(tab, [.. group.Tabs], "pane")));
         }
 
         // Below the button, right edges aligned, like other app menus (the default opened above when there was room).
@@ -1232,11 +1232,11 @@ public sealed partial class MainWindow : Window
         OpenTab(profile, ShellResolver.ForProfile(profile.Config), profile.Config.ResolveWorkingDirectory());
 
     /// <summary>Closes a workspace when you ask to: asks first if a command is running.</summary>
-    private async void CloseTab(WorkspaceTab tab)
+    private async void CloseWorkspace(WorkspaceTab tab)
     {
         if (await ConfirmClose(tab.Workspace.Tabs.ToList(), "workspace"))
         {
-            Ui.Guard("closing a workspace", () => CloseTabNow(tab));
+            Ui.Guard("closing a workspace", () => CloseWorkspaceNow(tab));
         }
         else if (SelectedTab is { } shown)
         {
@@ -1245,7 +1245,7 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>Closes every terminal in a workspace and removes its tab (it can be reopened: see <see cref="RememberClosed"/>).</summary>
-    private void CloseTabNow(WorkspaceTab tab)
+    private void CloseWorkspaceNow(WorkspaceTab tab)
     {
         RememberClosed(tab); // first: its shells' folders are read from them
         foreach (var pane in tab.Workspace.Tabs.ToList())
@@ -1385,7 +1385,7 @@ public sealed partial class MainWindow : Window
     {
         if (args.Tab.Tag is WorkspaceTab tab)
         {
-            CloseTab(tab);
+            CloseWorkspace(tab);
         }
         else
         {
@@ -1548,13 +1548,13 @@ public sealed partial class MainWindow : Window
             case TerminalAction.OpenNewTabMenu:
                 NewTabMenu.ShowAt(NewTabMenuButton);
                 return true;
-            case TerminalAction.ClosePane:
-                AskClosePane(tab, origin);
+            case TerminalAction.CloseTab:
+                AskClosePaneTab(tab, origin);
                 return true;
             case TerminalAction.CloseGroup:
                 if (tab.Workspace.GroupOf(origin) is { } closing)
                 {
-                    AskClosePanes(tab, [.. closing.Tabs], "pane");
+                    AskClosePaneTabs(tab, [.. closing.Tabs], "pane");
                 }
 
                 return true;

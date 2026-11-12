@@ -81,7 +81,7 @@ public sealed partial class MainWindow
                     return NotClosed();
                 }
 
-                CloseTabNow(tab);
+                CloseWorkspaceNow(tab);
                 return CliReply.Done();
             case "pane close":
                 if (!request.Force && !await ConfirmClose(group.Tabs.ToList(), "pane", severalTabs: false))
@@ -91,7 +91,7 @@ public sealed partial class MainWindow
 
                 foreach (var closing in group.Tabs.ToList())
                 {
-                    ClosePane(tab, closing);
+                    ClosePaneTab(tab, closing);
                 }
 
                 return CliReply.Done();
@@ -101,7 +101,7 @@ public sealed partial class MainWindow
                     return NotClosed();
                 }
 
-                ClosePane(tab, pane);
+                ClosePaneTab(tab, pane);
                 return CliReply.Done();
             case "terminal send":
                 return pane.Control.SendText(request.Text ?? "", request.Paste)

@@ -66,7 +66,7 @@ public static class Actions
         new("reopen-window", TerminalAction.ReopenWindow, Arg.None, "Reopen closed window",
             "Bring back the window closed last, where it was: its workspaces, tabs, splits and folders."),
         new("duplicate-tab", TerminalAction.DuplicateTab, Arg.None, "Duplicate tab", "Open the focused tab's command again, next to it."),
-        new("close-tab", TerminalAction.ClosePane, Arg.None, "Close tab", "Close the focused tab (its pane goes with its last tab)."),
+        new("close-tab", TerminalAction.CloseTab, Arg.None, "Close tab", "Close the focused tab (its pane goes with its last tab)."),
         new("next-tab", TerminalAction.NextTab, Arg.None, "Next tab", "The pane's next tab, or the next workspace."),
         new("previous-tab", TerminalAction.PreviousTab, Arg.None, "Previous tab", "The pane's previous tab, or the previous workspace."),
         new("go-to-workspace", TerminalAction.SwitchToTab, Arg.Workspace, "Go to workspace", "Show workspace N (from 1), or \"last\"."),

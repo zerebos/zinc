@@ -185,7 +185,7 @@ internal sealed partial class AttentionDot : Grid
             {
                 Attention.Failed or Attention.Exited => _failed ?? Brand.ErrorFor(dark),
                 Attention.Bell => _bell ?? Brand.CautionFor(dark),
-                _ => _finished ?? Brand.Attention(dark),
+                _ => _finished ?? Brand.AttentionFor(dark),
             });
             _dot.Fill = brush;
             _pill.Background = brush;

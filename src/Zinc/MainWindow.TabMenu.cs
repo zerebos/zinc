@@ -73,10 +73,10 @@ public sealed partial class MainWindow
         menu.Items.Add(Item("Move workspace to new window", "", null, () => MoveToNewWindow(tab)));
 
         menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(Item("Close other workspaces", null, null, () => CloseTabs(AllTabs().Where(t => t != tab))));
+        menu.Items.Add(Item("Close other workspaces", null, null, () => CloseWorkspaces(AllTabs().Where(t => t != tab))));
         menu.Items.Add(Item("Close workspaces to the right", null, null, () =>
-            CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1))));
-        menu.Items.Add(Item("Close workspace", "", null, () => CloseTab(tab)));
+            CloseWorkspaces(AllTabs().SkipWhile(t => t != tab).Skip(1))));
+        menu.Items.Add(Item("Close workspace", "", null, () => CloseWorkspace(tab)));
 
         return menu.RunAfterClose();
     }
@@ -112,7 +112,7 @@ public sealed partial class MainWindow
     private void SplitFocused(WorkspaceTab tab, PaneDirection direction) =>
         HandleAction(new ActionInvocation(TerminalAction.SplitPane, Direction: direction), tab, tab.Active);
 
-    private async void CloseTabs(IEnumerable<WorkspaceTab> tabs)
+    private async void CloseWorkspaces(IEnumerable<WorkspaceTab> tabs)
     {
         var list = tabs.ToList();
         if (!await ConfirmClose(list.SelectMany(t => t.Workspace.Tabs).ToList(), list.Count == 1 ? "workspace" : "workspaces"))
@@ -124,7 +124,7 @@ public sealed partial class MainWindow
         {
             foreach (var t in list)
             {
-                CloseTabNow(t);
+                CloseWorkspaceNow(t);
             }
         });
     }

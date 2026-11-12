@@ -69,7 +69,7 @@ public sealed partial class MainWindow
         _workspaceList = list;
 
         list.ItemClicked += tab => Tabs.SelectedItem = tab.Item;
-        list.ItemCloseClicked += CloseTab;
+        list.ItemCloseClicked += CloseWorkspace;
         list.PageClicked += () =>
         {
             if (StartPageItem() is { } page)

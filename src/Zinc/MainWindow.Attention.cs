@@ -342,10 +342,10 @@ public sealed partial class MainWindow
     }
 
     /// <summary>Closes a terminal tab when you ask to (not when its shell has exited).</summary>
-    private void AskClosePane(WorkspaceTab tab, TerminalTab pane) => AskClosePanes(tab, [pane]);
+    private void AskClosePaneTab(WorkspaceTab tab, TerminalTab pane) => AskClosePaneTabs(tab, [pane]);
 
     /// <summary>Closes several terminal tabs, asking once for all of them; <paramref name="what"/> names them for the button ("pane").</summary>
-    private async void AskClosePanes(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
+    private async void AskClosePaneTabs(WorkspaceTab tab, IReadOnlyList<TerminalTab> panes, string? what = null)
     {
         // FIXME: this is gonna be fun with i18n later...
         if (await ConfirmClose(panes, what ?? (panes.Count == 1 ? "tab" : "tabs")))
@@ -366,13 +366,13 @@ public sealed partial class MainWindow
     {
         if (!_quick && tab.Workspace.Tabs.All(panes.Contains)) // (the quick terminal's isn't a workspace you'd reopen)
         {
-            CloseTabNow(tab);
+            CloseWorkspaceNow(tab);
             return;
         }
 
         foreach (var pane in panes)
         {
-            ClosePane(tab, pane);
+            ClosePaneTab(tab, pane);
         }
     }
 

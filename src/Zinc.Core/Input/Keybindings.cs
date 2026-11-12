@@ -29,8 +29,8 @@ public enum TerminalAction
     DuplicateTab,
     OpenNewTabMenu,
 
-    /// <summary>Close the focused tab (close-tab; the name is older than tabs inside panes). Its pane goes with its last tab.</summary>
-    ClosePane,
+    /// <summary>Close the focused tab (close-tab). Its pane goes with its last tab.</summary>
+    CloseTab,
 
     /// <summary>Close the focused pane and every tab in it (close-pane), asking once.</summary>
     CloseGroup,
@@ -592,7 +592,7 @@ public sealed class Keybindings
         b.Bind("ctrl+comma", TerminalAction.OpenSettings); // Windows Terminal's and VS Code's
         b.Bind("ctrl+shift+d", TerminalAction.DuplicateTab);
         b.Bind("ctrl+shift+space", TerminalAction.OpenNewTabMenu);
-        b.Bind("ctrl+shift+w", TerminalAction.ClosePane);
+        b.Bind("ctrl+shift+w", TerminalAction.CloseTab);
         b.Bind("ctrl+tab", TerminalAction.NextTab);
         b.Bind("ctrl+shift+tab", TerminalAction.PreviousTab);
         b.Bind("ctrl+shift+n", TerminalAction.NewWindow);

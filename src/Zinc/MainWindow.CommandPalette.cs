@@ -373,7 +373,7 @@ public sealed partial class MainWindow
         }
 
         Action(TerminalAction.NewWindow);
-        commands.Add(new PaletteCommand("Close page", Keys(TerminalAction.ClosePane), () => HandlePageAction(TerminalAction.ClosePane, page)));
+        commands.Add(new PaletteCommand("Close page", Keys(TerminalAction.CloseTab), () => HandlePageAction(TerminalAction.CloseTab, page)));
         if (Tabs.TabItems.Count > 1)
         {
             Action(TerminalAction.NextTab);
@@ -459,8 +459,8 @@ public sealed partial class MainWindow
             Action(TerminalAction.ReopenWindow);
         }
         Action(TerminalAction.DuplicateTab);
-        Action(TerminalAction.ClosePane);
-        Custom("Close workspace", () => CloseTab(tab));
+        Action(TerminalAction.CloseTab);
+        Custom("Close workspace", () => CloseWorkspace(tab));
         Custom("Move workspace to new window", () => MoveToNewWindow(tab));
         if (tab.Workspace.Tabs.Count() > 1)
         {
@@ -481,8 +481,8 @@ public sealed partial class MainWindow
             Custom("Clear workspace folder", () => ClearWorkspaceFolder(tab));
         }
 
-        Custom("Close other workspaces", () => CloseTabs(AllTabs().Where(t => t != tab)));
-        Custom("Close workspaces to the right", () => CloseTabs(AllTabs().SkipWhile(t => t != tab).Skip(1)));
+        Custom("Close other workspaces", () => CloseWorkspaces(AllTabs().Where(t => t != tab)));
+        Custom("Close workspaces to the right", () => CloseWorkspaces(AllTabs().SkipWhile(t => t != tab).Skip(1)));
         Action(TerminalAction.NextTab);
         Action(TerminalAction.PreviousTab);
         // From the palette, "Go to tab…" turns the palette itself into the tab switcher ("@"); run

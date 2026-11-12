@@ -60,7 +60,7 @@ public sealed partial class MainWindow
         var count = Tabs.TabItems.Count;
         switch (invocation.Action)
         {
-            case TerminalAction.ClosePane:
+            case TerminalAction.CloseTab:
                 RemoveStartPage(page);
                 return true;
             case TerminalAction.NextTab:

@@ -212,7 +212,7 @@ public sealed partial class MainWindow
 
         if (_runningCell != null && _searchGlyph != null)
         {
-            _runningCell.Fill = new SolidColorBrush(Brand.Attention(Brand.IsDark(_runningCell)));
+            _runningCell.Fill = new SolidColorBrush(Brand.AttentionFor(Brand.IsDark(_runningCell)));
             _runningCell.Visibility = running ? Visibility.Visible : Visibility.Collapsed;
             _searchGlyph.Visibility = running ? Visibility.Collapsed : Visibility.Visible;
         }

@@ -18,7 +18,7 @@ public sealed partial class TerminalControl
     {
         get
         {
-            var green = Brand.Attention(!LightTerminal);
+            var green = Brand.AttentionFor(!LightTerminal);
             return Color.FromArgb(0x90, green.R, green.G, green.B);
         }
     }

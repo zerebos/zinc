@@ -247,7 +247,7 @@ user's commits of what you staged; post-commit and post-merge, since a merge run
 - TabView's style defaults to `VerticalAlignment=Top`: without `Stretch` it's only as tall as
   its strip and tab content gets 0 px (panes never start their session).
 - TabView unloads hidden tabs' content and reloads it on selection. Never tie session
-  lifetime to `Unloaded` — panes are closed explicitly by their window (`CloseTab`,
+  lifetime to `Unloaded` — panes are closed explicitly by their window (`CloseWorkspace`,
   `Closed`); `Loaded` handlers must tolerate running more than once.
 - Flyouts/menus are separate popup windows: PrintWindow of the main HWND won't show them.
 - TabViewItem applies Horizontal/VerticalContentAlignment to its *header*: Stretch there

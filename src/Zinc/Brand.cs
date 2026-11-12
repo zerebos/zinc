@@ -30,7 +30,7 @@ internal static class Brand
 
     public static bool IsDark(FrameworkElement element) => element.ActualTheme != ElementTheme.Light;
 
-    public static Color Attention(bool dark) => dark ? Green : GreenOnLight;
+    public static Color AttentionFor(bool dark) => dark ? Green : GreenOnLight;
 
     public static Color CautionFor(bool dark) => dark ? Caution : CautionOnLight;
 

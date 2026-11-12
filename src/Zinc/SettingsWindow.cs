@@ -1878,7 +1878,7 @@ internal sealed partial class SettingsWindow : Window
             var dark = Brand.IsDark(_page);
             switch (setting.Key)
             {
-                case "notify.finished-color": return Brand.Attention(dark);
+                case "notify.finished-color": return Brand.AttentionFor(dark);
                 case "notify.bell-color": return Brand.CautionFor(dark);
                 case "notify.failed-color": return Brand.ErrorFor(dark);
             }

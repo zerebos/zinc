@@ -63,7 +63,7 @@ The attention dot's colors and the words around it say the same thing. Use these
 
 | State | Color in `Brand.cs` | Wording |
 |---|---|---|
-| Work finished out of view | `Attention` | "Finished": "Build finished in workspace 2" |
+| Work finished out of view | `AttentionFor` | "Finished": "Build finished in workspace 2" |
 | A program is waiting on the person | `CautionFor` | "Needs you": *ssh needs you in "prod"* |
 | The command that finished out of view failed | `ErrorFor` | "Failed": "Tests failed (exit 1) in workspace 2" |
 

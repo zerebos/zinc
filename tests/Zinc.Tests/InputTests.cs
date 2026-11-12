@@ -148,7 +148,7 @@ public class KeybindingTests
     [InlineData("ctrl+alt+1", TerminalAction.SwitchToTab, 0)]
     [InlineData("ctrl+alt+8", TerminalAction.SwitchToTab, 7)]
     [InlineData("ctrl+alt+9", TerminalAction.SwitchToTab, -1)]
-    [InlineData("ctrl+shift+w", TerminalAction.ClosePane, 0)]
+    [InlineData("ctrl+shift+w", TerminalAction.CloseTab, 0)]
     [InlineData("ctrl+tab", TerminalAction.NextTab, 0)]
     [InlineData("ctrl+shift+tab", TerminalAction.PreviousTab, 0)]
     [InlineData("ctrl+shift+space", TerminalAction.OpenNewTabMenu, 0)]

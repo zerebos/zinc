@@ -287,7 +287,7 @@ public sealed record Config
     /// <c>[font] fallback</c> in the form <see cref="FontFallback"/> keeps it ("A, B"), made from a list of names or from
     /// one string with commas. Null when it's neither.
     /// </summary>
-    public static string? FallbackList(object value)
+    public static string? NormalizeFallback(object value)
     {
         var text = value switch
         {

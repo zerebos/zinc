@@ -11,7 +11,7 @@ public class KeysConfigTests
     [InlineData("copy if-selection", TerminalAction.CopyIfSelection)]
     [InlineData("paste", TerminalAction.Paste)]
     [InlineData("new-tab", TerminalAction.NewTab)]
-    [InlineData("close-tab", TerminalAction.ClosePane)]
+    [InlineData("close-tab", TerminalAction.CloseTab)]
     [InlineData("command-palette", TerminalAction.OpenCommandPalette)]
     [InlineData("reload-config", TerminalAction.ReloadConfig)]
     [InlineData("quit", TerminalAction.Quit)]
@@ -131,7 +131,7 @@ public class KeysConfigTests
 
         Assert.False(keys.TryGet(new KeyChord(VirtualKey.W, Ctrl: true, Shift: true), out _));
         Assert.True(keys.TryGet(new KeyChord(VirtualKey.W, Ctrl: true), out var close));
-        Assert.Equal(TerminalAction.ClosePane, close.Action);
+        Assert.Equal(TerminalAction.CloseTab, close.Action);
         Assert.True(keys.TryGet(KeyChord.Parse("alt+shift+plus"), out var split));
         Assert.Equal(PaneDirection.Down, split.Direction);
         Assert.Equal(KeyChord.Parse("ctrl+alt+r"), keys.ChordFor(TerminalAction.ReloadConfig));
