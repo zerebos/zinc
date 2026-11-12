@@ -23,7 +23,7 @@ public class InputLatencyTests
     [Fact]
     public void ASpaceOvertakingTheLastLetterIsCounted()
     {
-        // "o" then space typed; the space's character arrives first (the tester's "the space lands before the letter").
+        // "o" then space typed, and the space's character arrives first.
         var trace = new InputLatency();
         trace.KeyDown(0, 0, "o");
         trace.KeyDown(30, 0, " ");
@@ -54,7 +54,7 @@ public class InputLatencyTests
         var trace = new InputLatency();
         trace.KeyDown(0, 0, "a");
         trace.Sent(1);
-        trace.Sent(3); // a second key before the echo: the clock keeps the first
+        trace.Sent(3); // a second key before the echo, so the clock keeps the first send
         trace.Output(21);
         trace.Drawn(30);
 
@@ -66,8 +66,8 @@ public class InputLatencyTests
     [Fact]
     public void AnEchoInSeveralPiecesIsTimedToItsLastPiece()
     {
-        // A letter whose echo comes in three reads (the letter, a recoloured line, a prediction), the last 40 ms after
-        // the send; output after the echo window (a program's own output later on) doesn't count.
+        // A letter whose echo comes in three reads (the letter, a recolored line, a prediction), the last 40 ms after
+        // the send. Output after the echo window (a program's own output later on) doesn't count.
         var trace = new InputLatency();
         trace.KeyDown(0, 0, "a");
         trace.Sent(0);

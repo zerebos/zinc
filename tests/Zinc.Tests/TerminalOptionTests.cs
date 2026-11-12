@@ -17,7 +17,7 @@ public class TerminalOptionTests
         session.WriteToScreen("\x1b[>q");
         Assert.Contains("\x1bP>|zinc ", Joined(replies));
         Assert.StartsWith("zinc ", TerminalSession.Version);
-        // Directory.Build.props: the release ("0.1.0+a1b2c3d") or a dev build ("0.1.0-dev.812+a1b2c3d").
+        // The version comes from Directory.Build.props, either the release ("0.1.0+a1b2c3d") or a dev build ("0.1.0-dev.812+a1b2c3d").
         Assert.Matches(@"^zinc \d+\.\d+\.\d+(-dev\.\d+)?(\+[0-9a-f]{7})?$", TerminalSession.Version);
     }
 
@@ -125,10 +125,10 @@ public class TerminalOptionTests
     [Fact]
     public void GrowingDoesNotPullScrollbackBackIntoView()
     {
-        // ConPTY keeps its own screen without scrollback; rows it never saw coming back would
+        // ConPTY keeps its own screen without scrollback, so rows it never saw coming back would
         // leave the two disagreeing about what's on screen.
-        // Pulled back, the rows would reappear above the cursor and push it down; kept, blank rows
-        // are added below and the cursor stays on its row.
+        // Pulled back, the rows would reappear above the cursor and push it down. With them kept in the
+        // scrollback, blank rows are added below and the cursor stays on its row.
         using var session = new TerminalSession(20, 5, TerminalTheme.Default);
         session.WriteToScreen(string.Concat(Enumerable.Range(1, 10).Select(i => $"line{i}\r\n")));
         Assert.Equal(4, session.CursorRow); // the bottom row

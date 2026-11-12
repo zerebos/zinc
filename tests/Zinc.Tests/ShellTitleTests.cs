@@ -121,7 +121,7 @@ public class ShellTitleTests
     {
         Assert.Equal(new HeaderTitle("vim: notes.md", @"~\dev", DetailIsFolder: true),
             Header(false, @"C:\Users\JDoe\dev", "vim notes.md", ranSeconds: 0.01, program: "vim: notes.md", programSinceCommand: true));
-        // A title the shell set before the command doesn't count; with program-titles off no program names it.
+        // A title the shell set before the command doesn't count. With program-titles off, no program names it.
         Assert.Equal(new HeaderTitle("vim notes.md", null), Header(false, null, "vim notes.md", program: "jdoe@fedora:~"));
         Assert.Equal(new HeaderTitle("vim notes.md", null),
             Header(false, null, "vim notes.md", program: "vim: x", programSinceCommand: true, programTitles: false));

@@ -127,7 +127,7 @@ public class ShaderTests : IDisposable
             }
         }
 
-        // Everything else is drawn only when the terminal changes: no work at all while it's idle.
+        // Everything else is drawn only when the terminal changes, so there's no work at all while it's idle.
         Assert.Equal(["crt", "cursor-trail"], animated.Order());
     }
 
@@ -204,7 +204,7 @@ public class ShaderTests : IDisposable
         Assert.True(ShaderTranslator.TryTranslate(Crt, "crt.glsl", out var hlsl, out var error), error);
         Assert.Contains("SV_Target", hlsl);
         Assert.Contains("iChannel0", hlsl);
-        // The uniform block keeps Ghostty's std140 layout: ShaderUniforms writes to these offsets.
+        // The uniform block keeps Ghostty's std140 layout, because ShaderUniforms writes to these offsets.
         Assert.Contains("iPalette[256] : packoffset(c19)", hlsl);
         Assert.Contains("iSelectionBackgroundColor : packoffset(c280)", hlsl);
     }
@@ -212,7 +212,7 @@ public class ShaderTests : IDisposable
     [Fact]
     public void VariablesStartAtZero()
     {
-        // GLSL allows a variable assigned on only some paths; Direct3D's compiler refuses it (X4000, matrix-hallway.glsl).
+        // GLSL allows a variable assigned on only some paths, but Direct3D's compiler refuses it (X4000, matrix-hallway.glsl).
         Assert.True(ShaderTranslator.TryTranslate("void mainImage(out vec4 c, in vec2 p) {\n float x;\n if (p.x > 1.0) x = 1.0;\n c = vec4(x);\n}\n",
             "paths.glsl", out var hlsl, out var error), error);
         Assert.Contains("float x = 0.0f;", hlsl);

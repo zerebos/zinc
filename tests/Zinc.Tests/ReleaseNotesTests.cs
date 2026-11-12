@@ -46,7 +46,7 @@ public class ReleaseNotesTests
             ReleaseNotes.Pieces(ReleaseNotes.Entry(Changelog, "0.1.0-dev.198")!));
     }
 
-    /// <summary>The repo's own CHANGELOG.md: in the shape release.ps1 and the app expect.</summary>
+    /// <summary>The repo's own CHANGELOG.md, in the shape release.ps1 and the app expect.</summary>
     [Fact]
     public void TheRealChangelog()
     {

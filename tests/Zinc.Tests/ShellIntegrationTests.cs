@@ -44,7 +44,7 @@ public class ShellIntegrationTests
     [InlineData("\e]1330;A\a")]                     // not 133
     [InlineData("\e]133A\a")]                       // malformed
     [InlineData("\e]133;\a")]                       // empty
-    [InlineData("\e]133;A\u0018")]                  // cancelled (CAN)
+    [InlineData("\e]133;A\u0018")]                  // canceled (CAN)
     public void IgnoresWhatIsNotAMark(string text) => Assert.Empty(ScanAll(new Osc133Scanner(), text));
 
     [Fact]
@@ -130,7 +130,7 @@ public class ShellIntegrationTests
     [Fact]
     public void LeavesOutRightPromptDecorationMarkedAsInput()
     {
-        // What powerlevel10k's two-line prompt sends (traced): the frame's corner is drawn after B,
+        // What powerlevel10k's two-line prompt sends, as traced. The frame's corner is drawn after B,
         // so it reads as input.
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         session.WriteToScreen("\e]133;A\a╰─ \e]133;B\a\e[K\e[73C─╯\e[75Dfalse\r\n\e]133;C;\a\e]133;D;1\a");
@@ -143,12 +143,12 @@ public class ShellIntegrationTests
     [Fact]
     public void ReadsACommandOfSeveralLines()
     {
-        // bash with a trailing "\": Zinc's script marks the continuation prompt "> " (P;k=s ... B).
+        // bash with a trailing "\", where Zinc's script marks the continuation prompt "> " (P;k=s ... B).
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         session.WriteToScreen("\e]133;A\a$ \e]133;B\aecho one \\\r\n\e]133;P;k=s\a> \e]133;B\atwo \\\r\n\e]133;P;k=s\a> \e]133;B\athree\r\n\e]133;C\a");
         Assert.Equal("echo one \\ two \\ three", session.Commands()[0].Text);
 
-        // A long line the terminal wrapped is still one line: no space where it wrapped.
+        // A long line the terminal wrapped is still one line, with no space where it wrapped.
         using var narrow = new TerminalSession(20, 24, TerminalTheme.Default);
         narrow.WriteToScreen("\e]133;A\a$ \e]133;B\aecho abcdefghijklmnopqrstuvwxyz\r\n\e]133;C\a");
         Assert.Equal("echo abcdefghijklmnopqrstuvwxyz", narrow.Commands()[0].Text);

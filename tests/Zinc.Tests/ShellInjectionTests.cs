@@ -10,11 +10,9 @@ public class ShellInjectionTests : IDisposable
     private readonly List<(TerminalSession Session, ManualResetEventSlim Exited)> _shells = [];
 
     /// <summary>
-    /// Each shell is told to exit before its console closes. Closed under a busy Git Bash or MSYS2 shell (within
-    /// milliseconds of its last output, as these tests do), the console sometimes left behind a forked bash that never
-    /// started (created suspended, its parent gone), and with it OpenConsole.exe, which locked the test output for the
-    /// next build. Closing a tab in a real running Zinc instance hasn't done this. It seems specific to the test environment.
-    /// Could also be an interaction with WT (Windows Terminal) or VSCode since he reuse their OpenConsole.exe instances.
+    /// Each shell is told to exit before its console closes. A console closed under a busy Git Bash or MSYS2 shell
+    /// (within milliseconds of its last output, as these tests do) can leave behind a forked bash that never started
+    /// (created suspended, its parent gone), and with it OpenConsole.exe, which locks the test output for the next build.
     /// </summary>
     public void Dispose()
     {
@@ -249,7 +247,7 @@ public class ShellInjectionTests : IDisposable
     [Fact]
     public void WindowsPowerShell()
     {
-        // Its default execution policy refuses script files: the script is loaded as text.
+        // Its default execution policy refuses script files, so the script is loaded as text.
         var session = StartShell("powershell.exe -NoLogo -NoProfile");
         ChecksMarks(session, "cmd /c exit 4", 4, "cd C:\\Windows", "Windows");
     }
@@ -267,8 +265,8 @@ public class ShellInjectionTests : IDisposable
     [Fact]
     public void Cmd()
     {
-        // cmd's PROMPT carries A, B, D (no exit code) and the folder; Zinc marks C itself when Enter is pressed.
-        // (/d: no AutoRun, so no Clink even where it's installed: CmdUnderClink covers that.)
+        // cmd's PROMPT carries A, B, D (no exit code) and the folder, and Zinc marks C itself when Enter is pressed.
+        // (/d skips AutoRun, so Clink doesn't load even where it's installed. CmdUnderClink covers Clink.)
         var session = StartShell("cmd.exe /d");
         WaitFor(session, () => session.Commands().Count >= 1, "the first prompt mark");
         session.SendInput("echo zinc-hello\r");
@@ -319,7 +317,7 @@ public class ShellInjectionTests : IDisposable
     [Trait("Category", "LocalShells")]
     public void OshInWsl()
     {
-        // OSH (Oils) runs the bash script from PROMPT_COMMAND but never shows PS0: its prompt asks for C on Enter.
+        // OSH (Oils) runs the bash script from PROMPT_COMMAND but never shows PS0, so its prompt asks for C on Enter.
         using (var probe = Process.Start(new ProcessStartInfo("wsl.exe", "-d Fedora --exec sh -c \"command -v osh\"")
                { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false }))
         {
@@ -357,8 +355,8 @@ public class ShellInjectionTests : IDisposable
     [Trait("Category", "LocalShells")]
     public void CmdUnderClink()
     {
-        // Clink injected by hand with a throwaway profile (not the user's AutoRun: its history and settings stay
-        // untouched); clink/zinc.lua sends the marks with exit codes and the command's text.
+        // Clink is injected by hand with a throwaway profile instead of through the user's AutoRun, so the user's
+        // history and settings stay untouched. clink/zinc.lua sends the marks with exit codes and the command's text.
         var clink = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "clink", "clink.bat");
         Assert.SkipUnless(File.Exists(clink), "no Clink");
         var profile = Path.Combine(Path.GetTempPath(), "zinc-clink-" + Guid.NewGuid().ToString("N"));
@@ -375,7 +373,7 @@ public class ShellInjectionTests : IDisposable
             session.SendInput("echo zinc-a        zinc-b\r");
             WaitFor(session, () => session.Commands().Any(c => c.Text == "echo zinc-a        zinc-b" && !c.Running), "the command's text from Clink");
 
-            // echo keeps the errorlevel of the failure before it: it gets no exit code, rather than the failure's.
+            // echo keeps the errorlevel of the failure before it, so it gets no exit code rather than the failure's.
             session.SendInput("dir zinc-no-such-file\r");
             WaitFor(session, () => session.Commands().Count(c => c.Failed) == 2, "the second failure");
             session.SendInput("echo zinc-after\r");
@@ -437,8 +435,8 @@ public class ShellInjectionTests : IDisposable
         WaitFor(session, () => session.ReadScreenText().Contains(expected), expected);
     }
 
-    // The README's hand-written snippets from before automatic integration (same function names
-    // as the first automatic scripts, which then replaced them and sent nothing).
+    // The README's hand-written snippets from before automatic integration. They use the same function names as the
+    // first automatic scripts, and an automatic script that defines those names replaces them and sends nothing.
     private const string OldBashSnippet = """
         __zinc_prompt() { printf '\e]133;D;%s\a\e]133;A\a' "$?"; }
         PROMPT_COMMAND="__zinc_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
@@ -467,7 +465,7 @@ public class ShellInjectionTests : IDisposable
         var home = Directory.CreateTempSubdirectory("zinc-bash-").FullName;
         File.WriteAllText(Path.Combine(home, ".bashrc"), OldBashSnippet);
         var session = StartShell($"\"{bash}\" --noprofile -i", new() { ["HOME"] = home });
-        // The snippet sends no command text: it's read back from the screen.
+        // The snippet sends no command text, so the text is read back from the screen.
         ChecksMarks(session, "false", 1, "cd /c/Windows", "/c/Windows");
     }
 
@@ -491,8 +489,8 @@ public class ShellInjectionTests : IDisposable
         Assert.SkipUnless(File.Exists(zsh), "no MSYS2 zsh");
         var home = Directory.CreateTempSubdirectory("zinc-zsh-").FullName;
         File.WriteAllText(Path.Combine(home, ".zshrc"), "PS1='%~ %# '\n");
-        // MSYS2's own tools and a UTF-8 locale, as its launcher sets them (Git's mkdir on PATH first
-        // named a non-ASCII folder differently from how this zsh looked it up).
+        // MSYS2's own tools and a UTF-8 locale, as its launcher sets them. With Git's mkdir first on PATH, a non-ASCII
+        // folder gets a different name from the one this zsh looks up.
         var session = StartShell($"{zsh} -i", new()
         {
             ["HOME"] = home,

@@ -3,7 +3,9 @@ using Zinc.Pty;
 
 namespace Zinc.Tests;
 
-/// <summary>The installer's side: the uninstall cleanup (against a scratch key standing in for HKCU) and moving old data.</summary>
+/// <summary>
+/// The installer's side, which is the uninstall cleanup (against a scratch key standing in for HKCU) and moving old data.
+/// </summary>
 public sealed class InstallTests : IDisposable
 {
     private const string Canary = "{A854D02A-F2FE-44A5-BB24-D03F4CF830D4}", CanaryTerminal = "{1706609C-A4CE-4C0D-B7D2-C19BF66398A5}";
@@ -160,7 +162,7 @@ public sealed class InstallTests : IDisposable
     [Fact]
     public void AnInstallInTheOldFolderIsNeverTouched()
     {
-        // Once the installer owns %LOCALAPPDATA%\Zinc, only the old items may move; the install stays.
+        // Once the installer owns %LOCALAPPDATA%\Zinc, only the old items may move, and the install stays.
         var from = Path.Combine(_temp, "Local", "Zinc");
         var to = Path.Combine(_temp, "Roaming", "Zinc");
         Directory.CreateDirectory(Path.Combine(from, "current"));

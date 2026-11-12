@@ -20,7 +20,7 @@ public class SearchTests
         session.WriteToScreen(string.Concat(Enumerable.Range(0, 20).Select(i => $"line {i}\r\n")));
         session.WriteToScreen("last needle");
 
-        // Row 0 scrolled into history; row 23 is the cursor line (3 + 20 lines before it).
+        // Row 0 scrolled into history, and row 23 is the cursor line (3 + 20 lines before it).
         Assert.Equal([new SearchMatch(0, 0, 5), new SearchMatch(23, 5, 10)], Find(session, "needle"));
         var sb = session.GetScrollbar();
         Assert.Equal(24ul, sb.Total);
@@ -29,7 +29,7 @@ public class SearchTests
     [Fact]
     public void LeadingBlankRowsKeepTheirPlace()
     {
-        // Full-screen apps position text with the cursor; blank rows above must still count.
+        // Full-screen apps position text with the cursor, so blank rows above must still count.
         using var session = new TerminalSession(20, 6, TerminalTheme.Default);
         session.WriteToScreen("\x1b[4;3Hneedle\x1b[6;1Hneedle");
         Assert.Equal([new SearchMatch(3, 2, 7), new SearchMatch(5, 0, 5)], Find(session, "needle"));
@@ -51,9 +51,9 @@ public class SearchTests
     {
         using var session = new TerminalSession(10, 5, TerminalTheme.Default);
         session.WriteToScreen("xxxxxxxneedle needle\r\nnext line"); // wraps after 10 columns
-        // "nee|dle" spans the wrap (row 0 col 7 to row 1 col 2); the second fits on row 1.
+        // "nee|dle" spans the wrap (row 0 col 7 to row 1 col 2), and the second fits on row 1.
         Assert.Equal([new SearchMatch(0, 7, 1, 2), new SearchMatch(1, 4, 9)], Find(session, "needle"));
-        // The real line break still separates lines: "next" is on screen row 2.
+        // The real line break still separates lines, and "next" is on screen row 2.
         Assert.Equal([new SearchMatch(2, 0, 3)], Find(session, "next"));
         Assert.Empty(Find(session, @"needle\s*next", regex: true));
     }

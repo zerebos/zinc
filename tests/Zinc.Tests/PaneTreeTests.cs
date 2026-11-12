@@ -80,7 +80,7 @@ public class PaneTreeTests
     [Fact]
     public void NeighborPrefersLargestOverlap()
     {
-        // a | b over c, with c getting 30% of the height: from a, Right goes to b.
+        // a | b over c, with c getting 30% of the height. From a, Right goes to b.
         var tree = new PaneTree<string>("a");
         var b = tree.Split(tree.Find("a")!, PaneDirection.Right, "b");
         tree.Split(b, PaneDirection.Down, "c", newShare: 0.3);
@@ -92,12 +92,12 @@ public class PaneTreeTests
     {
         var (tree, a, b, c, d) = Grid();
 
-        // Removing c: d takes its place, focus goes to d.
+        // When c is removed, d takes its place and gets the focus.
         Assert.Same(d, tree.Remove(c));
         AssertRect(R(0.5, 0.5, 0.5, 0.5), tree.Layout()[d]);
 
-        // Removing a (first child of root): the right column takes the whole tab,
-        // focus goes to that side's first pane.
+        // When a (the root's first child) is removed, the right column takes the whole tab,
+        // and focus goes to that side's first pane.
         Assert.Same(b, tree.Remove(a));
         AssertRect(R(0, 0, 1, 0.5), tree.Layout()[b]);
         AssertRect(R(0, 0.5, 1, 0.5), tree.Layout()[d]);
@@ -113,7 +113,7 @@ public class PaneTreeTests
     [Fact]
     public void RemovingSecondChildFocusesNearestSideOfSibling()
     {
-        // (a | b) over c; removing c focuses b (the last pane of the sibling side).
+        // (a | b) over c. Removing c focuses b (the last pane of the sibling side).
         var tree = new PaneTree<string>("a");
         var a = tree.Find("a")!;
         var c = tree.Split(a, PaneDirection.Down, "c");

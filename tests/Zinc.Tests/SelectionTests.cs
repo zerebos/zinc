@@ -3,7 +3,7 @@ using Zinc.Terminal;
 
 namespace Zinc.Tests;
 
-/// <summary>SelectionGesture against a real terminal; geometry mimics an 8x16 px cell grid.</summary>
+/// <summary>SelectionGesture against a real terminal. The geometry mimics an 8x16 px cell grid.</summary>
 public class SelectionTests
 {
     private const int CellW = 8, CellH = 16;

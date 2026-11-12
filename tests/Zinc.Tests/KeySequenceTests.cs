@@ -45,7 +45,7 @@ public class KeySequenceTests
             """);
         Assert.Empty(config.Warnings);
         Assert.Equal(3, config.Keybindings.Sequences.Count);
-        // Labels: a sequence where there's no single chord for the action; else the chord.
+        // A label shows a sequence where the action has no single chord, and otherwise the chord.
         Assert.Equal("Ctrl+A > R", config.Keybindings.ShortcutFor(TerminalAction.ReloadConfig));
         Assert.Equal("Alt+Shift+Plus", config.Keybindings.ShortcutFor(new ActionInvocation(TerminalAction.SplitPane, Direction: PaneDirection.Right)));
     }
@@ -126,7 +126,7 @@ public class KeySequenceTests
     [Fact]
     public void ALeaderBoundOnItsOwnOnlyStartsSequences()
     {
-        // Ctrl+Shift+T opens a tab by default; as a leader it can't do both.
+        // Ctrl+Shift+T opens a tab by default, and as a leader it can't do both.
         var config = Parse("""
             [keys]
             "ctrl+shift+t>c" = "new-window"

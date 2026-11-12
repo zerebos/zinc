@@ -86,7 +86,7 @@ public class KittyPlaceholderTests
     [Fact]
     public void GridDefaultsToTheImageSize()
     {
-        // No columns/rows given: 25x15 px at 10x10 cells needs 3x2.
+        // With no columns or rows given, 25x15 px at 10x10 cells needs 3x2.
         var slice = Geometry(new Run(0, 1, 0, 0, 0, 3), 25, 15, 0, 0, 10, 10);
         Assert.NotNull(slice);
     }

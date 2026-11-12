@@ -3,9 +3,9 @@ using Zinc.Terminal;
 namespace Zinc.Tests;
 
 /// <summary>
-/// A tester's report (2026-10-03): with a prompt drawn by Write-Host (so PowerShell's marks come after its text), the
-/// cursor sat on the line below the prompt. libghostty starts a fresh line for a prompt mark that arrives mid-line,
-/// which ConPTY never hears of.
+/// With a prompt drawn by Write-Host (so PowerShell's marks come after its text), the cursor stays on the prompt's line
+/// instead of the line below it. libghostty starts a fresh line for a prompt mark that arrives mid-line, which ConPTY
+/// never hears of.
 /// </summary>
 public class PromptFreshLineTests
 {

@@ -139,7 +139,7 @@ public class PaneHeaderTests
     [InlineData(253, TabsStage.Folded)]
     public void TitlesNeverSwitchBetweenIconsAndTheCount(double room, TabsStage stage)
     {
-        // A new tab's profile name, then its folder ("~"), or a long command: the stage stays (decision 50).
+        // Whether the shown title is a new tab's profile name, then its folder ("~"), or a long command, the stage stays.
         foreach (var shownTitle in new double[] { 8, 40, 180 })
         {
             Assert.Equal(stage, PaneHeader.FitTabs(room, [100, shownTitle, 100], 1, 60, 50, 30, 70).Stage);

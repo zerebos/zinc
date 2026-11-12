@@ -31,7 +31,7 @@ public class BenchmarkTests
         Assert.Equal(1, units);
         session.WriteToScreen(bytes);
 
-        // Characters, not columns: a CJK character or an emoji is two columns, so a full line is shorter than 20.
+        // Characters, not columns, because a CJK character or an emoji is two columns, so a full line is shorter than 20.
         var lines = session.ReadScreenText().Split('\n').Select(l => l.TrimEnd('\r')).ToArray();
         Assert.Equal(5, lines.Length);
         Assert.All(lines, line => Assert.True(line.Length is > 4 and < 20, line));

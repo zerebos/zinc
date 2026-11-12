@@ -3,13 +3,13 @@ using Zinc.Terminal;
 
 namespace Zinc.Tests;
 
-/// <summary>A tester's report (2026-10-03): failure bars and scrollbar ticks stayed after <c>clear</c>.</summary>
+/// <summary>Failure bars and scrollbar ticks go when <c>clear</c> wipes the commands they mark.</summary>
 public class ClearedCommandsTests
 {
     private static string Command(string line, int exit) =>
         $"\e]133;A\a$ \e]133;B\a{line}\r\n\e]133;C\aout\r\n\e]133;D;{exit}\a";
 
-    /// <summary>Six failed commands on an 8-row screen: the first three have scrolled into the scrollback.</summary>
+    /// <summary>Six failed commands on an 8-row screen, so the first three have scrolled into the scrollback.</summary>
     private static TerminalSession WithFailures()
     {
         var session = new TerminalSession(40, 8, TerminalTheme.Default);
@@ -47,9 +47,9 @@ public class ClearedCommandsTests
     [InlineData("\e[H\e[J")]
     public void ClearingTheScreenTakesItsCommandsTheScrollbackKeepsTheRest(string clear)
     {
-        // libghostty erases the screen in place: the commands on it are gone (their bars stayed beside empty rows),
-        // the ones already scrolled into the scrollback are still there, marks and all. The next prompt lands on an
-        // erased row again, which mustn't bring an old command back.
+        // libghostty erases the screen in place, so the commands on it go, or their bars would stay beside empty rows.
+        // The ones already scrolled into the scrollback stay, marks and all. The next prompt lands on an erased row
+        // again, which mustn't bring an old command back.
         using var session = WithFailures();
         session.WriteToScreen(Clear(clear));
         var scrollback = (long)(session.GetScrollbar().Total - session.GetScrollbar().Len);
@@ -62,7 +62,7 @@ public class ClearedCommandsTests
     public void ShellsRedrawingTheirPromptKeepTheirCommands()
     {
         // A prompt redrawn in place (nushell on every key, zsh themes) erases to the end of the screen around a
-        // live prompt: finished commands above it, still on screen, stay.
+        // live prompt, but the finished commands above it, still on screen, stay.
         using var session = WithFailures();
         session.WriteToScreen("\e]133;A\a$ \e]133;B\ax\r\e[J\e]133;A\a$ \e]133;B\axy\r\e[J\e]133;A\a$ \e]133;B\axyz");
         Assert.Equal(6, session.Commands().Count(c => c.Failed));
@@ -71,7 +71,7 @@ public class ClearedCommandsTests
     [Fact]
     public void ACommandStillRunningStays()
     {
-        // A nested shell's host (zsh started fish) is still running when fish clears: only finished ones go.
+        // A nested shell's host (zsh started fish) is still running when fish clears, so only finished commands go.
         using var session = WithFailures();
         session.WriteToScreen("\e]133;A\a$ \e]133;B\atop\r\n\e]133;C\a\e[3J");
         var commands = session.Commands();

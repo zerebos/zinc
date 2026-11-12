@@ -20,7 +20,7 @@ public class PaneGapTests
     [Fact]
     public void TheBandsMiddleFollowsThePointer()
     {
-        // 805 px: 800 for the panes and a 5 px band; the band's middle at 402.5 splits them evenly.
+        // 805 px is 800 for the panes and a 5 px band, so the band's middle at 402.5 splits them evenly.
         Assert.Equal(0.5, PaneGap.RatioAt(402.5, 805, 5));
         Assert.Equal(0.25, PaneGap.RatioAt(212, 824, 24));
         Assert.Equal(0, PaneGap.RatioAt(3, 806, 6));

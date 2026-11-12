@@ -81,8 +81,8 @@ public class NestedShellTests
     [Fact]
     public void ShellsThatLookAlikeStayOneLevel()
     {
-        // zsh in zsh: no way to tell the inner prompts from the outer ones, so as before nesting
-        // existed: the command ends at the next prompt.
+        // zsh in zsh: there's no way to tell the inner prompts from the outer ones, so the command ends at the next
+        // prompt, as for any command.
         using var session = Session(out _);
         session.WriteToScreen(Zsh + Run("zsh", exit: null) + Zsh + Run("echo hi") + Zsh);
         Assert.Equal("zsh:? | echo hi:0", Summary(session));

@@ -119,7 +119,7 @@ public class DiscoveryTests
 
             [profile.pwsh]
             """);
-        // Empty sections no longer place found profiles (profile-order does that).
+        // Empty sections don't place found profiles, because profile-order does that.
         Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:buildbox"], config.Profiles.Select(p => p.Id));
         Assert.Equal("ssh.exe buildbox", config.Profiles.Single(p => p.Id == "ssh:buildbox").Config.Command);
         Assert.Empty(config.Warnings);

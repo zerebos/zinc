@@ -190,7 +190,7 @@ public sealed class SettingsBackupTests : IDisposable
     [Fact]
     public void FilesZincDoesntRestoreAreLeftOut()
     {
-        // A newer Zinc's backup, a README someone added, a path out of the folder: the rest still comes back.
+        // Despite a newer Zinc's backup, a README someone added and a path out of the folder, the rest still comes back.
         var backup = Zip(("zinc-backup.json", "{}"), ("config.toml", "a"), ("README.txt", "hi"), ("keys/x.json", "k"), ("../evil.toml", "e"));
         Assert.Equal(["config.toml"], SettingsBackup.Read(backup).Contents!.Files);
 

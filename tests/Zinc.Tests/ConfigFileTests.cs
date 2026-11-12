@@ -206,7 +206,7 @@ public class ConfigFileTests : IDisposable
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:14:")); // a TOML syntax error
         Assert.DoesNotContain(config.Warnings, w => w.Contains("keys")); // reserved for keybindings
 
-        // Everything valid still applies; the profile's app-wide setting doesn't.
+        // Everything valid still applies, but the profile's app-wide setting doesn't.
         Assert.Equal(WorkspaceTabs.Left, config.Global.WorkspaceTabs);
     }
 
@@ -237,7 +237,7 @@ public class ConfigFileTests : IDisposable
         // Explicit colors override the scheme, wherever they are written.
         Assert.Equal(new GhosttyColorRgb(0x10, 0x10, 0x10), config.Global.Theme.Background);
         Assert.Equal(new GhosttyColorRgb(0xAC, 0x42, 0x42), config.Global.Theme.Palette[1]);
-        // The user's copy wins over the bundled one; the profile's scheme replaces the global one's
+        // The user's copy wins over the bundled one. The profile's scheme replaces the global one's
         // colors (what it leaves out is libghostty's, not the other scheme's or Zinc's own).
         var fedora = config.Profiles[0].Config.Theme;
         Assert.Equal(new GhosttyColorRgb(0x11, 0x11, 0x11), fedora.Background);

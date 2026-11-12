@@ -3,8 +3,8 @@ using Zinc.Terminal;
 namespace Zinc.Tests;
 
 /// <summary>
-/// The command list read while output streams is kept between writes and only checked (2026-10-04: it was made anew
-/// every frame). Read after every write or only at the end, it must say the same.
+/// The command list read while output streams is kept between writes and only checked, instead of being made anew
+/// every frame. Read after every write or only at the end, it must say the same.
 /// </summary>
 public class CommandSnapshotTests
 {
@@ -15,8 +15,8 @@ public class CommandSnapshotTests
     }
 
     /// <summary>
-    /// The output into a session whose list is read after every write (kept and checked); at checkpoints, compared with
-    /// a new session given everything so far and read once (its list made from scratch).
+    /// The output into a session whose list is read after every write (kept and checked). At checkpoints, that list is
+    /// compared with the list of a new session given everything so far and read once (its list made from scratch).
     /// </summary>
     private static void Compare(int scrollback, Action<Action<string>> script)
     {

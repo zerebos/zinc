@@ -224,7 +224,7 @@ public class SettingsWriterTests
     [Fact]
     public void RenamedKeysStillReadAndAreWrittenUnderTheirNewName()
     {
-        // Written before the 2026-10-06 renames: still read, and shown in Settings under the new key.
+        // Keys under their old names are still read, and Settings shows them under the new key.
         var old = "[window]\ngroup-tab-strip = \"always\"\nunfocused-split-opacity = 0.5\ntab-groups = false\n";
         var file = ConfigFile.Parse(old, "config.toml", "", _ => []);
         Assert.Equal(PaneHeaders.Always, file.Global.PaneHeaders);
@@ -319,7 +319,7 @@ public class SettingsWriterTests
         Assert.DoesNotContain("pane-tab-strip", File.ReadAllText(path));
         Assert.Equal(4, writer.ChangeCount()); // pane-tab-strip = "always" already read as pane-headers = "always"
 
-        // Compact is the defaults: choosing it takes every pane key out of the file.
+        // Compact is the defaults, so choosing it takes every pane key out of the file.
         writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Compact)[k])));
         Assert.Equal("# mine\n[window]\n", File.ReadAllText(path));
     }
@@ -436,7 +436,7 @@ public class ProfileSettingsTests
     [Fact]
     public void AChangedProfileThatCantOpenSaysWhy()
     {
-        // The ssh search finds "buildbox" only; "gone" was removed from ~/.ssh/config.
+        // The ssh search finds "buildbox" only, because "gone" was removed from ~/.ssh/config.
         static IReadOnlyList<DiscoveredProfile> Ssh(DiscoverySettings s) =>
             s.Ssh ? [new("ssh:buildbox", "SSH - buildbox", "ssh.exe buildbox")] : [];
         const string changes = "[profile.\"ssh:buildbox\"]\nfont.size = 14\n\n[profile.\"ssh:gone\"]\nfont.size = 12\nhidden = false\n";

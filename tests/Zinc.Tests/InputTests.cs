@@ -170,7 +170,7 @@ public class KeybindingTests
     [InlineData("alt+shift+up", TerminalAction.ResizePane, PaneDirection.Up)]
     public void PaneDefaultsFollowWindowsTerminal(string chord, TerminalAction expected, PaneDirection direction)
     {
-        // DuplicatePane carries no direction (default Left) — it picks one from the pane's shape.
+        // DuplicatePane carries no direction (default Left), because it picks one from the pane's shape.
         Assert.True(Keybindings.Default.TryGet(KeyChord.Parse(chord), out var action));
         Assert.Equal(new ActionInvocation(expected, Direction: direction), action);
     }

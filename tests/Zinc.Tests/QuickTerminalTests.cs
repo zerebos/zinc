@@ -125,7 +125,7 @@ public class QuickTerminalTests
     [Fact]
     public void ADraggedSizeKeepsItsPlace()
     {
-        // Centered stays centered; against an edge stays there (and centered along it); too big = the screen.
+        // Centered stays centered. Against an edge, it stays there (and centered along it). Too big, it fills the screen.
         Assert.Equal(new Rect(1920 + 460, 170, 1000, 700), Place(Work, S(QuickTerminalPosition.Center), (1000, 700)));
         Assert.Equal(new Rect(1920 + 460, 0, 1000, 300), Place(Work, S(QuickTerminalPosition.Top), (1000, 300)));
         Assert.Equal(new Rect(1920, 740, 1920, 300), Place(Work, S(QuickTerminalPosition.Bottom), (1920, 300)));
@@ -147,15 +147,15 @@ public class QuickTerminalTests
     public void DraggingAnEdgeResizes()
     {
         (int, int) start = (1000, 600), min = (300, 150), max = (1920, 1040);
-        // Centered: both sides move, so the dragged edge follows the pointer.
+        // Centered, both sides move, so the dragged edge follows the pointer.
         Assert.Equal((1100, 600), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Right, start, 50, 30, min, max));
         Assert.Equal((1100, 600), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Left, start, -50, 30, min, max));
         Assert.Equal((1000, 540), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Top, start, 0, 30, min, max));
         Assert.Equal((900, 660), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.BottomLeft, start, 50, 30, min, max));
-        // Against the top: the bottom edge moves alone; the sides still grow both ways.
+        // Against the top, the bottom edge moves alone, and the sides still grow both ways.
         Assert.Equal((1000, 630), QuickTerminalResize.Size(QuickTerminalPosition.Top, QuickTerminalEdge.Bottom, start, 0, 30, min, max));
         Assert.Equal((1100, 630), QuickTerminalResize.Size(QuickTerminalPosition.Top, QuickTerminalEdge.BottomRight, start, 50, 30, min, max));
-        // Against the left: the right edge moves alone.
+        // Against the left, the right edge moves alone.
         Assert.Equal((1050, 600), QuickTerminalResize.Size(QuickTerminalPosition.Left, QuickTerminalEdge.Right, start, 50, 0, min, max));
         // Limits.
         Assert.Equal((300, 600), QuickTerminalResize.Size(QuickTerminalPosition.Center, QuickTerminalEdge.Right, start, -2000, 0, min, max));
@@ -173,12 +173,12 @@ public class QuickTerminalTests
         Assert.Equal((900, 500), sizes.For("2560,0,2560x1440", center));
         Assert.Null(sizes.For("elsewhere", center));
 
-        // Dragged again: replaced, not added.
+        // Dragged again, the size is replaced, not added.
         sizes.Remember("0,0,2560x1440", center, 1300, 750);
         Assert.Equal(2, sizes.All.Count);
         Assert.Equal((1300, 750), sizes.For("0,0,2560x1440", center));
 
-        // The config moved it or gave it another size: the config's size again.
+        // Once the config moves it or gives it another size, the config's size applies again.
         Assert.Null(sizes.For("0,0,2560x1440", S(QuickTerminalPosition.Top)));
         Assert.Null(sizes.For("0,0,2560x1440", S(QuickTerminalPosition.Center, "60%,50%")));
 

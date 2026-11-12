@@ -19,7 +19,7 @@ public class SpriteTests
     [InlineData('A')]
     [InlineData(0x263Au)]   // ☺: fonts draw it
     [InlineData(0x1F600u)]  // emoji
-    [InlineData(0xE5FEu)]   // a Nerd Font icon (private use, like Powerline's neighbours)
+    [InlineData(0xE5FEu)]   // a Nerd Font icon (private use, like Powerline's neighbors)
     public void LeavesTheRestToFonts(uint codepoint)
     {
         Assert.False(Sprites.Has(codepoint));
@@ -44,7 +44,7 @@ public class SpriteTests
     [Fact]
     public void ARoundedCornerReachesTheEdgesItJoins()
     {
-        // ╭ joins the cell to its right and the one below: its lines end on those edges.
+        // ╭ joins the cell to its right and the one below, so its lines end on those edges.
         var corner = Sprites.Draw(0x256D, 10, 16, 4, 2)!;
         Assert.Equal(10, corner.X + corner.Width);
         Assert.Equal(20, corner.Y + corner.Height);

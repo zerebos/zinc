@@ -316,7 +316,7 @@ public class ConfigTests : IDisposable
     [Fact]
     public void GeneratedPaletteFollowsTheSchemeButKeepsEntriesItSets()
     {
-        // Lit Cell's colors; 196 is the standard cube's pure red, 200 one the theme sets itself.
+        // Lit Cell's colors. 196 is the standard cube's pure red, and 200 is one the theme sets itself.
         var theme = TerminalTheme.Default with { Palette = new Dictionary<int, GhosttyColorRgb> { [200] = new(1, 2, 3) } };
         GhosttyColorRgb Indexed(int index, bool generate)
         {

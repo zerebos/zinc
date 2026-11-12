@@ -37,7 +37,7 @@ public class FuzzyMatchTests
     [Fact]
     public void PrefersWordStartsOverEarlierLetters()
     {
-        // "gb" should land on G(it) B(ash), not the 'b' in "tab"-like earlier letters.
+        // "gb" should land on G(it) B(ash), not on the earlier letters in "Debug".
         FuzzyMatch.Score("gb", "Debug: Git Bash", out var positions);
         Assert.Equal([7, 11], positions);
     }
@@ -63,7 +63,7 @@ public class FuzzyMatchTests
         Assert.Equal(["Scroll to top", "Close tab", "Copy", "New tab"],
             CommandFilter.Filter(commands, "").Select(m => m.Command.Title));
         Assert.Equal("Close tab", CommandFilter.Filter(commands, "ct")[0].Command.Title);
-        // Equal matches ("tab" at a word start in both): the shorter title wins.
+        // Equal matches ("tab" at a word start in both), so the shorter title wins.
         Assert.Equal(["New tab", "Close tab"],
             CommandFilter.Filter(commands, "tab").Select(m => m.Command.Title));
     }
@@ -90,7 +90,7 @@ public class FuzzyMatchTests
         var commands = Commands("New tab", "Close tab", "Next tab");
         var recent = new RecentCommands();
         recent.Note("Close tab");
-        // "tab" matches all three equally well: the recent one comes first.
+        // "tab" matches all three equally well, so the recent one comes first.
         Assert.Equal("Close tab", CommandFilter.Filter(commands, "tab", recent)[0].Command.Title);
         // "nt" is a far better match for New/Next tab (initials) than for Close tab.
         Assert.NotEqual("Close tab", CommandFilter.Filter(commands, "nt", recent)[0].Command.Title);

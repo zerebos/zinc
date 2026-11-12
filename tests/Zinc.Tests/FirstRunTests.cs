@@ -68,7 +68,7 @@ public class FirstRunTests
         Assert.Contains("size = 12  # just right", text);
         Assert.Contains("theme = \"Dracula\"", text);
         Assert.DoesNotContain("Iosevka", text); // back to the default font
-        Assert.DoesNotContain("default-profile", text); // not chosen: not written
+        Assert.DoesNotContain("default-profile", text); // not chosen, so not written
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class FirstRunTests
         var dot = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null, ToastWhenDone: false));
         Assert.DoesNotContain("command-finished", dot);
 
-        // Reopened: "toast-always" already counts as notifications on; off removes it.
+        // Reopened, "toast-always" already counts as notifications on, and turning them off removes it.
         const string always = "[notify]\ncommand-finished = \"toast-always\"\n";
         var current = Read(always);
         Assert.Equal(always, FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, true), current));
@@ -99,7 +99,7 @@ public class FirstRunTests
     [InlineData("Solarized Dark", "Solarized Light")]
     [InlineData("Tokyo Night", "Tokyo Night Day")]
     [InlineData("Rose Pine", "Rose Pine Dawn")]
-    [InlineData("Dracula", "Catppuccin Latte")] // no counterpart: a well-known light scheme
+    [InlineData("Dracula", "Catppuccin Latte")] // no counterpart, so a well-known light scheme
     [InlineData("Lit Cell", "Lit Cell Light")]
     [InlineData(null, "Lit Cell Light")] // Zinc's own colors
     public void LightSchemesPairWithTheirDarkOnes(string? dark, string light)

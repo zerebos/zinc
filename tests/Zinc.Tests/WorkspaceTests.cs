@@ -232,7 +232,7 @@ public class WorkspaceTests
     [Fact]
     public void ClosingEveryTabOfAPaneRemovesItAndFocusesItsNeighbor()
     {
-        // close-pane: each of the pane's tabs closes, in order (after one question for all of them).
+        // close-pane closes each of the pane's tabs, in order (after one question for all of them).
         T a = new("a"), b = new("b"), c = new("c"), d = new("d");
         var ws = new Workspace<T>(a);
         var right = ws.Split(ws.ActiveGroup, PaneDirection.Right, b);

@@ -21,7 +21,7 @@ public class NewTerminalStartTests
     {
         Assert.Equal([StartSource.Current, StartSource.Workspace, StartSource.Usual], Order(StartKind.Split, true, NewTerminalFolder.Current));
         Assert.Equal([StartSource.Current, StartSource.Usual], Order(StartKind.Split, false, NewTerminalFolder.Current));
-        // The old way: the workspace's folder, else the profile's.
+        // Set to the profile, splits start the old way, in the workspace's folder or else the profile's.
         Assert.Equal([StartSource.Workspace, StartSource.Usual], Order(StartKind.Split, true, NewTerminalFolder.Profile));
         Assert.Equal([StartSource.Usual], Order(StartKind.Split, false, NewTerminalFolder.Profile));
     }

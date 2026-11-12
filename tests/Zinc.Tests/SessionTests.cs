@@ -128,7 +128,7 @@ public class SessionTests
         session.Resize(100, 30, 9, 18);
 
         // XTWINOPS cell size / text area in chars, and the report sent on enabling
-        // in-band resize. Regression: all were dropped without the OPT_SIZE callback.
+        // in-band resize. libghostty drops all of them unless the OPT_SIZE callback is installed.
         session.WriteToScreen("\x1b[16t\x1b[18t\x1b[?2048h");
         var all = Joined(replies);
         Assert.Contains("\x1b[6;18;9t", all);
@@ -179,7 +179,7 @@ public class SessionTests
         Assert.Null(session.LinkAt(1, 0));
         Assert.Null(session.LinkAt(13, 0));
 
-        // "https://ghostty.org/docs" occupies columns 5..28; the parentheses stay out.
+        // "https://ghostty.org/docs" occupies columns 5..28, and the parentheses stay out.
         Assert.Equal(new LinkMatch("https://ghostty.org/docs", 1, 5, 1, 28, Explicit: false), session.LinkAt(10, 1));
         Assert.Null(session.LinkAt(29, 1));
     }
@@ -216,7 +216,7 @@ public class SessionTests
     public void HyperlinksSpanSoftWrappedRows()
     {
         using var session = new TerminalSession(10, 5, TerminalTheme.Default);
-        // 10 columns: row 0 is "see click ", row 1 "here now e" — the link text "click here now"
+        // 10 columns: row 0 is "see click ", row 1 "here now e", so the link text "click here now"
         // runs from column 4 of row 0 to column 7 of row 1.
         session.WriteToScreen("see \x1b]8;;https://example.com/\x1b\\click here now\x1b]8;;\x1b\\ end");
 
@@ -229,7 +229,7 @@ public class SessionTests
     [Fact]
     public void ScrollbackKeepsTenThousandLines()
     {
-        // Regression: libghostty's default byte limit pruned to ~700 rows at 120 columns.
+        // libghostty's default byte limit would prune this to about 700 rows at 120 columns.
         using var session = new TerminalSession(120, 30, TerminalTheme.Default);
         var text = new System.Text.StringBuilder();
         for (var i = 0; i < 12_000; i++)

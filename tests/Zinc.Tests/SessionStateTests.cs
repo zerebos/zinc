@@ -40,7 +40,7 @@ public class SessionStateTests
         ws.ActiveGroup.Add(c);
         var saved = SessionLayout.Capture(ws, Saved);
 
-        // b and c's pane can't reopen at all: a is all that's left, alone.
+        // b and c's pane can't reopen at all, so a is all that's left, alone.
         var restored = SessionLayout.Restore(saved, s => s.Command == "a" ? new T("a") : null)!;
         Assert.Equal(["a"], restored.Tabs.Select(t => t.Name));
         Assert.Equal(1, restored.Layout.Count);
@@ -88,7 +88,7 @@ public class SessionStateTests
         Assert.Contains("\"sidebar\": \"AutoHide\"", json);
         Assert.Equal(chrome, SessionStore.Deserialize(json)!.Windows[0].Chrome);
 
-        // Saved before the modes existed: no chrome, the config's modes apply.
+        // A session saved before the modes existed has no chrome, so the config's modes apply.
         var old = SessionStore.Deserialize("""
             {"version": 1, "windows": [{"x": 0, "y": 0, "width": 800, "height": 600, "maximized": false, "selected": 0, "workspaces": []}]}
             """);

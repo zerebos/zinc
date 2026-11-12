@@ -26,7 +26,7 @@ public class ConfigEditorTests
 
     private static string Set(string text, string path, object value) => ConfigEditor.Set(text, Split(path), value);
 
-    // Paths are dot-separated here; ids with dots or colons are quoted like in TOML.
+    // Paths are dot-separated here, and ids with dots or colons are quoted like in TOML.
     private static string[] Split(string path) =>
         System.Text.RegularExpressions.Regex.Matches(path, "\"[^\"]*\"|[^.]+").Select(m => m.Value.Trim('"')).ToArray();
 

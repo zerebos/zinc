@@ -64,7 +64,7 @@ public class KittyGraphicsTests
 
         var p = Assert.Single(Collect(session));
         Assert.Equal((2, 1), (p.ImageWidth, p.ImageHeight));
-        // Second pixel is half transparent: premultiplied.
+        // The second pixel is half transparent, so it comes back premultiplied.
         Assert.Equal([10, 20, 30, 255, 100, 50, 0, 128], p.Pixels);
     }
 

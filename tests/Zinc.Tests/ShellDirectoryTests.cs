@@ -29,7 +29,7 @@ public class ShellDirectoryTests
     [Fact]
     public void ThisPcByNameIsLocal()
     {
-        // OSC 7 from zsh in WSL or Git Bash: the computer name, as the shell spells it.
+        // OSC 7 from zsh in WSL or Git Bash names the computer as the shell spells it.
         Assert.Equal("/home/jdoe/src", ShellDirectory.Parse($"file://{Environment.MachineName.ToLowerInvariant()}/home/jdoe/src"));
         Assert.Equal(@"C:\Users", ShellDirectory.Parse($"file://{System.Net.Dns.GetHostName()}/C:/Users"));
     }
@@ -56,7 +56,7 @@ public class ShellDirectoryTests
     [Fact]
     public void ADistrosOwnHostNameIsLocalOnceKnown()
     {
-        // LocalHosts is process-wide: a random name no other test (or real host) uses keeps this one to itself.
+        // LocalHosts is process-wide, so a random name no other test (or real host) uses keeps this one to itself.
         var name = "zinc-test-distro-" + Guid.NewGuid().ToString("N")[..8];
         Assert.Null(ShellDirectory.Parse($"file://{name}/home/jdoe"));
         LocalHosts.Add(WslConf.Hostname($"[network]\nhostname = {name}\n"));
@@ -149,7 +149,7 @@ public class ShellDirectoryTests
     [InlineData(true)]
     public void BackAtTheLocalShellsPromptSshHasEnded(bool remoteMarks)
     {
-        // zsh reports its folder only when it changes: after ssh, the same folder isn't reported again.
+        // zsh reports its folder only when it changes, so after ssh the same folder isn't reported again.
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         var changes = 0;
         session.DirectoryChanged += () => changes++;
@@ -159,7 +159,7 @@ public class ShellDirectoryTests
         session.WriteToScreen("\x1b]7;file://box/home/jdoe\x07");
         if (remoteMarks)
         {
-            // Its prompt isn't the local shell's: still over there.
+            // Its prompt isn't the local shell's, so the session is still over there.
             session.WriteToScreen("\x1b]133;A;aid=77\x07box$ \x1b]133;B\x07");
             Assert.Equal("box", session.RemoteHost);
             session.WriteToScreen("exit\r\n\x1b]133;C\x07\x1b]133;D;0\x07");
@@ -177,7 +177,7 @@ public class ShellDirectoryTests
     [Fact]
     public void AReportIgnoredTooEarlyIsTakenOnceItsHostIsKnown()
     {
-        // LocalHosts is process-wide: a random name no other test (or real host) uses keeps this one to itself.
+        // LocalHosts is process-wide, so a random name no other test (or real host) uses keeps this one to itself.
         var name = "zinc-test-distro-" + Guid.NewGuid().ToString("N")[..8];
         using var session = new TerminalSession(80, 24, TerminalTheme.Default);
         var changes = 0;

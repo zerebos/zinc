@@ -10,7 +10,7 @@ public class ColorSettingsTests
     {
         Assert.Equal(21, MinimumContrast.Ratio((0, 0, 0), (255, 255, 255)), 2);
         Assert.Equal(1, MinimumContrast.Ratio((120, 80, 200), (120, 80, 200)), 2);
-        Assert.Equal(4.54, MinimumContrast.Ratio((0x76, 0x76, 0x76), (255, 255, 255)), 2); // the usual AA grey
+        Assert.Equal(4.54, MinimumContrast.Ratio((0x76, 0x76, 0x76), (255, 255, 255)), 2); // the usual AA gray
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class ColorSettingsTests
     [Fact]
     public void ASchemeDoesNotTouchThem()
     {
-        // These are settings, not scheme keys: a scheme applied later keeps them.
+        // These are settings, not scheme keys, so a scheme applied later keeps them.
         var file = Path.Combine(Path.GetTempPath(), $"zinc-scheme-{Guid.NewGuid():N}");
         try
         {
