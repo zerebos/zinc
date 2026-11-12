@@ -40,12 +40,12 @@ jobs:
       # the patches or the native sources do, so they're built once per such change and kept.
       - name: Restore the native DLLs
         id: native
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: native
           key: native-x64-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
 
-      # setup-zig downloads Zig from the community mirrors (since ziglang.org asks CI to) and checks its signature.
+      # setup-zig downloads Zig from the community mirrors (because ziglang.org asks CI to) and checks its signature.
       # It's pinned to the commit of v2.2.1 with its own cache off, because the DLLs are cached above.
       - name: Install Zig
         if: steps.native.outputs.cache-hit != 'true'
@@ -58,10 +58,18 @@ jobs:
         if: steps.native.outputs.cache-hit != 'true'
         run: pwsh scripts/build/libghostty.ps1
 
+      # Saved here, not at the end of the job, so a failing build or test doesn't throw away the DLLs just built.
+      - name: Keep the native DLLs
+        if: steps.native.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: native
+          key: ${{ steps.native.outputs.cache-primary-key }}
+
       - name: Build
         run: dotnet build Zinc.slnx --no-incremental -warnaserror
 
-      # The file-based scripts use Zinc.Core, so a change there can break them
+      # The file-based scripts use Zinc.Core, so a change there can break them.
       # They're built with TreatWarningsAsErrors, because a file-based build refuses -warnaserror.
       - name: Build the scripts
         run: |

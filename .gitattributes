@@ -1,3 +1,7 @@
+# Every file is checked out with the line endings it was committed with, whatever core.autocrlf says. The tests
+# compare text byte for byte against literals in their own source, so a converted checkout fails them.
+* -text
+
 # Shell scripts run inside bash/zsh (WSL, MSYS): CRLF would break them.
 assets/shell-integration/** text eol=lf
 
