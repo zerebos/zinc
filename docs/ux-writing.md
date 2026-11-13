@@ -84,6 +84,7 @@ The attention dot's colors and the words around it say the same thing. Use these
 - **Periods** on descriptions and any text of more than one sentence.
 - **Colons** introduce a list ("Bring back the workspace closed last: its tabs, splits and folders."), separate a label from its value ("Color: automatic", "Inherited: 11 pt"), and lead into a reset arrow's destination ("Back to the default: no shaders"). A colon never stands in for "because", "so" or "use it for". Write two sentences, or join them with the word: "Drag to reorder. The new-tab menu lists them in this order."
 - **No semicolons.** Two short sentences read better on screen: "A dot on its tab. The taskbar button also flashes if Zinc is in the background."
+- **A comma before the last item** in a list of three or more (the serial comma): "Tabs, splits, and folders".
 - **Straight double quotes** for quoting labels and names ("Vintage"), and straight apostrophes (Zinc's). Never curly quotes, never single quotes for quoting. Consistency matters more than style, and straight quotes are what everyone types.
 - (In this guide, an example that itself contains a quoted label is shown in *italics* instead of quotes.)
 - **Code, keys, paths and values** appear exactly as typed, never quoted or recapitalized: `config.toml`, Ctrl+A > C, `C:\Users`.
