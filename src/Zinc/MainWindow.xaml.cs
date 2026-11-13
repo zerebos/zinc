@@ -278,6 +278,8 @@ public sealed partial class MainWindow : Window
             _commandSettle?.Stop();
             _springTimer?.Stop();
             _replayTimer?.Stop();
+            _fadeOutTimer?.Stop();
+            _shadowTimer?.Stop();
             foreach (var tab in AllTabs().ToList())
             {
                 foreach (var pane in tab.Workspace.Tabs)
