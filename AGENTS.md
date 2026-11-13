@@ -15,6 +15,7 @@ Zinc is a terminal for Windows, a WinUI 3 app in C# (.NET 10, Windows App SDK 2.
 - **Ask a person about what you can't test**: hover, the pointer's shape (captures leave the pointer out), real mouse clicks, and real key presses with modifiers. The key-to-action map is unit-tested, but whether a key reaches Zinc needs someone at the keyboard.
 - **Say which settings combinations you tested.** When a change touches layout or the window's chrome, test the defaults and the settings that change the chrome (`docs/development.md`, "Testing").
 - **Text in the product follows `docs/ux-writing.md`**, so read it before writing any. Its punctuation rules are the ones most often missed: no semicolons, and a colon only before a list, between a label and its value, or in a reset arrow's tooltip ("Back to the default: no shaders").
+- **Docs, comments, and commit messages follow `docs/writing.md`**, which shares those punctuation rules and says how much voice each kind of text gets.
 
 ## Issues and pull requests
 
@@ -28,7 +29,7 @@ This is about transparency, not a penalty for AI-assisted work, and it helps a r
 
 ## Code comments
 
-The comment rules in `docs/development.md` ("Code style") apply. For Zinc's languages:
+The comment rules in `docs/development.md` ("Code style") and `docs/writing.md` ("Code comments") apply. For Zinc's languages:
 
 - `//`, `///`, and `/* */` in C#, plus `#` in scripts.
 - A short fragment is often best when it says one clear thing: `child.Visibility = Visibility.Visible; // a maximized pane's hidden sides show while they grow or shrink`.
