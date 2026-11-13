@@ -1,9 +1,9 @@
-# Every file is checked out with the line endings it was committed with, whatever core.autocrlf says. The tests
-# compare text byte for byte against literals in their own source, so a converted checkout fails them.
-* -text
+# Text files are LF, in the repo and in every checkout, whatever core.autocrlf says. That covers the shell
+# integration scripts (bash and zsh can't read CRLF), the patches to Ghostty (git apply needs them to match its LF
+# sources), and the tests that compare text against multi-line literals in their own source. Git detects binary
+# files itself and leaves them alone.
+* text=auto eol=lf
 
-# Shell scripts run inside bash/zsh (WSL, MSYS): CRLF would break them.
-assets/shell-integration/** text eol=lf
-
-# Patches to upstream sources stay LF, because git apply needs them to match the upstream files, which are LF.
-patches/** text eol=lf
+# cmd.exe can misread a batch file with LF line ends.
+*.cmd text eol=crlf
+*.bat text eol=crlf
