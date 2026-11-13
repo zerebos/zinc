@@ -120,8 +120,8 @@ cursor move that ConPTY didn't make, and never hears of, leaves the two screens 
 then on. A tester's PowerShell prompt drew itself with `Write-Host`, so our marks (in the prompt's
 return value) came after its text; the fresh line put the cursor, and everything PSReadLine drew
 after it, a line below the prompt. Windows Terminal does no fresh line either, so a prompt that
-works there works here. Repro: `.scratch/tools/pwsh-profile-cursor.ps1` (the prompt in the
-2026-10-03 note).
+works there works here. To see it, give PowerShell a `prompt` function that draws its text with
+`Write-Host` and returns an empty string, so the marks Zinc adds to the return value come after the text.
 
 The tradeoff: a prompt whose text comes before its mark (a `Write-Host` prompt in PowerShell, or
 any shell whose previous output didn't end its line) is recorded as starting where the mark landed,

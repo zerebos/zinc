@@ -11,10 +11,10 @@ namespace Zinc.Ghostty;
 public sealed record SpriteImage(byte[] Coverage, int Width, int Height, int X, int Y);
 
 /// <summary>
-/// Ghostty's sprite rasterizer (zinc-sprite.dll, built from the pinned Ghostty by
-/// scripts/build/sprites.ps1): box drawing, block elements, Symbols for Legacy Computing,
-/// Powerline and Braille, drawn pixel-exact for a cell size instead of taken from a font, so
-/// they meet their neighbors in any font. Thread-safe, because each call draws on its own canvas.
+/// Ghostty's sprite rasterizer (zinc-sprite.dll, built from the pinned Ghostty with the other
+/// native DLLs): box drawing, block elements, Symbols for Legacy Computing, Powerline and
+/// Braille, drawn pixel-exact for a cell size instead of taken from a font, so they meet their
+/// neighbors in any font. Thread-safe, because each call draws on its own canvas.
 /// </summary>
 public static partial class Sprites
 {

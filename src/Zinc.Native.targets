@@ -16,13 +16,13 @@
   </PropertyGroup>
 
   <!-- libghostty-vt and Ghostty's sprite rasterizer (zinc-sprite: box drawing, blocks,
-       Legacy Computing, Powerline) are built by scripts/build/libghostty.ps1 into native/<arch>/. -->
+       Legacy Computing, Powerline), built from the pinned Ghostty into native/<arch>/. -->
   <ItemGroup>
     <None Include="$(GhosttyNativeDir)ghostty-vt.dll" Link="ghostty-vt.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)ghostty-vt.pdb" Link="ghostty-vt.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)ghostty-vt.pdb')" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.dll" Link="zinc-sprite.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />
     <None Include="$(GhosttyNativeDir)zinc-sprite.pdb" Link="zinc-sprite.pdb" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" Visible="false" Condition="Exists('$(GhosttyNativeDir)zinc-sprite.pdb')" />
-    <!-- Custom shaders' GLSL -> HLSL translator (scripts/build/shader.ps1), loaded only when a shader is configured.
+    <!-- The GLSL to HLSL translator for custom shaders (zinc-shader), loaded only when a shader is configured.
          All three DLLs are built for the GNU ABI and import only what Windows itself has (its Universal CRT), so no
          C or C++ runtime ships with them. -->
     <None Include="$(GhosttyNativeDir)zinc-shader.dll" Link="zinc-shader.dll" CopyToOutputDirectory="PreserveNewest" Visible="false" />

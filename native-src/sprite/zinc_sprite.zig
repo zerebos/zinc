@@ -2,9 +2,9 @@
 //! elements, Symbols for Legacy Computing, Powerline and Braille shapes Ghostty draws itself,
 //! pixel-exact for a given cell size, instead of taking them from a font.
 //!
-//! scripts/build/sprites.ps1 copies this file into the pinned Ghostty checkout (as
-//! src/zinc_sprite.zig, so its relative imports resolve) and builds it with
-//! native-src/sprite/build.zig into zinc-sprite.dll. Ghostty is MIT-licensed.
+//! The native build copies this file into the pinned Ghostty checkout (as src/zinc_sprite.zig,
+//! so its relative imports resolve) and builds it with the build.zig beside it into
+//! zinc-sprite.dll. Ghostty is MIT-licensed.
 const std = @import("std");
 const font = @import("font/main.zig");
 
