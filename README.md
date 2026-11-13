@@ -26,59 +26,17 @@ A Windows terminal emulator built on **WinUI 3** (Windows App SDK 2.5) and
 
 ## Requirements
 
-- Windows 10 version 2004 (build 19041) or later, or Windows 11 (developed on Windows 11 24H2); x64
-  (ARM64 isn't built yet)
-- .NET SDK 10
-- [Zig](https://ziglang.org) **0.16.x** on `PATH` (Ghostty's minimum). The native DLLs are built for
-  the GNU ABI, as libghostty's own Windows builds are, so they need only what Windows itself has.
-- For publishing only (a release, or `dotnet publish`): Visual Studio Build Tools with the C++
-  workload, because `zn` is compiled with Native AOT, which links with MSVC's linker
-- PowerShell 7.4 or later (`pwsh`) for the build scripts
+- Windows 10 version 2004 (build 19041) or later, or Windows 11. x64 only for now (ARM64 isn't built yet).
 
-## Build and run
+## Building from source
 
 ```powershell
-# 1. Build libghostty-vt at the pinned Ghostty commit -> native/x64/ghostty-vt.dll
-pwsh scripts/build/libghostty.ps1
-
-# 2. Build and run the app
-dotnet run --project src/Zinc
-
-# 3. Run the tests (ABI check against libghostty's manifest, headless ConPTY sessions)
+pwsh scripts/build/libghostty.ps1   # the native DLLs, which need Zig 0.16
+dotnet build
 dotnet test
 ```
 
-The app is unpackaged and Windows App SDK self-contained, so
-`src/Zinc/bin/x64/<Config>/net10.0-windows10.0.26100.0/win-x64/zinc.exe`
-runs directly.
-
-## Sharing a build
-
-Pushing a version tag makes a release. The release workflow (`.github/workflows/release.yml`) builds and tests
-the tagged commit, packs it with [Velopack](https://velopack.io) and publishes it under the repository's GitHub
-Releases: `Zinc-win-Setup.exe` (a per-user install, no admin prompt), the update packages, `releases.win.json`
-(what installed copies check daily) and `Zinc-win-Portable.zip`. The .NET runtime and the Windows App SDK are
-inside (about 50 MB). The release's notes are CHANGELOG.md's entry for its version, so the workflow refuses a
-version without one, and a changelog with notes still under "Unreleased". It also attaches `zinc-reference.json`
-and `config.schema.json`, which describe that version's settings and actions. Started by hand, the workflow is
-a dry run: it builds and packs the same way and keeps the files with the run, without making a release.
-
-Installed copies update themselves (Settings > About > Updates) from the releases of the GitHub repository that
-`Directory.Build.props` names (`ZincRepositoryUrl`). A pre-release also gets later pre-releases, and a release
-gets releases only.
-
-`pwsh scripts/release/release.ps1` does the building and packing, into `dist\release`, and runs on your own
-machine too. `-UpdateSource <address>` builds in another place for installed copies to look, which is a folder or
-a web address that holds the folder's contents. `-From <address>` fetches the previous release first, so the new
-one also gets a small delta package. `README.txt` (from `scripts/release/package-readme.txt`) tells testers how to
-install past SmartScreen (the build isn't signed), how updates work, where settings and logs go, how to send a
-debug log and benchmark results with feedback, and how to remove it.
-
-**Versions.** `ZincVersion` in `Directory.Build.props` is the release being worked toward. A build of the
-commit tagged `v<that version>` is that release (`0.1.0+a1b2c3d`). A build of a commit tagged as a pre-release
-of it, such as `v0.1.0-rc.1`, is that pre-release (`0.1.0-rc.1+a1b2c3d`). Every other build is a dev build
-(`0.1.0-dev+a1b2c3d`), which is never released. The version is shown in Settings > About and answered to
-programs asking the terminal's version (XTVERSION: `zinc 0.1.0+a1b2c3d`).
+[docs/development.md](docs/development.md) covers what you need to install, running a dev build next to an installed Zinc, testing, releasing and forking.
 
 ## Configuration
 
@@ -1010,15 +968,11 @@ off, or on uninstall). With the debug log on, each command is logged, never the 
 ## Layout
 
 ```
-scripts/build/libghostty.ps1      fetch + build libghostty-vt at a pinned commit (and, through
-                                  sprites.ps1 and shader.ps1, zinc-sprite.dll and zinc-shader.dll)
-scripts/build/gen-keys.ps1        regenerate GhosttyKey.g.cs from the C header
-scripts/release/                  releases (installer + update packages, Velopack) and their checks
-scripts/dev/update-themes.ps1     refresh the bundled color schemes
-scripts/dev/vt-bench.cs           libghostty-vt's parse speed, before and after a Ghostty update
+scripts/                          the build, dev and release scripts (docs/development.md lists them)
 assets/                           fonts, themes, shaders, shell-integration scripts, licenses
 native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
-docs/                             ux-writing.md (how the interface and docs talk), shell-integration.md
+docs/                             development.md (building and working on Zinc), ux-writing.md (how the
+                                  interface and docs talk), shell-integration.md
 src/Zinc.Native.targets        the native DLLs + bundled ConPTY for runnable projects
 src/Zinc.Core/                 everything testable without a window:
   Ghostty/                          P/Invoke bindings, the built-in glyphs
@@ -1033,20 +987,6 @@ src/Zinc/                      WinUI app: windows, settings, TerminalControl (Wi
 src/Zinc.Cli/                  zn, the command-line tool
 tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions (real shells), unit tests
 ```
-
-## Updating libghostty-vt
-
-The libghostty-vt C API is explicitly unstable. To move to a newer Ghostty:
-
-1. Run `dotnet run scripts/dev/vt-bench.cs -- --save before` (the current DLL's parse speed). It needs only the .NET
-   SDK. `--help` lists its options.
-2. Change `$Commit` in `scripts/build/libghostty.ps1` and run it. It also rebuilds zinc-sprite.dll
-   from Ghostty's sprite code, which isn't part of its API: `SpriteTests` pin what Zinc relies on.
-3. Run `pwsh scripts/build/gen-keys.ps1`.
-4. Run `dotnet test`. `AbiTests` compares every binding struct, enum and imported
-   function against the library's own ABI manifest (`ghostty_type_json()`).
-5. Run `dotnet run scripts/dev/vt-bench.cs -- --compare before`. More than 10% slower is worth a look, but run it
-   again first, because a busy machine can move the numbers by about 5%.
 
 ## Known gaps
 

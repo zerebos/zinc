@@ -25,6 +25,8 @@ A palette title is also in the README's action table (a test checks it), and tes
 (`palette:<exact title>`), so change every copy together. A wording pass users would notice gets one line under
 `## Unreleased` in CHANGELOG.md. `/tidy-ui-text` rewrites UI text in a diff or file to the guide. README, docs,
 CHANGELOG and release notes follow the guide's "Outside the app" section. The app's colors are in `src/Zinc/Brand.cs`.
+**Markdown paragraphs and list items stay on one line**, with no wrapping at a fixed width, so an edit never reflows
+the lines after it. Leave existing hard-wrapped Markdown as it is unless you're rewriting that part anyway.
 The brand guidelines and source artwork live in the brand repo, and this repo keeps only what the app ships
 (`src/Zinc/Assets`).
 
