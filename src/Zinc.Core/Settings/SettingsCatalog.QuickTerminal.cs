@@ -25,6 +25,7 @@ public static partial class SettingsCatalog
             "A percentage or pixels (50%, 600px) along its edge. Empty: 50%, or 70% by 60% at \"Center\".", SettingKind.Text)
             {
                 Placeholder = "50%",
+                DefaultText = "50%, or 70% by 60% at \"Center\"",
                 Binding = Bind.Custom((c, v) => QuickSize(v) is { } s && Config.TryQuickSize(s, out var a, out var b)
                     ? Quick(c, q => q with { Primary = a, Secondary = b })
                     : null,

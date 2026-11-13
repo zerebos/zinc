@@ -118,6 +118,20 @@ A setting that's parsed and tested but not drawn yet gets `Unfinished = true`, w
 
 The setting's label and description are text in the product, so they follow [ux-writing.md](ux-writing.md).
 
+## The reference and the schema
+
+`scripts/dev/export-reference.cs` writes two files that the release attaches and the website reads. `zinc-reference.json` describes the settings, actions, keys and notices of that build, and `config.schema.json` is a JSON Schema for `config.toml`. They're built from the same code the app reads: the settings catalog (with its top-level keys in `SettingsCatalog.TopLevel.cs`), `Actions.cs` (the actions and their arguments), `KeyChord` (the key names) and `OpenSourceNotices`. So a new setting, action or key name reaches them with no other change. Both are written with LF line ends.
+
+The reference has a `format` number (`ReferenceExport.Format`), and the website refuses a format it doesn't know.
+
+- Adding a field doesn't change the format, because a reader that doesn't know the field skips it.
+- Removing or renaming a field, or giving one another meaning, raises the format by one, in the same change. Say so in the changelog, so the website knows to update its reader before it takes that release's file.
+
+The schema lives at one address, `ConfigSchema.Url`, which is the schema's `$id`, and a new `config.toml` names it in its first line (`#:schema`). The address stays the same across releases, so the schema there always describes the latest release.
+
+- A renamed key keeps working, because Zinc reads the old name (`ConfigFile.RenamedKeys`) and Settings writes the new one the next time it changes that setting. The schema keeps the old name too, marked deprecated with a description that says it still works, so an editor can point it out without calling it an error.
+- If a release ever changes `config.toml` in a way Zinc can't keep reading, the schema moves to a new address with a version in it, and `ConfigSchema.Url` changes with it. Old configs keep their old `#:schema` line, which still describes them.
+
 ## Adding an action
 
 An action is anything a key can be bound to. It needs an entry in `src/Zinc.Core/Input/Actions.cs` (its name, palette title, description and category) and a handler. The reference export picks the entry up for the website. A pane's actions are handled in `TerminalControl.RunAction`, and a window's in `MainWindow.HandleAction`.

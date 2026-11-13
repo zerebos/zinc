@@ -32,7 +32,7 @@ public static partial class SettingsCatalog
             "For characters your font lacks, tried in order before Windows picks one. Separate them with commas.",
             SettingKind.Text)
             {
-                Placeholder = "Symbols Nerd Font, Noto Sans JP",
+                Placeholder = "Symbols Nerd Font, Noto Sans JP", PlaceholderIsExample = true, DefaultText = "None, so Windows picks",
                 Binding = Bind.Custom((c, v) => Config.NormalizeFallback(v) is { } fonts ? c with { FontFallback = fonts } : null,
                     [Accepts.Text(), Accepts.List([Accepts.Text()])], c => c.FontFallback is { Length: > 0 } fonts ? fonts : null),
             },
@@ -52,7 +52,8 @@ public static partial class SettingsCatalog
                 Binding = Adjustment((c, a) => c with { AdjustBoxThickness = a }),
             },
         new("appearance", "Colors", "colors.theme", "Color scheme",
-            "About 650 are included. Add your own to the themes folder next to config.toml.", SettingKind.Scheme, null),
+            "About 650 are included. Add your own to the themes folder next to config.toml.", SettingKind.Scheme, null)
+            { DefaultText = ThemeLibrary.ZincScheme },
         new("appearance", "Colors", "colors.palette-generate", "Match 256 colors to the scheme",
             "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme's 16, not the standard ones.",
             SettingKind.Toggle)

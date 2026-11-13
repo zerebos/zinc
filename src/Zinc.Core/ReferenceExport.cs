@@ -15,29 +15,47 @@ public static class ReferenceExport
 {
     /// <summary>
     /// The shape's version. Bump it on a change a reader would misread (a field removed, renamed or given another
-    /// meaning), so the website refuses a file it doesn't know. A new field doesn't need a bump.
+    /// meaning), so the website refuses a file it doesn't know. A new field doesn't need a bump. docs/development.md
+    /// ("The reference and the schema") has the rule for both files.
     /// </summary>
     public const int Format = 1;
 
     private static readonly JsonSerializerOptions Written = new()
     {
         WriteIndented = true,
+        NewLine = "\n", // the platform's newline is CRLF on Windows, and the files are LF
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // "…" and "+" as they are, not … and +
     };
 
     /// <summary>
     /// The reference for this build. <paramref name="licenseText"/> gives each notice's license text, which is
-    /// written with LF line ends, no byte order mark and no trailing blank lines.
+    /// written with LF line ends, no byte order mark and no trailing blank lines. <paramref name="changelog"/> is
+    /// CHANGELOG.md's text, for the release's date (null leaves the date out).
     /// </summary>
-    public static JsonObject Build(Func<OpenSourceComponent, string> licenseText)
+    public static JsonObject Build(Func<OpenSourceComponent, string> licenseText, string? changelog = null)
     {
         var shown = SettingsCatalog.All.Where(s => !s.Unfinished).ToList();
         var keys = shown.Select(s => s.Key).ToHashSet();
+        var release = ReleaseVersion(Version);
         return new JsonObject
         {
             ["format"] = Format,
-            ["zinc"] = new JsonObject { ["version"] = Version },
+            ["zinc"] = new JsonObject
+            {
+                ["version"] = Version,
+                ["release"] = release,
+                ["date"] = release != null && changelog != null ? ReleaseNotes.Date(changelog, release) : null,
+            },
             ["sections"] = Array(SettingsCatalog.Sections, s => new JsonObject { ["id"] = s.Id, ["title"] = s.Title }),
+            ["topLevel"] = Array(SettingsCatalog.TopLevel, k => new JsonObject
+            {
+                ["key"] = k.Key,
+                ["label"] = k.Label,
+                ["description"] = k.Description,
+                ["takes"] = k.Takes,
+                ["defaultText"] = k.DefaultText,
+            }),
+            ["customColorLabel"] = SettingsCatalog.CustomColorLabel,
             ["settings"] = Array(shown, Setting),
             ["folds"] = Array(
                 SettingsCatalog.Folds.Where(f => f.Lead == null || keys.Contains(f.Lead)),
@@ -51,7 +69,28 @@ public static class ReferenceExport
             ["fileOnly"] = Array(SettingsCatalog.FileOnly, f => new JsonObject { ["key"] = f.Key, ["text"] = f.Value }),
             ["profileFields"] = Array(SettingsCatalog.ProfileFields, Setting),
             ["discovery"] = Array(SettingsCatalog.Discovery, Setting),
+            ["actionCategories"] = Array(Actions.Categories, c => JsonValue.Create(c)),
+            ["actionArguments"] = Array(Actions.Arguments, a => new JsonObject
+            {
+                ["name"] = a.Name,
+                ["values"] = Array(a.Values, v => JsonValue.Create(v)),
+                ["optional"] = a.Optional,
+                ["text"] = a.Text,
+            }),
             ["actions"] = Array(Actions.Families, Action),
+            ["keys"] = new JsonObject
+            {
+                ["chordSeparator"] = KeyChord.Separator.ToString(),
+                ["sequenceSeparator"] = KeySequence.Separator.ToString(),
+                ["unbind"] = Actions.None,
+                ["modifiers"] = Array(KeyChord.ModifierNames, m => JsonValue.Create(m)),
+                ["names"] = Array(KeyChord.KeyNames, k => new JsonObject
+                {
+                    ["name"] = k.Name,
+                    ["aliases"] = Array(k.Aliases, a => JsonValue.Create(a)),
+                    ["virtualKey"] = k.VirtualKey,
+                }),
+            },
             ["notices"] = Array([OpenSourceNotices.Zinc, .. OpenSourceNotices.Components], c => new JsonObject
             {
                 ["name"] = c.Name,
@@ -72,6 +111,13 @@ public static class ReferenceExport
     /// <summary>This build's informational version ("0.1.0-dev+abc1234").</summary>
     public static string Version =>
         typeof(ReferenceExport).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0";
+
+    /// <summary>
+    /// The release <paramref name="version"/> is ("0.1.0", "0.1.0-rc.1"), without the commit's hash, or null for a dev
+    /// build, which is never released.
+    /// </summary>
+    internal static string? ReleaseVersion(string version) =>
+        version.Split('+')[0] is var plain && !plain.Contains("-dev", StringComparison.Ordinal) && plain != "0" ? plain : null;
 
     private static JsonObject Setting(SettingDef s) => new()
     {
@@ -95,6 +141,8 @@ public static class ReferenceExport
         ["placeholder"] = s.Placeholder,
         ["nullLabel"] = s.NullLabel,
         ["numbersAsNumbers"] = s.NumbersAsNumbers,
+        ["example"] = s.PlaceholderIsExample ? s.Placeholder : null,
+        ["defaultText"] = s.DefaultText,
         ["profileOverridable"] = s.ProfileOverridable,
         ["oldNames"] = Array(ConfigFile.OldNames(s.Key).Distinct(), n => JsonValue.Create(n)),
     };
@@ -112,7 +160,7 @@ public static class ReferenceExport
             Keybindings.Default.All.Where(b => Actions.Family(b.Action) == a.Name)
                 .Select(b => (Keys: b.Chord.ToConfig() ?? throw new InvalidOperationException($"{b.Chord} has no config name"), b.Action))
                 .Concat(Keybindings.Default.Sequences.Where(s => Actions.Family(s.Action) == a.Name)
-                    .Select(s => (Keys: string.Join(">", s.Keys.Keys.Select(k => k.ToConfig())), s.Action))),
+                    .Select(s => (Keys: string.Join(KeySequence.Separator, s.Keys.Keys.Select(k => k.ToConfig())), s.Action))),
             b => new JsonObject { ["keys"] = b.Keys, ["action"] = Actions.Format(b.Action) }),
     };
 

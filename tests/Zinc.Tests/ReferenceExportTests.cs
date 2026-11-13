@@ -89,6 +89,105 @@ public class ReferenceExportTests
         Assert.Null(notices[0]["version"]); // Zinc's own notice gives none
     }
 
+    [Fact]
+    public void EveryActionsCategoryAndArgumentIsListed()
+    {
+        Assert.Equal(Actions.Categories, Reference["actionCategories"]!.AsArray().Select(c => c!.GetValue<string>()));
+        var arguments = List("actionArguments").ToDictionary(a => Text(a, "name"));
+        foreach (var action in List("actions"))
+        {
+            Assert.Contains(Text(action, "category"), Actions.Categories);
+            if (action["argument"] is { } argument)
+            {
+                Assert.True(arguments.ContainsKey(argument.GetValue<string>()), Text(action, "name"));
+            }
+        }
+
+        // Each fixed value is one the parser takes, for every action that has that kind of argument.
+        foreach (var action in List("actions").Where(a => a["argument"] != null))
+        {
+            var argument = arguments[Text(action, "argument")];
+            foreach (var value in argument["values"]!.AsArray().Select(v => v!.GetValue<string>()))
+            {
+                Assert.True(Actions.Parse($"{Text(action, "name")} {value}", out var error) != null, error);
+            }
+
+            Assert.Equal(argument["optional"]!.GetValue<bool>(), Actions.Parse(Text(action, "name"), out _) != null);
+        }
+
+        // And the other way: every direction a pane can take is a listed word, so the parser can't read one the
+        // export leaves out.
+        var directions = arguments["direction"]["values"]!.AsArray().Select(v => v!.GetValue<string>()).ToList();
+        Assert.Equal(Enum.GetNames<Zinc.Panes.PaneDirection>().Select(n => n.ToLowerInvariant()).Order(), directions.Order());
+        Assert.Null(Actions.Parse("split 2", out _)); // a direction's number isn't a direction
+    }
+
+    [Fact]
+    public void EveryKeyNameParsesToItsVirtualKey()
+    {
+        var keys = (JsonObject)Reference["keys"]!;
+        Assert.Equal("+", Text(keys, "chordSeparator"));
+        Assert.Equal(Actions.None, Text(keys, "unbind"));
+        Assert.Equal(2, KeySequence.Parse("ctrl+a" + Text(keys, "sequenceSeparator") + "c").Keys.Count);
+        foreach (var key in keys["names"]!.AsArray().Cast<JsonObject>())
+        {
+            var vk = key["virtualKey"]!.GetValue<int>();
+            foreach (var name in key["aliases"]!.AsArray().Select(a => a!.GetValue<string>()).Prepend(Text(key, "name")))
+            {
+                Assert.Equal(vk, (int)KeyChord.Parse("ctrl+" + name).Key);
+            }
+        }
+
+        // Every key a default binding uses has a name.
+        var names = keys["names"]!.AsArray().Select(k => k!["virtualKey"]!.GetValue<int>()).ToHashSet();
+        Assert.All(Keybindings.Default.All, b => Assert.Contains((int)b.Chord.Key, names));
+    }
+
+    [Fact]
+    public void EveryTopLevelKeyIsDescribed()
+    {
+        // Every top-level key the schema allows is a settings table, a top-level entry, or the profiles.
+        var schema = (JsonObject)ConfigSchema.Build()["properties"]!;
+        var tables = SettingsCatalog.All.Concat(SettingsCatalog.Discovery).Select(s => s.Path[0]).Append("profile").ToHashSet();
+        var topLevel = List("topLevel").Select(k => Text(k, "key")).ToList();
+        Assert.All(schema.Select(p => p.Key), key => Assert.True(tables.Contains(key) || topLevel.Contains(key), key));
+        Assert.All(topLevel, key => Assert.True(schema.ContainsKey(key), key));
+        Assert.Equal(SettingsCatalog.CustomColorLabel, Reference["customColorLabel"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void WritesLfOnly()
+    {
+        Assert.DoesNotContain('\r', ReferenceExport.ToJson(Reference));
+        Assert.DoesNotContain('\r', ReferenceExport.ToJson(ConfigSchema.Build()));
+    }
+
+    [Fact]
+    public void SaysWhichReleaseItIs()
+    {
+        Assert.Null(ReferenceExport.ReleaseVersion("0.1.0-dev+abc1234"));
+        Assert.Equal("0.1.0", ReferenceExport.ReleaseVersion("0.1.0+abc1234"));
+        Assert.Equal("0.1.0-rc.1", ReferenceExport.ReleaseVersion("0.1.0-rc.1+abc1234"));
+        Assert.Equal("2026-10-22", ReleaseNotes.Date("## 0.1.0-dev.428 (2026-10-22)\n- x\n", "0.1.0-dev.428"));
+        Assert.Null(ReleaseNotes.Date("## Unreleased\n", "0.1.0"));
+        Assert.Null(ReferenceExport.ReleaseVersion("0")); // what an assembly without a version reports
+    }
+
+    [Fact]
+    public void DefaultTextOnlyWhereNoValueSaysIt()
+    {
+        foreach (var def in SettingsCatalog.All.Concat(SettingsCatalog.ProfileFields).Where(d => d.DefaultText != null))
+        {
+            Assert.True(def.Default == null, $"{def.Key} has a default, so its default text would repeat it");
+        }
+
+        var settings = List("settings").Concat(List("profileFields")).ToDictionary(s => Text(s, "key"));
+        Assert.Equal(ThemeLibrary.ZincScheme, Text(settings["colors.theme"], "defaultText"));
+        Assert.Equal("Symbols Nerd Font, Noto Sans JP", Text(settings["font.fallback"], "example"));
+        Assert.Null(settings["font.adjust-cell-height"]["example"]); // its placeholder is the default
+        Assert.Null(settings["notify.command-finished-after"]["defaultText"]); // its default says it
+    }
+
     // A JSON value as the catalog holds it: whole numbers as long, others as double.
     private static object? Plain(JsonNode? node) => node?.GetValueKind() switch
     {

@@ -85,6 +85,18 @@ public sealed record SettingDef(string Section, string Group, string Key, string
     public bool NumbersAsNumbers { get; init; }
 
     /// <summary>
+    /// Whether the <see cref="Placeholder"/> is only an example (<c>font.fallback</c>). Otherwise a Text setting's
+    /// placeholder shows what an empty setting does.
+    /// </summary>
+    public bool PlaceholderIsExample { get; init; }
+
+    /// <summary>
+    /// What an empty setting does, in words ("Lit Cell", "Your home folder"), for a setting whose <see cref="Default"/>
+    /// is null, so no default value shows it. A test checks it's set only where the default is null.
+    /// </summary>
+    public string? DefaultText { get; init; }
+
+    /// <summary>
     /// Read and tested, but kept out of the settings window (and the reference export) until the app does what it says.
     /// <c>ZINC_TEST_UNFINISHED_SETTINGS=1</c> shows them.
     /// </summary>

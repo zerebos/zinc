@@ -23,8 +23,7 @@ public static class ConfigSchema
             definitions[group] = Group(group);
         }
 
-        definitions["environment"] = Map("Environment variables for the programs Zinc starts. An empty value removes one.",
-            new JsonObject { ["type"] = "string" });
+        definitions["environment"] = Map(SettingsCatalog.TopLevelDescription("environment"), new JsonObject { ["type"] = "string" });
 
         var profile = Table("A profile: a shell or program, and settings of its own.",
             SettingsCatalog.ProfileFields.Select(f => (f.Path[0], (JsonNode)Setting(f))));
@@ -39,19 +38,17 @@ public static class ConfigSchema
 
         var properties = new JsonObject
         {
-            ["include"] = Describe(OneOrList(new JsonObject { ["type"] = "string" }),
-                "More config files to read first, by path or pattern. What this file says wins."),
-            ["default-profile"] = Describe(new JsonObject { ["type"] = "string" }, "The profile new tabs open with, by id."),
+            ["include"] = Describe(OneOrList(new JsonObject { ["type"] = "string" }), SettingsCatalog.TopLevelDescription("include")),
+            ["default-profile"] = Describe(new JsonObject { ["type"] = "string" }, SettingsCatalog.TopLevelDescription("default-profile")),
             ["profile-order"] = Describe(new JsonObject { ["type"] = "array", ["items"] = new JsonObject { ["type"] = "string" } },
-                "Profile ids in the order the menus list them."),
+                SettingsCatalog.TopLevelDescription("profile-order")),
         };
         foreach (var group in groups)
         {
             properties[group] = Ref(group);
         }
 
-        properties["keys"] = Map("Key bindings: a chord or sequence (\"ctrl+shift+t\", \"ctrl+a > c\") and the action it runs, or \"none\".",
-            new JsonObject { ["type"] = "string" });
+        properties["keys"] = Map(SettingsCatalog.TopLevelDescription("keys"), new JsonObject { ["type"] = "string" });
         properties["discover"] = Table("Where Zinc looks for shells.", SettingsCatalog.Discovery.Select(s => (s.Path[1], (JsonNode)Setting(s))));
         properties["environment"] = Ref("environment");
         properties["profile"] = Map("Profiles by id.", Ref("profile"));

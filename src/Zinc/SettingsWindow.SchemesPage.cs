@@ -31,9 +31,6 @@ internal sealed partial class SettingsWindow
     private SchemeKind _schemeKind;
     private string _schemeQuery = "";
 
-    /// <summary>Zinc's own scheme, which is in force where none is chosen.</summary>
-    private const string ZincScheme = "Lit Cell";
-
     private void OpenSchemes(string? profile)
     {
         // The page can be opened from anywhere, search results included, and it's a sub-page of Appearance or of the
@@ -87,7 +84,7 @@ internal sealed partial class SettingsWindow
         _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it; click again to stop."));
 
         // ---- In use: the scheme, or the pair that follows Windows' light/dark.
-        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
+        var reset = ResetArrow(setting.Label, profile == null ? $"Back to Zinc's own: {ThemeLibrary.ZincScheme}" : "Back to the scheme every profile inherits");
         reset.Click += (_, _) => Write(path, null);
         var description = DescriptionText();
         var inUse = PartTitle("In use");
@@ -118,8 +115,8 @@ internal sealed partial class SettingsWindow
             if (follow.IsOn)
             {
                 // The scheme in use becomes the dark side, and the light side starts from its counterpart.
-                var light = ThemeLibrary.LightCounterpart(dark, _config.Themes.Names()) ?? ZincScheme + " Light";
-                Write(path, $"light:{light},dark:{dark ?? ZincScheme}");
+                var light = ThemeLibrary.LightCounterpart(dark, _config.Themes.Names()) ?? ThemeLibrary.ZincLightScheme;
+                Write(path, $"light:{light},dark:{dark ?? ThemeLibrary.ZincScheme}");
             }
             else
             {
@@ -130,7 +127,7 @@ internal sealed partial class SettingsWindow
         // A slot shows one scheme in force, with its tile, which names the scheme, and Edit (the cards' pencil) beside it.
         Border Slot(string label, string about, string? name)
         {
-            var shown = name ?? ZincScheme;
+            var shown = name ?? ThemeLibrary.ZincScheme;
             var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? TerminalTheme.Default, shown);
             tile.Width = ControlWidth;
             var edit = new Button
@@ -173,7 +170,7 @@ internal sealed partial class SettingsWindow
         ToolTipService.SetToolTip(add, "New scheme…");
         AutomationProperties.SetName(add, "New scheme");
         add.Flyout = NewSchemeFlyout(
-            () => _previewedScheme ?? SchemeSides(ShownScheme(profile)).Dark ?? ZincScheme,
+            () => _previewedScheme ?? SchemeSides(ShownScheme(profile)).Dark ?? ThemeLibrary.ZincScheme,
             start =>
             {
                 var (dark, light) = SchemeSides(ShownScheme(profile));
@@ -245,7 +242,7 @@ internal sealed partial class SettingsWindow
         bool InForce(string name)
         {
             var (dark, light) = SchemeSides(ShownScheme(profile));
-            return name.Equals(dark ?? ZincScheme, StringComparison.OrdinalIgnoreCase) || name.Equals(light, StringComparison.OrdinalIgnoreCase);
+            return name.Equals(dark ?? ThemeLibrary.ZincScheme, StringComparison.OrdinalIgnoreCase) || name.Equals(light, StringComparison.OrdinalIgnoreCase);
         }
 
         // Puts scheme `name` in place as the scheme, or with a pair, as its light or dark side.

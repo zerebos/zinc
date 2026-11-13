@@ -7,6 +7,9 @@ made from.
 
 ## Unreleased
 
+### New
+- A new `config.toml` starts with a `#:schema` line, so editors that read it, like VS Code with Even Better TOML, complete its keys and point out mistakes with no setup.
+
 ### Changed
 - Zinc is now licensed under Apache-2.0. `Settings > About > Open-source software` lists Zinc's own license first.
 - The full list of settings and actions is now on [zincterminal.dev](https://zincterminal.dev/docs/config) instead of in the README, and a new `config.toml` points there. `zn`'s message for an unknown action points to `Settings > Keyboard`.

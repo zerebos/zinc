@@ -7,6 +7,17 @@ public class FirstRunTests
     private static ConfigFile Read(string text) => ConfigFile.Parse(text);
 
     [Fact]
+    public void ANewConfigNamesTheSchemaFirstAndReadsCleanly()
+    {
+        Assert.StartsWith("#:schema " + ConfigSchema.Url + "\n", FirstRun.Template);
+        Assert.Empty(Read(FirstRun.Template).Warnings);
+
+        // Choices written into it keep the schema line first.
+        var text = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, "Dracula", "Cascadia Mono", "cmd"));
+        Assert.StartsWith("#:schema ", text);
+    }
+
+    [Fact]
     public void WorkspacesInTheSidebarWithTheirOwnSchemeFontAndShell()
     {
         var text = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, "Dracula", "JetBrainsMono NF", "wsl:Fedora"));

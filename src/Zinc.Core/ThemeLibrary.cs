@@ -7,6 +7,12 @@ namespace Zinc;
 /// </summary>
 public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 {
+    /// <summary>Zinc's own scheme, which is in force where none is chosen (<see cref="Terminal.TerminalTheme.Default"/>).</summary>
+    public const string ZincScheme = "Lit Cell";
+
+    /// <summary>Zinc's own scheme for light mode.</summary>
+    public const string ZincLightScheme = "Lit Cell Light";
+
     /// <summary>
     /// The library for a config file, which looks in its folder's <c>themes</c>, then in <paramref name="bundledFolder"/>.
     /// </summary>
@@ -85,7 +91,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             }
         }
 
-        return (dark == null ? Named("Lit Cell Light") : null) ?? Named("Catppuccin Latte") ?? names.FirstOrDefault();
+        return (dark == null ? Named(ZincLightScheme) : null) ?? Named("Catppuccin Latte") ?? names.FirstOrDefault();
     }
 
     /// <summary>The scheme in force for <paramref name="value"/> (a name, or a light/dark pair) in <paramref name="scheme"/> mode.</summary>

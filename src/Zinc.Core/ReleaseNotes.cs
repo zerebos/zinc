@@ -48,6 +48,12 @@ public static partial class ReleaseNotes
             : Entry(changelog, version) is { Length: > 0 } ? null
             : $"The changelog has no entry for {version}.";
 
+    /// <summary>The date in <paramref name="version"/>'s heading ("2026-10-22"), or null when it has none.</summary>
+    public static string? Date(string changelog, string version) =>
+        Regex.Match(changelog, $@"^## {Regex.Escape(version)} \((\d{{4}}-\d{{2}}-\d{{2}})\)", RegexOptions.Multiline) is { Success: true } m
+            ? m.Groups[1].Value
+            : null;
+
     [GeneratedRegex(@"^## (\S+)", RegexOptions.Multiline)]
     private static partial Regex VersionHeading();
 

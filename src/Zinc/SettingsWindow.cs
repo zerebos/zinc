@@ -28,7 +28,7 @@ namespace Zinc;
 /// </summary>
 internal sealed partial class SettingsWindow : Window
 {
-    private const string DefaultSchemeLabel = "Default (Lit Cell)";
+    private const string DefaultSchemeLabel = "Default (" + ThemeLibrary.ZincScheme + ")";
     private const string BundledFontLabel = BundledFonts.Family + " (included)";
 
     private readonly SettingsWriter _writer;
@@ -1379,7 +1379,7 @@ internal sealed partial class SettingsWindow : Window
             tiles.Children.Clear();
             if (light == null)
             {
-                tiles.Children.Add(Tile(dark, dark ?? ZincScheme));
+                tiles.Children.Add(Tile(dark, dark ?? ThemeLibrary.ZincScheme));
             }
             else
             {
@@ -1718,7 +1718,7 @@ internal sealed partial class SettingsWindow : Window
             box.Items.Add(choice.Label);
         }
 
-        box.Items.Add("Custom color");
+        box.Items.Add(SettingsCatalog.CustomColorLabel);
         var custom = setting.Choices.Count;
         var (color, showColor) = ColorControl(setting, commit, profile);
         var showing = false; // true while the list is set from the file, which isn't the user choosing

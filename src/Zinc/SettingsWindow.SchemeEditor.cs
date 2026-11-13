@@ -41,7 +41,7 @@ internal sealed partial class SettingsWindow
     {
         if (name == null)
         {
-            name = "Lit Cell";
+            name = ThemeLibrary.ZincScheme;
             Write(themePath, name);
         }
 
@@ -309,11 +309,11 @@ internal sealed partial class SettingsWindow
             // scheme for that side takes its place.
             if (string.Equals(light, replacing, StringComparison.OrdinalIgnoreCase))
             {
-                light = name ?? "Lit Cell Light";
+                light = name ?? ThemeLibrary.ZincLightScheme;
             }
             else
             {
-                dark = name ?? "Lit Cell";
+                dark = name ?? ThemeLibrary.ZincScheme;
             }
 
             Write(themePath, $"light:{light},dark:{dark}");

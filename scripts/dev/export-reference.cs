@@ -2,8 +2,8 @@
 #:property TargetFramework=net10.0-windows10.0.26100.0
 #:property PublishAot=false
 
-// Writes two files for the website: zinc-reference.json, this checkout's settings, actions and open-source notices for
-// its reference pages, and config.schema.json, a JSON Schema for config.toml. Run it with `dotnet run`:
+// Writes two files for the website. zinc-reference.json holds this checkout's settings, actions, keys and open-source
+// notices for its reference pages, and config.schema.json is a JSON Schema for config.toml. Run it with `dotnet run`:
 //
 //   dotnet run scripts/dev/export-reference.cs                       (writes both to dist\reference)
 //   dotnet run scripts/dev/export-reference.cs -- --out <folder>
@@ -15,7 +15,7 @@ using Zinc;
 using Zinc.Settings;
 
 const string Usage = """
-    Writes zinc-reference.json (settings, actions, open-source notices) and config.schema.json for the website.
+    Writes zinc-reference.json (settings, actions, keys, open-source notices) and config.schema.json for the website.
 
     Options:
       --out <folder>   where to write them (default: dist\reference)
@@ -40,7 +40,8 @@ for (var i = 0; i < args.Length; i++)
     }
 }
 
-var reference = ReferenceExport.Build(c => File.ReadAllText(OpenSourceNotices.SourceIn(repo, c.LicenseFile)));
+var reference = ReferenceExport.Build(c => File.ReadAllText(OpenSourceNotices.SourceIn(repo, c.LicenseFile)),
+    File.ReadAllText(Path.Combine(repo, "CHANGELOG.md")));
 Directory.CreateDirectory(outFolder);
 foreach (var (name, json) in new[] { ("zinc-reference.json", reference), ("config.schema.json", ConfigSchema.Build()) })
 {

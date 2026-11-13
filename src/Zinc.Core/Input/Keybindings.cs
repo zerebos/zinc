@@ -121,6 +121,8 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
     // VK_OEM_3: the `/~ key on US layouts ("grave" in Ghostty, "`" in Windows Terminal).
     private const VirtualKey OemGrave = (VirtualKey)0xC0;
 
+    // For each key, the first name here that starts with a letter is the one ToConfig writes (and the reference
+    // lists), and the others are aliases. So reordering an entry changes what config.toml and the reference say.
     private static readonly Dictionary<string, VirtualKey> Names = new(StringComparer.OrdinalIgnoreCase)
     {
         ["plus"] = OemPlus, ["minus"] = OemMinus, ["comma"] = OemComma, [","] = OemComma, ["grave"] = OemGrave, ["grave_accent"] = OemGrave, ["`"] = OemGrave,
@@ -169,20 +171,50 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
             >= VirtualKey.F1 and <= VirtualKey.F24 => $"f{Key - VirtualKey.F1 + 1}",
             _ => Names.FirstOrDefault(n => n.Value == key && char.IsLetter(n.Key[0])).Key,
         };
-        return name == null ? null : (Ctrl ? "ctrl+" : "") + (Alt ? "alt+" : "") + (Shift ? "shift+" : "") + name;
+        return name == null ? null : (Ctrl ? CtrlName + Separator : "") + (Alt ? AltName + Separator : "") + (Shift ? ShiftName + Separator : "") + name;
+    }
+
+    /// <summary>What goes between a chord's modifiers and its key ("ctrl+shift+t").</summary>
+    public const char Separator = '+';
+
+    private const string CtrlName = "ctrl", AltName = "alt", ShiftName = "shift";
+
+    /// <summary>The modifier names <see cref="Parse"/> reads, in the order <see cref="ToConfig"/> writes them.</summary>
+    internal static IReadOnlyList<string> ModifierNames { get; } = [CtrlName, AltName, ShiftName];
+
+    /// <summary>
+    /// Every key name <see cref="Parse"/> reads, for the reference export: the name <see cref="ToConfig"/> writes, the
+    /// other spellings it accepts, and the Windows virtual-key code it stands for.
+    /// </summary>
+    internal static IEnumerable<(string Name, IReadOnlyList<string> Aliases, int VirtualKey)> KeyNames
+    {
+        get
+        {
+            var keys = Enumerable.Range(0, 26).Select(i => VirtualKey.A + i)
+                .Concat(Enumerable.Range(0, 10).Select(i => VirtualKey.Number0 + i))
+                .Concat(Enumerable.Range(0, 10).Select(i => VirtualKey.NumberPad0 + i))
+                .Concat(Enumerable.Range(0, 24).Select(i => VirtualKey.F1 + i))
+                .Concat(Names.Values.Distinct());
+            foreach (var key in keys)
+            {
+                var name = new KeyChord(key).ToConfig() ?? throw new InvalidOperationException($"{key} has no config name");
+                IReadOnlyList<string> aliases = [.. Names.Where(n => n.Value == key && n.Key != name).Select(n => n.Key)];
+                yield return (name, aliases, (int)key);
+            }
+        }
     }
 
     public static KeyChord Parse(string text)
     {
         bool ctrl = false, alt = false, shift = false;
         VirtualKey? key = null;
-        foreach (var part in text.Split('+', StringSplitOptions.TrimEntries))
+        foreach (var part in text.Split(Separator, StringSplitOptions.TrimEntries))
         {
             switch (part.ToLowerInvariant())
             {
-                case "ctrl": ctrl = true; continue;
-                case "alt": alt = true; continue;
-                case "shift": shift = true; continue;
+                case CtrlName: ctrl = true; continue;
+                case AltName: alt = true; continue;
+                case ShiftName: shift = true; continue;
             }
 
             if (key != null)
@@ -247,11 +279,14 @@ public sealed class KeySequence : IEquatable<KeySequence>
     public IReadOnlyList<KeyChord> Keys { get; }
 
     /// <summary>Whether <paramref name="text"/> is written as a sequence (has a <c>&gt;</c>).</summary>
-    public static bool IsSequence(string text) => text.Contains('>');
+    public static bool IsSequence(string text) => text.Contains(Separator);
+
+    /// <summary>What goes between a sequence's chords. Spaces around it are allowed.</summary>
+    public const char Separator = '>';
 
     public static KeySequence Parse(string text)
     {
-        var parts = text.Split('>', StringSplitOptions.TrimEntries);
+        var parts = text.Split(Separator, StringSplitOptions.TrimEntries);
         if (parts.Length < 2 || parts.Any(p => p.Length == 0))
         {
             throw new FormatException($"'{text}': a key is missing around '>'");

@@ -108,17 +108,40 @@ public static class Actions
     /// argument is (null for none). An argument named "optional-…" can be left out.
     /// </summary>
     internal static IEnumerable<(string Name, string Title, string Description, string Category, string? Argument)> Families =>
-        Definitions.Select(d => (d.Name, d.Title, d.Description, CategoryOf.GetValueOrDefault(d.Name, "Zinc"), d.Arg switch
-        {
-            Arg.None => null,
-            Arg.Direction => "direction",
-            Arg.Workspace => "workspace",
-            Arg.OptionalProfile => "optional-profile",
-            Arg.CopyMode => "copy-mode",
-            Arg.OptionalSidebarMode => "optional-sidebar-mode",
-            Arg.PromptDirection => "prompt-direction",
-            _ => throw new InvalidOperationException($"{d.Name}: no export name for its argument"),
-        }));
+        Definitions.Select(d => (d.Name, d.Title, d.Description, CategoryOf.GetValueOrDefault(d.Name, "Zinc"),
+            d.Arg == Arg.None ? null : TypeOf(d.Arg, d.Name).Name));
+
+    /// <summary>
+    /// What each kind of argument takes, for the reference export: the fixed words, in the order a person would list
+    /// them, and any free-form value in words. An optional argument can be left out. <see cref="Parse"/> and
+    /// <see cref="Variants"/> read their words from the same list, so the export can't miss one.
+    /// </summary>
+    internal static IReadOnlyList<(string Name, IReadOnlyList<string> Values, bool Optional, string? Text)> Arguments =>
+        [.. ArgumentTypes.Select(t => (t.Name, (IReadOnlyList<string>)[.. t.Values.Select(v => v.Word)], t.Optional, t.Text))];
+
+    // Each fixed word carries the label Settings shows for it, so a word can't be added without one.
+    private static readonly (Arg Arg, string Name, (string Word, string Label)[] Values, bool Optional, string? Text)[] ArgumentTypes =
+    [
+        (Arg.Direction, "direction", [("right", "Right"), ("down", "Down"), ("left", "Left"), ("up", "Up")], false, null),
+        (Arg.Workspace, "workspace", [("last", "The last one")], false, "A workspace number from 1, or last"),
+        (Arg.OptionalProfile, "optional-profile", [], true, "A profile's id, or its position in the profile menu from 1"),
+        (Arg.CopyMode, "copy-mode", [("if-selection", "Only when text is selected")], true, null),
+        (Arg.OptionalSidebarMode, "optional-sidebar-mode", [("rail", "Icons only"), ("auto-hide", "Auto-hide")], true, null),
+        (Arg.PromptDirection, "prompt-direction", [("previous", "Previous"), ("next", "Next")], false, null),
+    ];
+
+    private static (Arg Arg, string Name, (string Word, string Label)[] Values, bool Optional, string? Text) TypeOf(Arg arg, string action) =>
+        ArgumentTypes.FirstOrDefault(t => t.Arg == arg) is { Name: not null } type
+            ? type
+            : throw new InvalidOperationException($"{action}: its argument kind {arg} isn't in ArgumentTypes");
+
+    private static IEnumerable<string> Words(Arg arg) => TypeOf(arg, arg.ToString()).Values.Select(v => v.Word);
+
+    /// <summary>The fixed words of <paramref name="arg"/> as Variants lists them, label first.</summary>
+    private static IEnumerable<(string Label, string Arg)> Fixed(Arg arg) => TypeOf(arg, arg.ToString()).Values.Select(v => (v.Label, v.Word));
+
+    /// <summary>The word in <paramref name="arg"/>'s fixed list that matches <paramref name="text"/> in any case, spelled as the list spells it, or null when none does.</summary>
+    private static string? Word(Arg arg, string text) => Words(arg).FirstOrDefault(w => w.Equals(text, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Every action that needs no argument, as an invocation (for the settings' key list).</summary>
     public static IEnumerable<ActionInvocation> WithoutArguments =>
@@ -163,13 +186,12 @@ public static class Actions
         var definition = DefinitionOf(family);
         IEnumerable<(string Label, string Arg)> args = definition.Arg switch
         {
-            Arg.Direction => [("Right", "right"), ("Down", "down"), ("Left", "left"), ("Up", "up")],
+            Arg.Direction or Arg.PromptDirection => Fixed(definition.Arg),
             Arg.Workspace => Enumerable.Range(1, 9).Select(i => (i.ToString(CultureInfo.InvariantCulture), i.ToString(CultureInfo.InvariantCulture)))
-                .Append(("The last one", "last")),
+                .Concat(Fixed(Arg.Workspace)),
             Arg.OptionalProfile => profiles.Select(p => (p.Name, p.Id)).Prepend(("The default profile", "")),
-            Arg.CopyMode => [("Always", ""), ("Only when text is selected", "if-selection")],
-            Arg.OptionalSidebarMode => [("Each in turn", ""), ("Icons only", "rail"), ("Auto-hide", "auto-hide")],
-            Arg.PromptDirection => [("Previous", "previous"), ("Next", "next")],
+            Arg.CopyMode => Fixed(Arg.CopyMode).Prepend(("Always", "")),
+            Arg.OptionalSidebarMode => Fixed(Arg.OptionalSidebarMode).Prepend(("Each in turn", "")),
             _ => [(definition.Title, "")],
         };
         return
@@ -276,17 +298,17 @@ public static class Actions
                 return new ActionInvocation(def.Action);
             case Arg.CopyMode when arg.Length == 0:
                 return new ActionInvocation(TerminalAction.Copy);
-            case Arg.CopyMode when arg.Equals("if-selection", StringComparison.OrdinalIgnoreCase):
+            case Arg.CopyMode when Word(Arg.CopyMode, arg) != null:
                 return new ActionInvocation(TerminalAction.CopyIfSelection);
             case Arg.CopyMode:
                 error = $"'copy' takes nothing or \"if-selection\", not '{arg}'";
                 return null;
-            case Arg.Direction when Enum.TryParse<PaneDirection>(arg, true, out var dir) && !int.TryParse(arg, out _):
+            case Arg.Direction when Word(Arg.Direction, arg) is { } word && Enum.TryParse<PaneDirection>(word, true, out var dir):
                 return new ActionInvocation(def.Action, Direction: dir);
             case Arg.Direction:
                 error = $"'{name}' takes left, right, up or down{(arg.Length > 0 ? $", not '{arg}'" : "")}";
                 return null;
-            case Arg.Workspace when arg.Equals("last", StringComparison.OrdinalIgnoreCase):
+            case Arg.Workspace when Word(Arg.Workspace, arg) != null:
                 return new ActionInvocation(def.Action, -1);
             case Arg.Workspace when int.TryParse(arg, NumberStyles.None, CultureInfo.InvariantCulture, out var n) && n >= 1:
                 return new ActionInvocation(def.Action, n - 1);
@@ -304,15 +326,15 @@ public static class Actions
                 return new ActionInvocation(TerminalAction.NewTabFromProfile, Profile: arg);
             case Arg.OptionalSidebarMode when arg.Length == 0:
                 return new ActionInvocation(def.Action, -1);
+            // This reads the mode with the setting's own reader, which also forgives other spellings ("autohide"). The
+            // listed words are the ones the docs give, and a test checks that each reads back.
             case Arg.OptionalSidebarMode when Config.TryMode<SidebarMode>(arg, out var mode) && mode != SidebarMode.Full:
                 return new ActionInvocation(def.Action, (int)mode);
             case Arg.OptionalSidebarMode:
                 error = $"'{name}' takes nothing, \"rail\" or \"auto-hide\", not '{arg}'";
                 return null;
-            case Arg.PromptDirection when arg.Equals("previous", StringComparison.OrdinalIgnoreCase):
-                return new ActionInvocation(def.Action, -1);
-            case Arg.PromptDirection when arg.Equals("next", StringComparison.OrdinalIgnoreCase):
-                return new ActionInvocation(def.Action, 1);
+            case Arg.PromptDirection when Word(Arg.PromptDirection, arg) is { } word:
+                return new ActionInvocation(def.Action, word == "previous" ? -1 : 1);
             case Arg.PromptDirection:
                 error = $"'{name}' takes \"previous\" or \"next\"{(arg.Length > 0 ? $", not '{arg}'" : "")}";
                 return null;
