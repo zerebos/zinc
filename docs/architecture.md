@@ -26,7 +26,7 @@ Everything else, from the windows and tabs to the settings, is Zinc's own WinUI 
 - `Pty/` has `ConPty.cs` (the pseudoconsole, the child process and the reader thread), the child's environment, the default terminal, the user's `PATH` and install cleanup.
 - `Terminal/TerminalSession*.cs` owns one libghostty terminal, its encoders and its `ConPty`. Around that it handles libghostty's callbacks, color schemes, find, links, prompt clicks, notifications, and the commands it learns about from shell marks.
 - `Terminal/` also has shell integration (`ShellIntegration.cs` and `ShellMarks.cs`, with the scripts in `assets/shell-integration`), where new terminals start (`ShellDirectory`, `WorkspaceFolder`, `NewTerminalStart`), Kitty images, links, file drops and the benchmark workloads.
-- `Config.cs` is one resolved set of settings, and `ConfigFile.cs` reads `config.toml` into it, with profiles and renamed keys. `ProfileDiscovery.cs` finds the installed shells, `ConfigEditor.cs` writes changes back without touching the rest of the file, and `ShellResolver.cs` picks the shell a terminal starts.
+- `Config.cs` is one resolved set of settings, and `ConfigFile.cs` reads `config.toml` into it, with profiles and renamed keys. `ProfileDiscovery.cs` finds the installed shells, `ConfigEditor.cs` writes changes back without touching the rest of the file, and `ShellResolver.cs` picks the shell a terminal starts. The config and scheme files are read with shared access and a few short retries (`ConfigFile.ReadShared`), because an editor may be partway through saving one. A config that can't be read counts as a config with errors, so Zinc reports it instead of falling back to the defaults.
 - `Input/` has key handling (`KeyDecision`, `Keybindings` and key sequences) and the actions in `Actions.cs`.
 - `Panes/` has workspaces, the pane tree, tab groups, start layouts and how a workspace looks. `Session/` has `session.json`, capturing and restoring layouts, recents, and closed workspaces and windows.
 - `Settings/` has the settings catalog (`SettingsCatalog*.cs`, every setting), the writer, the key binding editor and scheme files.
@@ -39,6 +39,7 @@ Everything else, from the windows and tabs to the settings, is Zinc's own WinUI 
 - `MainWindow*.cs` is the window. That covers workspaces (as tabs or the sidebar list), drags, the palette, menus, the new-workspace page, the quick terminal and the title bar. `GroupView*.cs` is one pane's frame, with its tab strip or header around the terminal.
 - `Terminal/TerminalControl*.cs` is one terminal: the session's lifetime, keyboard, mouse, IME, the scrollbar, find and menus. `Terminal/TerminalRenderer*.cs`, `GlyphAtlas.cs`, `SwapChainSurface.cs` and `ShaderPass.cs` draw it.
 - `SettingsWindow*.cs` is the Settings window, built in code. `WelcomeWindow.cs` is the welcome window, which opens on the first run and from the palette.
+- `Brand.cs` holds the app's colors for each theme, and `Assets/` the icon and the other images the app ships. `WindowIcon.cs` gives each window the `.ico` frames that exactly match its DPI, because `AppWindow.SetIcon` rescales a single frame and smears the 16-pixel icon.
 - `App*.cs` is the app's lifetime, and it wires up the pieces that live in their own files, like `TrayIcon.cs`, `Updater.cs`, `CliServer.cs` (`zn`'s server) and the jump list.
 
 The rest of the repo:
@@ -58,6 +59,8 @@ A shell's output is read and parsed on ConPTY's reader thread, one thread per pa
 libghostty's callbacks (writing to the PTY, the title, the bell, size queries) fire during `vt_write` or a resize, on whichever thread holds the lock at that moment. So a callback must not call back into the terminal. It sets a flag or notes a value, and the code reads the state after the write returns. The title works this way, with the reader setting `_titleDirty` and the pane taking the title on the UI thread.
 
 A closed session stays safe to call. A pane's UI can still call into its session after the pane closed (a late resize, wheel or key event), and the reader thread can be partway through a read. So every public member of `TerminalSession` that reaches the terminal checks `_disposed` inside the lock and returns an empty value. Code outside the session that uses its handle checks `IsDisposed` in the same lock. `ClosedSessionTests` calls each of these members on a closed session, and a new member belongs in its list.
+
+About 190 native threads at idle is normal for Zinc, and nearly all of them belong to the GPU driver and the frameworks. The .NET thread pool is empty at idle.
 
 The reader thread parses on the same thread that reads, so ConPTY and libghostty take turns. That's fine for most output, but ConPTY takes in a whole large write before it emits any of it, so a program writing tens of megabytes at once makes the screen pause between batches.
 
@@ -142,7 +145,7 @@ So, for any code that touches a pane's canvas:
 - Create every `CanvasControl` with `CanvasLifetime.Create`, and hand it to `CanvasLifetime.Retire` once your own handlers are off it. Never let one go to the garbage collector any other way.
 - Change what a pane shows before you detach the layout around it.
 
-With the debug log on, a count outside 0 and 1 is logged as "left its load count at", which tells you which path unbalanced it.
+With the debug log on, a count outside 0 and 1 is logged as "left its load count at", which tells you which path unbalanced it. Pairs that only arrive out of order, like a moved pane's `Unloaded` coming after its new `Loaded`, are harmless.
 
 ## Layout and panes
 
@@ -174,6 +177,8 @@ WinUI 3 has a lot of behavior you only find by running into it. These are the ca
 
 ### The title bar
 
+Zinc keeps the standard caption buttons (`TitleBarHeightOption.Standard`, 32 pixels) with TabView's own strip of about 41 pixels, so the buttons are short and the tabs sit on the strip's bottom edge, as in File Explorer. Tall caption buttons hung over the terminal.
+
 The tab strip's `DragRegion` needs a `MinWidth` of at least the caption buttons' width (`AppWindow.TitleBar.RightInset` divided by the scale). Otherwise the tabs and the + and ▾ buttons slide under the caption buttons instead of shrinking and then scrolling.
 
 The empty part of the title bar refuses drops, because it's caption area to Windows, which shows the "not allowed" pointer over it. WinUI keeps putting the caption region back however you clear it, so tab drops are accepted over the tabs and the + and ▾ buttons only. The one way out is collapsing the title bar element, after which WinUI stops putting the region back. The auto-hidden title bar uses that to free the area with `ClearRegionRects`. After the title bar shows again, call `SetTitleBar` once it's in place, or the row isn't draggable.
@@ -183,7 +188,9 @@ The empty part of the title bar refuses drops, because it's caption area to Wind
 - Panels like `Grid` have no `OnPointer*` overrides, so subscribe to `PointerPressed` and the rest instead.
 - Panels have no automation peer either, so an `AutomationProperties.Name` on a `Grid` reaches no screen reader. Items built from panels, like the sidebar's workspaces and the pane tabs, use `SelectableItemPeer`, which shows them as list items or tab items, where selecting one is a click.
 - A C# subclass of `SplitButton` gets no template and throws `0x800F1000`, even with `DefaultStyleKey` set. Change template parts from outside once they exist instead. An element that starts collapsed has no template at `Loaded`, but its first `SizeChanged` comes right after the template is built (`LikePlainButton` in `SettingsWindow.SchemesPage.cs`).
-- A standalone `ScrollBar` with `IndicatorMode.None` is hidden, not shown in full. Widen it with `VisualStateManager.GoToState(bar, "Expanded")`, as `ScrollViewer` does, which returns false until the template has applied. Zinc's bar (`Terminal/TerminalScrollBar.xaml`) is a copy of WinUI's default style with a few changes, because the default style's sizes are `StaticResource`s, which a bar's own resources can't override.
+- A standalone `ScrollBar` with `IndicatorMode.None` is hidden, not shown in full. Widen it with `VisualStateManager.GoToState(bar, "Expanded")`, as `ScrollViewer` does, which returns false until the template has applied. Zinc's bar (`Terminal/TerminalScrollBar.xaml`) is a copy of WinUI's default style with a few changes, because the default style's sizes are `StaticResource`s, which a bar's own resources can't override. The bar expands while the pointer is in a zone along the pane's right edge as wide as the expanded bar (16 DIPs, Windows Terminal's size), tracked by a `PointerMoved` handler that sees handled events too, because the bar handles its own pointer events. While the thumb is dragged or the bar is paging, it stays expanded until the button is released, even with the pointer off the pane.
+- `FontWeights` is `Microsoft.UI.Text.FontWeights`, and `Colors` is `Microsoft.UI.Colors`, not the UWP namespaces most examples online use.
+- C# doesn't allow `await` inside unsafe code, so async code that would sit next to it lives apart, like the clipboard helpers in `ClipboardText` and the drop reader in `TerminalControl.Drop.cs`.
 
 ### Windows and menus
 
@@ -197,7 +204,7 @@ A key's `WM_CHAR` arrives after its `KeyDown` and before its `KeyUp`. The termin
 
 AltGr arrives as Ctrl+Alt, so while the kitty keyboard protocol is off, printable text typed with Ctrl+Alt is treated as text, not as a chord.
 
-A popup that commits on Enter's `KeyDown` hands focus back before that key's `WM_CHAR` arrives. The rename box and the palette both do, and without a guard the terminal gets the `\r` and runs the prompt's line. So the terminal notes Enter, Escape, Tab and Backspace held down when it gets focus (`_foreignKeys`), and drops their character and release. A `KeyDown` in the terminal makes the key its own again.
+A popup that commits on Enter's `KeyDown` hands focus back before that key's `WM_CHAR` arrives. The rename box and the palette both do, and without a guard the terminal gets the `\r` and runs the prompt's line. So the terminal notes Enter, Escape, Tab and Backspace held down when it gets focus (`_foreignKeys`), and drops their character and release. A `KeyDown` in the terminal makes the key its own again. Posted input doesn't set the keyboard state, so automation is unaffected.
 
 ## Pointer shape
 

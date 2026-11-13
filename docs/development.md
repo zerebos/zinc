@@ -4,7 +4,7 @@ This is the guide to building Zinc, running it next to an installed copy, testin
 
 ## What you need
 
-- Windows 10 version 2004 (build 19041) or later, or Windows 11. Zinc builds for x64 only for now.
+- Windows 10 version 2004 (build 19041) or later, or Windows 11. Zinc builds for x64 only for now, and ARM64 stays out of the solution until there's a `native/arm64` build.
 - The .NET 10 SDK.
 - [Zig](https://ziglang.org) 0.16.x on `PATH`, for the native DLLs. It's the version Ghostty requires.
 - PowerShell 7.4 or later (`pwsh`), for the build scripts.
@@ -25,6 +25,8 @@ dotnet test
 
 Step 1 builds three DLLs: `ghostty-vt.dll` (Ghostty's terminal core), `zinc-sprite.dll` (Ghostty's built-in glyphs for box drawing, blocks, Powerline and Braille) and `zinc-shader.dll` (the custom shader translator). They're all built for Zig's `windows-gnu` target, as libghostty's own Windows builds are, so they import only what Windows itself has and Zinc ships no C runtime. The script resets the Ghostty checkout in `external/ghostty` and applies the patches in `patches/ghostty` before every build, so an edit left in the checkout never reaches a build. `external/` and `native/` are build output and stay out of git. You only need to run it again when the Ghostty commit or a patch changes.
 
+A native dependency added later has to keep that promise, so check what a new DLL imports. Anything beyond the Universal CRT, kernel32 and ntdll is a DLL a fresh Windows may lack. A `windows-msvc` build, for one, imports `vcruntime140.dll`.
+
 Zig 0.16 on Windows sometimes fails with "unable to load '<file>': Unexpected". The scripts retry those, because each run caches what it finished and the next one gets further.
 
 The app is unpackaged and carries the Windows App SDK with it, so the exe in `src/Zinc/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/zinc.exe` runs as it is. Add `-c Release` to the build for anything that measures speed.
@@ -32,6 +34,8 @@ The app is unpackaged and carries the Windows App SDK with it, so the exe in `sr
 `dotnet test` builds the test project and what it references, which doesn't include the app. So a compile error in `src/Zinc` only shows up in `dotnet build`. Run both before calling a change done.
 
 A running `zinc.exe` from `bin/` locks the build output, and the build then fails with MSB3027. Close that copy first. This happens with dev builds only, because an installed Zinc runs from its own folder.
+
+A git worktree has no `native/` folder, because it's build output. Either run the native build in the worktree, or point it at the main checkout's with a junction (`cmd /c mklink /J ..\zinc-feature\native native`). Before removing the worktree, unlink the junction first (`cmd /c rmdir ..\zinc-feature\native`), because `git worktree remove` with the junction in place can delete the real folder's contents through it.
 
 ## Running a dev build
 
@@ -51,7 +55,7 @@ Programs started in Zinc inherit its environment. If `NO_COLOR` is set where you
 | Variable | What it does |
 |:---|:---|
 | `ZINC_CONFIG=<file>` | Reads and writes this config file instead of `%APPDATA%\Zinc\config.toml`, and turns off the session and everything Zinc registers with Windows, as above. |
-| `ZINC_SESSION=<file>` | The session file to restore and save. A launch is handed to the running copy with the same session file. |
+| `ZINC_SESSION=<file>` | The session file to restore and save, instead of `%APPDATA%\Zinc\session.json`. A launch is handed to the running copy with the same session file. |
 | `ZINC_SHELL=<command>` | The shell the first tab starts, unless the command line names one. Without either, it's the profile's `command`, or else the first of pwsh, Windows PowerShell and cmd on `PATH`. |
 | `ZINC_LOG=<file>` | Turns on the debug log and writes it to this file, with short times that scripts can read. |
 | `ZINC_PERF=1` | With `ZINC_LOG`, every pane logs its frame times. |
@@ -69,7 +73,7 @@ These ship in every build, because the update tests drive a published build with
 
 - `ZINC_TEST_KEYS="alt+shift+plus,ctrl+f24,alt+left"` replays key chords, one a second, through the real key bindings, as if pressed in the focused pane. Posted window messages can't carry modifier state, so this is how a script presses Ctrl or Alt. `ctrl+f24` isn't bound to anything, so it works as a one-second pause.
 - In the same list, `palette:<exact title>` runs a command palette entry, and `menu:Split pane/Split right` runs a workspace context menu item. `test:` entries do what posted input can't, such as drags (`test:pane-right:1`, `test:tab-to:1`), clicks on a cell, pastes, file drops, forcing a garbage collection (`test:gc`) or throwing from a dispatcher callback (`test:throw`). `MainWindow.TestKeys.cs` lists them all.
-- Every window replays the keys from when it starts. A `w2:` prefix runs a key only in the second window, so one run can set up two windows.
+- Every window replays the keys from when it starts. A `w2:` prefix runs a key only in the second window, so one run can set up two windows, for example `w1:ctrl+shift+n` plus `w2:` keys, with `new-workspace-page = false` in the test config. `test:pane-window-left:0` then drops the focused pane on another window's pane 0.
 - `ZINC_TEST_DETERMINISTIC=1` makes captures repeatable. The cursor doesn't blink and is drawn as focused, Mica is off and attention dots don't pulse.
 - `ZINC_TEST_STILL=1` only stops the attention dots from pulsing.
 - `ZINC_TEST_APPEARANCE=light|dark` forces the app's look, whatever Windows and the config say.
@@ -80,7 +84,7 @@ A palette title that's renamed silently breaks any script that runs it by name, 
 
 ## Testing
 
-`dotnet test` runs the whole suite (xUnit v3 on Microsoft.Testing.Platform). Besides unit tests, it has:
+`dotnet test` runs the whole suite (xUnit v3 on Microsoft.Testing.Platform, which `global.json` selects, because .NET 10's older VSTest path doesn't run xUnit v3). Besides unit tests, it has:
 
 - `AbiTests`, which compare every binding struct and enum against libghostty's own manifest (`ghostty_type_json()`) and check that every imported function exists. They catch a C API change after a Ghostty bump.
 - `SessionTests` and the other session tests, which run real `cmd.exe` and other shells on ConPTY, headless.
@@ -88,7 +92,7 @@ A palette title that's renamed silently breaks any script that runs it by name, 
 
 Run the tests after any change to the bindings, `TerminalSession` or `ConPty`, and always after bumping the Ghostty commit.
 
-Posted input can't do everything a person can. Posted mouse clicks don't reach WinUI, because WinUI reads pointer messages, not mouse messages. Hover and the pointer's shape can't be tested at all, and screenshots leave the pointer out. Changes there need a person at the mouse.
+Posted input can't do everything a person can. Posted `WM_CHAR`, `WM_KEYDOWN` and `WM_MOUSEWHEEL` messages work, but posted keys don't update the keyboard state, so modifiers look released. Posted mouse clicks don't reach WinUI at all, because WinUI reads pointer messages, not mouse messages. Hover and the pointer's shape can't be tested at all, and screenshots leave the pointer out. Changes there need a person at the mouse. What scripts can do is drive the window through UI Automation, which is one more reason every button gets an `AutomationProperties.Name`, besides screen readers.
 
 Your own settings can hide bugs that the defaults show. When a change touches layout or the window's chrome, try it with the defaults and with the settings that change the chrome: `pane-headers` (`auto` and `always`), `pane-gap` (0 and the card look), workspace tabs on top and on the left, and pane tabs on and off.
 
@@ -110,7 +114,7 @@ Every setting is defined once, in the settings catalog, and the Settings window,
 3. Write the code that uses it, and add a line to `CHANGELOG.md` under Unreleased.
 4. Run `dotnet test`. `SettingsCatalogTests` checks the binding, the ends of the range, and that every `Config` property is set by some setting. `ConfigSchemaTests` checks that the schema takes what the reader takes.
 
-A setting that's parsed and tested but not drawn yet gets `Unfinished = true`, which keeps it out of Settings and the reference until it's done.
+A setting that's parsed and tested but not drawn yet gets `Unfinished = true`, which keeps it out of Settings and the reference until it's done. The change that finishes it removes the flag.
 
 The setting's label and description are text in the product, so they follow [ux-writing.md](ux-writing.md).
 
@@ -123,7 +127,7 @@ An action is anything a key can be bound to. It needs an entry in `src/Zinc.Core
 Ghostty's C API is explicitly unstable, so a new commit can change structs, enums and functions under you.
 
 1. Run `dotnet run scripts/dev/vt-bench.cs -- --save before`, which records how fast the current DLL parses output.
-2. Change `$Commit` in `scripts/build/libghostty.ps1`. Delete each patch in `patches/ghostty` whose fix the new commit already has (its header says what to look for), and fix up any other that no longer applies. A patch's tests run in the checkout with `zig build test-lib-vt -Dtest-filter=<name>`.
+2. Change `$Commit` in `scripts/build/libghostty.ps1`. Delete each patch in `patches/ghostty` whose fix the new commit already has (its header says what to look for), and fix up any other that no longer applies. A patch's tests run in the checkout with `zig build test-lib-vt -Dtest-filter=<name>`, because plain `zig build test` needs POSIX headers that Windows doesn't have.
 3. Run `pwsh scripts/build/libghostty.ps1`. It also rebuilds `zinc-sprite.dll` from Ghostty's sprite code, which isn't part of Ghostty's API. If that fails, look at what changed in the sprite code's `Face`, canvas and `Metrics`. `SpriteTests` pin what Zinc relies on.
 4. Run `pwsh scripts/build/gen-keys.ps1`, which regenerates `GhosttyKey.g.cs` from the new key header.
 5. Run `dotnet test`. `AbiTests` fails on any struct, enum or export that changed. It can't check the arguments of imported functions, though, because the manifest describes types only, so read the header's diff for those.
@@ -161,7 +165,7 @@ The version shows in Settings > About, and Zinc answers programs that ask the te
 
 To make a release:
 
-1. Rename `## Unreleased` in `CHANGELOG.md` to `## <version> (<date>)`, and add a new, empty Unreleased above it.
+1. Rename `## Unreleased` in `CHANGELOG.md` to `## <version> (<date>)`, and add a new, empty Unreleased above it. The changelog is for users, newest first, with `### New`, `### Changed` and `### Fixed` under each version. The test builds from before the first release keep their old headings, `## 0.1.0-dev.N (<date>)`.
 2. Commit that, tag the commit `v<version>`, and push both.
 3. The release workflow (`.github/workflows/release.yml`) builds and tests the tagged commit, packs it with [Velopack](https://velopack.io) and publishes it under the repository's GitHub Releases, marked as a pre-release when the version has an `rc.N` part.
 
@@ -203,5 +207,6 @@ dotnet format analyzers Zinc.slnx --verify-no-changes --severity info
 - **Line width.** There's no hard limit, and nothing is rewrapped for width alone. A comment that spans several lines wraps at about 120 columns. A comment that fits on one line stays on one line, even a long one.
 - **Comments** say what the code does or what it prevents, in the present tense, in plain sentences a new reader can follow. The history behind a choice goes in the commit message instead. Leave out comments that only restate the code. Keep a `<summary>` when it says something the name doesn't (a unit, what null means, when the value changes), and drop one that only repeats the name.
 - **Text in the product** (labels, descriptions, tooltips, notices, errors, the palette, `zn`'s output, screen reader names) follows [ux-writing.md](ux-writing.md). So do the README, the docs and the changelog, through its "Outside the app" section.
+- **Markdown.** A paragraph or list item stays on one line, with no wrapping at a fixed width, so an edit never reflows the lines after it. Leave Markdown that's already wrapped as it is, unless you're rewriting that part anyway.
 - **Line endings.** The repo has both LF and CRLF files, and git converts neither (`.gitattributes`). Keep each file's endings as they are, and check `git diff --stat` after a scripted edit.
 - Every user-visible change gets a line in `CHANGELOG.md` under Unreleased.
