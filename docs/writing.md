@@ -1,6 +1,6 @@
 # Writing docs, comments, and commits
 
-This guide is for the writing that lives around Zinc's code, which means the README, the docs, the changelog, code comments, and commit messages. Text inside the app (labels, descriptions, notices, the palette, `zn`'s output) follows [ux-writing.md](ux-writing.md) instead. The two guides share the rules in "The rules both guides share", and ux-writing.md's [Outside the app](ux-writing.md#outside-the-app) section says what the README and release notes are for.
+This guide is for the writing that lives around Zinc's code, which means the README, the docs, the changelog, code comments, and commit messages. Text inside the app (labels, descriptions, notices, the palette, `zn`'s output) follows [ux-writing.md](ux-writing.md) instead. The two guides share the rules in "The rules both guides share".
 
 ## The voice
 
@@ -34,10 +34,20 @@ The voice stays the same everywhere, but the room for it changes with the job.
 
 - **docs/architecture.md and the other "how it works" docs** get the most. They walk through mechanisms, so they can ask the reader's question, show the obvious approach that fails, and allow the occasional aside. The canvas lifetime section is a good model.
 - **docs/development.md** is drier, the way a reference page is drier than a tutorial. Steps and facts come first, with the reason in one clause.
-- **The README** speaks to people who use Zinc, not people who work on it. It's specific and calm, and it follows ux-writing.md's "Outside the app".
+- **The README** speaks to people who use Zinc, not people who work on it. It's specific and calm, and it follows "The README, the changelog, and release notes" below.
 - **The changelog** is for users too. Each entry says what changed for them, in a sentence or two, with no story behind it.
 - **Code comments** get almost none. They say what the code does or prevents, and stop.
 - **Commit messages** get none in the subject, and a few plain sentences in the body when the reason isn't obvious.
+
+## The README, the changelog, and release notes
+
+These keep the interface's tone, but their job is different. They explain what Zinc does and why someone might switch to it.
+
+- **Specific over superlative.** Name the detail. "Box drawing meets without seams in any font" beats "beautiful rendering". The interface names the familiar thing instead, and that difference is deliberate.
+- **Calm.** No "blazing", "insanely", or "game-changing".
+- **Honest about limits.** Say plainly what isn't there yet. The interface leaves limits out, but the docs and release notes don't.
+- **Credit Ghostty accurately.** Say "built on libghostty", "uses Ghostty's terminal engine", or "the same core that powers Ghostty". Never say "Ghostty for Windows", "a Ghostty port", or anything that suggests an official Ghostty project.
+- **The name** follows ux-writing.md's [The product's name](ux-writing.md#the-products-name), so it's "Zinc" in prose, never "Zinc Terminal".
 
 ## How the docs explain things
 
