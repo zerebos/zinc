@@ -53,8 +53,8 @@ public class ClosedWorkspacesTests
     [InlineData(new string[0], "Window")]
     [InlineData(new[] { "notes" }, "notes")]
     [InlineData(new[] { "notes", "api" }, "notes and api")]
-    [InlineData(new[] { "notes", "api", "logs" }, "notes, api and logs")]
-    [InlineData(new[] { "notes", "api", "logs", "db", "web" }, "notes, api and 3 more")]
+    [InlineData(new[] { "notes", "api", "logs" }, "notes, api, and logs")]
+    [InlineData(new[] { "notes", "api", "logs", "db", "web" }, "notes, api, and 3 more")]
     public void AClosedWindowIsNamedForItsWorkspaces(string[] titles, string name) => Assert.Equal(name, ClosedWindow.NameFor(titles));
 
     [Fact]

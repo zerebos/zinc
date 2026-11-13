@@ -143,7 +143,7 @@ internal sealed partial class StartPage : UserControl
                 new TextBlock { Text = "New workspace", FontSize = 26, FontWeight = FontWeights.SemiBold },
                 new TextBlock
                 {
-                    Text = $"Pick a profile, folder and layout, then press Enter. Enter alone opens {defaultProfile.Name} in its usual folder.",
+                    Text = $"Pick a profile, folder, and layout, then press Enter. Enter alone opens {defaultProfile.Name} in its usual folder.",
                     Opacity = 0.7,
                     TextWrapping = TextWrapping.Wrap,
                 },

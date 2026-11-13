@@ -533,7 +533,7 @@ public sealed class ConfigFile
                         };
                         break;
                     case ["discover", ..]:
-                        _warnings.Add($"{e.Where}: [discover] takes wsl, powershell, cmd, git-bash, msys2, ssh or visual-studio = true or false");
+                        _warnings.Add($"{e.Where}: [discover] takes wsl, powershell, cmd, git-bash, msys2, ssh, or visual-studio = true or false");
                         break;
                     case ["environment", _] when e.Value is string:
                         break; // applied below, after the groups

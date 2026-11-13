@@ -43,7 +43,7 @@ public static partial class SettingsCatalog
                 Binding = Adjustment((c, a) => c with { AdjustCellHeight = a }),
             },
         new("appearance", "Font", "font.builtin-glyphs", "Built-in glyphs",
-            "Zinc draws box lines, blocks and Powerline shapes itself, so they join up in any font.",
+            "Zinc draws box lines, blocks, and Powerline shapes itself, so they join up in any font.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.BuiltinGlyphs, (c, v) => c with { BuiltinGlyphs = v }) },
         new("appearance", "Font", "font.adjust-box-thickness", "Line thickness",
             "Thicker or thinner built-in lines, in pixels (1, -1) or as a percentage (20%).", SettingKind.Text)
@@ -158,7 +158,7 @@ public static partial class SettingsCatalog
                 }, [Accepts.Choices]),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
-            "Windows, menus and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
+            "Windows, menus, and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -169,7 +169,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<ChromeAppearance>((c, v) => c with { Appearance = v }),
             },
         new("appearance", "Window", "window.accent", "Accent color",
-            "Selections, focus lines, switches and buttons. Restart Zinc to apply.", SettingKind.Choice)
+            "Selections, focus lines, switches, and buttons. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -183,7 +183,7 @@ public static partial class SettingsCatalog
                     _ => null,
                 }, [Accepts.Choices]),
             },
-        new("appearance", "Background", "window.backdrop", "Window background", "What's behind everything in the window: tabs, sidebar and terminal.",
+        new("appearance", "Background", "window.backdrop", "Window background", "What's behind everything in the window: tabs, sidebar, and terminal.",
             SettingKind.Choice)
             {
                 Choices =
@@ -215,7 +215,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Number(c => c.BackgroundOpacity, (c, v) => c with { BackgroundOpacity = v }),
             },
         new("appearance", "Shaders", "shaders.files", "Custom shaders",
-            "Effects drawn over the terminal, such as CRT screens, glow and cursor trails. They're GLSL files written for Ghostty or Shadertoy, and they run in order.",
+            "Effects drawn over the terminal, such as CRT screens, glow, and cursor trails. They're GLSL files written for Ghostty or Shadertoy, and they run in order.",
             SettingKind.Files)
             {
                 Expected = "a file path or a list of them",

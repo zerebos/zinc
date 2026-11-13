@@ -178,14 +178,14 @@ public static partial class SettingsCatalog
     public static IReadOnlyList<SettingFold> Folds { get; } =
     [
         new(null, null, "font.builtin-glyphs", ["font.adjust-box-thickness"]),
-        new("Background, text, cursor and selection", "The scheme's, unless you pick your own.", null,
+        new("Background, text, cursor, and selection", "The scheme's, unless you pick your own.", null,
             ["colors.background", "colors.foreground", "colors.cursor", "colors.cursor-text", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
         PaneStyle.Fold,
         new(null, null, "window.unfocused-pane-opacity", ["window.unfocused-pane-fill"]),
         new(null, null, "terminal.paste-warning", ["terminal.large-paste-warning"]),
         new(null, null, "colors.palette-generate", ["colors.palette-harmonious"]),
-        new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim and remote shells do.", null,
+        new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim, and remote shells do.", null,
             ["terminal.clipboard-write", "terminal.clipboard-read"]),
         new(null, null, "notify.command-finished", ["notify.command-finished-after", "notify.command-finished-sound"]),
         new(null, null, "window.free-hidden-memory", ["window.free-hidden-after"]),

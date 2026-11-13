@@ -73,8 +73,8 @@ public sealed record ClosedWindow(string Name, WindowState State, DateTimeOffset
         0 => "Window",
         1 => titles[0],
         2 => $"{titles[0]} and {titles[1]}",
-        3 => $"{titles[0]}, {titles[1]} and {titles[2]}",
-        _ => $"{titles[0]}, {titles[1]} and {titles.Count - 2} more",
+        3 => $"{titles[0]}, {titles[1]}, and {titles[2]}",
+        _ => $"{titles[0]}, {titles[1]}, and {titles.Count - 2} more",
     };
 }
 

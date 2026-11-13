@@ -703,7 +703,7 @@ internal sealed partial class SettingsWindow : Window
                 Write(["default-profile"], visible[defaults.SelectedIndex].Id);
             }
         };
-        _page.Children.Add(Row("Default profile", "New windows, workspaces and tabs open with it.", defaults));
+        _page.Children.Add(Row("Default profile", "New windows, workspaces, and tabs open with it.", defaults));
 
         var add = new Button { Content = "New profile", HorizontalAlignment = HorizontalAlignment.Right };
         add.Click += (_, _) => NewProfile();

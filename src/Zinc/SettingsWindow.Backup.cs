@@ -23,7 +23,7 @@ internal sealed partial class SettingsWindow
     private void BackupRow()
     {
         _page.Children.Add(Row("Settings backup",
-            "Your settings, color schemes, shaders and open windows in one zip file, to keep or to take to another PC.",
+            "Your settings, color schemes, shaders, and open windows in one zip file, to keep or to take to another PC.",
             ButtonRow(("Export settings", () => _ = ExportSettings()), ("Import settings", () => _ = ImportSettings()))));
         if (_backupStatus != null)
         {

@@ -46,7 +46,7 @@ public static class CliCommandLine
 
     private static readonly Verb[] Verbs =
     [
-        new("", "list", "Everything open: windows, workspaces, panes and terminals", "zn list", "json"),
+        new("", "list", "Everything open: windows, workspaces, panes, and terminals", "zn list", "json"),
         new("", "action", "Runs any action by its name, as a key would", "zn action \"NAME [ARGS]\"", Targets, "action"),
         new("", "version", "zn's version and the running Zinc's", "zn version", "json"),
         new("window", "list", "Windows, with their workspaces", "zn window list", "json"),
@@ -58,7 +58,7 @@ public static class CliCommandLine
         new("workspace", "focus", "Shows a workspace", "zn workspace focus", Targets),
         new("workspace", "close", "Closes a workspace (asks first if commands are running)", "zn workspace close", Targets + " force"),
         new("workspace", "rename", "Names a workspace (\"\" goes back to the program's title)", "zn workspace rename NAME", Targets, "name"),
-        new("workspace", "color", "Colors a workspace: red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB or none",
+        new("workspace", "color", "Colors a workspace: red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB, or none",
             "zn workspace color COLOR", Targets, "color"),
         new("workspace", "icon", "Gives a workspace an icon (none: the profile's icon)", "zn workspace icon NAME", Targets, "icon"),
         new("workspace", "move", "Moves a workspace to another window, or a new one", "zn workspace move --to-window N|new",
@@ -261,8 +261,8 @@ public static class CliCommandLine
         {
             case "direction" when positional == null || !Directions.Contains(positional):
                 return Usage(positional == null
-                    ? "Which side? zn pane split right, left, down or up."
-                    : $"\"{positional}\" isn't a side: right, left, down or up.");
+                    ? "Which side? zn pane split right, left, down, or up."
+                    : $"\"{positional}\" isn't a side: right, left, down, or up.");
             case "direction":
                 request.Direction = positional;
                 break;
@@ -286,7 +286,7 @@ public static class CliCommandLine
                 break;
             case "color" or "icon" when string.IsNullOrWhiteSpace(positional):
                 return Usage(verb.Positional == "color"
-                    ? "Which color? red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB or none."
+                    ? "Which color? red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB, or none."
                     : "Which icon? Give its name, or none for the profile's icon. A wrong name lists them.");
             case "color":
                 request.Color = positional;
@@ -433,8 +433,8 @@ public static class CliCommandLine
         }
 
         sb.AppendLine();
-        sb.AppendLine("Inside a Zinc terminal, commands act on that terminal (its pane, workspace and window); outside,");
-        sb.AppendLine("on the focused one of the window used last. --terminal, --pane, --workspace and --window aim");
+        sb.AppendLine("Inside a Zinc terminal, commands act on that terminal (its pane, workspace, and window); outside,");
+        sb.AppendLine("on the focused one of the window used last. --terminal, --pane, --workspace, and --window aim");
         sb.AppendLine("elsewhere. zn <thing> --help shows a thing's commands.");
         return sb.ToString();
     }

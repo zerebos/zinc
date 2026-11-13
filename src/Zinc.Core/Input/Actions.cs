@@ -62,18 +62,18 @@ public static class Actions
         new("new-workspace", TerminalAction.NewWorkspace, Arg.None, "New workspace", "Open a workspace with the default profile."),
         new("new-window", TerminalAction.NewWindow, Arg.None, "New window", "Open a window with the default profile."),
         new("reopen-workspace", TerminalAction.ReopenWorkspace, Arg.None, "Reopen closed workspace",
-            "Bring back the workspace closed last: its tabs, splits and folders."),
+            "Bring back the workspace closed last: its tabs, splits, and folders."),
         new("reopen-window", TerminalAction.ReopenWindow, Arg.None, "Reopen closed window",
-            "Bring back the window closed last, where it was: its workspaces, tabs, splits and folders."),
+            "Bring back the window closed last, where it was: its workspaces, tabs, splits, and folders."),
         new("duplicate-tab", TerminalAction.DuplicateTab, Arg.None, "Duplicate tab", "Open the focused tab's command again, next to it."),
         new("close-tab", TerminalAction.CloseTab, Arg.None, "Close tab", "Close the focused tab (its pane goes with its last tab)."),
         new("next-tab", TerminalAction.NextTab, Arg.None, "Next tab", "The pane's next tab, or the next workspace."),
         new("previous-tab", TerminalAction.PreviousTab, Arg.None, "Previous tab", "The pane's previous tab, or the previous workspace."),
         new("go-to-workspace", TerminalAction.SwitchToTab, Arg.Workspace, "Go to workspace", "Show workspace N (from 1), or \"last\"."),
-        new("split", TerminalAction.SplitPane, Arg.Direction, "Split", "Split the focused pane: right, down, left or up."),
+        new("split", TerminalAction.SplitPane, Arg.Direction, "Split", "Split the focused pane: right, down, left, or up."),
         new("duplicate-pane", TerminalAction.DuplicatePane, Arg.None, "Duplicate pane", "Split, running the focused tab's command again."),
-        new("focus", TerminalAction.MoveFocus, Arg.Direction, "Focus pane", "Focus the neighboring pane: left, right, up or down."),
-        new("resize", TerminalAction.ResizePane, Arg.Direction, "Resize pane", "Move the focused pane's divider: left, right, up or down."),
+        new("focus", TerminalAction.MoveFocus, Arg.Direction, "Focus pane", "Focus the neighboring pane: left, right, up, or down."),
+        new("resize", TerminalAction.ResizePane, Arg.Direction, "Resize pane", "Move the focused pane's divider: left, right, up, or down."),
         new("maximize-pane", TerminalAction.MaximizePane, Arg.None, "Maximize pane",
             "Fill the workspace with the focused pane, hiding the others. Trigger again to show them. Focusing another pane shows them too."),
         new("close-pane", TerminalAction.CloseGroup, Arg.None, "Close pane",
@@ -81,11 +81,11 @@ public static class Actions
         new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Profile menu", "The ▾ menu of profiles."),
         new("command-palette", TerminalAction.OpenCommandPalette, Arg.None, "Command palette", "Search every command."),
         new("tab-switcher", TerminalAction.TabSwitcher, Arg.None, "Go to tab…",
-            "Search this window's tabs by title, folder or running command (the palette's \"@\"); tabs with a dot come first."),
+            "Search this window's tabs by title, folder, or running command (the palette's \"@\"); tabs with a dot come first."),
         new("next-attention", TerminalAction.NextAttention, Arg.None, "Next tab needing attention",
-            "Go to the next tab with a dot: programs that exited with an error first, then failed commands, the bell, programs' notifications and finished commands."),
+            "Go to the next tab with a dot: programs that exited with an error first, then failed commands, the bell, programs' notifications, and finished commands."),
         new("toggle-sidebar", TerminalAction.ToggleSidebar, Arg.OptionalSidebarMode, "Toggle sidebar",
-            "With workspace-tabs = \"left\": cycle the workspace list through full, rail and auto-hide. \"toggle-sidebar rail\" (or auto-hide) switches between that and full."),
+            "With workspace-tabs = \"left\": cycle the workspace list through full, rail, and auto-hide. \"toggle-sidebar rail\" (or auto-hide) switches between that and full."),
         new("toggle-title-bar", TerminalAction.ToggleTitleBar, Arg.None, "Toggle title bar",
             "With workspace-tabs = \"left\": auto-hide the title bar, or show it again."),
         new("focus-mode", TerminalAction.FocusMode, Arg.None, "Focus mode",
@@ -306,7 +306,7 @@ public static class Actions
             case Arg.Direction when Word(Arg.Direction, arg) is { } word && Enum.TryParse<PaneDirection>(word, true, out var dir):
                 return new ActionInvocation(def.Action, Direction: dir);
             case Arg.Direction:
-                error = $"'{name}' takes left, right, up or down{(arg.Length > 0 ? $", not '{arg}'" : "")}";
+                error = $"'{name}' takes left, right, up, or down{(arg.Length > 0 ? $", not '{arg}'" : "")}";
                 return null;
             case Arg.Workspace when Word(Arg.Workspace, arg) != null:
                 return new ActionInvocation(def.Action, -1);
@@ -331,7 +331,7 @@ public static class Actions
             case Arg.OptionalSidebarMode when Config.TryMode<SidebarMode>(arg, out var mode) && mode != SidebarMode.Full:
                 return new ActionInvocation(def.Action, (int)mode);
             case Arg.OptionalSidebarMode:
-                error = $"'{name}' takes nothing, \"rail\" or \"auto-hide\", not '{arg}'";
+                error = $"'{name}' takes nothing, \"rail\", or \"auto-hide\", not '{arg}'";
                 return null;
             case Arg.PromptDirection when Word(Arg.PromptDirection, arg) is { } word:
                 return new ActionInvocation(def.Action, word == "previous" ? -1 : 1);

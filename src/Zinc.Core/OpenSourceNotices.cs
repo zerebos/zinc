@@ -66,7 +66,7 @@ public static class OpenSourceNotices
             ["Microsoft.WindowsAppSDK.WinUI", "Microsoft.WindowsAppSDK.Foundation", "Microsoft.WindowsAppSDK.InteractiveExperiences"]),
         new("z2d", "0.12.1", "Draws the built-in glyphs, in Ghostty's sprite code",
             "MPL-2.0", "https://github.com/vancluever/z2d", @"Licenses\z2d.txt", []),
-        new("Zig standard library", "0.16.0", "Compiled into libghostty-vt, the glyph library and the shader translator",
+        new("Zig standard library", "0.16.0", "Compiled into libghostty-vt, the glyph library, and the shader translator",
             "MIT", "https://ziglang.org", @"Licenses\Zig.txt", []),
     ];
 

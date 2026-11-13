@@ -21,7 +21,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<TitleBarMode>((c, v) => c with { TitleBar = v }),
             },
         new("layout", "Workspaces", "window.new-workspace-page", "Start page for new workspaces",
-            "Choose a profile, a folder and a name when you open a workspace. Enter starts the default profile.", SettingKind.Toggle)
+            "Choose a profile, a folder, and a name when you open a workspace. Enter starts the default profile.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.NewWorkspacePage, (c, v) => c with { NewWorkspacePage = v }) },
         new("layout", "Workspaces", "window.workspace-colors", "Colors for new workspaces", "For the ones you don't color yourself.",
             SettingKind.Choice)
@@ -67,7 +67,7 @@ public static partial class SettingsCatalog
                 ],
                 Binding = Bind.Enum<PaneHeaders>((c, v) => c with { PaneHeaders = v }),
             },
-        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize and more on the right of a pane's header, with a program's progress beside them.",
+        new("layout", "Panes", "window.pane-header-buttons", "Header buttons", "Split, maximize, and more on the right of a pane's header, with a program's progress beside them.",
             SettingKind.Choice)
             {
                 Choices =
@@ -103,7 +103,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<PaneFocus>((c, v) => c with { PaneFocus = v }),
             },
         new("layout", "Panes", "window.pane-animations", "Pane animations",
-            "Panes slide into place when you split, close, maximize or move them. They don't while \"Animation effects\" is off in Windows Settings.",
+            "Panes slide into place when you split, close, maximize, or move them. They don't while \"Animation effects\" is off in Windows Settings.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.PaneAnimations, (c, v) => c with { PaneAnimations = v }) },
         new("layout", "Panes", "window.pane-resize-step", "Resize step",
@@ -123,7 +123,7 @@ public static partial class SettingsCatalog
         new("layout", "Panes", "window.divider-color", "Divider color", "The line between split panes, when \"Gap between panes\" is 0.", SettingKind.Color)
             { Placeholder = "Zinc's grey", Binding = Bind.Color((c, v) => c with { DividerColor = v }) },
         new("layout", "When you come back", "window.save-state", "Reopen windows",
-            "Windows, workspaces, splits and tabs come back in their folders.", SettingKind.Choice)
+            "Windows, workspaces, splits, and tabs come back in their folders.", SettingKind.Choice)
             {
                 Choices = [new("Reopen them", "always"), new("Start fresh", "never")],
                 Binding = Bind.Custom((c, v) => v switch
@@ -165,7 +165,7 @@ public static partial class SettingsCatalog
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.ExplorerMenu, (c, v) => c with { ExplorerMenu = v }) },
         new("layout", "Closing", "window.confirm-close", "Ask before closing",
-            "When a tab, pane, workspace or window you close still runs a command, or holds two or more tabs. Zinc knows a command is running through shell integration.",
+            "When a tab, pane, workspace, or window you close still runs a command, or holds two or more tabs. Zinc knows a command is running through shell integration.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.ConfirmClose, (c, v) => c with { ConfirmClose = v }) },
         new("layout", "Closing", "window.confirm-quit", "Ask before quitting with a running command",

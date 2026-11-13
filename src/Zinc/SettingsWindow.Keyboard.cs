@@ -389,7 +389,7 @@ internal sealed partial class SettingsWindow
             }
 
             shown.Text = "Press the keys";
-            problem.Text = "Hold Ctrl, Alt or Shift, then press a key. Esc cancels.";
+            problem.Text = "Hold Ctrl, Alt, or Shift, then press a key. Esc cancels.";
             confirm.IsEnabled = false;
             confirm.Content = "Add";
             capture.Focus(FocusState.Programmatic);

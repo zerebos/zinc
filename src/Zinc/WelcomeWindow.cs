@@ -262,7 +262,7 @@ internal sealed partial class WelcomeWindow : Window
         };
         if (!_firstRun)
         {
-            page.Children.Add(Note("This applies to windows opened from now on; colors, font and shell apply right away."));
+            page.Children.Add(Note("This applies to windows opened from now on; colors, font, and shell apply right away."));
         }
 
         return (page, simple, workspaces, onRow);
@@ -382,7 +382,7 @@ internal sealed partial class WelcomeWindow : Window
                 SectionTitle("How should panes look?"),
                 Note("When you split a workspace, or put several tabs in one pane."),
                 row,
-                Note("Mix the two in Settings > Layout > Panes: the gap, headers, their buttons and how focus shows."),
+                Note("Mix the two in Settings > Layout > Panes: the gap, headers, their buttons, and how focus shows."),
             },
         };
         return (page, compact, cards);

@@ -6,7 +6,7 @@ public static partial class SettingsCatalog
     private static SettingDef[] TerminalSettings() =>
     [
         new("terminal", "Shell", "terminal.shell-integration", "Shell integration",
-            "Marks prompts and commands in PowerShell, bash and zsh (WSL too), so you can jump between prompts, copy a command's output and see which commands failed.",
+            "Marks prompts and commands in PowerShell, bash, and zsh (WSL too), so you can jump between prompts, copy a command's output, and see which commands failed.",
             SettingKind.Choice)
             {
                 Choices = [new("On", "auto"), new("Off", "off")],
@@ -66,7 +66,7 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Menu", "menu", "Copy, paste, find, the link or command you clicked, split and close."),
+                    new("Menu", "menu", "Copy, paste, find, the link or command you clicked, split, and close."),
                     new("Copy or paste", "copy-paste", "Copies a selection, or pastes when there's none."),
                     new("Paste", "paste"),
                 ],
@@ -109,7 +109,7 @@ public static partial class SettingsCatalog
         new("terminal", "Clipboard", "terminal.large-paste-warning", "Large pastes", "Ask before pasting more than 5 KB.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.LargePasteWarning, (c, v) => c with { LargePasteWarning = v }) },
         new("terminal", "Clipboard", "terminal.clipboard-write", "Programs may copy",
-            "Copying with OSC 52, as tmux, neovim and remote shells do.", SettingKind.Toggle)
+            "Copying with OSC 52, as tmux, neovim, and remote shells do.", SettingKind.Toggle)
             {
                 // true or false, or "allow" or "deny" as the read setting takes them.
                 Binding = Bind.Custom((c, v) => v switch
@@ -154,7 +154,7 @@ public static partial class SettingsCatalog
             "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell, as set in \"Bell\".", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.ScreenFlashBell, (c, v) => c with { ScreenFlashBell = v }) },
         new("terminal", "Command line", "cli.remote-control", "Remote control",
-            "Lets zn, Zinc's command-line tool, open, arrange and close tabs, type into them and read them. Any program running as you could use it.",
+            "Lets zn, Zinc's command-line tool, open, arrange, and close tabs, type into them, and read them. Any program running as you could use it.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.RemoteControl, (c, v) => c with { RemoteControl = v }) },
         new("terminal", "Command line", "cli.path", "Use zn in other terminals",
@@ -162,14 +162,14 @@ public static partial class SettingsCatalog
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.ZnOnPath, (c, v) => c with { ZnOnPath = v }) },
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
-            "Type Japanese, Chinese, Korean and more with Windows' input methods (IME). Turn it off if keys behave oddly.",
+            "Type Japanese, Chinese, Korean, and more with Windows' input methods (IME). Turn it off if keys behave oddly.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.InputMethod, (c, v) => c with { InputMethod = v }) },
         new("terminal", "Troubleshooting", "window.low-latency-drawing", "Low-latency drawing",
             "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.LowLatencyDrawing, (c, v) => c with { LowLatencyDrawing = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free memory of hidden tabs",
-            "Background tabs, minimized windows and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
+            "Background tabs, minimized windows, and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.FreeHiddenMemory, (c, v) => c with { FreeHiddenMemory = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-after", "Free it after",
@@ -184,7 +184,7 @@ public static partial class SettingsCatalog
                     c => Bind.Tidy(c.FreeHiddenAfter.TotalSeconds)),
             },
         new("terminal", "Troubleshooting", "window.software-rendering", "Software rendering",
-            "Draws with the processor instead of the graphics card, which is slower. Use it for broken graphics drivers, some virtual machines and remote desktop glitches. Applies to terminals opened from now on.",
+            "Draws with the processor instead of the graphics card, which is slower. Use it for broken graphics drivers, some virtual machines, and remote desktop glitches. Applies to terminals opened from now on.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.SoftwareRendering, (c, v) => c with { SoftwareRendering = v }) },
     ];
