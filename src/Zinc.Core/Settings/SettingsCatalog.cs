@@ -85,7 +85,7 @@ public sealed record SettingDef(string Section, string Group, string Key, string
     public bool NumbersAsNumbers { get; init; }
 
     /// <summary>
-    /// Read and tested, but kept out of the settings window (and the README) until the app does what it says.
+    /// Read and tested, but kept out of the settings window (and the reference export) until the app does what it says.
     /// <c>ZINC_TEST_UNFINISHED_SETTINGS=1</c> shows them.
     /// </summary>
     public bool Unfinished { get; init; }

@@ -24,9 +24,9 @@ public sealed record WelcomeChoices(WorkStyle Style, WorkspaceTabs WorkspacesOn,
 /// <summary>Writes the welcome page's choices into config.toml.</summary>
 public static class FirstRun
 {
-    /// <summary>What a new config file starts with (kept short, because the README has every setting).</summary>
+    /// <summary>What a new config file starts with (kept short, because the website's reference has every setting).</summary>
     public const string Template =
-        "# Zinc's settings. Changes apply when you save; the README lists every setting.\n" +
+        "# Zinc's settings. Changes apply when you save, and zincterminal.dev/docs/config lists every setting.\n" +
         "# Reopen the welcome page from the command palette (Ctrl+Shift+P): Welcome…\n";
 
     /// <summary>

@@ -8,7 +8,7 @@ public sealed record ActionVariant(string Label, ActionInvocation Invocation);
 
 /// <summary>
 /// Every action by name: what the <c>[keys]</c> table binds, what the command palette shows,
-/// and what the README lists. An action is a name plus at most one argument, written as one
+/// and what the reference export lists. An action is a name plus at most one argument, written as one
 /// string: <c>"split right"</c>, <c>"go-to-workspace 3"</c>, <c>"new-tab wsl:Fedora"</c>.
 /// </summary>
 public static class Actions

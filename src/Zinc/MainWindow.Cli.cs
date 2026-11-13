@@ -153,7 +153,7 @@ public sealed partial class MainWindow
                 if (Actions.Parse(request.Action!, out var error) is not { } invocation)
                 {
                     return CliReply.Fail(CliCodes.Usage, $"No action \"{request.Action}\" ({error}). " +
-                        "The README's key table lists them, and Settings > Keyboard.");
+                        "Settings > Keyboard lists them.");
                 }
 
                 return pane.Control.Invoke(invocation)

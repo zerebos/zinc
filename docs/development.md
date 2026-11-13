@@ -120,7 +120,7 @@ The setting's label and description are text in the product, so they follow [ux-
 
 ## Adding an action
 
-An action is anything a key can be bound to. It needs an entry in `src/Zinc.Core/Input/Actions.cs` (its name, palette title, description and category), a row in the README's action table (a test checks it), and a handler. A pane's actions are handled in `TerminalControl.RunAction`, and a window's in `MainWindow.HandleAction`.
+An action is anything a key can be bound to. It needs an entry in `src/Zinc.Core/Input/Actions.cs` (its name, palette title, description and category) and a handler. The reference export picks the entry up for the website. A pane's actions are handled in `TerminalControl.RunAction`, and a window's in `MainWindow.HandleAction`.
 
 ## Bumping Ghostty
 

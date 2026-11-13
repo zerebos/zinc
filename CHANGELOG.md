@@ -9,6 +9,7 @@ made from.
 
 ### Changed
 - Zinc is now licensed under Apache-2.0. `Settings > About > Open-source software` lists Zinc's own license first.
+- The full list of settings and actions is now on [zincterminal.dev](https://zincterminal.dev/docs/config) instead of in the README, and a new `config.toml` points there. `zn`'s message for an unknown action points to `Settings > Keyboard`.
 
 ### Fixed
 - Terminals could stop updating after a big resize, such as dragging the window to another monitor and snapping it to maximize, when a pane header's title was too long to fit. The window kept resizing, but the terminals kept showing their old picture until you restarted Zinc. With pane tabs on, the same resize could instead leave the header's tab running past the pane's edge, with its × and + out of sight.

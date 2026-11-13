@@ -226,15 +226,6 @@ public class ConfigSchemaTests
     }
 
     [Fact]
-    public void TheReadmesExamplesFit()
-    {
-        var readme = File.ReadAllText(Path.Combine(OpenSourceNoticesTests.Root, "README.md"));
-        var blocks = Regex.Matches(readme, "```toml\\r?\\n(.*?)```", RegexOptions.Singleline).Select(m => m.Groups[1].Value).ToList();
-        Assert.NotEmpty(blocks);
-        Assert.All(blocks, block => Assert.True(Problem(FromToml(block)) == null, $"{Problem(FromToml(block))}\n{block}"));
-    }
-
-    [Fact]
     public void WhatTheWelcomePageWritesFits()
     {
         foreach (var style in Enum.GetValues<WorkStyle>())

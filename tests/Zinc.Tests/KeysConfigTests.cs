@@ -101,19 +101,6 @@ public class KeysConfigTests
         Assert.Equal("Split", Actions.FamilyTitle("split", paneTabs: false));
     }
 
-    [Fact]
-    public void ReadmeListsEveryAction()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !File.Exists(Path.Combine(dir.FullName, "README.md")))
-        {
-            dir = dir.Parent;
-        }
-
-        var readme = File.ReadAllText(Path.Combine(dir!.FullName, "README.md"));
-        Assert.All(Actions.All, a => Assert.Contains($"`{a.Name}", readme));
-    }
-
     private static ConfigFile Parse(string text) => ConfigFile.Parse(text);
 
     [Fact]
