@@ -79,7 +79,7 @@ jobs:
       - name: Test
         run: dotnet test
 
-      # release.ps1 publishes the app, checks the result and packs it with Velopack. -From fetches the release before
+      # release.ps1 publishes the app, checks the result, and packs it with Velopack. -From fetches the release before
       # this one, so this one also gets a small package of only what changed.
       - name: Pack
         run: |

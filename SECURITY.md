@@ -12,4 +12,4 @@ Fixes go into the latest release. Zinc updates itself, so that's the version alm
 
 ## What counts
 
-Anything that lets a program, a file or a web page do more than it should through Zinc is worth reporting. Examples include a terminal sequence that runs a command, reads the clipboard without asking, or writes a file, a link that opens something it shouldn't, and `zn`'s pipe accepting commands from another user. Zinc's own update path and installer count too.
+Anything that lets a program, a file, or a web page do more than it should through Zinc is worth reporting. Examples include a terminal sequence that runs a command, reads the clipboard without asking, or writes a file, a link that opens something it shouldn't, and `zn`'s pipe accepting commands from another user. Zinc's own update path and installer count too.

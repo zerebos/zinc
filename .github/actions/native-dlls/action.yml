@@ -1,7 +1,7 @@
 name: Native DLLs
 description: >
   Puts the native DLLs (libghostty-vt, the sprite rasterizer, the shader translator) in native/. They change only
-  when the build scripts, the Ghostty patches or the native sources do, so they're built once per such change and
+  when the build scripts, the Ghostty patches, or the native sources do, so they're built once per such change and
   kept in the cache.
 
 runs:

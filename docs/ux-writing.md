@@ -1,8 +1,8 @@
 # Writing Zinc's interface
 
-How Zinc talks to people inside the app: settings, menus, notices, the palette, the welcome page and the About page. These rules come from building the settings window and from studying Windows Terminal's (2026-09-30), where the good and the weak parts of its wording were easy to compare side by side. Zinc is a power tool; the aim is still to be easier to understand than the tools it competes with.
+How Zinc talks to people inside the app: settings, menus, notices, the palette, the welcome page, and the About page. These rules come from building the settings window and from studying Windows Terminal's (2026-09-30), where the good and the weak parts of its wording were easy to compare side by side. Zinc is a power tool; the aim is still to be easier to understand than the tools it competes with.
 
-**Scope.** This guide covers in-product copy. The README, docs and release notes keep the same tone, with the few differences in [Outside the app](#outside-the-app) at the end. They differ on purpose: the interface helps someone do something right now, and the README and docs explain why Zinc is worth switching to.
+**Scope.** This guide covers in-product copy. The README, docs, and release notes keep the same tone, with the few differences in [Outside the app](#outside-the-app) at the end. They differ on purpose: the interface helps someone do something right now, and the README and docs explain why Zinc is worth switching to.
 
 ## Personality
 
@@ -10,12 +10,12 @@ How Zinc talks to people inside the app: settings, menus, notices, the palette, 
 
 When a situation isn't covered below (a new notice, a hint, a first-run moment), write it the way that sentence sounds: quiet, exact, and useful.
 
-- **No hype.** No exclamation marks, no "awesome", "blazing" or "magic", no celebratory confirmations. "Saved to config.toml and applied" is the right temperature.
+- **No hype.** No exclamation marks, no "awesome", "blazing", or "magic", no celebratory confirmations. "Saved to config.toml and applied" is the right temperature.
 - **No apologies.** Say what happened and what to do; "sorry" adds nothing.
 
 ## Voice
 
-- **Write from the user's side of the screen.** Name things by what people recognize, not by how they're built: "Programs may copy", not "OSC 52 write". Put the mechanism in the description ("Copying with OSC 52, as tmux, neovim and remote shells do.") for people who look for it. This is where the interface differs from the marketing: the marketing names the precise detail, and the interface names the familiar thing.
+- **Write from the user's side of the screen.** Name things by what people recognize, not by how they're built: "Programs may copy", not "OSC 52 write". Put the mechanism in the description ("Copying with OSC 52, as tmux, neovim, and remote shells do.") for people who look for it. This is where the interface differs from the marketing: the marketing names the precise detail, and the interface names the familiar thing.
 - **Plain, direct, specific.** Short sentences, active voice, no jargon a user wouldn't search for. Prefer "the reset arrow gives one back" to "reverts to the inherited value".
 - **Keep the small words, and name the thing.** "Check that the file can be opened", not "check the file can be opened". When "it" or "them" could mean more than one thing, say which.
 - **Sentence case everywhere**: names, buttons, section titles, menu items. ("Tab width mode", not "Tab Width Mode".) Windows Terminal slips here ("Application Theme", "Add Entry"); we don't. The one exception is a window's title, which follows Windows' own title case: "Zinc Settings".
@@ -75,19 +75,19 @@ The attention dot's colors and the words around it say the same thing. Use these
 
 - **Apply immediately; make undo easy.** Settings write as you change them and say so ("Saved to config.toml and applied"), with "Undo N changes" counting what Undo would put back. No Save/Discard step.
 - **Buttons say what they do; reset arrows say where they go.** A text button is a verb phrase that names its object: "Restore the original", "Delete profile", "Open folder", "Open in editor". A reset arrow (icon only) has a tooltip that starts "Back to …": "Back to the default: no shaders".
-- **Destructive actions** (delete a profile, reset everything): a button that says what it does, a confirmation that states the consequence ("Removes its section from config.toml."), and a confirm button that repeats the action with its object ("Delete profile", "Reset everything"). Never "OK", "Yes" or "Delete it": a button has to make sense when a screen reader announces it on its own. Put destructive actions last on a page.
+- **Destructive actions** (delete a profile, reset everything): a button that says what it does, a confirmation that states the consequence ("Removes its section from config.toml."), and a confirm button that repeats the action with its object ("Delete profile", "Reset everything"). Never "OK", "Yes", or "Delete it": a button has to make sense when a screen reader announces it on its own. Put destructive actions last on a page.
 - **Errors say what's wrong and what to do**: "config.toml has an error. Fix it first (see the top of the page)." No apologies, no vague "something went wrong".
 
 ## Punctuation
 
-- **No period** on names, labels, buttons, choice labels or tooltips that are a single phrase.
+- **No period** on names, labels, buttons, choice labels, or tooltips that are a single phrase.
 - **Periods** on descriptions and any text of more than one sentence.
-- **Colons** introduce a list ("Bring back the workspace closed last: its tabs, splits and folders."), separate a label from its value ("Color: automatic", "Inherited: 11 pt"), and lead into a reset arrow's destination ("Back to the default: no shaders"). A colon never stands in for "because", "so" or "use it for". Write two sentences, or join them with the word: "Drag to reorder. The new-tab menu lists them in this order."
+- **Colons** introduce a list ("Bring back the workspace closed last: its tabs, splits, and folders."), separate a label from its value ("Color: automatic", "Inherited: 11 pt"), and lead into a reset arrow's destination ("Back to the default: no shaders"). A colon never stands in for "because", "so", or "use it for". Write two sentences, or join them with the word: "Drag to reorder. The new-tab menu lists them in this order."
 - **No semicolons.** Two short sentences read better on screen: "A dot on its tab. The taskbar button also flashes if Zinc is in the background."
 - **A comma before the last item** in a list of three or more (the serial comma): "Tabs, splits, and folders".
 - **Straight double quotes** for quoting labels and names ("Vintage"), and straight apostrophes (Zinc's). Never curly quotes, never single quotes for quoting. Consistency matters more than style, and straight quotes are what everyone types.
 - (In this guide, an example that itself contains a quoted label is shown in *italics* instead of quotes.)
-- **Code, keys, paths and values** appear exactly as typed, never quoted or recapitalized: `config.toml`, Ctrl+A > C, `C:\Users`.
+- **Code, keys, paths, and values** appear exactly as typed, never quoted or recapitalized: `config.toml`, Ctrl+A > C, `C:\Users`.
 - **Keyboard shortcuts** use Windows' notation: Ctrl+Shift+T, Win+`.
 
 ## Order
@@ -106,11 +106,11 @@ The attention dot's colors and the words around it say the same thing. Use these
 
 ## Outside the app
 
-The README, the docs, the CHANGELOG and release notes keep the interface's tone, but their job is different: they explain what Zinc does and why someone might switch to it.
+The README, the docs, the CHANGELOG, and release notes keep the interface's tone, but their job is different: they explain what Zinc does and why someone might switch to it.
 
 - **Specific over superlative.** Name the detail: "Box drawing meets without seams in any font" beats "beautiful rendering". The interface names the familiar thing instead, and that difference is deliberate.
-- **Calm.** No exclamation marks, and no "blazing", "insanely" or "game-changing".
+- **Calm.** No exclamation marks, and no "blazing", "insanely", or "game-changing".
 - **Honest about limits.** Say plainly what isn't there yet. The interface leaves limits out, but docs and release notes don't.
 - **Short sentences, plain words.**
-- **Credit Ghostty, accurately.** Say "built on libghostty", "uses Ghostty's terminal engine" or "the same core that powers Ghostty". Never "Ghostty for Windows", "a Ghostty port", or anything that suggests an official Ghostty project.
+- **Credit Ghostty, accurately.** Say "built on libghostty", "uses Ghostty's terminal engine", or "the same core that powers Ghostty". Never "Ghostty for Windows", "a Ghostty port", or anything that suggests an official Ghostty project.
 - **The name** follows [The product's name](#the-products-name): "Zinc" in prose, never "Zinc Terminal".

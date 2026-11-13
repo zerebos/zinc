@@ -60,11 +60,11 @@ Gaps:
 | Title | `shell-titles` (2026-10-03): folder at the prompt, command while it runs, done in Zinc from the marks (no script), so every marking shell gets it; a title the running program sets wins | `title` feature in each script: folder at the prompt, command while it runs |
 
 Why ours differ:
-- **`cmdline_url`**: our command center, palette and attention dots show what ran. Ghostty keeps
+- **`cmdline_url`**: our command center, palette, and attention dots show what ran. Ghostty keeps
   no command history, so it doesn't need the text.
 - **Exit codes**: libghostty ignores D's status. We parse it ourselves (`ShellMarks.cs`) for
   failure bars and notifications.
-- **Percent-encoded `file://`**: paths with spaces, `#` or non-ASCII survive the URI. Ghostty's
+- **Percent-encoded `file://`**: paths with spaces, `#`, or non-ASCII survive the URI. Ghostty's
   `kitty-shell-cwd://` exists so the path can be sent raw.
 
 Ideas from Ghostty's side:
@@ -84,7 +84,7 @@ Ideas from Ghostty's side:
   changes that, so Zinc adds `redraw=1` to marks that don't say: powerlevel10k's own, fish's,
   nushell's and our zsh and elvish scripts. Our scripts for shells that don't redraw it all say
   so: `last` for bash (readline redraws only the last line, as Ghostty's bash script says) and `0`
-  for pwsh, cmd and Clink. Before this, powerlevel10k's full-width frame left a stale copy above
+  for pwsh, cmd, and Clink. Before this, powerlevel10k's full-width frame left a stale copy above
   the prompt on every narrowing resize: zsh goes up only the rows it drew, and the terminal had
   already wrapped the frame onto more. That also needed a libghostty fix, because rewrapping
   marked every wrapped part of a prompt line as a prompt start, so the clear missed the upper
