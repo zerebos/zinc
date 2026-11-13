@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question or float an idea
+    url: https://github.com/zerebos/zinc/discussions
+    about: For questions, and for ideas you'd like to talk through before opening an issue.
+  - name: Report a security problem
+    url: https://github.com/zerebos/zinc/security/advisories/new
+    about: Privately, so it isn't public before there's a fix.

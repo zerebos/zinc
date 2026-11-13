@@ -1,0 +1,68 @@
+name: Bug report
+description: Something in Zinc doesn't work the way it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      description: The steps, as exact as you can make them. Include the command you ran if it matters.
+      placeholder: |
+        1. Open a WSL tab
+        2. Split it to the right
+        3. Run `htop` in the new pane
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Zinc version
+      description: From Settings > About.
+      placeholder: 0.1.0+a1b2c3d
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: Run `winver` and copy the version and build.
+      placeholder: Windows 11 24H2, build 26100.2314
+    validations:
+      required: true
+  - type: dropdown
+    id: shell
+    attributes:
+      label: Shell
+      description: The shell in the pane where it happened.
+      options:
+        - PowerShell 7 (pwsh)
+        - Windows PowerShell
+        - Command Prompt (cmd)
+        - WSL
+        - Git Bash or MSYS2
+        - SSH
+        - Something else, or it doesn't depend on the shell
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Debug log
+      description: >-
+        Turn on the log in Settings > About > Troubleshooting, make the bug happen, then copy the log and paste it here.
+        For a pointer that flickers or shows the wrong shape, also run "Trace the pointer (15 s)"
+        from the command palette while it happens. Check the log first, because it can contain folder names from your
+        machine.
+      render: text
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots, your config.toml if it seems related, or anything you've already tried.
