@@ -36,7 +36,7 @@ dotnet build
 dotnet test
 ```
 
-[docs/development.md](docs/development.md) covers what you need to install, running a dev build next to an installed Zinc, testing, releasing and forking.
+[docs/development.md](docs/development.md) covers what you need to install, running a dev build next to an installed Zinc, testing, releasing and forking. [docs/architecture.md](docs/architecture.md) explains how Zinc works inside and where things live.
 
 ## Configuration
 
@@ -964,29 +964,6 @@ of its PATH. In WSL, where Windows' PATH may not be shared (`appendWindowsPath`)
 and zsh defines `zn` from `ZINC_ZN` (zn.exe's path, passed in); in other WSL shells, `alias zn="$ZINC_ZN"`. For other
 terminals, **Use zn in other terminals** (`[cli] path = true`) puts it on your user PATH (taken off again when turned
 off, or on uninstall). With the debug log on, each command is logged, never the text sent.
-
-## Layout
-
-```
-scripts/                          the build, dev and release scripts (docs/development.md lists them)
-assets/                           fonts, themes, shaders, shell-integration scripts, licenses
-native-src/                       the C APIs built around Ghostty's sprite code and glslang/SPIRV-Cross
-docs/                             development.md (building and working on Zinc), ux-writing.md (how the
-                                  interface and docs talk), shell-integration.md
-src/Zinc.Native.targets        the native DLLs + bundled ConPTY for runnable projects
-src/Zinc.Core/                 everything testable without a window:
-  Ghostty/                          P/Invoke bindings, the built-in glyphs
-  Pty/                              ConPTY (pseudoconsole, child process, reader thread), default terminal
-  Terminal/                         TerminalSession (terminal + pty glue, libghostty callbacks), shell
-                                    integration, links, find, selection, benchmark workloads
-  Input/                            keys and bindings, actions, keyboard layout translation
-  Settings/, Session/, Panes/       the settings catalog and writer, session.json, workspaces and panes
-  Cli/                              zn's protocol (compiled into zn as well)
-  Config.cs, ConfigFile.cs          one resolved config; config.toml, profiles and discovery
-src/Zinc/                      WinUI app: windows, settings, TerminalControl (Win2D render + input)
-src/Zinc.Cli/                  zn, the command-line tool
-tests/Zinc.Tests/              xUnit v3: ABI check, headless sessions (real shells), unit tests
-```
 
 ## Known gaps
 
