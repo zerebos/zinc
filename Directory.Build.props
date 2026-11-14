@@ -3,7 +3,7 @@
     Zinc's version, for every project. ZincVersion is the release being worked toward:
     bump it when work on the next one starts. A build of the commit tagged v$(ZincVersion) is that
     release ("0.1.0+a1b2c3d"). A build of a commit tagged with a pre-release of it, such as
-    v$(ZincVersion)-rc.1, is that pre-release ("0.1.0-rc.1+a1b2c3d"). Any other build is a dev build
+    v$(ZincVersion)-pre.1 or v$(ZincVersion)-rc.1, is that pre-release ("0.1.0-rc.1+a1b2c3d"). Any other build is a dev build
     ("0.1.0-dev+a1b2c3d"), which is never released. About shows the version, XTVERSION answers with it,
     and the crash log records it.
   -->

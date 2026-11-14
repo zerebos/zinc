@@ -173,8 +173,10 @@ The `.cs` scripts are .NET file-based apps that reference `Zinc.Core`, so they r
 A release is a version tag. `ZincVersion` in `Directory.Build.props` is the release being worked toward.
 
 - A build of the commit tagged `v<ZincVersion>` is that release, such as `0.1.0+a1b2c3d`.
-- A build of a commit tagged with a pre-release of it, such as `v0.1.0-rc.1`, is that pre-release. Pre-releases use `rc.N`.
+- A build of a commit tagged with a pre-release of it, such as `v0.1.0-pre.1` or `v0.1.0-rc.1`, is that pre-release.
 - Every other build is a dev build, `0.1.0-dev+a1b2c3d`, and is never released.
+
+A pre-release is a label and a number, like `pre.1` or `rc.2`. Velopack and the release workflow compare versions as SemVer does, and SemVer compares labels as text. So each new pre-release needs a label that sorts at or after the last one's, with a higher number when the label stays the same. `pre` sorts after `dev`, the label of the test builds from before the first release, and `rc` sorts after `pre`. `alpha` and `beta` sort before `dev`, so copies on those test builds would never update to them. A published version number is never used again, even after its release is deleted, because a copy that installed it never updates to a second build with the same number.
 
 The version shows in Settings > About, and Zinc answers programs that ask the terminal's version (XTVERSION) with it. The build reads it from git, so it needs the full history and the tags, not a shallow clone.
 

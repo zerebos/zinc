@@ -1,8 +1,8 @@
 name: Release
 
-# Pushing a version tag publishes a release. The tag is v<ZincVersion> for a release, or v<ZincVersion>-rc.N for a
-# pre-release, with ZincVersion from Directory.Build.props. Run by hand, the workflow is a dry run that builds and
-# packs the same way and keeps the files as an artifact, without making a release.
+# Pushing a version tag publishes a release. The tag is v<ZincVersion> for a release, or v<ZincVersion>-<label>.N for a
+# pre-release (pre.1, rc.2), with ZincVersion from Directory.Build.props. Run by hand, the workflow is a dry run that
+# builds and packs the same way and keeps the files as an artifact, without making a release.
 on:
   push:
     tags: ['v*']
@@ -50,7 +50,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $version = (dotnet msbuild src/Zinc.Core/Zinc.Core.csproj -nologo -t:ZincGitVersion -getProperty:ZincPackVersion).Trim()
           if ($env:GITHUB_EVENT_NAME -eq 'push' -and "v$version" -ne $env:GITHUB_REF_NAME) {
-              throw "The tag is $env:GITHUB_REF_NAME, but this commit builds as $version. A release's tag is v<ZincVersion>, or v<ZincVersion>-rc.N for a pre-release, with ZincVersion from Directory.Build.props."
+              throw "The tag is $env:GITHUB_REF_NAME, but this commit builds as $version. A release's tag is v<ZincVersion>, or v<ZincVersion>-<label>.N for a pre-release, with ZincVersion from Directory.Build.props."
           }
           "version=$version" >> $env:GITHUB_OUTPUT
           "prerelease=$($version.Contains('-').ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT

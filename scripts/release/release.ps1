@@ -95,12 +95,12 @@ if (-not $Version) {
     if ($dirty) { $Version += '-dirty' }
 }
 if ($Publish -and $Version -match '-dev\+') {
-    throw "This commit has no version tag, so it would be $Version. Tag it (v<ZincVersion>, or v<ZincVersion>-rc.N for a pre-release) and run this again."
+    throw "This commit has no version tag, so it would be $Version. Tag it (v<ZincVersion>, or v<ZincVersion>-<label>.N for a pre-release) and run this again."
 }
 
 # ---- a release testers would never get, because it isn't above the one already published ----
-# Velopack only updates to a higher version. Versions compare as SemVer orders them, so 0.1.0-rc.1 is above every
-# 0.1.0-dev.N, and 0.1.0 is above every pre-release of it.
+# Velopack only updates to a higher version. Versions compare as SemVer orders them, which compares labels as text,
+# so 0.1.0-pre.1 and 0.1.0-rc.1 are above every 0.1.0-dev.N, and 0.1.0 is above every pre-release of it.
 if ($Publish) {
     $mine = [semver]$Version.Split('+')[0]
     $highest = (Invoke-RestMethod "$($UpdateUrl.TrimEnd('/'))/releases.win.json").Assets |
