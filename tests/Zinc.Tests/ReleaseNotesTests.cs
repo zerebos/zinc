@@ -86,6 +86,9 @@ public class ReleaseNotesTests
         var newest = ReleaseNotes.Newest(text);
         Assert.NotNull(newest);
         Assert.NotEmpty(ReleaseNotes.Pieces(ReleaseNotes.Entry(text, newest)!));
-        Assert.Null(ReleaseNotes.ReleaseProblem(text.Replace(ReleaseNotes.Entry(text, "Unreleased") ?? "", ""), newest));
+
+        // The newest version is releasable once Unreleased is empty, which it already is when a release is tagged.
+        var unreleased = ReleaseNotes.Entry(text, "Unreleased");
+        Assert.Null(ReleaseNotes.ReleaseProblem(string.IsNullOrEmpty(unreleased) ? text : text.Replace(unreleased, ""), newest));
     }
 }
