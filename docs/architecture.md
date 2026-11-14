@@ -32,15 +32,15 @@ Everything else, from the windows and tabs to the settings, is Zinc's own WinUI 
 - `Settings/` has the settings catalog (`SettingsCatalog*.cs`, every setting), the writer, the key binding editor, and scheme files.
 - `Shaders/` has the custom shader library, `Commands/` the palette's filtering, and `Shell/` what Zinc adds to Windows' shell (the Explorer menu entry and the jump list's content).
 - `Cli/` is `zn`'s protocol. `zn` compiles four of these files as linked source, without the rest of Core (`CliProtocol`, `CliPipe`, `CliCommandLine`, `CliText`), so those four can't use other Core types.
-- The files at the top level are app-wide pieces without a folder of their own, such as `Log.cs`, `AppFolders.cs`, `FirstRun.cs`, `UpdateFeed.cs`, `ReleaseNotes.cs` and `ReferenceExport.cs`.
+- The files at the top level are app-wide pieces without a folder of their own, such as `Log.cs`, `AppFolders.cs`, `FirstRun.cs`, `UpdateFeed.cs`, `ReleaseNotes.cs`, and `ReferenceExport.cs`.
 
 `src/Zinc` is the WinUI app.
 
 - `MainWindow*.cs` is the window. That covers workspaces (as tabs or the sidebar list), drags, the palette, menus, the new-workspace page, the quick terminal, and the title bar. `GroupView*.cs` is one pane's frame, with its tab strip or header around the terminal.
-- `Terminal/TerminalControl*.cs` is one terminal: the session's lifetime, keyboard, mouse, IME, the scrollbar, find, and menus. `Terminal/TerminalRenderer*.cs`, `GlyphAtlas.cs`, `SwapChainSurface.cs` and `ShaderPass.cs` draw it.
+- `Terminal/TerminalControl*.cs` is one terminal: the session's lifetime, keyboard, mouse, IME, the scrollbar, find, and menus. `Terminal/TerminalRenderer*.cs`, `GlyphAtlas.cs`, `SwapChainSurface.cs`, and `ShaderPass.cs` draw the terminal.
 - `SettingsWindow*.cs` is the Settings window, built in code. `WelcomeWindow.cs` is the welcome window, which opens on the first run and from the palette.
 - `Brand.cs` holds the app's colors for each theme, and `Assets/` the icon and the other images the app ships. `WindowIcon.cs` gives each window the `.ico` frames that exactly match its DPI, because `AppWindow.SetIcon` rescales a single frame and smears the 16-pixel icon.
-- `App*.cs` is the app's lifetime, and it wires up the pieces that live in their own files, like `TrayIcon.cs`, `Updater.cs`, `CliServer.cs` (`zn`'s server) and the jump list.
+- `App*.cs` is the app's lifetime, and it wires up the pieces that live in their own files, like `TrayIcon.cs`, `Updater.cs`, `CliServer.cs` (`zn`'s server), and the jump list.
 
 The rest of the repo:
 
@@ -116,8 +116,8 @@ The usual way to hit this is a COM call that pumps, and one hides in font handli
 Each pane draws into a `CanvasSwapChain` through `SwapChainSurface`, which presents a frame as soon as the output pauses, at most once per refresh. With `low-latency-drawing = false`, a pane draws into a `CanvasControl` instead, which waits for WinUI's own frame. The pane reaches its surface through the same `Surface` and `Redraw()` in both modes.
 
 - `SetFont` does work that pumps messages, so a frame can start partway through it. The sprite cache remembers the cell metrics it was drawn for and is dropped when they change, so a frame never draws sprites at a stale cell size.
-- A new `CanvasRenderTarget` can hold another target's old pixels, because GPU memory gets recycled. Clear it before drawing into it with normal blending. The glyph atlas once didn't, and zooming showed the previous size's glyphs.
-- When glyphs are drawn in one sprite batch, the padding's sub-pixel offset is rounded to 1/64 of a pixel before it becomes part of the atlas key. Without that, floating-point noise made a new atlas for every window size.
+- A new `CanvasRenderTarget` can hold another target's old pixels, because GPU memory gets recycled. Clear it before drawing into it with normal blending. Otherwise, the glyph atlas can show the previous size's glyphs after a zoom.
+- When glyphs are drawn in one sprite batch, the padding's sub-pixel offset is rounded to 1/64 of a pixel before it becomes part of the atlas key. Without that, floating-point noise makes a new atlas for every window size.
 - A character the font lacks is drawn from a color font only when it's an emoji, meaning a pictograph in a wide cell, or a cluster with VS16 (U+FE0F), a zero-width joiner, or a keycap. Otherwise a text-style symbol like ✔ (U+2714) would turn into an emoji, and CJK would come out in an emoji font.
 - Nerd Font icons from an "NF" font overflow their cell on purpose, as they do in Windows Terminal, and the atlas keeps the overhang. The "NFM" variants don't overflow.
 
@@ -172,12 +172,12 @@ WinUI 3 has a lot of behavior you only find by running into it. These are the ca
 - Its style defaults to `VerticalAlignment=Top`. Without `Stretch`, a TabView is only as tall as its tab strip, so the tab's content gets 0 pixels and its panes never start their sessions.
 - A TabViewItem applies `HorizontalContentAlignment` and `VerticalContentAlignment` to its header, not its content. `Stretch` there pushes the label above the icon.
 - Setting a TabViewItem's `Header` or `IconSource` replays the header's content transition, so the label slides in again, and decodes the icon again. So each tab has one `TabHeader` for good, with one `TextBlock` and a decoded icon per profile, shown and hidden through `Visibility`.
-- The inner list has entrance transitions, which made new tabs slide in after their terminal had already drawn. `DisableTabAnimations` clears them.
+- The inner list has entrance transitions, which make new tabs slide in after their terminal had already drawn. `DisableTabAnimations` clears them.
 - Lightweight styling set after the template has applied, like a tab's color, doesn't take until the item's `RequestedTheme` flips to the other theme and back, which makes it resolve its theme resources again.
 
 ### The title bar
 
-Zinc keeps the standard caption buttons (`TitleBarHeightOption.Standard`, 32 pixels) with TabView's own strip of about 41 pixels, so the buttons are short and the tabs sit on the strip's bottom edge, as in File Explorer. Tall caption buttons hung over the terminal.
+Zinc keeps the standard caption buttons (`TitleBarHeightOption.Standard`, 32 pixels) with TabView's own strip of about 41 pixels, so the buttons are short and the tabs sit on the strip's bottom edge, as in File Explorer. Tall caption buttons would hang over the terminal.
 
 The tab strip's `DragRegion` needs a `MinWidth` of at least the caption buttons' width (`AppWindow.TitleBar.RightInset` divided by the scale). Otherwise the tabs and the + and ▾ buttons slide under the caption buttons instead of shrinking and then scrolling.
 

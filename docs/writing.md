@@ -77,7 +77,7 @@ A section ends when the explanation is done, often on what happens if you break 
 
 ### "You", "we", and "Zinc"
 
-"You" is the reader, and "Zinc" is what the app does. "We" is for walking through something together. "I" doesn't appear in the repo's docs.
+"You" is the reader, and "Zinc" is what the app does. "We" is for walking through something together. "I" doesn't appear in `docs/`, the README, or the changelog. CONTRIBUTING.md and AI_POLICY.md are the maintainer speaking, so they use "I".
 
 ### Shape follows the content
 

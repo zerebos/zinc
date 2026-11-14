@@ -25,7 +25,7 @@ Before you open a pull request:
 - `dotnet build Zinc.slnx --no-incremental` has 0 warnings, and `dotnet test` passes. CI checks both.
 - If your change makes a section of `docs/architecture.md` or `docs/development.md` wrong, fix the section in the same pull request.
 - A change users would notice gets a line in `CHANGELOG.md` under `## Unreleased`.
-- Text in the app (labels, settings descriptions, notices, errors, `zn`'s output) follows [docs/ux-writing.md](docs/ux-writing.md). The README, the docs, the changelog, code comments, and commit messages follow [docs/writing.md](docs/writing.md), which shares its punctuation rules.
+- Text in the app (labels, settings descriptions, notices, errors, `zn`'s output) follows [docs/ux-writing.md](docs/ux-writing.md). The README, the docs, the changelog, code comments, and commit messages follow [docs/writing.md](docs/writing.md), which shares ux-writing.md's punctuation rules.
 - If the change touches the layout or the window's chrome, say which settings you tried it with. `docs/development.md` lists the ones that change the chrome.
 - Say what you couldn't test. Hover, the pointer's shape, and real mouse input can't be scripted, and that's fine, as long as the pull request says so.
 

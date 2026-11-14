@@ -25,9 +25,9 @@ Zinc is in alpha and free. Download the installer from the [latest release](http
 
 **Settings that explain themselves.** Zinc is configured with a `config.toml` file, but you never have to open it. The Settings window explains every setting in plain words, shows a preview as you change it, writes only the line that changed, and puts everything back with one click. About 650 color schemes come with it, along with custom shaders written for Ghostty or Shadertoy.
 
-**At home on Windows.** Mica, a tray icon, a quick terminal on a global hotkey, the Windows default terminal, a jump list, and an "Open in Zinc" entry in Explorer. Zinc finds your shells on its own, including WSL distros, Git Bash, MSYS2, the Visual Studio developer shells, and SSH hosts.
+**At home on Windows.** Zinc uses Mica, and it has a tray icon, a quick terminal on a global hotkey, the Windows default terminal, a jump list, and an "Open in Zinc" entry in Explorer. Zinc finds your shells on its own, including WSL distros, Git Bash, MSYS2, the Visual Studio developer shells, and SSH hosts.
 
-**Scriptable.** `zn`, the command-line tool, opens and arranges windows, workspaces, and panes, types into terminals and reads them, once you turn on remote control.
+**Scriptable.** `zn`, the command-line tool, opens and arranges windows, workspaces, and panes. Once you turn on remote control, it can also type into terminals and read them.
 
 ## Installing
 
@@ -47,12 +47,12 @@ The default keys follow Windows Terminal's, so `Ctrl+Shift+T` opens a tab and `A
 
 ## Known gaps
 
-- Sixel isn't supported (libghostty has no sixel API); kitty graphics animation shows the current frame only.
-- Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own line break (e.g. to fit a fixed width) is cut there.
+- Sixel isn't supported, because libghostty has no sixel API. Kitty graphics animations show only their current frame.
+- Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own line break (to fit a fixed width, for example) is cut there.
 - Default terminal mode needs Windows Terminal installed (its console host does the other half).
-- Shell integration doesn't reach a bash in WSL whose startup files replace `PROMPT_COMMAND` (a bash started directly, like Git Bash, is fine), elvish inside WSL, YSH, or xonsh; cmd reports no exit codes without Clink.
+- Shell integration doesn't reach a bash in WSL whose startup files replace `PROMPT_COMMAND` (a bash started directly, like Git Bash, is fine), elvish inside WSL, YSH, or xonsh. Without Clink, cmd reports no exit codes.
 - Git Bash and MSYS2 programs write to a console a few bytes at a time, so very large colorful output from them is slow in any Windows terminal (native programs and WSL are fine).
-- No ARM64 build yet.
+- There's no ARM64 build yet.
 
 ## Building from source
 
@@ -66,7 +66,7 @@ dotnet test
 
 ## Open-source software
 
-Zinc ships Ghostty's terminal core (libghostty-vt, with simdutf, Highway, uucode, and the Zig standard library compiled in), z2d (in the built-in glyphs), glslang and SPIRV-Cross (custom shaders), Cascadia Mono NF, iTerm2-Color-Schemes, the Windows App SDK, Win2D, Vortice.Windows, ConPTY/OpenConsole, .NET, Tomlyn, Velopack, and a Heroicons shape. Settings > About lists them with their licenses; the texts are in `Licenses\` next to `zinc.exe`.
+Zinc ships Ghostty's terminal core (libghostty-vt, with simdutf, Highway, uucode, and the Zig standard library compiled in), z2d (in the built-in glyphs), glslang and SPIRV-Cross (custom shaders), Cascadia Mono NF, iTerm2-Color-Schemes, the Windows App SDK, Win2D, Vortice.Windows, ConPTY and OpenConsole, .NET, Tomlyn, Velopack, and a Heroicons shape. Settings > About lists them with their licenses, and the license texts are in `Licenses\` next to `zinc.exe`.
 
 ## License
 

@@ -1,6 +1,6 @@
 Zinc {version}
-A native terminal for Windows, organized around how you actually work. Built on libghostty, the same
-core that powers Ghostty.
+A native terminal for Windows, organized around how you actually work. It's built on libghostty, the
+same core that powers Ghostty.
 
 Website: https://zincterminal.dev
 Source and releases: https://github.com/zerebos/zinc
@@ -38,4 +38,4 @@ GOOD TO KNOW
 REMOVING ZINC
   An installed copy: Settings > Apps > Zinc > Uninstall. It also stops Zinc starting with Windows and
   gives the default terminal back. A portable copy: delete its folder. To remove your settings and
-  logs too, delete %APPDATA%\Zinc afterwards.
+  logs too, delete %APPDATA%\Zinc afterward.

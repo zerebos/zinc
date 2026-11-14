@@ -42,7 +42,7 @@ Windows' elvish.exe starts with `-rc` and Zinc's `elvish/zinc.elv`. That script 
 
 ### What fish and nushell send
 
-Traced in Zinc with `ZINC_TRACE`:
+This is what each one sends, traced in Zinc with `ZINC_TRACE`.
 
 - **fish 4.3** (Homebrew, on Fedora in WSL) sends `133;A;click_events=1`, `133;B`, `133;C;cmdline_url=<encoded>`, `133;D;<status>`, and `7;file://host/path`. That's everything Zinc's command list needs, including the command's text.
 - **nushell 0.116** (`$env.config.shell_integration`) sends `133;A;k=i;click_events=1`, `133;P;k=r` (the right prompt), `133;B`, `133;C` with no command text, `133;D;<status>`, and a title (OSC 2). It reports the folder with OSC 7 on Linux and OSC 9;9 on Windows (its `osc7` and `osc9_9` defaults), and it draws the prompt again (A, P, and B) on every key. Zinc reads the command's text back from the input cells, so the command list works without `cmdline_url`, and the text is exact, `;` and double spaces included. nushell's OSC 633 (VS Code's protocol, whose `633;E` carries the command line) goes out only inside VS Code (`TERM_PROGRAM=vscode`), so Zinc never sees it.
@@ -65,7 +65,7 @@ Traced in Zinc with `ZINC_TRACE`:
 | String terminator | BEL for marks, and ESC\ for zsh's OSC 7 | BEL everywhere |
 | Title | Zinc sets it from the marks (`shell-titles`), with the folder at the prompt and the command while it runs, so every shell that marks gets it with no script. A title the running program sets wins. | The `title` feature in each script, with the folder at the prompt and the command while it runs |
 
-Why Zinc's marks differ:
+Zinc's marks differ from Ghostty's for these reasons.
 
 - **`cmdline_url`**: Zinc's command center, palette, and attention dots show what ran. Ghostty keeps no command history, so it doesn't need the text.
 - **Exit codes**: libghostty ignores D's status, so Zinc parses it itself (`ShellMarks.cs`) for failure bars and notifications.
@@ -94,7 +94,7 @@ The tradeoff is that a prompt whose text comes before its mark (a `Write-Host` p
 
 ## Features beyond marks
 
-Ghostty's `shell-integration-features`, with their defaults in brackets, and what Zinc does instead:
+This table lists Ghostty's `shell-integration-features`, with their defaults in brackets, and what Zinc does instead.
 
 | Feature | What it does | Zinc |
 |---|---|---|
@@ -107,7 +107,7 @@ Ghostty's `shell-integration-features`, with their defaults in brackets, and wha
 
 Both terminals use the marks to confirm closing, so closing at a prompt doesn't ask. Zinc asks only when a pane has a running command, meaning a C with no D yet (`TerminalControl.RunningCommand`).
 
-What only Zinc does:
+A few things only Zinc does.
 
 - **Standing down**: each script checks whether the prompt already sends marks or folder reports (powerlevel10k's own integration, or `133;` or `]7;` in PS1, hooks, or functions) and leaves those to it. Ghostty's scripts don't check, and powerlevel10k under Ghostty is configured through Ghostty's variables instead.
 - **A PSReadLine wrapper**: pwsh's B and C come from a `PSConsoleHostReadLine` wrapper, because a B inside the prompt string breaks PSReadLine's redraw after a failed command.
