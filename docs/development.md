@@ -5,6 +5,7 @@ This is the guide to building Zinc, running it next to an installed copy, testin
 ## What you need
 
 - Windows 10 version 2004 (build 19041) or later, or Windows 11. Zinc builds for x64 only for now, and ARM64 stays out of the solution until there's a `native/arm64` build.
+- Git on `PATH`, because the native build fetches Ghostty with it.
 - The .NET 10 SDK.
 - [Zig](https://ziglang.org) 0.16.x on `PATH`, for the native DLLs. It's the version Ghostty requires.
 - PowerShell 7.4 or later (`pwsh`), for the build scripts.
