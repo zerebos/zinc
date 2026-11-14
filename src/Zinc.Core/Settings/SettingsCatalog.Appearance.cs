@@ -26,7 +26,7 @@ public static partial class SettingsCatalog
                 Binding = Weight((c, w) => c with { BoldWeight = w }),
             },
         new("appearance", "Font", "font.ligatures", "Ligatures",
-            "Fonts that have them (Cascadia Code, JetBrains Mono, Fira Code) join =>, !=, ->, and the like into one shape. Each character keeps its own cell, and the character under the cursor isn't joined.",
+            "Fonts that have them (Cascadia Code, JetBrains Mono, Fira Code) join `=>`, `!=`, `->`, and the like into one shape. Each character keeps its own cell, and the character under the cursor isn't joined.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.FontLigatures, (c, v) => c with { FontLigatures = v }) },
         new("appearance", "Font", "font.fallback", "Fallback fonts",
             "Zinc tries these fonts in order for characters your font lacks, before Windows picks one. Separate them with commas.",

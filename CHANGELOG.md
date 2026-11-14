@@ -14,6 +14,7 @@ made from.
 - Zinc is now licensed under Apache-2.0. `Settings > About > Open-source software` lists Zinc's own license first.
 - The full list of settings and actions is now on [zincterminal.dev](https://zincterminal.dev/docs/config) instead of in the README, and a new `config.toml` points there. `zn`'s message for an unknown action points to `Settings > Keyboard`.
 - Setting descriptions, command palette entries, notifications, config warnings, and `zn`'s messages are worded more clearly. Config warnings quote what you wrote, and a wrong choice lists the values the setting takes.
+- Settings descriptions show what you'd type in `config.toml`, like `45s` or `~/.ssh/config`, in a code font.
 - Discovered SSH hosts are named like "prod (SSH)" instead of "SSH - prod". Saved workspaces still find them.
 
 ### Fixed

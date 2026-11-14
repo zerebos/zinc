@@ -352,6 +352,7 @@ public sealed partial class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
             StartupInput = _startupInput,
+            ProfileNames = () => _config.VisibleProfiles.Select(p => (p.Id, p.Name)),
         };
         return new TerminalTab(profile, command, workingDirectory, control);
     }

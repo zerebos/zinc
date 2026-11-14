@@ -32,13 +32,13 @@ internal sealed partial class SettingsWindow
     {
         var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         static bool All(string text, IEnumerable<string> words) => words.All(w => text.Contains(w, StringComparison.OrdinalIgnoreCase));
-        static string Text(SettingDef s) => $"{s.Label} {s.Description} {s.Key} {s.Group} {SectionTitle(s.Section)}";
+        static string Text(SettingDef s) => $"{s.Label} {CodeText.Plain(s.Description)} {s.Key} {s.Group} {SectionTitle(s.Section)}";
 
         // Matching folds with a title of their own (like "Pane style") show whole, and matching settings show on their
         // own, each under the section it lives in. A setting inside a matching fold shows only in that fold.
         static string SectionOf(SettingFold fold) => SettingsCatalog.Find(fold.Children[0])!.Section;
         var folds = SettingsCatalog.Folds
-            .Where(f => f.Title != null && FoldFor(f.Children[0]) == f && All($"{f.Title} {f.Description} {SectionTitle(SectionOf(f))}", words))
+            .Where(f => f.Title != null && FoldFor(f.Children[0]) == f && All($"{f.Title} {CodeText.Plain(f.Description ?? "")} {SectionTitle(SectionOf(f))}", words))
             .ToList();
         var inFolds = folds.SelectMany(f => f.Children).ToHashSet();
         var matching = ShownSettings.Where(s => !inFolds.Contains(s.Key) && All(Text(s), words)).ToList();

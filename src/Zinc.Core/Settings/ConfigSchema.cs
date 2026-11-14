@@ -115,7 +115,7 @@ public static class ConfigSchema
         schema["title"] = s.Label;
         if (s.Description.Length > 0)
         {
-            schema["description"] = s.Description;
+            Describe(schema, s.Description);
         }
 
         if (s.Default is { } value)
@@ -202,9 +202,15 @@ public static class ConfigSchema
 
     private static JsonObject Ref(string definition) => new() { ["$ref"] = $"#/definitions/{definition}" };
 
+    // Editors that read Markdown (VS Code's markdownDescription) show the code spans, and the rest get plain text.
     private static JsonObject Describe(JsonObject schema, string description)
     {
-        schema["description"] = description;
+        schema["description"] = CodeText.Plain(description);
+        if (description.Contains('`'))
+        {
+            schema["markdownDescription"] = description;
+        }
+
         return schema;
     }
 

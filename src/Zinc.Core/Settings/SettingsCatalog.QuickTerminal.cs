@@ -5,7 +5,7 @@ public static partial class SettingsCatalog
     /// <summary>The settings in the Quick terminal section, in the order the window shows them.</summary>
     private static SettingDef[] QuickSettings() =>
     [
-        new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides the quick terminal from anywhere, for example win+grave or ctrl+alt+t.", SettingKind.Text)
+        new("quick", "Summon", "quick-terminal.hotkey", "Hotkey", "Shows and hides the quick terminal from anywhere, for example `win+grave` or `ctrl+alt+t`.", SettingKind.Text)
             {
                 Binding = Bind.Custom(
                     (c, v) => v is string s && Config.TryHotkey(s) ? Quick(c, q => q with { Hotkey = s }) : null,
@@ -22,7 +22,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<QuickTerminalScreen>((c, v) => Quick(c, q => q with { Screen = v })),
             },
         new("quick", "Placement", "quick-terminal.size", "Size",
-            "Sets the quick terminal's size along its edge, as a percentage or in pixels (50%, 600px). When empty, the size is 50%, or 70% by 60% at \"Center\".", SettingKind.Text)
+            "Sets the quick terminal's size along its edge, as a percentage or in pixels (`50%`, `600px`). When empty, the size is 50%, or 70% by 60% at \"Center\".", SettingKind.Text)
             {
                 Placeholder = "50%",
                 DefaultText = "50%, or 70% by 60% at \"Center\"",

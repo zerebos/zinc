@@ -544,6 +544,9 @@ public sealed partial class TerminalControl : UserControl
     /// animation holds the terminal at one size, so there's only the one resize. Setting false drops a request that
     /// wasn't used.
     /// </summary>
+    /// <summary>The profiles' ids and names, so an action title in the key sequence hint names a profile instead of its id.</summary>
+    public Func<IEnumerable<(string Id, string Name)>>? ProfileNames { get; init; }
+
     public bool ResizeAtOnce
     {
         get => _resizeAtOnce;

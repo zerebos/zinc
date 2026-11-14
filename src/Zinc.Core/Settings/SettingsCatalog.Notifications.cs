@@ -9,7 +9,7 @@ public static partial class SettingsCatalog
             "Says what happens when a long command finishes in a pane you weren't looking at.", SettingKind.Choice)
             { Choices = NotifyChoices, Binding = Bind.Enum<NotifyMode>((c, v) => c with { NotifyCommandFinished = v }) },
         new("notifications", "Long commands", "notify.command-finished-after", "Counts as long after",
-            "This is in seconds unless you add a unit, like 45s or 2m.", SettingKind.Text)
+            "This is in seconds unless you add a unit, like `45s` or `2m`.", SettingKind.Text)
             {
                 Placeholder = "10", NumbersAsNumbers = true,
                 Binding = Bind.Custom(

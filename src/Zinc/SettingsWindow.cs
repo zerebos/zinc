@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Zinc.Settings;
@@ -476,13 +477,17 @@ internal sealed partial class SettingsWindow : Window
     private static TextBlock GroupTitle(string title) =>
         new() { Text = title, Style = TextStyle("BodyStrongTextBlockStyle"), Margin = new Thickness(0, 18, 0, 6) };
 
-    private static TextBlock Note(string text) => new()
+    private static TextBlock Note(string text)
     {
-        Text = text,
-        Style = TextStyle("BodyTextBlockStyle"),
-        Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
-        Margin = new Thickness(2, 8, 0, 0),
-    };
+        var block = new TextBlock
+        {
+            Style = TextStyle("BodyTextBlockStyle"),
+            Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+            Margin = new Thickness(2, 8, 0, 0),
+        };
+        Fill(block, text);
+        return block;
+    }
 
     private void AboutPage()
     {
@@ -1540,16 +1545,79 @@ internal sealed partial class SettingsWindow : Window
 
     private static void SetText(TextBlock block, string text)
     {
-        block.Text = text;
+        Fill(block, text);
         block.Visibility = text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    /// <summary>Puts <paramref name="text"/> in <paramref name="block"/>, with its `code spans` in a monospace font.</summary>
+    private static void Fill(TextBlock block, string text)
+    {
+        block.TextHighlighters.Clear();
+        if (!text.Contains('`'))
+        {
+            block.Text = text;
+            return;
+        }
+
+        // A TextBlock's runs can't have a background, but a highlighter can, and it follows the text as it wraps.
+        var shade = new TextHighlighter { Background = CodeShade(block.ActualTheme), Foreground = block.Foreground };
+        block.Inlines.Clear();
+        var at = 0;
+        foreach (var (part, isCode) in CodeText.Split(text))
+        {
+            if (isCode)
+            {
+                // A narrow no-break space on each side pads the shade, so it doesn't stop at the glyphs' edges and look
+                // like a selection. Descriptions can't be selected, so the spaces never reach the clipboard.
+                // Cascadia Mono looks larger than the text at the same size, so code is drawn a touch smaller.
+                block.Inlines.Add(new Run { Text = CodePad });
+                block.Inlines.Add(new Run { Text = part, FontFamily = CodeFont, FontSize = block.FontSize * 0.9 });
+                block.Inlines.Add(new Run { Text = CodePad });
+                shade.Ranges.Add(new TextRange { StartIndex = at, Length = part.Length + 2 * CodePad.Length });
+                at += part.Length + 2 * CodePad.Length;
+            }
+            else
+            {
+                block.Inlines.Add(new Run { Text = part });
+                at += part.Length;
+            }
+        }
+
+        block.TextHighlighters.Add(shade);
+        block.ActualThemeChanged -= ShadeForTheme;
+        block.ActualThemeChanged += ShadeForTheme;
+        block.Loaded -= ShadeForTheme;
+        block.Loaded += ShadeForTheme;
+    }
+
+    // The shade comes from the block's own theme, because a brush from the app's resources follows the app's theme, not
+    // the window's. It's set again when the block joins the window or the theme changes.
+    private static void ShadeForTheme(FrameworkElement block, object _) => ShadeForTheme((object)block, null!);
+
+    private static void ShadeForTheme(object sender, RoutedEventArgs _)
+    {
+        if (sender is TextBlock block)
+        {
+            foreach (var shade in block.TextHighlighters)
+            {
+                shade.Background = CodeShade(block.ActualTheme);
+            }
+        }
+    }
+
+    private static SolidColorBrush CodeShade(ElementTheme theme) =>
+        new(theme == ElementTheme.Light ? Color.FromArgb(0x0D, 0, 0, 0) : Color.FromArgb(0x17, 0xFF, 0xFF, 0xFF));
+
+    private static readonly FontFamily CodeFont = new("Cascadia Mono, Consolas");
+
+    private const string CodePad = "\u202F"; // a narrow no-break space
 
     private static TextBlock KeyText(string key)
     {
         var text = new TextBlock
         {
             Text = key,
-            FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+            FontFamily = CodeFont,
             FontSize = 11,
             Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
             TextTrimming = TextTrimming.CharacterEllipsis,

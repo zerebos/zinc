@@ -9,7 +9,7 @@ public static partial class SettingsCatalog
             { DefaultText = "The found shell's own name, or else the profile's id" },
         new("profiles", "General", "command", "Command", "The profile's tabs run this shell or other program.", SettingKind.Text, null)
             { DefaultText = "The found shell's own command, or else PowerShell 7, else Windows PowerShell, else Command Prompt" },
-        new("profiles", "General", "working-directory", "Starting folder", "The profile's tabs start in this folder. Write ~ for your home folder, or a path, which can use %VARIABLES%.", SettingKind.Text, null)
+        new("profiles", "General", "working-directory", "Starting folder", "The profile's tabs start in this folder. Write `~` for your home folder, or a path, which can use `%VARIABLES%`.", SettingKind.Text, null)
             { Placeholder = "~", DefaultText = "Your home folder" },
         new("profiles", "General", "icon", "Icon", "The profile's tabs show this image file. Without one, they show the program's own icon.", SettingKind.Text, null)
             { DefaultText = "The program's own icon" },
@@ -25,6 +25,6 @@ public static partial class SettingsCatalog
         new("profiles", "Find shells on this PC", "discover.git-bash", "Git Bash", "", SettingKind.Toggle, true),
         new("profiles", "Find shells on this PC", "discover.msys2", "MSYS2", "", SettingKind.Toggle, true),
         new("profiles", "Find shells on this PC", "discover.visual-studio", "Visual Studio developer shells", "", SettingKind.Toggle, true),
-        new("profiles", "Find shells on this PC", "discover.ssh", "SSH hosts", "Reads hosts from ~/.ssh/config.", SettingKind.Toggle, true),
+        new("profiles", "Find shells on this PC", "discover.ssh", "SSH hosts", "Reads hosts from `~/.ssh/config`.", SettingKind.Toggle, true),
     ];
 }

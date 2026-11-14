@@ -106,7 +106,7 @@ public sealed partial class TerminalControl
             };
             var what = new TextBlock
             {
-                Text = action is { } a ? Actions.Title(a, _config.PaneTabs) : $"{_keybindings.Continuations([.. pressed, key]).Count} more…",
+                Text = action is { } a ? Actions.Title(a, _config.PaneTabs, ProfileNames?.Invoke()) : $"{_keybindings.Continuations([.. pressed, key]).Count} more…",
                 Opacity = action == null ? 0.7 : 1,
             };
             Grid.SetRow(keyText, row);
