@@ -106,7 +106,7 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
           $version = '${{ steps.version.outputs.version }}'
-          $pre = if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { @('--pre') } else { @() }
+          $pre = @(if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { '--pre' }) # @() keeps one item an array, so the splat passes it whole
           dotnet vpk upload github --repoUrl $env:REPOSITORY_URL --token $env:GH_TOKEN --outputDir dist/release `
               --tag $env:GITHUB_REF_NAME --releaseName "Zinc $version" --publish @pre
           dotnet run scripts/release/release-notes.cs -- $version --out dist/notes.md

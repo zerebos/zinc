@@ -119,7 +119,7 @@ if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
     $plain = $Version.Split('+')[0]
     $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out, because everything there is uploaded
     if (Test-Path $notesFile) { Remove-Item $notesFile }
-    $check = if ($Publish) { @('--check') } else { @() }
+    $check = @(if ($Publish) { '--check' }) # @() keeps one item an array, so the splat passes it whole
     dotnet run (Join-Path $PSScriptRoot 'release-notes.cs') -- $plain --changelog $Changelog --out $notesFile @check
     if ($LASTEXITCODE -ne 0) { throw 'The changelog is not ready for this release (see above, and this script''s help).' }
     if (Test-Path $notesFile) { $notesArgs = '--releaseNotes', $notesFile }
@@ -130,7 +130,7 @@ if ($From) {
     Write-Host "Fetching the previous release from $From ..."
     if ($From -match '^https://github\.com/[^/]+/[^/]+/?$') {
         # A pre-release's delta is made from the newest release or pre-release, and a release's from the newest release.
-        $pre = if ($Version.Split('+')[0].Contains('-')) { @('--pre') } else { @() }
+        $pre = @(if ($Version.Split('+')[0].Contains('-')) { '--pre' })
         $token = if ($env:GH_TOKEN) { @('--token', $env:GH_TOKEN) } else { @() }
         dotnet vpk download github --repoUrl $From -o $Out @pre @token
         if ($LASTEXITCODE -ne 0) { Write-Warning "No previous release came from $From, so this release has no delta package." }
