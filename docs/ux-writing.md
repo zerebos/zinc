@@ -55,6 +55,8 @@ A description says what changes for the person, not how it works inside. "When o
 
 Write descriptions as full sentences with a subject and a verb. "Expands the focused pane's scrollbar and keeps it expanded" reads better than "The focused pane's scrollbar, expanded and kept so". Join two thoughts with a word that says how they connect, like "because", "so", "which", "when", or "instead of", or split them into two sentences.
 
+A setting's description starts with a verb that says what the setting does, like "Expands the focused pane's scrollbar", or it's a sentence about the setting. An action's description, which the command palette and the key bindings show, is a command instead, like "Copy the selection.", because an action is something the person runs.
+
 Describe how Zinc behaves now, in the present tense. Leave out the history of how a setting came to be.
 
 Spell out shorthand. Write "or", not "/". Write "1 turns it off, 4.5 is the usual accessibility level, and 21 makes all text black or white", not "1: off, 4.5: usual". A rule in parentheses becomes its own sentence, as in "If the scheme doesn't set one either, it's the background color." A short parenthesis that only gives examples can stay, as in "(Cascadia Code, JetBrains Mono, Fira Code)".
@@ -118,7 +120,8 @@ Errors say what's wrong and what to do, as in "config.toml has an error. Fix it 
 - A comma before the last item in a list of three or more (the serial comma), as in "Tabs, splits, and folders".
 - An ellipsis ends a command that asks for more before it acts, as Windows does ("Browse…", "Workspace folder…"), or shows where text was cut to fit. Never use one as punctuation in a sentence.
 - Use straight double quotes for quoting labels and names ("Vintage"), and straight apostrophes (Zinc's). Never use curly quotes, and never use single quotes for quoting. (In this guide, an example that itself contains a quoted label is shown in *italics* instead.)
-- Code, keys, paths, and values appear exactly as typed, never quoted or recapitalized, like `config.toml`, Ctrl+A > C, and `C:\Users`.
+- Code, keys, paths, and values appear exactly as typed, never recapitalized, like `config.toml`, Ctrl+A > C, and `C:\Users`.
+- Product text is plain, with no code style. So when a word someone types in config.toml, like an action, a key chord, or a value such as none or last, sits in a sentence where it could read as an ordinary word, put it in double quotes, as in *A key bound to "none" goes to the program instead.* File names, paths, and keyboard shortcuts stay bare, because they can't be misread. Config warnings quote what the person wrote the same way, as in *unknown action "teleport"*.
 - Keyboard shortcuts use Windows' notation, like Ctrl+Shift+T and Win+`.
 - No em dashes and no exclamation marks.
 

@@ -72,7 +72,7 @@ public static partial class SettingsCatalog
                 ],
                 Binding = Bind.Enum<RightClick>((c, v) => c with { RightClick = v }),
             },
-        new("terminal", "Mouse", "terminal.link-click", "Open links with", "Applies to web links and files shown in the terminal.",
+        new("terminal", "Mouse", "terminal.link-click", "Open links with", "Web links and files in the terminal open with this.",
             SettingKind.Choice)
             {
                 Choices =
@@ -137,7 +137,7 @@ public static partial class SettingsCatalog
                     _ => null,
                 }, [Accepts.Choices]),
             },
-        new("terminal", "Bell", "terminal.bell", "Bell", "Applies when a program rings the bell, for example at a failed tab completion.",
+        new("terminal", "Bell", "terminal.bell", "Bell", "Says what happens when a program rings the bell, for example at a failed tab completion.",
             SettingKind.Choice)
             {
                 Choices =
@@ -165,15 +165,15 @@ public static partial class SettingsCatalog
             "Type Japanese, Chinese, Korean, and more with Windows' input methods (IME). Turn it off if keys behave oddly.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.InputMethod, (c, v) => c with { InputMethod = v }) },
         new("terminal", "Troubleshooting", "window.low-latency-drawing", "Low-latency drawing",
-            "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and tell us. Applies to terminals opened from now on.",
+            "What you type shows up about one screen refresh sooner. Turn it off if a terminal draws wrong or stops drawing, and open an issue. Applies to terminals opened from now on.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.LowLatencyDrawing, (c, v) => c with { LowLatencyDrawing = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free memory of hidden tabs",
             "Background tabs, minimized windows, and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Applies only while \"Low-latency drawing\" is on.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.FreeHiddenMemory, (c, v) => c with { FreeHiddenMemory = v }) },
-        new("terminal", "Troubleshooting", "window.free-hidden-after", "Free it after",
-            "Takes seconds, or a time with a unit, like 45s or 2m.", SettingKind.Text)
+        new("terminal", "Troubleshooting", "window.free-hidden-after", "Free memory after",
+            "The time is in seconds, or has a unit, like 45s or 2m.", SettingKind.Text)
             {
                 Placeholder = "60", NumbersAsNumbers = true,
                 Binding = Bind.Custom(

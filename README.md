@@ -17,17 +17,17 @@ Zinc is in alpha and free. Download the installer from the [latest release](http
 
 **Workspaces, panes, and tabs.** A workspace holds one project's terminals, split into panes, and each pane can hold tabs. Workspaces sit along the top or in a sidebar, and Zinc reopens all of them where you left them, with fresh shells in the same folders.
 
-**Shell integration, set up for you.** Zinc loads its integration into PowerShell, bash, zsh, fish, nushell, elvish, and cmd (fullest with Clink) without you editing a profile. Each command gets a mark in the gutter, and you can jump between prompts, copy a command's output, or click to move the cursor along the line you're typing.
+**Shell integration.** Zinc loads its integration into PowerShell, bash, zsh, fish, nushell, elvish, and cmd (fullest with Clink) without you editing a profile. Each command gets a mark in the gutter, and you can jump between prompts, copy a command's output, or click to move the cursor along the line you're typing.
 
-**Attention, in words.** A dot on the tab or workspace, and a Windows notification if you're elsewhere, says what happened: a command finished, failed, or is waiting for you.
+**Notifications.** A dot on the tab or workspace, and a Windows notification if you're elsewhere, says what happened: a command finished, failed, or is waiting for you.
 
-**Drawing you can trust.** Zinc draws box lines, blocks, Powerline separators, and Braille itself, cell by cell, so they line up in any font and at any line height. Powerline prompts work without a patched font. Emoji and CJK fall back to the right fonts, and Kitty graphics show images inline.
+**Box drawing and Powerline.** Zinc draws box lines, blocks, Powerline separators, and Braille itself, cell by cell, so they line up in any font and at any line height. Powerline prompts work without a patched font. Emoji and CJK fall back to the right fonts, and Kitty graphics show images inline.
 
-**Settings that explain themselves.** Zinc is configured with a `config.toml` file, but you never have to open it. The Settings window explains every setting in plain words, shows a preview as you change it, writes only the line that changed, and puts everything back with one click. About 650 color schemes come with it, along with custom shaders written for Ghostty or Shadertoy.
+**Settings.** Zinc is configured with a `config.toml` file, but you never have to open it. The Settings window explains every setting in plain words, shows a preview as you change it, writes only the line that changed, and puts everything back with one click. About 650 color schemes come with it, along with custom shaders written for Ghostty or Shadertoy.
 
-**At home on Windows.** Zinc uses Mica, and it has a tray icon, a quick terminal on a global hotkey, the Windows default terminal, a jump list, and an "Open in Zinc" entry in Explorer. Zinc finds your shells on its own, including WSL distros, Git Bash, MSYS2, the Visual Studio developer shells, and SSH hosts.
+**Windows integration.** Zinc uses Mica, and it has a tray icon, a quick terminal on a global hotkey, the Windows default terminal, a jump list, and an "Open in Zinc" entry in Explorer. Zinc finds your shells on its own, including WSL distros, Git Bash, MSYS2, the Visual Studio developer shells, and SSH hosts.
 
-**Scriptable.** `zn`, the command-line tool, opens and arranges windows, workspaces, and panes. Once you turn on remote control, it can also type into terminals and read them.
+**Scripting.** `zn`, the command-line tool, opens and arranges windows, workspaces, and panes. Once you turn on remote control, it can also type into terminals and read them.
 
 ## Installing
 

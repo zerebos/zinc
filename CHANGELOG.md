@@ -20,7 +20,7 @@ made from.
 ## 0.1.0-dev.428 (2026-10-22)
 
 ### New
-- Panes now move instead of jumping. They slide into place when you split, close, maximize or restore them, and when you drop one beside another, into its tabs, or into another window. Turn the animations off with `Settings > Layout > Panes > Pane animations` (`pane-animations` in `[window]`). While Windows' Animation effects are off, panes jump into place as before.
+- Panes now move instead of jumping. They slide into place when you split, close, maximize, or restore them, and when you drop one beside another, into its tabs, or into another window. Turn the animations off with `Settings > Layout > Panes > Pane animations` (`pane-animations` in `[window]`). While "Animation effects" is off in Windows Settings, panes jump into place as before.
 
 ### Changed
 - Setting descriptions, command palette entries, config warnings, and `zn`'s messages are worded more clearly. Config warnings quote names with double quotes.
@@ -29,13 +29,13 @@ made from.
 ### Fixed
 - With an animated shader, the quick terminal kept using the graphics card after you dismissed it, and so did a minimized window. Hidden or minimized, terminals now draw nothing, and they give back their graphics memory after a minute, as background tabs do (`Free memory of hidden tabs`).
 - A pane could miss a frame at startup, leaving an error in the crash log ("The last drawing session ... must be disposed").
-- Choosing a split or a new tab from a menu (a pane's ⋯ menu, a tab's or workspace's right-click menu, the terminal's right-click menu) no longer flickers focus back to the old pane for a moment before the new one takes it.
+- Choosing a split or a new tab from a menu (a pane's ⋯ menu, a tab's or workspace's right-click menu, or the terminal's right-click menu) no longer flickers focus back to the old pane for a moment before the new one takes it.
 - In the quick terminal, Maximize pane from the command palette restored the pane right away, because closing the palette moved focus to the first pane. The pane now stays maximized.
 - Dragging a pane or tab into another window made both windows flicker between active and inactive, because the window it came from took focus back. Now the window you drop it on stays active.
-- A prompt that spans the window, like powerlevel10k's frame, no longer leaves copies of itself above the new one when a pane or window gets narrower. Zinc now clears the old prompt for your shell to draw again. It clears the whole prompt in zsh, fish, nushell and elvish, and only the last line in bash, since bash draws only that line again.
+- A prompt that spans the window, like powerlevel10k's frame, no longer leaves copies of itself above the new one when a pane or window gets narrower. Zinc now clears the old prompt for your shell to draw again. It clears the whole prompt in zsh, fish, nushell, and elvish, and only the last line in bash, because bash draws only that line again.
 - The scrollbar's marks at each prompt, and the bars beside failed commands, all went away once a full-screen app like `btm` or `vim` had run, and never came back, because Zinc took the app clearing its own screen for a clear of yours. Now they stay.
-- Searching settings now finds "Pane style", "Programs using the clipboard", and "Background, text, cursor and selection", which group several settings under a title of their own.
-- Apps that draw their whole screen as one image, like `terminal-browser`, no longer flash while you move the pointer over them. Zinc showed the screen without the image while each new one arrived.
+- Searching settings now finds "Pane style", "Programs using the clipboard", and "Background, text, cursor, and selection", which group several settings under a title of their own.
+- Apps that draw their whole screen as one image, like `terminal-browser`, no longer flash while you move the pointer over them.
 - The title bar and the tab switcher no longer show a terminal's folder twice ("~\dev\zinc  ·  C:\Users\you\dev\zinc"). The folder now reads the way pane headers show it, with your home folder as ~.
 - In Settings, a config key under a setting now ends with "…" when it doesn't fit, and its tooltip shows the whole key.
 - The prompt in the Settings preview is easier to read in light color schemes.
@@ -43,82 +43,84 @@ made from.
 ## 0.1.0-dev.393 (2026-10-15)
 
 ### New
-- Panes as cards (`Settings > Layout > Panes > Pane style`). Pick Cards and each pane becomes a rounded card with a header, a gap between them, header buttons on the focused pane and a ring around it. Compact, the default, keeps panes edge to edge. The welcome page asks which you'd like. Change any of the settings under it to make your own mix:
+- Panes can now be cards (`Settings > Layout > Panes > Pane style`). Pick Cards and each pane becomes a rounded card with a header, with a gap between the cards, header buttons on the focused pane, and a ring around it. Compact, the default, keeps panes edge to edge. The welcome page asks which you'd like. Change any of the settings under Pane style to make your own mix:
   - `Gap between panes` (`pane-gap`): the space between panes. You drag the gap to resize them, as you dragged the divider.
   - `Gap at the workspace edges` (`pane-gap-edges`): the same gap around the outside, so splitting never moves a pane's outer edges.
   - `Show focus with` (`pane-focus`): a ring around the focused pane, the accent line along its top, or nothing but the dimming.
-- Pane headers now have a background of their own, a shade off the terminal's, so they don't look like empty space between split panes. Dimming an unfocused pane dims its header too. Make it subtler or stronger, the same as the terminal, or a color of your own with `Settings > Appearance > Colors > Pane headers` (`pane-header` in `[colors]`, per profile if you like, to suit each scheme). With "Same as the terminal", the other tabs take the shade instead, so the one you're on still stands out. A card's border is a step stronger than its header, so cards stand clear of the window, and has none when the header is the same as the terminal.
-- Pane header buttons (`Settings > Layout > Panes > Header buttons`, `pane-header-buttons` in `[window]`). Split, Maximize pane and a menu with the pane's other commands (including Close pane), on the right of a pane's header. Show them on every pane, on the focused pane, only while the pointer is over a header, or not at all (the default). With them, the header also shows a program's progress. With `Tabs inside panes` off, the buttons end with ×, which closes the pane, and the title no longer has its own. Without buttons, middle-click the title or use its right-click menu.
-- A tab whose program exits with an error and stays open (a dropped `ssh` session, a command profile that crashed, WSL shut down) now gets a red dot when you weren't looking, and the taskbar button flashes if Zinc is in the background. It comes first for Next tab needing attention, and a pane header with buttons shows "Exited (code N)".
-- Move a pane like a tab by dragging the empty part of its header, beside its tabs. Drop it on another pane's edge to put it there, or on its header or middle to add its tabs to that pane, in any workspace or window. Drop it on the title bar for a workspace of its own, or outside Zinc for a window of its own. A workspace's only pane takes the workspace with it. Dragging from a maximized pane shows the other panes until you let go, so you can drop it on them.
-- Rename tab. Give one tab in a pane its own name, from its right-click menu, the pane's menu or the command palette.
-- Added "Maximize pane". It fills the workspace with the focused pane and hides the others. Trigger it again, or move focus to another pane, to bring them back. Double-click the pane's header, use the command palette, or bind `maximize-pane` to a key. The other panes keep running and keep their size.
-- Added "Close pane". It closes the focused pane and every tab in it, asking once first if a command is still running in any of them. From the command palette, or bind `close-pane` to a key.
+- Pane headers now have a background of their own, a shade off the terminal's, so they don't look like empty space between split panes. Dimming an unfocused pane dims its header too. Make the header subtler or stronger, the same as the terminal, or a color of your own with `Settings > Appearance > Colors > Pane headers` (`pane-header` in `[colors]`, per profile if you like, to suit each scheme). With "Same as the terminal", the other tabs take the shade instead, so the one you're on still stands out. A card's border is a step stronger than its header, so cards stand clear of the window. A card has no border when its header is the same as the terminal.
+- Panes can now have header buttons (`Settings > Layout > Panes > Header buttons`, `pane-header-buttons` in `[window]`). Split, Maximize pane, and a menu with the pane's other commands (including Close pane) sit on the right of a pane's header. Show them on every pane, on the focused pane, only while the pointer is over a header, or not at all (the default). With the buttons, the header also shows a program's progress. With `Tabs inside panes` off, the buttons end with ×, which closes the pane, and the title no longer has its own. Without buttons, middle-click the title or use its right-click menu.
+- A tab whose program exits with an error and stays open (a dropped `ssh` session, a command profile that crashed, or WSL shutting down) now gets a red dot when you weren't looking, and the taskbar button flashes if Zinc is in the background. The tab comes first for Next tab needing attention, and a pane header with buttons shows "Exited (code N)".
+- You can move a pane like a tab by dragging the empty part of its header, beside its tabs. Drop it on another pane's edge to put it there, or on its header or middle to add its tabs to that pane, in any workspace or window. Drop it on the title bar for a workspace of its own, or outside Zinc for a window of its own. A workspace's only pane takes the workspace with it. Dragging from a maximized pane shows the other panes until you let go, so you can drop it on them.
+- You can give one tab in a pane its own name with "Rename tab…" in the tab's right-click menu, the pane's menu, or the command palette.
+- "Maximize pane" fills the workspace with the focused pane and hides the others. Run it again, or move focus to another pane, to bring them back. Double-click the pane's header, use the command palette, or bind `maximize-pane` to a key. The other panes keep running and keep their size.
+- "Close pane" closes the focused pane and every tab in it, asking once first if a command is still running in any of them. Run it from the command palette, or bind `close-pane` to a key.
 
 ### Changed
-- A pane's tabs no longer scroll out of sight when they don't fit. The inactive tabs get shorter and show only their icon and dot. Any shorter and they fold into a count ("4 of 5") that opens a dropdown menu of all of them. To keep a pane's header that calm at every width, set `Settings > Layout > Panes > Show pane tabs as` to "A menu" (`pane-tabs-as = "menu"` in `[window]`).
-- `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` gives every pane a header once a workspace is split, and `Never` hides them. A pane with one tab shows its title there instead of a single tab, also with `Always`, and with `Tabs inside panes` off: its folder and profile at the prompt, or a command once it has run for a moment. A long folder is shortened from its start, so you still see where you are (in a pane's tabs too). The old setting (`pane-tab-strip`) still works and keeps its original meaning.
+- A pane's tabs no longer scroll out of sight when they don't fit. The inactive tabs get shorter and show only their icon and dot. When even that doesn't fit, they fold into a count ("4 of 5") that opens a dropdown menu of all of them. To keep a pane's header that calm at every width, set `Settings > Layout > Panes > Show pane tabs as` to "A menu" (`pane-tabs-as = "menu"` in `[window]`).
+- `Pane tab strip` is now `Pane headers` (`Settings > Layout > Panes`, `pane-headers` in `[window]`), with two new choices. `Automatic` gives every pane a header once a workspace is split, and `Never` hides them. A pane with one tab shows its title there instead of a single tab, also with `Always` and with `Tabs inside panes` off. The title is its folder and profile at the prompt, or a command once it has run for a moment. A long folder is shortened from its start, in a pane's tabs too, so you still see where you are. The old setting (`pane-tab-strip`) still works and keeps its original meaning.
 - Dropping a tab anywhere on a pane's header now adds it to that pane's tabs. Before, a drop beside the tabs split the pane instead.
-- Closing two or more tabs at once (a pane, a workspace, a window, or Close other tabs and Close other workspaces) now asks first, even when no command is running. Turn it off with `Settings > Layout > Closing > Ask before closing`, which also stops the question about running commands.
+- Closing two or more tabs at once (a pane, a workspace, a window, or Close other tabs and Close other workspaces) now asks first, even when no command is running. Turn the question off with `Settings > Layout > Closing > Ask before closing`, which also stops the question about running commands.
 
 ### Fixed
-- Closing a workspace's last tab or pane (the tab's ×, `close-tab` or `close-pane`) closed the workspace for good: Reopen closed workspace couldn't bring it back as it does after Close workspace. Now it can.
+- Closing a workspace's last tab or pane (the tab's ×, `close-tab`, or `close-pane`) closed the workspace for good, so Reopen closed workspace couldn't bring it back as it does after Close workspace. Now it can.
 - A tab dragged while the quick terminal was showing (its hotkey pressed mid-drag) could be dropped into it. The quick terminal now takes no tabs or panes. Files still drop there as paths.
 - Closing a tab with its × could show an error ("Not in this workspace") once the pane switched to another tab. Nothing was lost, and it no longer happens.
 
 ## 0.1.0-dev.344 (2026-10-10)
 
 ### New
-- Copy with formatting: the selection's colors and styles go on the clipboard too, for pasting into a document (e.g. Word) or an email, in your terminal's colors and font. From the right-click menu or the command palette, or for every copy with `Terminal > Clipboard > Copy with formatting`.
-- With Clink, `cmd` tabs now get exit codes and the exact command text from shell integration. i.e. failed commands get their red bar, as in other shells. It keeps working with prompt themes like `oh-my-posh` or `starship`.
-- Settings backup (`Settings > About`): Export settings saves your settings, color schemes, shaders and open windows in one zip file. Import settings brings them back, on this PC or another. Your current settings are saved first, so an import can be undone.
+- Copy with formatting puts the selection's colors and styles on the clipboard too, for pasting into a document (Word, for example) or an email, in your terminal's colors and font. Run it from the right-click menu or the command palette, or turn on `Terminal > Clipboard > Copy with formatting` for every copy.
+- With Clink, `cmd` tabs now get exit codes and the exact command text from shell integration, so failed commands get their red bar, as in other shells. Shell integration keeps working with prompt themes like `oh-my-posh` or `starship`.
+- You can now back up your settings from `Settings > About`. Export settings saves your settings, color schemes, shaders, and open windows in one zip file. Import settings brings them back, on this PC or another. Your current settings are saved first, so an import can be undone.
 
 ### Changed
 - With `Tabs inside panes` off, `Settings > Keyboard` no longer shows two "New workspace" cards. The one for `Ctrl+Shift+T` (and keys for a specific profile) is now "New workspace with a profile". The workspace's folder menu and the setting for where new tabs and splits start now say they apply to splits only.
 
 ### Fixed
-- A `cmd` tab or split opened from a WSL tab accidentally started in `C:\Windows` because `cmd` can't use the distro's network-style folder. In a Windows folder (`/mnt/c/...`) it now starts in that folder (`C:\...`). in a folder only Linux has (`/home/...`), it starts in its profile's folder.
+- A `cmd` tab or split opened from a WSL tab started in `C:\Windows`, because `cmd` can't use the distro's network-style folder. In a Windows folder (`/mnt/c/...`), it now starts in that folder (`C:\...`). In a folder only Linux has (`/home/...`), it starts in its profile's folder.
 - Duplicating a tab whose shell never reported its folder, after its start folder was deleted, opened a pane that failed to start. It starts in the profile's folder now.
-- A WSL distro with its own `hostname` in `/etc/wsl.conf` had its folder ignored (as if it were another machine) when it wasn't started with `wsl.exe` from the tab itself, e.g. with `ubuntu.exe` or from a PowerShell tab. Zinc now recognizes running distros by their own names.
+- A WSL distro with its own `hostname` in `/etc/wsl.conf` had its folder ignored (as if it were another machine) when it wasn't started with `wsl.exe` from the tab itself, such as with `ubuntu.exe` or from a PowerShell tab. Zinc now recognizes running distros by their own names.
 - In zsh, after leaving an `ssh` session, the tab showed no folder until you changed folders. It shows the folder you're in again as soon as the prompt is back.
 
 ## 0.1.0-dev.330 (2026-10-07)
 
 ### New
-- Ligatures, for fonts that have them (Cascadia Code, JetBrains Mono, Fira Code): `=>` `!=` `->` `===` and the like
-  drawn as one shape, each character still in its own cell. Turn them on in `Appearance > Font > Ligatures`.
+- Zinc now draws ligatures for fonts that have them (Cascadia Code, JetBrains Mono, Fira Code). `=>` `!=` `->` `===` and
+  the like are drawn as one shape, with each character still in its own cell. Turn them on in
+  `Appearance > Font > Ligatures`.
 - Duplicate workspace (the workspace's menu) copies the whole workspace now: its splits and tabs, each where its shell
-  is, with its folder, icon, color and name.
+  is, with its folder, icon, color, and name.
 
 ### Changed
 - New tabs and splits start in the folder you're in (the focused terminal's, with shell integration), instead of the
   profile's. In a workspace with its own folder, new tabs still start there, and splits start where you are. To get
   the old behavior back, set `Layout > Panes > New tabs and splits start` to "In the profile's folder".
 - Duplicate tab and Duplicate pane start where the original is now, not where it started.
-- With Tabs inside panes off, "New tab" is called "New workspace" in menus, the command palette and Settings, since
+- With Tabs inside panes off, "New tab" is called "New workspace" in menus, the command palette, and Settings, because
   that's what it opens.
-- Some settings have clearer names in config.toml: `[window] pane-tabs`, `pane-tab-strip`, `unfocused-pane-opacity`
-  and `unfocused-pane-fill` (were `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`, `unfocused-split-fill`).
-  The old names still work.
+- Some settings have clearer names in config.toml: `[window] pane-tabs`, `pane-tab-strip`, `unfocused-pane-opacity`,
+  and `unfocused-pane-fill`. They were `tab-groups`, `group-tab-strip`, `unfocused-split-opacity`, and
+  `unfocused-split-fill`, and the old names still work.
 
 ### Fixed
 - A shell on another machine (over ssh) that reports its folder is no longer taken for a folder of the same name on
-  this PC. New tabs, splits and reopened tabs start in the folder you ran ssh from, and the tab shows the title the
+  this PC. New tabs, splits, and reopened tabs start in the folder you ran ssh from, and the tab shows the title the
   remote shell sets.
 
 ## 0.1.0-dev.318 (2026-10-05)
 
 ### New
-- A menu on right-click in a terminal: copy, paste and find; open or copy the link you clicked; copy the command you
-  clicked, or select or copy its output (with shell integration); split, new tab, close. Each item shows its key.
-  Shift+F10 or the Menu key opens it at the cursor.
-- Shell integration for cmd: jump between its prompts, select or copy a command's output, see its commands in the
-  command center and tabs follow its folder. (cmd can't report exit codes, so failed commands get no red bar.)
-- Shell integration for elvish (your `rc.elv` still runs first) and OSH (Oils) in WSL: prompts, commands with their
-  exit codes, folders.
-- Font weight and bold weight, from thin to black (`Appearance > Font`). A font without that weight shows its nearest.
-- Fallback fonts: pick the fonts for characters yours lacks (Japanese, symbols, icons), tried in order before
-  Windows chooses (`Appearance > Font`).
+- Right-clicking in a terminal opens a menu. It can copy, paste, and find, open or copy the link you clicked, copy the
+  command you clicked or select or copy its output (with shell integration), split, open a new tab, and close. Each
+  item shows its key. Shift+F10 or the Menu key opens the menu at the cursor.
+- cmd now has shell integration. You can jump between its prompts, select or copy a command's output, and see its
+  commands in the command center, and tabs follow its folder. cmd can't report exit codes, so failed commands get no
+  red bar.
+- Shell integration now covers elvish (your `rc.elv` still runs first) and OSH (Oils) in WSL, with prompts, commands
+  with their exit codes, and folders.
+- You can set the font weight and the bold weight, from thin to black (`Appearance > Font`). A font without that weight shows its nearest.
+- You can pick fallback fonts for the characters yours lacks (Japanese, symbols, icons). Zinc tries them in order
+  before Windows chooses (`Appearance > Font`).
 
 ### Changed
 - Right-click opens that menu now, instead of copying a selection or pasting. To get the old behavior back, set
@@ -126,106 +128,108 @@ made from.
 
 ### Fixed
 - Developer PowerShell for Visual Studio (and any PowerShell profile that runs a command and stays open) gets shell
-  integration now: command marks, failed-command bars, the command center's folder.
+  integration now, with command marks, failed-command bars, and the command center's folder.
 - Git Bash and MSYS2's bash keep their shell integration even when your `.bashrc` sets `PROMPT_COMMAND` outright
   (`PROMPT_COMMAND='history -a'` used to switch the marks off).
 
 ## 0.1.0-dev.306 (2026-10-05)
 
 ### New
-- New tabs pick up environment changes: a PATH an installer changed works without restarting Zinc (`Terminal > Shell > Pick up environment changes`).
-- Environment variables of your own, for every program (`Terminal > Shell`) or per profile (on its page), in
-  config.toml's `[environment]`. `%PATH%` and the like work in values; an empty value removes a variable.
-- Open links with Alt+click, or a plain click, instead of Ctrl+click (`Terminal > Mouse > Open links with`).
-- Middle-click pastes, if you turn it on (`Terminal > Mouse`).
-- A sound when a long command finishes out of view: Windows' notification sound or its beep (Notifications).
-- Turn off the question before closing or quitting while a command runs (`Layout > Closing`).
-- How far a resize key moves a pane's divider (`Layout > Panes > Resize step`).
-- Line height: more room between lines, as a percentage or in pixels (`Appearance > Font`). Box drawing still joins up.
-- Match 256 colors to the scheme: programs using the extended palette get shades made from your scheme's colors
-  (`Appearance > Colors`).
-- Open in Zinc from File Explorer: right-click a folder or a drive (`Layout > When you come back`; off by default).
+- New tabs pick up environment changes, so a PATH that an installer changed works without restarting Zinc (`Terminal > Shell > Pick up environment changes`).
+- You can set environment variables of your own, for every program (`Terminal > Shell`) or per profile (on its page),
+  in config.toml's `[environment]`. `%PATH%` and the like work in values, and an empty value removes a variable.
+- You can open links with Alt+click, or a plain click, instead of Ctrl+click (`Terminal > Mouse > Open links with`).
+- Middle-click can paste, if you turn on `Middle-click pastes` (`Terminal > Mouse`).
+- A long command that finishes out of view can play a sound, either Windows' notification sound or its beep (`Notifications > Sound`).
+- You can turn off the question before closing or quitting while a command runs (`Layout > Closing`).
+- You can set how far a resize key moves a pane's divider (`Layout > Panes > Resize step`).
+- Line height adds room between lines, as a percentage or in pixels (`Appearance > Font`). Box drawing still joins up.
+- With `Match 256 colors to the scheme` (`Appearance > Colors`), programs using the extended palette get shades made
+  from your scheme's colors.
+- You can open a folder or a drive in Zinc from File Explorer's right-click menu. The menu entry is off by default (`Layout > When you come back`).
 
 ### Changed
-- Settings: pages inside a page (a profile, color schemes, shaders, the scheme editor) show where you are in their
-  heading (`Profiles > PowerShell`); click any part to go back up, or use the back arrow in the title bar.
-- Settings: in a narrower window the sidebar folds to icons, and to a menu button when narrower still.
-- Settings: headings and text use Windows' own text styles.
+- Pages inside a Settings page (a profile, color schemes, shaders, and the scheme editor) show where you are in their
+  heading (`Profiles > PowerShell`). Click any part to go back up, or use the back arrow in the title bar.
+- In a narrower window, the Settings sidebar folds to icons, and to a menu button when narrower still.
+- Settings headings and text use Windows' own text styles.
 - The welcome window's page dots slide from page to page.
-- Workspace colors are a grid like the icons: arrow keys move between them, and screen readers name the chosen one.
-- Wording: buttons say what they do ("Delete profile", "Close workspace", "Quit Zinc", "Don't allow"), key
-  sequences show as Ctrl+A > C everywhere, and settings refer to each other by their exact names in quotes.
-- An update that's ready offers "Restart Zinc" or "Install when I quit" (it always installs when you quit).
-- A dot's meaning is in words: tab tooltips, screen readers and the tab switcher ("@") say "finished",
-  "failed (exit 1)" or "needs you". The command-finished notification reads "npm test failed (exit 1)", then where
-  and how long.
+- Workspace colors are a grid now, like the icons. Arrow keys move between them, and screen readers name the chosen one.
+- Buttons say what they do ("Delete profile", "Close workspace", "Quit Zinc", "Don't allow"), key sequences show as
+  Ctrl+A > C everywhere, and settings refer to each other by their exact names in quotes.
+- An update that's ready offers "Restart Zinc" or "Install when I quit". A ready update always installs when you quit.
+- Tab tooltips, screen readers, and the tab switcher ("@") now say what a dot means: "finished", "failed (exit 1)",
+  or "needs you". The command-finished notification reads "npm test failed (exit 1)", followed by where the command
+  ran and how long it took.
 
 ### Fixed
 - Screen readers can now find and pick workspaces in the sidebar and tabs in a pane's tab strip. Before, they
   skipped them entirely.
 - Arrow keys in the workspace icon and color choosers picked the next one and closed the menu. They move between
-  choices now; Enter, Space or a click picks.
-- Settings: the preview at the top of Appearance and profile pages lost its first lines for good when its rows got
-  taller (line height) or the window narrower. It grows to fit now, and lays itself out again at each size.
+  choices now, and Enter, Space, or a click picks one.
+- The preview at the top of the Appearance and profile pages in Settings lost its first lines for good when its rows
+  got taller (line height) or the window narrower. The preview grows to fit now, and lays itself out again at each size.
 
 ## 0.1.0-dev.282 (2026-10-05)
 
 ### New
-- A jump list: right-click Zinc's taskbar button for your recent profiles and folders, a new window, the quick
+- Zinc has a jump list. Right-click Zinc's taskbar button for your recent profiles and folders, a new window, the quick
   terminal, Settings, and reopening what you closed. Each item opens in the window you used last. The same things
   work from the command line: `zinc --profile <id>`, `--folder <path>`, `--new-window`, `--quick-terminal`,
   `--settings`, `--reopen-workspace`, `--reopen-window`.
-- Shaders have their own settings page (`Appearance > Shaders > Edit shaders`): your list, and a library of
-  Zinc's shaders, yours and the folders you add (a collection you cloned, say), each with a line about it.
-  Click one to see it in the preview (and whether it compiles), again to take it back; Add puts it in your list.
-- Color schemes have their own page too (`Appearance > Color scheme`): the scheme in use (or your light and dark
-  pair) with Edit and New scheme, and all ~650 schemes as cards you can filter by Dark, Light or Yours and search.
-  Click one to see it in the preview, again to take it back; Use puts it in place.
+- Shaders have their own settings page (`Appearance > Shaders > Edit shaders`), with your list and a library of
+  Zinc's shaders, yours, and the folders you add (a collection you cloned, say), each with a line about it.
+  Click one to see it in the preview (and whether it compiles), and click it again to take it back. Add puts it in
+  your list.
+- Color schemes have their own page too (`Appearance > Color scheme`). The page shows the scheme in use (or your light
+  and dark pair) with Edit and New scheme, and about 650 schemes as cards you can filter by Dark, Light, or Yours and
+  search. Click one to see it in the preview, and click it again to take it back. Use puts it in place.
 
 ### Changed
-- Settings: the search box is in the title bar now (Ctrl+F or F3 goes there, Esc clears it), and pages use more of
-  a wide window (up to 1000 px, as Windows Settings).
-- Input methods (IME: Japanese, Chinese, Korean…) work by default. If keys ever behave oddly, `Terminal > Troubleshooting > Input methods` turns it off.
-- Clearer wording across the app (settings, menus, notices, the palette). Some names changed:
-  - "Window glass" is now Window background (Mica, Acrylic, Clear), with Window tint and Window tint color.
-  - Palette: "Color scheme for this tab…", "Default color scheme…", "Workspace folder…", "Save tab text…",
-    "Go to workspace: …".
+- The Settings search box is in the title bar now (Ctrl+F or F3 goes there, and Esc clears it), and pages use more of
+  a wide window (up to 1000 px, as Windows Settings does).
+- Input methods (IMEs for Japanese, Chinese, Korean, and other languages) work by default. If keys ever behave oddly, `Terminal > Troubleshooting > Input methods` turns them off.
+- Wording is clearer across the app (settings, menus, notices, and the palette). Some names changed:
+  - "Window glass" is now Window background (Mica, Acrylic, or Clear), with Window tint and Window tint color.
+  - Palette entries are now "Color scheme for this tab…", "Default color scheme…", "Workspace folder…",
+    "Save tab text…", and "Go to workspace: …".
   - Tooltips show your own shortcuts.
 
 ### Fixed
-- Settings: while searching (or editing a profile or a scheme), clicking the section that was open before did
-  nothing; it goes back to that section now. Search results no longer show a section as selected.
+- While you searched Settings (or edited a profile or a scheme), clicking the section that was open before did
+  nothing. Clicking it goes back to that section now. Search results no longer show a section as selected.
 
 ## 0.1.0-dev.254 (2026-10-04)
 
 ### New
 - Zinc comes with six shaders of its own: `scanlines`, `crt`, `glow`, `phosphor` (in Lit Cell's green),
-  `cursor-glow` and `cursor-trail`. Use them by name (`[shaders] files = ["crt", "glow"]`), or pick them from
-  `Settings > Appearance > Shaders > Add`. Only `crt` and `cursor-trail` move on their own; the others cost nothing
+  `cursor-glow`, and `cursor-trail`. Use them by name (`[shaders] files = ["crt", "glow"]`), or pick them from
+  `Settings > Appearance > Shaders > Add`. Only `crt` and `cursor-trail` move on their own, so the others cost nothing
   while the terminal is idle.
-- A downloaded update says what's new in it: `Settings > About > "What's new in …"` (this file's entry for it).
+- A downloaded update shows what's new in it under `Settings > About > "What's new in …"`, which is this file's entry
+  for that version.
 
 ### Changed
-- The quick terminal (``Win+` ``) is just the terminal now: no title bar, frame or tab strip, centered on the screen,
-  fading and growing into place (`Settings > Quick terminal > Animation`). It's one terminal: splits yes, tabs and
-  workspaces no. Dismissing it gives the foreground back to the window you came from, and closing it only hides
-  it, so its shells and scrollback are still there next time.
-- Resize the quick terminal by dragging its edges. Each monitor remembers its size; double-click an edge (or run
+- The quick terminal (``Win+` ``) is just the terminal now, with no title bar, frame, or tab strip. It's centered on
+  the screen and fades and grows into place (`Settings > Quick terminal > Animation`). It's one terminal, which can
+  split but has no tabs or workspaces. Dismissing it gives the foreground back to the window you came from, and
+  closing it only hides it, so its shells and scrollback are still there next time.
+- Resize the quick terminal by dragging its edges. Each monitor remembers its size. Double-click an edge (or run
   "Reset quick terminal size") to go back to the configured one.
 
 ### Fixed
 - Alt+F4 typed an escape sequence into the terminal (and rang its bell) instead of closing the window.
 - The quick terminal came out too big, or too small, the first time it opened on a monitor with another scale.
 - Box-drawing lines (prompt frames, `─`) had a gap in every cell after a window moved to a monitor with another scale.
-- Settings: a short page (a search with few results) slid off the right side of a window wider than about 1230 px.
+- A short Settings page (a search with few results) slid off the right side of a window wider than about 1230 px.
 - Zinc could close without a word while a window was being resized, most likely when dragging fast. Resizing is also
-  lighter now: most sizes made Zinc draw every character's shape again.
+  lighter now, because Zinc no longer draws every character's shape again at most sizes.
 
 ## 0.1.0-dev.228 (2026-10-04)
 
 ### Faster
-- Japanese, Chinese, Korean and emoji draw as fast as other text: a screen full of them took ~200 ms a frame
-  (5 frames a second), now ~1 ms.
+- Japanese, Chinese, Korean, and emoji draw as fast as other text. A screen full of them took about 200 ms a frame
+  (5 frames a second), and now takes about 1 ms.
 
 ### Less graphics memory
 - Terminals with the same font share their drawn letters instead of each keeping a copy.
@@ -244,14 +248,14 @@ made from.
 ## 0.1.0-dev.221 (2026-10-03)
 
 ### New
-- Custom shaders, as in Ghostty: effects drawn over the terminal (CRT screens, glow, cursor trails), from GLSL
-  files written for Ghostty or Shadertoy. `Settings > Appearance > Shaders`, or `[shaders]` in config.toml; a
-  profile can have its own. A shader that doesn't compile is left out and a notice says why; saving a shader file
-  applies it at once.
+- Zinc supports custom shaders, as Ghostty does. They're effects drawn over the terminal (CRT screens, glow, and
+  cursor trails), from GLSL files written for Ghostty or Shadertoy. Set them in `Settings > Appearance > Shaders` or
+  `[shaders]` in config.toml, and a profile can have its own. A shader that doesn't compile is left out, and a notice
+  says why. Saving a shader file applies it at once.
 
 ### Changed
 - The installer is 49 MB instead of 85, and Zinc takes 95 MB on disk instead of 200.
-- `zn list` cuts long names, titles and folders to fit a terminal.
+- `zn list` cuts long names, titles, and folders to fit a terminal.
 - About's list of open-source software is in alphabetical order.
 
 ## 0.1.0-dev.213 (2026-10-03)
@@ -269,23 +273,23 @@ made from.
 ## 0.1.0-dev.209 (2026-10-03)
 
 ### New
-- `zn`, a command-line tool for controlling Zinc from its terminals and scripts (off until you turn on
-  `Settings > Terminal > Command line`).
+- `zn` is a new command-line tool for controlling Zinc from its terminals and scripts. It's off until you turn on
+  `Settings > Terminal > Command line`.
 - Tabs show the folder at the prompt, and the command while one runs (`shell-titles`).
 
 ### Changed
-- Low-latency drawing is on for everyone: what you type shows up about a screen refresh sooner.
+- Low-latency drawing is on for everyone, so what you type shows up about a screen refresh sooner.
 
 ### Fixed
 - A terminal could stop drawing while still on screen.
-- zsh's prompt marks could go astray; fish and nushell were handed bash and zsh settings.
+- zsh's prompt marks could go astray, and fish and nushell were handed bash and zsh settings.
 - The debug log no longer fills with missing-profile warnings.
 
 ## 0.1.0-dev.201 (2026-10-03)
 
 ### New
-- Experimental low-latency drawing (`[window] low-latency-drawing`): each terminal presents its frames as soon as
-  they're drawn.
+- Experimental low-latency drawing (`[window] low-latency-drawing`) makes each terminal show each frame as soon as
+  it's drawn.
 
 ## 0.1.0-dev.200 (2026-10-03)
 
@@ -296,12 +300,12 @@ made from.
 ## 0.1.0-dev.199 (2026-10-03)
 
 ### Fixed
-- Zinc wouldn't start on a fresh Windows install ("Unable to load DLL 'ghostty-vt'"): it now brings the Visual C++
-  runtime it needs.
+- Zinc wouldn't start on a fresh Windows install ("Unable to load DLL 'ghostty-vt'"). It starts now, because it
+  brings the Visual C++ runtime it needs.
 
 ## 0.1.0-dev.198 (2026-10-02)
 
-The first release with an installer: Zinc installs per user, keeps itself up to date (it checks once a day,
+This is the first release with an installer. Zinc installs per user, keeps itself up to date (it checks once a day,
 downloads in the background, and installs on restart or when you quit), and appears in `Settings > Apps`.
 
 Builds before this one came as zip files.

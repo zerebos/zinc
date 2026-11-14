@@ -17,7 +17,7 @@ public static partial class SettingsCatalog
         new("profile-order", "Profile order", "The menus list profiles in this order, by id.", "A list of profile ids"),
         new("environment", "Environment", "Sets environment variables for the programs Zinc starts. An empty value removes that variable.",
             "A table of names and values"),
-        new("keys", "Keys", "Binds a key chord or sequence, like ctrl+shift+t or ctrl+a > c, to the action it runs. The action none removes a binding.",
+        new("keys", "Keys", "Binds a key chord or sequence, like ctrl+shift+t or ctrl+a > c, to the action it runs. A key bound to \"none\" goes to the program instead.",
             "A table of keys and actions"),
     ];
 

@@ -50,7 +50,7 @@ internal static class Program
                 Console.Out.WriteLine($"zn {version}");
             }
 
-            Console.Error.WriteLine("Zinc isn't running.");
+            Console.Error.WriteLine("Zinc isn't running. Start Zinc, then try again.");
             return CliExit.NotRunning;
         }
 
