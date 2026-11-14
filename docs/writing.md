@@ -49,6 +49,8 @@ These keep the interface's tone, but their job is different. They explain what Z
 - **Credit Ghostty accurately.** Say "built on libghostty", "uses Ghostty's terminal engine", or "the same core that powers Ghostty". Never say "Ghostty for Windows", "a Ghostty port", or anything that suggests an official Ghostty project.
 - **The name** follows ux-writing.md's [The product's name](ux-writing.md#the-products-name), so it's "Zinc" in prose, never "Zinc Terminal".
 
+Older changelog entries can be reworded for clarity, as long as their headings stay exactly as they are, because the release tooling reads them.
+
 ## How the docs explain things
 
 ### Answer the reader's question

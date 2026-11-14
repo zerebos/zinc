@@ -23,6 +23,8 @@ Keep the small words. Write "check that the file can be opened", not "check the 
 
 Name the thing instead of "it". Write "Shows and hides the quick terminal", not "Shows and hides it". When "it" or "them" could mean more than one thing, say which.
 
+Use the same words for the same idea. When the interface already has words for something, like "Inherited" and "Changed here" for a profile's settings, use those words everywhere that idea appears.
+
 Talk to the person as "you", and call the app "Zinc". Never write "we", because Zinc speaks for itself, not for a team behind it. Most descriptions don't need either, because they start with a verb, like "Expands the focused pane's scrollbar and keeps it expanded."
 
 Use sentence case for names, buttons, section titles, and menu items. Write "Tab width mode", not "Tab Width Mode". The one exception is a window title, which follows Windows' own title case, as in "Zinc Settings".
