@@ -67,7 +67,7 @@ public sealed partial class MainWindow
 
         if (tab == null || group == null || pane == null)
         {
-            return CliReply.Fail(CliCodes.Failed, $"Window {Id} shows the new-workspace page: there's no terminal there.");
+            return CliReply.Fail(CliCodes.Failed, $"Window {Id} shows the new-workspace page, which has no terminal.");
         }
 
         switch (request.Cmd)
@@ -106,11 +106,11 @@ public sealed partial class MainWindow
             case "terminal send":
                 return pane.Control.SendText(request.Text ?? "", request.Paste)
                     ? CliReply.Done()
-                    : CliReply.Fail(CliCodes.Failed, $"Nothing runs in terminal {pane.Id} (its program ended).");
+                    : CliReply.Fail(CliCodes.Failed, $"Nothing runs in terminal {pane.Id} because its program ended.");
             case "terminal read":
                 return pane.Control.ReadText(request.Lines, request.Ansi) is { } text
                     ? new CliReply { Ok = true, Text = text }
-                    : CliReply.Fail(CliCodes.Failed, $"Terminal {pane.Id} hasn't started yet: it starts once it's shown.");
+                    : CliReply.Fail(CliCodes.Failed, $"Terminal {pane.Id} hasn't started yet. It starts once it's shown.");
             case "terminal title":
                 pane.CustomTitle = string.IsNullOrEmpty(request.Title) ? null : request.Title;
                 UpdateTitle(tab);
@@ -126,8 +126,8 @@ public sealed partial class MainWindow
             case "workspace color":
                 if (!TryWorkspaceColor(request.Color!, out var color))
                 {
-                    return CliReply.Fail(CliCodes.Usage, $"No color \"{request.Color}\": " +
-                        string.Join(", ", WorkspaceColors.All.Select(c => c.Name.ToLowerInvariant())) + ", #RRGGBB or none.");
+                    return CliReply.Fail(CliCodes.Usage, $"No color \"{request.Color}\". Choose " +
+                        string.Join(", ", WorkspaceColors.All.Select(c => c.Name.ToLowerInvariant())) + ", #RRGGBB, or none.");
                 }
 
                 SetTabColor(tab, color);
@@ -137,8 +137,8 @@ public sealed partial class MainWindow
                     : WorkspaceIcons.All.FirstOrDefault(i => i.Name.Equals(request.Icon, StringComparison.OrdinalIgnoreCase)).Name;
                 if (icon == null && !request.Icon.Equals("none", StringComparison.OrdinalIgnoreCase))
                 {
-                    return CliReply.Fail(CliCodes.Usage, $"No icon \"{request.Icon}\": " +
-                        string.Join(", ", WorkspaceIcons.All.Select(i => i.Name)) + " or none.");
+                    return CliReply.Fail(CliCodes.Usage, $"No icon \"{request.Icon}\". Choose " +
+                        string.Join(", ", WorkspaceIcons.All.Select(i => i.Name)) + ", or none.");
                 }
 
                 SetWorkspaceIcon(tab, icon);
@@ -153,14 +153,14 @@ public sealed partial class MainWindow
                 if (Actions.Parse(request.Action!, out var error) is not { } invocation)
                 {
                     return CliReply.Fail(CliCodes.Usage, $"No action \"{request.Action}\" ({error}). " +
-                        "Settings > Keyboard lists them.");
+                        "Settings > Keyboard lists the actions.");
                 }
 
                 return pane.Control.Invoke(invocation)
                     ? CliReply.Done()
                     : CliReply.Fail(CliCodes.Failed, $"\"{request.Action}\" had nothing to do in terminal {pane.Id}.");
             default:
-                return CliReply.Fail(CliCodes.Usage, $"This Zinc doesn't know \"{request.Cmd}\": is zn newer than Zinc?");
+                return CliReply.Fail(CliCodes.Usage, $"This Zinc doesn't know \"{request.Cmd}\". Is zn newer than Zinc?");
         }
     }
 
@@ -221,7 +221,7 @@ public sealed partial class MainWindow
     {
         if (!_config.Global.PaneTabs)
         {
-            return CliReply.Fail(CliCodes.Failed, "Tab groups are off ([window] pane-tabs), so a pane holds one terminal.");
+            return CliReply.Fail(CliCodes.Failed, "\"Tabs inside panes\" is off ([window] pane-tabs), so a pane holds one terminal.");
         }
 
         if (App.Instance.FindCliPane(request.ToPane!.Value) is not { Workspace: { } toTab, Pane: { } toGroup } to)
@@ -318,5 +318,5 @@ public sealed partial class MainWindow
         }
     }
 
-    private static CliReply NotClosed() => CliReply.Fail(CliCodes.Failed, "Not closed: a command is still running there, and closing was cancelled.");
+    private static CliReply NotClosed() => CliReply.Fail(CliCodes.Failed, "Nothing was closed, because a command is still running there and closing was cancelled.");
 }

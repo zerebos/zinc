@@ -73,7 +73,7 @@ public class CliTests
         Assert.Contains("isn't a side", Error("pane", "split", "sideways"));
         Assert.Contains("Unexpected", Error("pane", "split", "left", "right"));
         Assert.Contains("--size takes", Error("pane", "split", "left", "--size", "95%"));
-        Assert.Contains("Nothing after --", Error("pane", "split", "left", "--"));
+        Assert.Contains("-- needs the program to run after it", Error("pane", "split", "left", "--"));
     }
 
     [Fact]

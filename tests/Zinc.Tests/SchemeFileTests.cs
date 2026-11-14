@@ -94,7 +94,7 @@ public sealed class CustomizeSchemeTests : IDisposable
     [Fact]
     public void ANewSchemeStartsAsACopyAndCanBeDeleted()
     {
-        Assert.Equal("Give it a name.", _themes.NameProblem("  "));
+        Assert.Equal("Give the scheme a name.", _themes.NameProblem("  "));
         Assert.NotNull(_themes.NameProblem("a/b"));
         Assert.NotNull(_themes.NameProblem("light:x"));
         Assert.Equal("There's a scheme called dracula already.", _themes.NameProblem("dracula"));

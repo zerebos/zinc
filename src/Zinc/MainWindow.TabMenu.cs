@@ -50,8 +50,8 @@ public sealed partial class MainWindow
             // follow the folder.
             var what = _config.Global.PaneTabs ? "new tabs and splits" : "splits";
             current.Text = tab.Folder is { } f ? f.Path
-                : _config.Global.StartIn == NewTerminalFolder.Current ? $"No folder set: {what} start where you are"
-                : $"No folder set: {what} start in their profile's folder";
+                : _config.Global.StartIn == NewTerminalFolder.Current ? $"No folder set, so {what} start where you are"
+                : $"No folder set, so {what} start in their profile's folder";
             clear.IsEnabled = tab.Folder != null;
         };
 

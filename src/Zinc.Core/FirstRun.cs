@@ -32,7 +32,7 @@ public static class FirstRun
     public const string Template =
         "#:schema " + ConfigSchema.Url + "\n" +
         "# Zinc's settings. Changes apply when you save, and zincterminal.dev/docs/config lists every setting.\n" +
-        "# Reopen the welcome page from the command palette (Ctrl+Shift+P): Welcome…\n";
+        "# To reopen the welcome page, run Welcome from the command palette (Ctrl+Shift+P).\n";
 
     /// <summary>
     /// <paramref name="text"/> (the current config, or null for a new one) with the choices set,

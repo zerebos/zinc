@@ -63,7 +63,7 @@ internal sealed partial class SettingsWindow
     {
         var setting = SettingsCatalog.Find("shaders.files")!;
         var error = ErrorText();
-        _page.Children.Add(Note(setting.Description + " Click a shader in the library to preview it; click again to stop."));
+        _page.Children.Add(Note(setting.Description + " Click a shader in the library to preview it, and click it again to stop."));
 
         // ---- In use
         var description = DescriptionText();
@@ -87,14 +87,14 @@ internal sealed partial class SettingsWindow
             if (!_config.Global.LowLatencyDrawing)
             {
                 var off = ErrorText();
-                off.Text = "Shaders need \"Low-latency drawing\", which is off (Terminal > Troubleshooting).";
+                off.Text = "Shaders need \"Low-latency drawing\", which is off in Terminal > Troubleshooting.";
                 off.Visibility = Visibility.Visible;
                 rows.Children.Add(off);
             }
 
             if (files.Count == 0)
             {
-                rows.Children.Add(DescriptionText(profile != null && own != null ? "None in this profile." : "None yet: add some from the library below."));
+                rows.Children.Add(DescriptionText(profile != null && own != null ? "None in this profile." : "None yet. Add some from the library below."));
             }
 
             var load = ++current;
@@ -328,7 +328,7 @@ internal sealed partial class SettingsWindow
                 BorderThickness = new Thickness(1),
             };
             AutomationProperties.SetName(card, entry.Name);
-            AutomationProperties.SetHelpText(card, $"{entry.Description} Space previews; Enter adds or removes.".Trim());
+            AutomationProperties.SetHelpText(card, $"{entry.Description} Space previews it, and Enter adds or removes it.".Trim());
             ToolTipService.SetToolTip(card, entry.File);
             card.Click += (_, _) => Preview(entry);
             // Enter adds or removes, Space previews (it's a button's click), and arrows move between shaders.

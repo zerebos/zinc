@@ -76,7 +76,7 @@ internal sealed partial class SettingsWindow
             var inherited = profile == null ? [] : Own(null);
             foreach (var (name, value) in own.OrderBy(v => v.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var box = new TextBox { Text = value, PlaceholderText = "Empty: removed for these programs", FontFamily = new FontFamily("Cascadia Mono, Consolas") };
+                var box = new TextBox { Text = value, PlaceholderText = "Empty removes the variable for these programs", FontFamily = new FontFamily("Cascadia Mono, Consolas") };
                 AutomationProperties.SetName(box, $"Value of {name}");
                 void Commit()
                 {
@@ -108,7 +108,7 @@ internal sealed partial class SettingsWindow
                     VerticalAlignment = VerticalAlignment.Center,
                     TextTrimming = TextTrimming.CharacterEllipsis,
                 };
-                ToolTipService.SetToolTip(shown, "Every profile gets this (Terminal > Shell); add it here to change it for this profile.");
+                ToolTipService.SetToolTip(shown, "Every profile gets this variable from Terminal > Shell. Add the variable here to change it for this profile.");
                 rows.Children.Add(Row(NameText(name, true), shown, null));
             }
         }
@@ -150,8 +150,8 @@ internal sealed partial class SettingsWindow
         }
 
         var description = DescriptionText(profile == null
-            ? "Set for every program Zinc starts. %NAME% uses a variable's value (PATH = %PATH%;C:\\tools); an empty value removes one."
-            : "Set for this profile's programs, on top of every profile's. %NAME% uses a variable's value; an empty value removes one.");
+            ? "Zinc sets these for every program it starts. %NAME% uses a variable's value, as in PATH = %PATH%;C:\\tools. An empty value removes a variable."
+            : "Zinc sets these for this profile's programs, on top of every profile's. %NAME% uses a variable's value. An empty value removes a variable.");
         var text = new StackPanel
         {
             Spacing = 1,

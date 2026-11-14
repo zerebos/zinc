@@ -145,7 +145,7 @@ public partial class App
         : _config.FindProfile(name) ?? _config.Profiles.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
 
     internal static CliReply NoProfile(string name) =>
-        CliReply.Fail(CliCodes.Usage, $"No profile \"{name}\". Settings > Profiles lists them; use a profile's id (wsl:Fedora) or name.");
+        CliReply.Fail(CliCodes.Usage, $"No profile \"{name}\". Settings > Profiles lists the profiles. Use a profile's id (wsl:Fedora) or name.");
 
     /// <summary>
     /// What a command acts on. That's the thing its flag names (a window, workspace or pane brings its focused parts
@@ -209,7 +209,7 @@ public partial class App
         : request.Pane is { } p ? $"No pane {p}. zn list shows the open ones."
         : request.Workspace is { } s ? $"No workspace {s}. zn list shows the open ones."
         : request.Window is { } w ? $"No window {w}. zn list shows the open ones."
-        : request.Caller is { } c ? $"zn's terminal ({c}) isn't in this Zinc. Name one with --terminal; zn list shows them."
+        : request.Caller is { } c ? $"zn's terminal ({c}) isn't in this Zinc. Name one with --terminal. zn list shows the open ones."
         : "No window is open. zn window new opens one.";
 
     /// <summary>"pane 3 in window 1": what a command from outside Zinc acted on.</summary>

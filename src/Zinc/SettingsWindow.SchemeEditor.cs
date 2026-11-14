@@ -29,8 +29,8 @@ internal sealed partial class SettingsWindow
         ("foreground", "Text", "Text in the default color."),
         ("cursor-color", "Cursor", ""),
         ("cursor-text", "Cursor text", "The character under a block cursor."),
-        ("selection-background", "Selection", "Behind selected text (not set: selection inverts the colors)."),
-        ("selection-foreground", "Selected text", "Not set: selected text keeps its color."),
+        ("selection-background", "Selection", "Behind selected text. When this color isn't set, selection inverts the colors."),
+        ("selection-foreground", "Selected text", "When this color isn't set, selected text keeps its own color."),
     ];
 
     /// <summary>
@@ -123,7 +123,7 @@ internal sealed partial class SettingsWindow
         if (replaces)
         {
             var original = new Button { Content = "Restore the original" };
-            ToolTipService.SetToolTip(original, $"Deletes your copy: {name} as Zinc comes with it is used again.");
+            ToolTipService.SetToolTip(original, $"Deletes your copy, so the {name} that comes with Zinc is used again.");
             original.Click += (_, _) =>
             {
                 try
@@ -193,7 +193,7 @@ internal sealed partial class SettingsWindow
             MaxWidth = 260,
             Visibility = Visibility.Collapsed,
         };
-        var use = new CheckBox { Content = "Use it now", IsChecked = true };
+        var use = new CheckBox { Content = "Use the new scheme now", IsChecked = true };
         var create = new Button { Content = "Create", Style = (Style)Application.Current.Resources["AccentButtonStyle"] };
         var intro = new TextBlock { TextWrapping = TextWrapping.Wrap, MaxWidth = 260 };
         // "Start from" is shown when the caller lists schemes. It's a search box filled in with the suggested scheme, and
@@ -224,8 +224,8 @@ internal sealed partial class SettingsWindow
         flyout.Opening += (_, _) =>
         {
             intro.Text = sources == null
-                ? $"A copy of {from()} to change as you like, yours in the themes folder."
-                : "A copy of a scheme to change as you like, yours in the themes folder.";
+                ? $"Makes a copy of {from()} in the themes folder, yours to change as you like."
+                : "Makes a copy of a scheme in the themes folder, yours to change as you like.";
             if (sources != null)
             {
                 names = sources();
@@ -269,7 +269,7 @@ internal sealed partial class SettingsWindow
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                problem.Text = $"Couldn't save it: {ex.Message}";
+                problem.Text = $"Couldn't save the scheme: {ex.Message}";
                 problem.Visibility = Visibility.Visible;
                 return;
             }
@@ -335,7 +335,7 @@ internal sealed partial class SettingsWindow
             {
                 XamlRoot = Content.XamlRoot,
                 Title = $"Delete {name}?",
-                Content = "Removes its file from the themes folder. Anywhere it's used goes back to the default colors.",
+                Content = "Removes the scheme's file from the themes folder. Every pane that uses the scheme goes back to the default colors.",
                 PrimaryButtonText = "Delete scheme",
                 CloseButtonText = "Cancel",
                 DefaultButton = ContentDialogButton.Close,

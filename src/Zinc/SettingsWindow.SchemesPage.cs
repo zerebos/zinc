@@ -81,7 +81,7 @@ internal sealed partial class SettingsWindow
     {
         var setting = SettingsCatalog.Find("colors.theme")!;
         var path = SchemePath(profile);
-        _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it; click again to stop."));
+        _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it, and click it again to stop."));
 
         // ---- In use: the scheme, or the pair that follows Windows' light/dark.
         var reset = ResetArrow(setting.Label, profile == null ? $"Back to Zinc's own: {ThemeLibrary.ZincScheme}" : "Back to the scheme every profile inherits");
@@ -98,9 +98,9 @@ internal sealed partial class SettingsWindow
         }
 
         var quiet = false; // showing values, not changing them
-        var (followPanel, follow) = Switch("Follow Windows light/dark");
-        _page.Children.Add(CardLayout(new TextBlock { Text = "Follow Windows light/dark" }, null,
-            DescriptionText("Two schemes: one while Windows is light, one while it's dark."), null, null, followPanel));
+        var (followPanel, follow) = Switch("Follow Windows light and dark mode");
+        _page.Children.Add(CardLayout(new TextBlock { Text = "Follow Windows light and dark mode" }, null,
+            DescriptionText("Uses two schemes, one while Windows is in light mode and one while it's in dark mode."), null, null, followPanel));
         var slots = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 4) };
         _page.Children.Add(slots);
 
@@ -404,9 +404,9 @@ internal sealed partial class SettingsWindow
                 SetText(whose, shown.ReplacesBundled ? "Your copy" : shown.Yours ? "Yours" : "");
                 ToolTipService.SetToolTip(whose, shown.ReplacesBundled ? "Your edited copy, used instead of the one Zinc comes with" : null);
                 AutomationProperties.SetName(card, shown.Name);
-                AutomationProperties.SetHelpText(card, $"{(shown.IsDark ? "Dark" : "Light")} scheme. Space previews it; Enter uses it.");
+                AutomationProperties.SetHelpText(card, $"{(shown.IsDark ? "Dark" : "Light")} scheme. Space previews it, and Enter uses it.");
                 AutomationProperties.SetName(inUseBadge, "In use");
-                var editTip = shown.Yours ? "Edit colors" : "Edit colors (makes your copy)";
+                var editTip = shown.Yours ? "Edit colors" : "Edit colors in your own copy";
                 ToolTipService.SetToolTip(edit, editTip);
                 AutomationProperties.SetName(edit, $"{editTip}: {shown.Name}");
                 Update();

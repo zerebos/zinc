@@ -26,8 +26,8 @@ internal sealed partial class SettingsWindow
 
     private static readonly (string Label, PaneStyleKind Style, string Detail)[] PaneStyles =
     [
-        ("Compact", PaneStyleKind.Compact, "Panes edge to edge, with a header only on panes with several tabs."),
-        ("Cards", PaneStyleKind.Cards, "Each pane a rounded card with a header, a gap between them, and a ring around the focused one."),
+        ("Compact", PaneStyleKind.Compact, "Panes sit edge to edge, with a header only on panes with several tabs."),
+        ("Cards", PaneStyleKind.Cards, "Each pane is a rounded card with a header, with a gap between the cards and a ring around the focused one."),
     ];
 
     /// <summary>What a style is, in one sentence (the welcome page's cards say the same).</summary>
@@ -36,7 +36,7 @@ internal sealed partial class SettingsWindow
     /// <summary>The Pane style fold's header: the style in force, a dropdown that sets all five, and an arrow back to Compact.</summary>
     private FrameworkElement PaneStyleHeader()
     {
-        var reset = ResetArrow("Pane style", "Back to Compact (removes these settings from config.toml)");
+        var reset = ResetArrow("Pane style", "Back to Compact, which removes these settings from config.toml");
         var description = DescriptionText();
         var box = new ComboBox { Width = ControlWidth };
         AutomationProperties.SetName(box, "Pane style");

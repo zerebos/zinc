@@ -159,7 +159,7 @@ public class DiscoveryTests
         });
 
         Assert.Equal(new DiscoverySettings(Ssh: false, VisualStudio: false), asked);
-        Assert.Contains("config.toml:4: unknown [discover] source 'teleporter'", config.Warnings);
+        Assert.Contains("config.toml:4: unknown [discover] source teleporter", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:5: [discover] takes"));
     }
 

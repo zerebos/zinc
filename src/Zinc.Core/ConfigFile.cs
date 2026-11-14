@@ -311,7 +311,7 @@ public sealed class ConfigFile
         {
             if (!_files.Add(System.IO.Path.GetFullPath(file)))
             {
-                _warnings.Add($"{System.IO.Path.GetFileName(file)}: included more than once; skipped");
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}: included more than once, so Zinc reads it once");
                 return;
             }
 
@@ -665,7 +665,7 @@ public sealed class ConfigFile
             var defaultProfile = profiles.FirstOrDefault(p => p.Id == defaultId) ?? profiles.FirstOrDefault(p => !p.Hidden) ?? profiles[0];
             if (defaultId != null && defaultProfile.Id != defaultId)
             {
-                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile '{defaultId}' isn't a profile; using '{defaultProfile.Id}'");
+                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile \"{defaultId}\" isn't a profile, so Zinc uses \"{defaultProfile.Id}\"");
             }
 
             var keybindings = Keybindings.Configure(keys, _warnings);
@@ -702,7 +702,7 @@ public sealed class ConfigFile
 
         private DiscoverySettings Unknown(DiscoverySettings settings, Entry e)
         {
-            _warnings.Add($"{e.Where}: unknown [discover] source '{e.Path[1]}'");
+            _warnings.Add($"{e.Where}: unknown [discover] source {e.Path[1]}");
             return settings;
         }
 

@@ -175,7 +175,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
         name = name.Trim();
         if (name.Length == 0)
         {
-            return "Give it a name.";
+            return "Give the scheme a name.";
         }
 
         if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains(':') || name.Contains(','))

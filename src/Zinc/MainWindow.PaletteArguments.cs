@@ -14,9 +14,9 @@ public sealed partial class MainWindow
         yield return Asks("Color scheme for this tab…", () => PickColorScheme(tab, tab.Active, asDefault: false));
         yield return Asks("Default color scheme…", () => PickColorScheme(tab, tab.Active, asDefault: true));
         yield return Asks("New tab running…", () => AskPaletteArgument(new PaletteArgument(
-            $"A command to run in a new {ShellName(tab.Active)} tab here, e.g. htop or npm test",
+            $"A command to run in a new {ShellName(tab.Active)} tab here, like htop or npm test",
             Submit: line => NewShellTabRunning(tab, line))));
-        yield return Asks("New tab in folder…", () => AskFolder(tab, "A folder to open a new tab in, e.g. ~/src"));
+        yield return Asks("New tab in folder…", () => AskFolder(tab, "A folder to open a new tab in, like ~/src"));
     }
 
     // ------------------------------------------------------------ color schemes
@@ -187,6 +187,6 @@ public sealed partial class MainWindow
             return;
         }
 
-        AskFolder(tab, $"No folder {typed} for {profile.Name}: try another");
+        AskFolder(tab, $"No folder {typed} for {profile.Name}. Try another one.");
     }
 }

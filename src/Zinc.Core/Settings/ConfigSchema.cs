@@ -25,7 +25,7 @@ public static class ConfigSchema
 
         definitions["environment"] = Map(SettingsCatalog.TopLevelDescription("environment"), new JsonObject { ["type"] = "string" });
 
-        var profile = Table("A profile: a shell or program, and settings of its own.",
+        var profile = Table("A profile, which is a shell or program with settings of its own.",
             SettingsCatalog.ProfileFields.Select(f => (f.Path[0], (JsonNode)Setting(f))));
         var profileProperties = (JsonObject)profile["properties"]!;
         foreach (var group in groups.Where(g => SettingsCatalog.All.First(s => s.Path[0] == g).ProfileOverridable))

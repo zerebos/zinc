@@ -16,7 +16,7 @@ namespace Zinc;
 
 /// <summary>
 /// The welcome page: shown instead of a terminal on first launch (no config file yet), and later
-/// from the palette (Welcome…). Asks how you like to work (Simple puts tabs on top, and Workspaces puts them in a
+/// from the palette (Welcome). Asks how you like to work (Simple puts tabs on top, and Workspaces puts them in a
 /// sidebar or on top), how panes look (Compact or Cards), colors and font (previewed), and the default shell. Then it
 /// raises <see cref="Finished"/> with the answers (null if it was skipped or closed) for App to write into config.toml.
 /// It's a window of its own, because its layout choice decides how the main window is built.
@@ -253,7 +253,7 @@ internal sealed partial class WelcomeWindow : Window
             Spacing = 12,
             Children =
             {
-                Note("A few choices to start with. Change them any time in Settings, or come back here: Ctrl+Shift+P, then \"Welcome…\"."),
+                Note("A few choices to start with. Change them any time in Settings, or come back here with Ctrl+Shift+P, then \"Welcome\"."),
                 new Border { Height = 8 },
                 SectionTitle("How do you like to work?"),
                 cards,
@@ -262,7 +262,7 @@ internal sealed partial class WelcomeWindow : Window
         };
         if (!_firstRun)
         {
-            page.Children.Add(Note("This applies to windows opened from now on; colors, font, and shell apply right away."));
+            page.Children.Add(Note("How you work applies to windows opened from now on. Colors, font, and shell apply right away."));
         }
 
         return (page, simple, workspaces, onRow);
@@ -547,8 +547,8 @@ internal sealed partial class WelcomeWindow : Window
             Visibility = _follow ? Visibility.Visible : Visibility.Collapsed,
             Children = { new TextBlock { Text = "Light scheme" }, lightPicker },
         };
-        var follow = new ToggleSwitch { Header = "Follow Windows light/dark", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
-        AutomationProperties.SetName(follow, "Follow Windows light/dark");
+        var follow = new ToggleSwitch { Header = "Follow Windows light and dark mode", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
+        AutomationProperties.SetName(follow, "Follow Windows light and dark mode");
         follow.Toggled += (_, _) =>
         {
             _follow = follow.IsOn;
@@ -708,7 +708,7 @@ internal sealed partial class WelcomeWindow : Window
             Children =
             {
                 SectionTitle("Default shell"),
-                Note("New tabs open with it. The others stay a click away in the ▾ menu."),
+                Note("New tabs open with this shell. The others stay a click away in the ▾ menu."),
                 shells,
             },
         };

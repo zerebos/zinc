@@ -46,19 +46,19 @@ public static class Actions
         new("find", TerminalAction.Find, Arg.None, "Find", "Open the find box."),
         new("zoom-in", TerminalAction.ZoomIn, Arg.None, "Zoom in", "Make the text 10% bigger."),
         new("zoom-out", TerminalAction.ZoomOut, Arg.None, "Zoom out", "Make the text 10% smaller."),
-        new("reset-zoom", TerminalAction.ZoomReset, Arg.None, "Reset zoom", "Back to 100%: the configured font size."),
+        new("reset-zoom", TerminalAction.ZoomReset, Arg.None, "Reset zoom", "Set the text back to 100%, the configured font size."),
         new("scroll-page-up", TerminalAction.ScrollPageUp, Arg.None, "Scroll page up", "Scroll back a page."),
         new("scroll-page-down", TerminalAction.ScrollPageDown, Arg.None, "Scroll page down", "Scroll forward a page."),
         new("scroll-to-top", TerminalAction.ScrollToTop, Arg.None, "Scroll to top", "Scroll to the start of the scrollback."),
         new("scroll-to-bottom", TerminalAction.ScrollToBottom, Arg.None, "Scroll to bottom", "Scroll to the prompt."),
         new("jump-to-prompt", TerminalAction.JumpToPrompt, Arg.PromptDirection, "Jump to prompt",
-            "Scroll to the previous or next prompt: \"jump-to-prompt previous\" / \"next\". Without prompt marks, it scrolls a line. Needs shell integration."),
+            "Scroll to the previous prompt with \"jump-to-prompt previous\", or to the next one with \"jump-to-prompt next\". Without prompt marks, the view scrolls a line. Needs shell integration."),
         new("select-output", TerminalAction.SelectOutput, Arg.None, "Select command output",
-            "Select the output of the command at the top of the view (or the last command). Needs shell integration."),
+            "Select the output of the command at the top of the view, or of the last command when the view is at the bottom. Needs shell integration."),
         new("copy-output", TerminalAction.CopyOutput, Arg.None, "Copy command output",
-            "Copy the output of the command at the top of the view (or the last command). Needs shell integration."),
+            "Copy the output of the command at the top of the view, or of the last command when the view is at the bottom. Needs shell integration."),
         new("new-tab", TerminalAction.NewTab, Arg.OptionalProfile, "New tab",
-            "Open a tab (in the focused pane, with tab groups). With a profile: that profile, by id or menu position."),
+            "Open a tab in the focused pane, or a workspace when \"Tabs inside panes\" is off. With a profile, the tab starts that profile, named by its id or its position in the menu."),
         new("new-workspace", TerminalAction.NewWorkspace, Arg.None, "New workspace", "Open a workspace with the default profile."),
         new("new-window", TerminalAction.NewWindow, Arg.None, "New window", "Open a window with the default profile."),
         new("reopen-workspace", TerminalAction.ReopenWorkspace, Arg.None, "Reopen closed workspace",
@@ -66,10 +66,10 @@ public static class Actions
         new("reopen-window", TerminalAction.ReopenWindow, Arg.None, "Reopen closed window",
             "Bring back the window closed last, where it was: its workspaces, tabs, splits, and folders."),
         new("duplicate-tab", TerminalAction.DuplicateTab, Arg.None, "Duplicate tab", "Open the focused tab's command again, next to it."),
-        new("close-tab", TerminalAction.CloseTab, Arg.None, "Close tab", "Close the focused tab (its pane goes with its last tab)."),
-        new("next-tab", TerminalAction.NextTab, Arg.None, "Next tab", "The pane's next tab, or the next workspace."),
-        new("previous-tab", TerminalAction.PreviousTab, Arg.None, "Previous tab", "The pane's previous tab, or the previous workspace."),
-        new("go-to-workspace", TerminalAction.SwitchToTab, Arg.Workspace, "Go to workspace", "Show workspace N (from 1), or \"last\"."),
+        new("close-tab", TerminalAction.CloseTab, Arg.None, "Close tab", "Close the focused tab. Closing a pane's last tab also closes the pane."),
+        new("next-tab", TerminalAction.NextTab, Arg.None, "Next tab", "Go to the focused pane's next tab, or to the next workspace when the pane has one tab."),
+        new("previous-tab", TerminalAction.PreviousTab, Arg.None, "Previous tab", "Go to the focused pane's previous tab, or to the previous workspace when the pane has one tab."),
+        new("go-to-workspace", TerminalAction.SwitchToTab, Arg.Workspace, "Go to workspace", "Show workspace N, counting from 1. \"last\" shows the last workspace."),
         new("split", TerminalAction.SplitPane, Arg.Direction, "Split", "Split the focused pane: right, down, left, or up."),
         new("duplicate-pane", TerminalAction.DuplicatePane, Arg.None, "Duplicate pane", "Split, running the focused tab's command again."),
         new("focus", TerminalAction.MoveFocus, Arg.Direction, "Focus pane", "Focus the neighboring pane: left, right, up, or down."),
@@ -78,23 +78,23 @@ public static class Actions
             "Fill the workspace with the focused pane, hiding the others. Trigger again to show them. Focusing another pane shows them too."),
         new("close-pane", TerminalAction.CloseGroup, Arg.None, "Close pane",
             "Close the focused pane and every tab in it, asking first if a command is running in any of them."),
-        new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Profile menu", "The ▾ menu of profiles."),
+        new("profile-menu", TerminalAction.OpenNewTabMenu, Arg.None, "Profile menu", "Open the ▾ menu of profiles."),
         new("command-palette", TerminalAction.OpenCommandPalette, Arg.None, "Command palette", "Search every command."),
         new("tab-switcher", TerminalAction.TabSwitcher, Arg.None, "Go to tab…",
-            "Search this window's tabs by title, folder, or running command (the palette's \"@\"); tabs with a dot come first."),
+            "Search this window's tabs by title, folder, or running command, as typing \"@\" in the palette does. Tabs with a dot come first."),
         new("next-attention", TerminalAction.NextAttention, Arg.None, "Next tab needing attention",
             "Go to the next tab with a dot: programs that exited with an error first, then failed commands, the bell, programs' notifications, and finished commands."),
         new("toggle-sidebar", TerminalAction.ToggleSidebar, Arg.OptionalSidebarMode, "Toggle sidebar",
-            "With workspace-tabs = \"left\": cycle the workspace list through full, rail, and auto-hide. \"toggle-sidebar rail\" (or auto-hide) switches between that and full."),
+            "When workspace-tabs = \"left\", cycle the workspace list through full, rail, and auto-hide. \"toggle-sidebar rail\" or \"toggle-sidebar auto-hide\" switches between that mode and full."),
         new("toggle-title-bar", TerminalAction.ToggleTitleBar, Arg.None, "Toggle title bar",
-            "With workspace-tabs = \"left\": auto-hide the title bar, or show it again."),
+            "When workspace-tabs = \"left\", auto-hide the title bar, or show the title bar again."),
         new("focus-mode", TerminalAction.FocusMode, Arg.None, "Focus mode",
-            "With workspace-tabs = \"left\": auto-hide the title bar and the workspace list; again to bring them back."),
+            "When workspace-tabs = \"left\", auto-hide the title bar and the workspace list. Trigger again to bring them back."),
         new("reload-config", TerminalAction.ReloadConfig, Arg.None, "Reload config", "Read config.toml again."),
         new("open-settings", TerminalAction.OpenSettings, Arg.None, "Settings", "Open the settings window."),
         new("quit", TerminalAction.Quit, Arg.None, "Quit Zinc", "Close every window and exit."),
         new("quit-fresh", TerminalAction.QuitFresh, Arg.None, "Quit without saving windows",
-            "Close every window and exit without saving them: next time opens a new window."),
+            "Close every window and exit without saving the windows, so Zinc starts with a new window next time."),
     ];
 
     /// <summary>Unbinds a chord in <c>[keys]</c>.</summary>
@@ -285,14 +285,14 @@ public static class Actions
 
         if (Definitions.FirstOrDefault(d => d.Name == name) is not { } def)
         {
-            error = $"unknown action '{name}'";
+            error = $"unknown action \"{name}\"";
             return null;
         }
 
         switch (def.Arg)
         {
             case Arg.None when arg.Length > 0:
-                error = $"'{name}' takes no argument";
+                error = $"\"{name}\" takes no argument";
                 return null;
             case Arg.None:
                 return new ActionInvocation(def.Action);
@@ -301,19 +301,19 @@ public static class Actions
             case Arg.CopyMode when Word(Arg.CopyMode, arg) != null:
                 return new ActionInvocation(TerminalAction.CopyIfSelection);
             case Arg.CopyMode:
-                error = $"'copy' takes nothing or \"if-selection\", not '{arg}'";
+                error = $"\"copy\" takes nothing or \"if-selection\", not \"{arg}\"";
                 return null;
             case Arg.Direction when Word(Arg.Direction, arg) is { } word && Enum.TryParse<PaneDirection>(word, true, out var dir):
                 return new ActionInvocation(def.Action, Direction: dir);
             case Arg.Direction:
-                error = $"'{name}' takes left, right, up, or down{(arg.Length > 0 ? $", not '{arg}'" : "")}";
+                error = $"\"{name}\" takes left, right, up, or down{(arg.Length > 0 ? $", not \"{arg}\"" : "")}";
                 return null;
             case Arg.Workspace when Word(Arg.Workspace, arg) != null:
                 return new ActionInvocation(def.Action, -1);
             case Arg.Workspace when int.TryParse(arg, NumberStyles.None, CultureInfo.InvariantCulture, out var n) && n >= 1:
                 return new ActionInvocation(def.Action, n - 1);
             case Arg.Workspace:
-                error = $"'{name}' takes a workspace number from 1, or \"last\"";
+                error = $"\"{name}\" takes a workspace number from 1, or \"last\"";
                 return null;
             case Arg.OptionalProfile when arg.Length == 0:
                 return new ActionInvocation(def.Action);
@@ -331,16 +331,16 @@ public static class Actions
             case Arg.OptionalSidebarMode when Config.TryMode<SidebarMode>(arg, out var mode) && mode != SidebarMode.Full:
                 return new ActionInvocation(def.Action, (int)mode);
             case Arg.OptionalSidebarMode:
-                error = $"'{name}' takes nothing, \"rail\", or \"auto-hide\", not '{arg}'";
+                error = $"\"{name}\" takes nothing, \"rail\", or \"auto-hide\", not \"{arg}\"";
                 return null;
             case Arg.PromptDirection when Word(Arg.PromptDirection, arg) is { } word:
                 return new ActionInvocation(def.Action, word == "previous" ? -1 : 1);
             case Arg.PromptDirection:
-                error = $"'{name}' takes \"previous\" or \"next\"{(arg.Length > 0 ? $", not '{arg}'" : "")}";
+                error = $"\"{name}\" takes \"previous\" or \"next\"{(arg.Length > 0 ? $", not \"{arg}\"" : "")}";
                 return null;
         }
 
-        error = $"unsupported argument for '{name}'";
+        error = $"unsupported argument for \"{name}\"";
         return null;
     }
 

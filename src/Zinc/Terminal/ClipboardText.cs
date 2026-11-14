@@ -88,7 +88,7 @@ public static partial class ClipboardText
             PasteConcern.CouldRunCommands => ($"Paste {lines} lines?",
                 "Each line runs as a command as soon as it's pasted."),
             PasteConcern.MultipleLines => ($"Paste {lines} lines?", "The program receives them as one paste."),
-            _ => ($"Paste {kb} KB?", "That's a lot of text; once it starts, it can't be stopped."),
+            _ => ($"Paste {kb} KB?", "That's a lot of text. Once the paste starts, it can't be stopped."),
         };
 
         // The first lines, as they'll arrive.

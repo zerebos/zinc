@@ -44,7 +44,7 @@ internal sealed partial class SettingsWindow
         {
             if (error != null)
             {
-                Show(error, "config.toml has an error; fix it first (see the top of the page).");
+                Show(error, "config.toml has an error. Fix it first. The error is shown at the top of this page.");
             }
 
             return false;
@@ -93,7 +93,7 @@ internal sealed partial class SettingsWindow
 
             summary.Text = files.Count == 0 ? "None" : string.Join(", ", files.Select(ShaderName));
             SetText(state, !_config.Global.LowLatencyDrawing && files.Count > 0
-                ? "Shaders need \"Low-latency drawing\", which is off (Terminal > Troubleshooting)."
+                ? "Shaders need \"Low-latency drawing\", which is off in Terminal > Troubleshooting."
                 : "");
             if (files.Count > 0 && _config.Global.LowLatencyDrawing)
             {
@@ -110,7 +110,7 @@ internal sealed partial class SettingsWindow
                 var loaded = await ShaderLoader.Load(full);
                 if (current == check && loaded.Errors.Count > 0)
                 {
-                    SetText(state, loaded.Errors.Count == 1 ? $"One doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} don't compile; \"Edit shaders\" shows why.");
+                    SetText(state, loaded.Errors.Count == 1 ? $"One shader doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} shaders don't compile. \"Edit shaders\" shows why.");
                     state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 }
             }

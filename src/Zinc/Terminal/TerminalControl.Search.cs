@@ -116,7 +116,7 @@ public sealed partial class TerminalControl
             catch (RegexMatchTimeoutException)
             {
                 _matches.Clear();
-                problem = "Pattern too slow; simplify it";
+                problem = "Pattern too slow. Try a simpler one.";
             }
         }
 

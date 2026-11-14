@@ -26,10 +26,10 @@ public static partial class SettingsCatalog
                 Binding = Weight((c, w) => c with { BoldWeight = w }),
             },
         new("appearance", "Font", "font.ligatures", "Ligatures",
-            "Fonts that have them (Cascadia Code, JetBrains Mono, Fira Code) join => != -> and the like into one shape. Each character keeps its own cell, and the character under the cursor isn't joined.",
+            "Fonts that have them (Cascadia Code, JetBrains Mono, Fira Code) join =>, !=, ->, and the like into one shape. Each character keeps its own cell, and the character under the cursor isn't joined.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.FontLigatures, (c, v) => c with { FontLigatures = v }) },
         new("appearance", "Font", "font.fallback", "Fallback fonts",
-            "For characters your font lacks, tried in order before Windows picks one. Separate them with commas.",
+            "Zinc tries these fonts in order for characters your font lacks, before Windows picks one. Separate them with commas.",
             SettingKind.Text)
             {
                 Placeholder = "Symbols Nerd Font, Noto Sans JP", PlaceholderIsExample = true, DefaultText = "None, so Windows picks",
@@ -37,7 +37,7 @@ public static partial class SettingsCatalog
                     [Accepts.Text(), Accepts.List([Accepts.Text()])], c => c.FontFallback is { Length: > 0 } fonts ? fonts : null),
             },
         new("appearance", "Font", "font.adjust-cell-height", "Line height",
-            "More room between lines, as a percentage (20%) or in pixels (2). A negative value gives less. Text stays centered.", SettingKind.Text)
+            "Adds room between lines, as a percentage (20%) or in pixels (2). A negative value gives less room. Text stays centered.", SettingKind.Text)
             {
                 Placeholder = "0", NumbersAsNumbers = true,
                 Binding = Adjustment((c, a) => c with { AdjustCellHeight = a }),
@@ -46,16 +46,16 @@ public static partial class SettingsCatalog
             "Zinc draws box lines, blocks, and Powerline shapes itself, so they join up in any font.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.BuiltinGlyphs, (c, v) => c with { BuiltinGlyphs = v }) },
         new("appearance", "Font", "font.adjust-box-thickness", "Line thickness",
-            "Thicker or thinner built-in lines, in pixels (1, -1) or as a percentage (20%).", SettingKind.Text)
+            "Makes built-in lines thicker or thinner, in pixels (1, -1) or as a percentage (20%).", SettingKind.Text)
             {
                 Placeholder = "0", NumbersAsNumbers = true,
                 Binding = Adjustment((c, a) => c with { AdjustBoxThickness = a }),
             },
         new("appearance", "Colors", "colors.theme", "Color scheme",
-            "About 650 are included. Add your own to the themes folder next to config.toml.", SettingKind.Scheme, null)
+            "About 650 schemes are included. Add your own to the themes folder next to config.toml.", SettingKind.Scheme, null)
             { DefaultText = ThemeLibrary.ZincScheme },
         new("appearance", "Colors", "colors.palette-generate", "Match 256 colors to the scheme",
-            "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme's 16, not the standard ones.",
+            "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme's 16 colors instead of the standard ones.",
             SettingKind.Toggle)
             {
                 Binding = Bind.Bool(c => c.PaletteGeneration.Generate,
@@ -74,10 +74,10 @@ public static partial class SettingsCatalog
         new("appearance", "Colors", "colors.cursor", "Cursor", "", SettingKind.Color)
             { Binding = Bind.Color((c, v) => c with { Theme = c.Theme with { Cursor = v } }) },
         new("appearance", "Colors", "colors.cursor-text", "Cursor text",
-            "The character under a block cursor. If the scheme doesn't set one either, it's the background color.", SettingKind.Color)
+            "Colors the character under a block cursor. If the scheme doesn't set one either, it's the background color.", SettingKind.Color)
             { Binding = Bind.Color((c, v) => c with { Theme = c.Theme with { CursorText = v } }) },
         new("appearance", "Colors", "colors.selection-background", "Selection",
-            "Behind selected text. If the scheme doesn't set one either, selection inverts the colors.", SettingKind.Color)
+            "Colors the background of selected text. If the scheme doesn't set one either, selection inverts the colors.", SettingKind.Color)
             { Binding = Bind.Color((c, v) => c with { Theme = c.Theme with { SelectionBackground = v } }) },
         new("appearance", "Colors", "colors.selection-foreground", "Selected text",
             "If the scheme doesn't set one either, the text keeps its color, or inverts with the selection when \"Selection\" has no color either.",
@@ -86,7 +86,7 @@ public static partial class SettingsCatalog
         // A color, or how far the made fill stands from the background (`HeaderLevel`). The window shows the
         // choices in a list with "Custom color" last, and null (Standard) is the default.
         new("appearance", "Colors", "colors.pane-header", "Pane headers",
-            "Behind pane titles and tabs. On cards, the border is a step stronger.", SettingKind.Color)
+            "Colors the row behind pane titles and tabs. On cards, the border is a step stronger.", SettingKind.Color)
         {
             Placeholder = "From the background",
             NullLabel = "Standard",
@@ -115,34 +115,34 @@ public static partial class SettingsCatalog
         new("appearance", "Readability", "colors.bold-is-bright", "Bold in bright colors",
             "Bold text in the first eight colors shows their bright versions, as older terminals did.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.BoldIsBright, (c, v) => c with { BoldIsBright = v }) },
-        new("appearance", "Readability", "colors.bold", "Bold text color", "For bold text in the default text color.", SettingKind.Color)
+        new("appearance", "Readability", "colors.bold", "Bold text color", "Colors bold text that's in the default text color.", SettingKind.Color)
             { Placeholder = "Same as the text", Binding = Bind.Color((c, v) => c with { BoldColor = v }) },
         new("appearance", "Readability", "colors.faint-opacity", "Faint text",
-            "How bright dim text is (1: as bright as other text).", SettingKind.Number)
+            "How bright dim text is. At 1, dim text is as bright as other text.", SettingKind.Number)
             {
                 Minimum = 0.1, Maximum = 1, Step = 0.05,
                 Binding = Bind.Number(c => c.FaintOpacity, (c, v) => c with { FaintOpacity = v }),
             },
-        new("appearance", "Readability", "colors.find-highlight", "Find highlight", "Behind each match of Find.", SettingKind.Color)
+        new("appearance", "Readability", "colors.find-highlight", "Find highlight", "Colors the background of each match of Find.", SettingKind.Color)
             { Placeholder = "Zinc's yellow", Binding = Bind.Color((c, v) => c with { SearchBackground = v }) },
-        new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Behind the match Find is on.", SettingKind.Color)
+        new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Colors the background of the match Find is on.", SettingKind.Color)
             { Placeholder = "Zinc's orange", Binding = Bind.Color((c, v) => c with { SearchSelectedBackground = v }) },
-        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Until a program picks its own (vim's insert mode often does).",
+        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Applies until a program picks its own shape, as vim's insert mode often does.",
             SettingKind.Choice)
             {
                 Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
                 Binding = Bind.Custom((c, v) => CursorStyle(v) is { } style ? c with { CursorStyle = style } : null, [Accepts.Choices]),
             },
-        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Until a program says otherwise.", SettingKind.Toggle)
+        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Applies until a program says otherwise.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.CursorBlink, (c, v) => c with { CursorBlink = v }) },
         new("appearance", "Cursor", "colors.cursor-opacity", "Cursor opacity",
-            "1: solid. Lower lets the character under a block cursor show in its own color.", SettingKind.Number)
+            "At 1, the cursor is solid. Lower values let the character under a block cursor show in its own color.", SettingKind.Number)
             {
                 Minimum = 0.1, Maximum = 1, Step = 0.05,
                 Binding = Bind.Number(c => c.CursorOpacity, (c, v) => c with { CursorOpacity = v }),
             },
         new("appearance", "Cursor", "terminal.cursor-style-at-prompt", "Cursor at the prompt",
-            "While the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
+            "Applies while the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
             SettingKind.Choice)
             {
                 Choices =
@@ -158,23 +158,23 @@ public static partial class SettingsCatalog
                 }, [Accepts.Choices]),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
-            "Windows, menus, and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
+            "Applies to Zinc's windows, menus, and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
-                    new("Same as Windows", "system", "Windows Settings > Personalization > Colors > Choose your mode."),
+                    new("Same as Windows", "system", "Follows Windows Settings > Personalization > Colors > Choose your mode."),
                     new("Light", "light"),
                     new("Dark", "dark"),
                 ],
                 Binding = Bind.Enum<ChromeAppearance>((c, v) => c with { Appearance = v }),
             },
         new("appearance", "Window", "window.accent", "Accent color",
-            "Selections, focus lines, switches, and buttons. Restart Zinc to apply.", SettingKind.Choice)
+            "Colors selections, focus lines, switches, and buttons. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
                     new("Zinc green", "zinc"),
-                    new("Windows' accent", "windows", "The one in Windows Settings > Personalization > Colors."),
+                    new("Windows' accent", "windows", "Uses the accent color from Windows Settings > Personalization > Colors."),
                 ],
                 Binding = Bind.Custom((c, v) => v switch
                 {
@@ -188,7 +188,7 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Mica", "mica", "Not see-through. It takes a tint from your wallpaper, as Windows apps do."),
+                    new("Mica", "mica", "Mica isn't see-through. It takes a tint from your wallpaper, as Windows apps do."),
                     new("Acrylic (frosted)", "acrylic", "The windows behind show, blurred."),
                     new("Clear", "none", "The windows behind show as they are."),
                 ],
@@ -208,7 +208,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Color((c, v) => c with { BackdropColor = v }),
             },
         new("appearance", "Background", "colors.background-opacity", "Terminal background opacity",
-            "Lower lets the window background show behind the text (1: solid). Colored cells stay solid.",
+            "At 1, the background is solid. Lower values let the window background show behind the text. Colored cells stay solid.",
             SettingKind.Number)
             {
                 Minimum = 0, Maximum = 1, Step = 0.05,
@@ -222,11 +222,11 @@ public static partial class SettingsCatalog
                 Binding = Bind.Paths(Shaders.ShaderPaths.Resolve, (c, v) => c with { ShaderFiles = v }),
             },
         new("appearance", "Shaders", "shaders.animation", "Animation",
-            "For animated shaders. The others redraw only when the terminal changes.", SettingKind.Choice)
+            "Applies to animated shaders. The others redraw only when the terminal changes.", SettingKind.Choice)
         {
             Choices =
             [
-                new("While focused", true, "Unfocused, they pause where they are. The text under them still updates."),
+                new("While focused", true, "Shaders in unfocused terminals pause where they are. The text under them still updates."),
                 new("Always", "always", "Every terminal with shaders keeps redrawing, focused or not."),
                 new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
             ],
@@ -239,12 +239,12 @@ public static partial class SettingsCatalog
                 _ => null,
             }, [Accepts.Choices]),
         },
-        new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Between the window's edge and the text.", SettingKind.Number)
+        new("appearance", "Spacing", "terminal.padding-x", "Padding left and right", "Adds space between the window's edge and the text.", SettingKind.Number)
         {
             Unit = "pt", Maximum = 100,
             Binding = Padding(c => c.PaddingLeft, (c, a, b) => c with { PaddingLeft = a, PaddingRight = b }),
         },
-        new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Between the window's edge and the text.", SettingKind.Number)
+        new("appearance", "Spacing", "terminal.padding-y", "Padding top and bottom", "Adds space between the window's edge and the text.", SettingKind.Number)
         {
             Unit = "pt", Maximum = 100,
             Binding = Padding(c => c.PaddingTop, (c, a, b) => c with { PaddingTop = a, PaddingBottom = b }),

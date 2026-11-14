@@ -131,7 +131,7 @@ public class KeySequenceTests
             [keys]
             "ctrl+shift+t>c" = "new-window"
             """);
-        Assert.Contains("config.toml:2: Ctrl+Shift+T starts key sequences now, so it no longer runs 'new-tab'", config.Warnings);
+        Assert.Contains("config.toml:2: Ctrl+Shift+T starts key sequences now, so it no longer runs \"new-tab\"", config.Warnings);
         Assert.False(config.Keybindings.TryGet(K("ctrl+shift+t"), out _));
         Assert.True(config.Keybindings.StartsSequence(K("ctrl+shift+t")));
     }
@@ -144,7 +144,7 @@ public class KeySequenceTests
             "ctrl+a>c" = "new-tab"
             "ctrl+a>c>x" = "quit"
             """);
-        Assert.Contains("config.toml:3: Ctrl+A > C > X can't be reached: Ctrl+A > C runs first", config.Warnings);
+        Assert.Contains("config.toml:3: Ctrl+A > C > X can't be reached, because Ctrl+A > C runs first", config.Warnings);
     }
 
     [Fact]

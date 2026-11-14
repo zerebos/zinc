@@ -26,7 +26,7 @@ public sealed partial class MainWindow
         if (show)
         {
             UpdateNotice.Title = $"Zinc {Updater.NewVersion} is ready";
-            UpdateNotice.Message = "Restart to update now, or it installs when you quit.";
+            UpdateNotice.Message = "Restart to update now, or the update installs when you quit.";
         }
 
         UpdateNotice.IsOpen = show;

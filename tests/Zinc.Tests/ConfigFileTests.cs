@@ -167,7 +167,7 @@ public class ConfigFileTests : IDisposable
     {
         var config = Parse("default-profile = \"nope\"\n[profile.fedora]\ncommand = \"a\"");
         Assert.Equal("fedora", config.DefaultProfile.Id);
-        Assert.Contains(config.Warnings, w => w.Contains("'nope'"));
+        Assert.Contains(config.Warnings, w => w.Contains("\"nope\""));
     }
 
     [Fact]

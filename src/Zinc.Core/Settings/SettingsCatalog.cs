@@ -152,7 +152,7 @@ public static partial class SettingsCatalog
     public static IReadOnlyDictionary<string, string> FileOnly { get; } = new Dictionary<string, string>
     {
         ["colors.palette"] = "Palette colors by number (palette.1 = \"#AC4242\") are set in config.toml.",
-        ["shaders.folders"] = "Folders of shaders to choose from. Add and remove them on the shaders page (the library's … menu).",
+        ["shaders.folders"] = "Zinc offers the shaders in these folders to choose from. Add and remove folders on the shaders page, in the library's … menu.",
     };
 
     /// <summary>The setting with config.toml path <paramref name="key"/> ("font.size"), if <see cref="All"/> has one.</summary>
@@ -178,14 +178,14 @@ public static partial class SettingsCatalog
     public static IReadOnlyList<SettingFold> Folds { get; } =
     [
         new(null, null, "font.builtin-glyphs", ["font.adjust-box-thickness"]),
-        new("Background, text, cursor, and selection", "The scheme's, unless you pick your own.", null,
+        new("Background, text, cursor, and selection", "These use the scheme's colors unless you pick your own.", null,
             ["colors.background", "colors.foreground", "colors.cursor", "colors.cursor-text", "colors.selection-background", "colors.selection-foreground"]),
         new(null, null, "window.workspace-tabs", ["window.sidebar", "window.title-bar"]),
         PaneStyle.Fold,
         new(null, null, "window.unfocused-pane-opacity", ["window.unfocused-pane-fill"]),
         new(null, null, "terminal.paste-warning", ["terminal.large-paste-warning"]),
         new(null, null, "colors.palette-generate", ["colors.palette-harmonious"]),
-        new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, neovim, and remote shells do.", null,
+        new("Programs using the clipboard", "Copying and reading with OSC 52, as tmux, Neovim, and remote shells do.", null,
             ["terminal.clipboard-write", "terminal.clipboard-read"]),
         new(null, null, "notify.command-finished", ["notify.command-finished-after", "notify.command-finished-sound"]),
         new(null, null, "window.free-hidden-memory", ["window.free-hidden-after"]),

@@ -120,7 +120,7 @@ internal static class CliServer
                 var line = await ReadLine(reader, timeout.Token);
                 var reply = line == null ? null
                     : CliProtocol.ReadRequest(line) is { } request ? await handle(request)
-                    : CliReply.Fail(CliCodes.Usage, "Zinc couldn't read that request: is zn newer than Zinc?");
+                    : CliReply.Fail(CliCodes.Usage, "Zinc couldn't read that request. zn may be newer than Zinc.");
                 if (reply != null)
                 {
                     await writer.WriteLineAsync(CliProtocol.Write(reply));

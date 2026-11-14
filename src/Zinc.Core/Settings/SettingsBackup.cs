@@ -142,14 +142,14 @@ public static partial class SettingsBackup
 
             if (!manifest && !files.Contains("config.toml"))
             {
-                return (null, "It isn't a Zinc settings backup.");
+                return (null, "The file isn't a Zinc settings backup.");
             }
 
             return (new BackupContents(files.Where(f => f != SessionEntry).ToList(), files.Contains(SessionEntry), version, made), null);
         }
         catch (InvalidDataException)
         {
-            return (null, "It isn't a zip file, or it's damaged.");
+            return (null, "The file is damaged or isn't a zip file.");
         }
     }
 

@@ -733,7 +733,7 @@ public sealed partial class TerminalControl : UserControl
             Log.Write($"pane: couldn't start {_commandLine}: {ex.Message}");
             _exited = true;
             session.WriteToScreen($"\e[0;31mCouldn't start {_commandLine}\e[0m\r\n{ex.Message}\r\n\r\n" +
-                "\e[0;2mShell commands (dir, ls, cd) need a shell: run the shell and type them there. " +
+                "\e[0;2mShell commands (dir, ls, cd) need a shell, so run the shell and type them there. " +
                 "Press any key to close.\e[0m");
         }
     }

@@ -25,7 +25,7 @@ internal sealed partial class SettingsWindow
 
     private void KeyboardPage()
     {
-        _page.Children.Add(Note("Click a key to remove it. Key sequences (Ctrl+A > C) show here; add them in config.toml."));
+        _page.Children.Add(Note("Click a key to remove it. Key sequences (Ctrl+A > C) show here too. Add them in config.toml."));
         var filter = new TextBox { PlaceholderText = "Search actions or keys", Text = _keyFilter, Margin = new Thickness(0, 12, 0, 8), Width = 360, HorizontalAlignment = HorizontalAlignment.Left };
         AutomationProperties.SetName(filter, "Search actions or keys");
         filter.TextChanged += (_, _) =>
@@ -348,9 +348,9 @@ internal sealed partial class SettingsWindow
             var keys = _config.Keybindings;
             (problem.Text, confirm.IsEnabled, confirm.Content) =
                 chord.ToConfig() == null ? ("config.toml has no name for that key, so it can't be saved here.", false, "Add")
-                : keys.StartsSequence(chord) ? ($"{chord} starts key sequences; change those in config.toml.", false, "Add")
+                : keys.StartsSequence(chord) ? ($"{chord} starts key sequences, which you change in config.toml.", false, "Add")
                 : keys.TryGet(chord, out var other) && other == current ? ("Already one of its keys.", false, "Add")
-                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other, PaneTabs)}. Replace moves it here.", true, "Replace")
+                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other, PaneTabs)}. \"Replace\" moves the key here.", true, "Replace")
                 : ("", true, (object)"Add");
         }
 

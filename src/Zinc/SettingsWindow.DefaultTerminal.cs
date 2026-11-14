@@ -30,7 +30,7 @@ internal sealed partial class SettingsWindow
         var detail = state switch
         {
             DefaultTerminal.State.NoConsoleHost =>
-                "Needs Windows Terminal: choose it as the default terminal app in Windows Settings first; Zinc then takes over from it.",
+                "Choose Windows Terminal as the default terminal app in Windows Settings first. Zinc then takes over from Windows Terminal.",
             _ => "Programs that open a console outside a terminal (a script you double-click, Run, an installer) open in a Zinc tab.",
         };
 

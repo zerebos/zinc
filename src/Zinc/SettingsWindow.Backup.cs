@@ -23,7 +23,7 @@ internal sealed partial class SettingsWindow
     private void BackupRow()
     {
         _page.Children.Add(Row("Settings backup",
-            "Your settings, color schemes, shaders, and open windows in one zip file, to keep or to take to another PC.",
+            "Your settings, color schemes, shaders, and open windows go in one zip file, to keep or to take to another PC.",
             ButtonRow(("Export settings", () => _ = ExportSettings()), ("Import settings", () => _ = ImportSettings()))));
         if (_backupStatus != null)
         {
@@ -72,7 +72,7 @@ internal sealed partial class SettingsWindow
             var leftOut = SettingsBackup.LeftOut(_config);
             Log.Write($"backup: exported {count} files to {file.Path}; left out {leftOut.Count}: {string.Join(", ", leftOut)}");
             ShowBackupStatus($"Exported {Files(count)} to {file.Path}." + (leftOut.Count == 0 ? "" :
-                $" Your settings also use files outside Zinc's settings folder, which aren't in it: {string.Join(", ", leftOut)}. " +
+                $" Your settings also use files outside Zinc's settings folder, which the zip file leaves out: {string.Join(", ", leftOut)}. " +
                 "Copy them yourself to take them to another PC."), file.Path);
         }
         catch (Exception ex)
@@ -131,12 +131,12 @@ internal sealed partial class SettingsWindow
         {
             // The import stopped partway, so some files are the backup's and the rest are not imported.
             Log.Write($"backup: import failed after {ex.Written} files: {ex}");
-            ShowBackupStatus($"The import stopped partway: {ex.Message}. Your settings from before are in " + $"{Path.GetFileName(ex.SafetyCopy)}: import that file to go back.", ex.SafetyCopy);
+            ShowBackupStatus($"The import stopped partway ({ex.Message.TrimEnd('.', ' ')}). Your settings from before are in " + $"{Path.GetFileName(ex.SafetyCopy)}. Import that file to go back.", ex.SafetyCopy);
         }
         catch (Exception ex)
         {
             Log.Write($"backup: import failed: {ex}");
-            ShowBackupStatus($"Couldn't import the settings ({ex.Message.TrimEnd('.', ' ')}). Nothing was changed: check the file can be opened, and try again.");
+            ShowBackupStatus($"Couldn't import the settings ({ex.Message.TrimEnd('.', ' ')}). Nothing was changed. Check that the file can be opened, and try again.");
         }
     }
 
@@ -148,9 +148,9 @@ internal sealed partial class SettingsWindow
         // TODO: we should do proper i18n with pluralization at some point
         var done = result.Files > 0
             ? $"Imported {Files(result.Files)}." + (result.Session ? " The windows from the backup open the next time Zinc starts." : "")
-            : result.Session ? "Imported the windows from the backup: they open the next time Zinc starts." : "Imported nothing: the backup has no settings.";
+            : result.Session ? "Imported the windows from the backup. They open the next time Zinc starts." : "Imported nothing, because the backup has no settings.";
         var skipped = result.Skipped > 0
-            ? $" {Files(result.Skipped)} in it {(result.Skipped == 1 ? "wasn't" : "weren't")} restored, as Zinc doesn't use {(result.Skipped == 1 ? "it" : "them")} (from a newer version, or not settings)."
+            ? $" {Files(result.Skipped)} in the backup {(result.Skipped == 1 ? "wasn't" : "weren't")} restored, because Zinc doesn't use {(result.Skipped == 1 ? "it" : "them")} (from a newer version, or not settings)."
             : "";
         return $"{done}{skipped} Your settings from before are in {Path.GetFileName(result.SafetyCopy)}.";
     }
@@ -173,7 +173,7 @@ internal sealed partial class SettingsWindow
         }
 
         var adds = parts.Count > 0
-            ? $" It adds {JoinAnd(parts)}, replacing yours with the same names; the others stay."
+            ? $" It also adds {JoinAnd(parts)}, which replace any of yours with the same names. The rest of yours stay."
             : "";
         var windows = contents.HasSession && keepsSessions ? " The windows in it open the next time Zinc starts." : "";
         return $"{from}It replaces your settings. They're saved first, in the backups folder next to config.toml.{adds}{windows}";
@@ -183,6 +183,6 @@ internal sealed partial class SettingsWindow
     {
         1 => parts[0],
         2 => $"{parts[0]} and {parts[1]}",
-        _ => string.Join(", ", parts[..^1]) + " and " + parts[^1],
+        _ => string.Join(", ", parts[..^1]) + ", and " + parts[^1],
     };
 }

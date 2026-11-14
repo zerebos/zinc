@@ -12,7 +12,7 @@ public static partial class SettingsCatalog
                 Choices = [new("On", "auto"), new("Off", "off")],
                 Binding = Bind.Enum<ShellIntegrationMode>((c, v) => c with { ShellIntegration = v }),
             },
-        new("terminal", "Shell", "terminal.command-marks", "Command marks", "The bar beside a command's output.", SettingKind.Choice)
+        new("terminal", "Shell", "terminal.command-marks", "Command marks", "Shows a bar beside the output of these commands.", SettingKind.Choice)
             {
                 Choices = [new("Failed commands", "failures"), new("Every command", "all"), new("None", "none")],
                 Binding = Bind.Enum<CommandMarks>((c, v) => c with { CommandMarks = v }),
@@ -34,7 +34,7 @@ public static partial class SettingsCatalog
             "Shells and programs set the tab's title (often the folder or the running command). When off, tabs show the profile's name.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.ProgramTitles, (c, v) => c with { ProgramTitles = v }) },
         new("terminal", "Shell", "terminal.shell-titles", "Folder and command as the title",
-            "The folder at the prompt, the running command otherwise. A program's own title still wins. Needs shell integration.",
+            "Shows the folder at the prompt, and the running command otherwise. A program's own title still wins. Needs shell integration.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.ShellTitles, (c, v) => c with { ShellTitles = v }) },
         new("terminal", "Scrollback", "terminal.scrollback-lines", "Scrollback lines", "How far back you can scroll.", SettingKind.Number)
         {
@@ -52,7 +52,7 @@ public static partial class SettingsCatalog
                 }, [Accepts.Choices]),
             },
         new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
-            "Characters that end a word when you double-click (space and tab always do). Empty: the ones shown.", SettingKind.Text)
+            "These characters end a word when you double-click. Space and tab always do. When this is empty, Zinc uses the characters shown.", SettingKind.Text)
             {
                 Placeholder = "'\"│`|:;,()[]{}<>$",
                 // Empty means the built-in set, so it's accepted too.
@@ -72,7 +72,7 @@ public static partial class SettingsCatalog
                 ],
                 Binding = Bind.Enum<RightClick>((c, v) => c with { RightClick = v }),
             },
-        new("terminal", "Mouse", "terminal.link-click", "Open links with", "Web links and files shown in the terminal.",
+        new("terminal", "Mouse", "terminal.link-click", "Open links with", "Applies to web links and files shown in the terminal.",
             SettingKind.Choice)
             {
                 Choices =
@@ -84,7 +84,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<LinkClick>((c, v) => c with { LinkClick = v }),
             },
         new("terminal", "Mouse", "terminal.middle-click-paste", "Middle-click pastes",
-            "Unless the program uses the mouse.", SettingKind.Toggle)
+            "Pastes the clipboard unless the program uses the mouse.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.MiddleClickPaste, (c, v) => c with { MiddleClickPaste = v }) },
         new("terminal", "Mouse", "window.focus-follows-mouse", "Focus follows mouse",
             "Moving the pointer into a pane focuses it.", SettingKind.Toggle)
@@ -95,21 +95,21 @@ public static partial class SettingsCatalog
         new("terminal", "Clipboard", "terminal.copy-formatting", "Copy with formatting",
             "Copies colors and styles too, for documents and email. Apps that take plain text still get plain text.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.CopyFormatting, (c, v) => c with { CopyFormatting = v }) },
-        new("terminal", "Clipboard", "terminal.paste-warning", "Paste warning", "Ask before pasting text with more than one line.",
+        new("terminal", "Clipboard", "terminal.paste-warning", "Paste warning", "Asks before pasting text with more than one line.",
             SettingKind.Choice)
             {
                 Binding = Bind.Enum<Terminal.PasteWarning>((c, v) => c with { PasteWarning = v }),
                 Choices =
                 [
-                    new("Automatic", "auto", "When the program would take each line as Enter and run it. A program that marks pastes (bracketed paste) gets no warning."),
+                    new("Automatic", "auto", "Warns when the program would take each line as Enter and run it. A program that marks pastes (bracketed paste) gets no warning."),
                     new("Always", "multiline", "Whenever a paste has more than one line."),
                     new("Never", "never"),
                 ],
             },
-        new("terminal", "Clipboard", "terminal.large-paste-warning", "Large pastes", "Ask before pasting more than 5 KB.",
+        new("terminal", "Clipboard", "terminal.large-paste-warning", "Large pastes", "Asks before pasting more than 5 KB.",
             SettingKind.Toggle) { Binding = Bind.Bool(c => c.LargePasteWarning, (c, v) => c with { LargePasteWarning = v }) },
         new("terminal", "Clipboard", "terminal.clipboard-write", "Programs may copy",
-            "Copying with OSC 52, as tmux, neovim, and remote shells do.", SettingKind.Toggle)
+            "Copying with OSC 52, as tmux, Neovim, and remote shells do.", SettingKind.Toggle)
             {
                 // true or false, or "allow" or "deny" as the read setting takes them.
                 Binding = Bind.Custom((c, v) => v switch
@@ -120,11 +120,11 @@ public static partial class SettingsCatalog
                 }, [Accepts.Bool], c => c.ClipboardWrite),
             },
         new("terminal", "Clipboard", "terminal.clipboard-read", "Programs reading the clipboard",
-            "Anything running, including a remote host, could read it.", SettingKind.Choice)
+            "Anything running, including a remote host, could read the clipboard.", SettingKind.Choice)
             {
                 Choices =
                 [
-                    new("Ask each time", "ask", "Allow once, for the tab, or not."),
+                    new("Ask each time", "ask", "Zinc asks whether to allow it once, for the tab, or not at all."),
                     new("Allow", "allow"),
                     new("Deny", "deny"),
                 ],
@@ -137,12 +137,12 @@ public static partial class SettingsCatalog
                     _ => null,
                 }, [Accepts.Choices]),
             },
-        new("terminal", "Bell", "terminal.bell", "Bell", "When a program rings it, e.g. at a failed tab completion.",
+        new("terminal", "Bell", "terminal.bell", "Bell", "Applies when a program rings the bell, for example at a failed tab completion.",
             SettingKind.Choice)
             {
                 Choices =
                 [
-                    new("Tab dot", "attention", "A dot on its tab, and the taskbar button flashes, when you aren't looking at that pane."),
+                    new("Tab dot", "attention", "When you aren't looking at that pane, a dot shows on its tab and the taskbar button flashes."),
                     new("Flash the pane", "flash", "Marks the tab too."),
                     new("None", "none"),
                 ],
@@ -154,11 +154,11 @@ public static partial class SettingsCatalog
             "Programs that flash the screen instead of beeping (Git Bash does) ring Zinc's bell, as set in \"Bell\".", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.ScreenFlashBell, (c, v) => c with { ScreenFlashBell = v }) },
         new("terminal", "Command line", "cli.remote-control", "Remote control",
-            "Lets zn, Zinc's command-line tool, open, arrange, and close tabs, type into them, and read them. Any program running as you could use it.",
+            "Lets zn, Zinc's command-line tool, open, arrange, and close tabs, type into them, and read them. Any program running as you could use zn.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.RemoteControl, (c, v) => c with { RemoteControl = v }) },
         new("terminal", "Command line", "cli.path", "Use zn in other terminals",
-            "Adds zn to your PATH, so other terminals find it too (Zinc's own terminals always do). Shells started from now on see it.",
+            "Adds zn to your PATH, so other terminals find zn too. Zinc's own terminals always do. Shells started from now on see the change.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.ZnOnPath, (c, v) => c with { ZnOnPath = v }) },
         new("terminal", "Troubleshooting", "terminal.input-method", "Input methods",
@@ -169,11 +169,11 @@ public static partial class SettingsCatalog
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.LowLatencyDrawing, (c, v) => c with { LowLatencyDrawing = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-memory", "Free memory of hidden tabs",
-            "Background tabs, minimized windows, and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Only with \"Low-latency drawing\".",
+            "Background tabs, minimized windows, and the dismissed quick terminal give back their graphics memory and rebuild it when you return. Turn it off if switching tabs flashes. Applies only while \"Low-latency drawing\" is on.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.FreeHiddenMemory, (c, v) => c with { FreeHiddenMemory = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-after", "Free it after",
-            "Seconds, or with a unit: 45s, 2m.", SettingKind.Text)
+            "Takes seconds, or a time with a unit, like 45s or 2m.", SettingKind.Text)
             {
                 Placeholder = "60", NumbersAsNumbers = true,
                 Binding = Bind.Custom(

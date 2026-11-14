@@ -179,8 +179,8 @@ public sealed class SettingsBackupTests : IDisposable
     [Fact]
     public void ZipsThatArentBackupsAreRefusedBeforeAnythingChanges()
     {
-        Assert.Equal("It isn't a Zinc settings backup.", SettingsBackup.Read(Zip(("readme.txt", "hi"))).Problem);
-        Assert.Equal("It isn't a zip file, or it's damaged.", SettingsBackup.Read(new MemoryStream([1, 2, 3])).Problem);
+        Assert.Equal("The file isn't a Zinc settings backup.", SettingsBackup.Read(Zip(("readme.txt", "hi"))).Problem);
+        Assert.Equal("The file is damaged or isn't a zip file.", SettingsBackup.Read(new MemoryStream([1, 2, 3])).Problem);
 
         var to = Folder("to");
         Assert.Throws<InvalidDataException>(() => SettingsBackup.Import(Zip(("../x.toml", "")), to, null, "v", Now));

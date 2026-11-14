@@ -23,7 +23,7 @@ public static class CliCommandLine
     // Options by name: what each takes and says in help.
     private static readonly Dictionary<string, string> OptionHelp = new()
     {
-        ["terminal"] = "--terminal N     acts on terminal N (ids: zn list)",
+        ["terminal"] = "--terminal N     acts on terminal N (zn list shows the ids)",
         ["pane"] = "--pane N         acts on pane N (its shown terminal)",
         ["workspace"] = "--workspace N    acts on workspace N (its focused pane and terminal)",
         ["window"] = "--window N       acts on window N (its shown workspace)",
@@ -33,11 +33,11 @@ public static class CliCommandLine
         ["size"] = "--size 30%       the new pane's share of the space",
         ["force"] = "--force          closes without asking, even with commands running",
         ["json"] = "--json           prints JSON for scripts",
-        ["paste"] = "--paste          sends it as a paste: shells insert it without running it",
+        ["paste"] = "--paste          sends the text as a paste, which shells insert without running",
         ["lines"] = "--lines N        the last N lines, scrollback included (default: the screen)",
         ["ansi"] = "--ansi           with colors and styles, as escape sequences",
-        ["to-pane"] = "--to-pane N      the pane to move it into",
-        ["to-window"] = "--to-window N    the window to move it to, or \"new\"",
+        ["to-pane"] = "--to-pane N      the pane to move the terminal into",
+        ["to-window"] = "--to-window N    the window to move the workspace to, or \"new\"",
         ["command"] = "-- COMMAND ...   runs this program instead of the profile's shell",
     };
 
@@ -60,7 +60,7 @@ public static class CliCommandLine
         new("workspace", "rename", "Names a workspace (\"\" goes back to the program's title)", "zn workspace rename NAME", Targets, "name"),
         new("workspace", "color", "Colors a workspace: red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB, or none",
             "zn workspace color COLOR", Targets, "color"),
-        new("workspace", "icon", "Gives a workspace an icon (none: the profile's icon)", "zn workspace icon NAME", Targets, "icon"),
+        new("workspace", "icon", "Gives a workspace an icon (none goes back to the profile's icon)", "zn workspace icon NAME", Targets, "icon"),
         new("workspace", "move", "Moves a workspace to another window, or a new one", "zn workspace move --to-window N|new",
             Targets + " to-window"),
         new("pane", "list", "Panes, with their terminals", "zn pane list", "json window workspace"),
@@ -68,9 +68,9 @@ public static class CliCommandLine
             Targets + " profile cwd size command", "direction"),
         new("pane", "focus", "Focuses a pane (its shown terminal)", "zn pane focus", Targets),
         new("pane", "close", "Closes a pane and all its terminals (asks first if commands are running)", "zn pane close", Targets + " force"),
-        new("terminal", "list", "Terminals: ids, titles, folders, profiles", "zn terminal list", "json window workspace pane"),
+        new("terminal", "list", "Terminals: ids, titles, folders, and profiles", "zn terminal list", "json window workspace pane"),
         new("terminal", "new", "Opens a terminal as a new tab in a pane", "zn terminal new", Targets + " profile cwd command"),
-        new("terminal", "send", "Types text into a terminal (\\r = Enter, \\e = Esc, \\t, \\n, \\xHH, \\\\; - reads stdin as is; -- before text that starts with a dash)",
+        new("terminal", "send", "Types text into a terminal, with \\r for Enter and \\e for Esc (also \\t, \\n, \\xHH, and \\\\). - reads stdin as is, and -- goes before text that starts with a dash",
             "zn terminal send TEXT|-", Targets + " paste", "text"),
         new("terminal", "read", "Prints a terminal's screen", "zn terminal read", Targets + " lines ansi"),
         new("terminal", "title", "Names a terminal's tab (\"\" goes back to the program's title)", "zn terminal title TITLE", Targets, "title"),
@@ -136,7 +136,7 @@ public static class CliCommandLine
 
                 if (i + 1 >= args.Count)
                 {
-                    return Usage("Nothing after --: give the program to run.");
+                    return Usage("-- needs the program to run after it.");
                 }
 
                 request.CommandLine = Join(args.Skip(i + 1));
@@ -194,7 +194,7 @@ public static class CliCommandLine
                         return Usage(name switch
                         {
                             "lines" => $"--lines takes a number of lines, not \"{value}\".",
-                            "to-window" => $"--to-window takes a window's number from zn list, or new; not \"{value}\".",
+                            "to-window" => $"--to-window takes a window's number from zn list, or new, not \"{value}\".",
                             _ => $"--{name} takes a number from zn list, not \"{value}\".",
                         });
                     }
@@ -287,7 +287,7 @@ public static class CliCommandLine
             case "color" or "icon" when string.IsNullOrWhiteSpace(positional):
                 return Usage(verb.Positional == "color"
                     ? "Which color? red, orange, yellow, green, teal, blue, purple, pink, #RRGGBB, or none."
-                    : "Which icon? Give its name, or none for the profile's icon. A wrong name lists them.");
+                    : "Which icon? Give its name, or none for the profile's icon. An unknown name lists the icons.");
             case "color":
                 request.Color = positional;
                 break;
@@ -298,7 +298,7 @@ public static class CliCommandLine
 
         if (verb.Name == "move" && request.ToPane == null && request.ToWindow == null)
         {
-            return Usage(thing == "terminal" ? "Where to? --to-pane N (ids: zn list)." : "Where to? --to-window N, or --to-window new.");
+            return Usage(thing == "terminal" ? "Where to? --to-pane N (zn list shows the ids)." : "Where to? --to-window N, or --to-window new.");
         }
 
         return new CliParse(request, json);
@@ -433,9 +433,9 @@ public static class CliCommandLine
         }
 
         sb.AppendLine();
-        sb.AppendLine("Inside a Zinc terminal, commands act on that terminal (its pane, workspace, and window); outside,");
-        sb.AppendLine("on the focused one of the window used last. --terminal, --pane, --workspace, and --window aim");
-        sb.AppendLine("elsewhere. zn <thing> --help shows a thing's commands.");
+        sb.AppendLine("Inside a Zinc terminal, commands act on that terminal (its pane, workspace, and window). Outside");
+        sb.AppendLine("Zinc, they act on the focused terminal of the window used last. --terminal, --pane, --workspace,");
+        sb.AppendLine("and --window aim elsewhere. zn <thing> --help shows a thing's commands.");
         return sb.ToString();
     }
 

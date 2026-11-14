@@ -155,10 +155,10 @@ internal static class ShaderLoader
             {
                 // A name that's neither yours (shaders\ next to the config) nor Zinc's.
                 var known = string.Join(", ", ShaderPaths.Bundled().Select(s => s.Name));
-                return (null, $"{Path.GetFileNameWithoutExtension(file)}: no shader by that name (Zinc's are {known}; yours go in a shaders folder next to config.toml)");
+                return (null, $"{Path.GetFileNameWithoutExtension(file)}: no shader by that name. Zinc's own are {known}, and yours go in a shaders folder next to config.toml.");
             }
 
-            return (null, ex is FileNotFoundException or DirectoryNotFoundException ? $"{name}: no such file ({file})" : $"{name}: couldn't read it ({ex.Message})");
+            return (null, ex is FileNotFoundException or DirectoryNotFoundException ? $"{name}: no such file ({file})" : $"{name}: couldn't read the file ({ex.Message})");
         }
 
         try
@@ -185,7 +185,7 @@ internal static class ShaderLoader
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException or BadImageFormatException)
         {
             Log.Write($"shader: no translator: {ex.Message}");
-            return (null, $"{name}: Zinc's shader translator (zinc-shader.dll) is missing or broken; reinstalling Zinc should bring it back");
+            return (null, $"{name}: Zinc's shader translator (zinc-shader.dll) is missing or broken. Reinstall Zinc to bring it back.");
         }
         catch (Exception ex)
         {

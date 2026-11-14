@@ -413,7 +413,7 @@ internal sealed partial class SettingsWindow : Window
     private void UpdateBanners()
     {
         _problems.IsOpen = _config.HasErrors;
-        _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until it's fixed.";
+        _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until the error is fixed.";
         UpdateChanges();
     }
 
@@ -499,10 +499,10 @@ internal sealed partial class SettingsWindow : Window
         AutomationProperties.SetName(image, "Zinc");
         _page.Children.Add(image);
         _page.Children.Add(Row(TerminalSession.Version.Replace("zinc", "Zinc"),
-            "Zinc: what makes ghosts glow in the dark. Built on libghostty, the terminal engine that powers Ghostty; the open-source software Zinc ships is listed below.",
+            "Zinc: what makes ghosts glow in the dark. Built on libghostty, the terminal engine that powers Ghostty. The open-source software Zinc ships is listed below.",
             null));
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open in editor", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
-        _page.Children.Add(Row("Welcome page", "The first-run questions: how you work, colors and font, default shell.",
+        _page.Children.Add(Row("Welcome page", "Asks the first-run questions again: how you work, colors and font, and the default shell.",
             ButtonRow(("Open welcome page", () => App.Instance.ShowWelcome(firstRun: false)))));
         BackupRow();
         UpdatesGroup();
@@ -625,7 +625,7 @@ internal sealed partial class SettingsWindow : Window
         {
             var text = Log.ReadText();
             ClipboardText.Set($"Zinc debug log: {Log.About}{Environment.NewLine}{Environment.NewLine}" +
-                (text.Length > 0 ? text : "(empty: turn the debug log on, make the problem happen, then copy it)"));
+                (text.Length > 0 ? text : "(The log is empty. Turn the debug log on, make the problem happen, then copy the log again.)"));
             copy.Content = "Copied";
         });
 
@@ -711,7 +711,7 @@ internal sealed partial class SettingsWindow : Window
         header.Children.Add(new TextBlock { Text = "Profiles", FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center });
         header.Children.Add(add);
         _page.Children.Add(header);
-        _page.Children.Add(Note("Drag to reorder: the new-tab menu lists them in this order."));
+        _page.Children.Add(Note("The new-tab menu lists the profiles in this order. Drag a profile to move it."));
 
         // The rows are their own ListViewItems, so a drag moves them as they are.
         var list = new ListView
@@ -1066,7 +1066,7 @@ internal sealed partial class SettingsWindow : Window
                 Title = "This profile can't open",
                 Message = profile.Missing == ProfileMissing.SearchOff
                     ? $"It was found by \"{SearchLabel(profile.Source)}\", which is turned off. Your changes to it are kept in config.toml."
-                    : "It was found on this PC, but isn't here any more. Your changes to it are kept in config.toml; delete it if it's gone for good.",
+                    : "It was found on this PC, but isn't here any more. Your changes to it are kept in config.toml. Delete the profile if its shell is gone for good.",
                 ActionButton = MissingFix(profile),
                 Margin = new Thickness(0, 0, 0, 8),
             };
@@ -1093,7 +1093,7 @@ internal sealed partial class SettingsWindow : Window
 
         _page.Children.Add(EnvironmentCard(id));
 
-        _page.Children.Add(Note("The settings below come from the defaults until you change them here; the reset arrow gives one back."));
+        _page.Children.Add(Note("The settings below come from the defaults until you change them here. The reset arrow gives one back."));
         foreach (var group in ShownSettings.Where(s => s.ProfileOverridable).GroupBy(s => s.Group))
         {
             var rows = new List<FrameworkElement>();
@@ -1131,7 +1131,7 @@ internal sealed partial class SettingsWindow : Window
                     new TextBlock
                     {
                         Text = found
-                            ? "Removes its section from config.toml: back to what was found on this PC."
+                            ? "Removes its section from config.toml, so the profile goes back to what was found on this PC."
                             : "Removes its section from config.toml.",
                         TextWrapping = TextWrapping.Wrap,
                     },
@@ -1190,7 +1190,7 @@ internal sealed partial class SettingsWindow : Window
 
             if (_config.HasErrors)
             {
-                Show(error, "config.toml has an error; fix it first (see the top of the page).");
+                Show(error, "config.toml has an error. Fix it first. The error is shown at the top of this page.");
                 return;
             }
 
@@ -1274,7 +1274,7 @@ internal sealed partial class SettingsWindow : Window
         // A profile's own field ([profile.<id>] name, command, ...), or a global setting.
         IReadOnlyList<string> path = profile == null ? setting.Path : ["profile", profile, .. setting.Path];
         var error = ErrorText();
-        var reset = ResetArrow(setting.Label, "Back to the default (removes it from config.toml)");
+        var reset = ResetArrow(setting.Label, "Back to the default, which removes the setting from config.toml");
         var description = DescriptionText();
         bool Changed(object? value) => value != null && !SettingsCatalog.Same(value, setting.Default);
 
@@ -1293,7 +1293,7 @@ internal sealed partial class SettingsWindow : Window
 
             if (_config.HasErrors)
             {
-                Show(error, "config.toml has an error; fix it first (see the top of the page).");
+                Show(error, "config.toml has an error. Fix it first. The error is shown at the top of this page.");
                 return;
             }
 
@@ -1367,7 +1367,7 @@ internal sealed partial class SettingsWindow : Window
             reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
             if (profile == null)
             {
-                SetText(description, light != null ? "Follows Windows light/dark." : setting.Description);
+                SetText(description, light != null ? "Follows Windows light and dark mode." : setting.Description);
             }
             else
             {

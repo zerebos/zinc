@@ -219,13 +219,13 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
 
             if (key != null)
             {
-                throw new FormatException($"'{text}': more than one key");
+                throw new FormatException($"\"{text}\" has more than one key");
             }
 
-            key = ParseKey(part) ?? throw new FormatException($"'{text}': unknown key '{part}'");
+            key = ParseKey(part) ?? throw new FormatException($"\"{text}\" has an unknown key, \"{part}\"");
         }
 
-        return new KeyChord(key ?? throw new FormatException($"'{text}': no key"), ctrl, alt, shift);
+        return new KeyChord(key ?? throw new FormatException($"\"{text}\" has no key"), ctrl, alt, shift);
     }
 
     private static VirtualKey? ParseKey(string name)
@@ -289,7 +289,7 @@ public sealed class KeySequence : IEquatable<KeySequence>
         var parts = text.Split(Separator, StringSplitOptions.TrimEntries);
         if (parts.Length < 2 || parts.Any(p => p.Length == 0))
         {
-            throw new FormatException($"'{text}': a key is missing around '>'");
+            throw new FormatException($"\"{text}\" is missing a key around >");
         }
 
         return new KeySequence(parts.Select(KeyChord.Parse).ToArray());
@@ -547,7 +547,7 @@ public sealed class Keybindings
             var leader = keys.Keys[0];
             if (bindings.TryGet(leader, out var shadowed))
             {
-                warnings.Add($"{seenSequences[keys]}: {leader} starts key sequences now, so it no longer runs '{Actions.Format(shadowed)}'");
+                warnings.Add($"{seenSequences[keys]}: {leader} starts key sequences now, so it no longer runs \"{Actions.Format(shadowed)}\"");
                 bindings.Unbind(leader);
             }
         }
@@ -558,7 +558,7 @@ public sealed class Keybindings
             if (bindings.Sequences.FirstOrDefault(s => s.Keys.Keys.Count < keys.Keys.Count && keys.StartsWith(s.Keys.Keys)) is { Keys: { } shorter } &&
                 seenSequences.TryGetValue(keys, out var where))
             {
-                warnings.Add($"{where}: {keys} can't be reached: {shorter} runs first");
+                warnings.Add($"{where}: {keys} can't be reached, because {shorter} runs first");
             }
         }
 

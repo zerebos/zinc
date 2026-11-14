@@ -59,17 +59,17 @@ public class KeysConfigTests
     public void RejectsOtherSidebarModes(string text)
     {
         Assert.Null(Actions.Parse(text, out var error));
-        Assert.StartsWith("'toggle-sidebar' takes nothing, \"rail\", or \"auto-hide\"", error);
+        Assert.StartsWith("\"toggle-sidebar\" takes nothing, \"rail\", or \"auto-hide\"", error);
     }
 
     [Theory]
-    [InlineData("teleport", "unknown action 'teleport'")]
-    [InlineData("split sideways", "'split' takes left, right, up, or down, not 'sideways'")]
-    [InlineData("split", "'split' takes left, right, up, or down")]
-    [InlineData("split 1", "'split' takes left, right, up, or down, not '1'")]
-    [InlineData("paste now", "'paste' takes no argument")]
-    [InlineData("go-to-workspace 0", "'go-to-workspace' takes a workspace number from 1, or \"last\"")]
-    [InlineData("copy all", "'copy' takes nothing or \"if-selection\", not 'all'")]
+    [InlineData("teleport", "unknown action \"teleport\"")]
+    [InlineData("split sideways", "\"split\" takes left, right, up, or down, not \"sideways\"")]
+    [InlineData("split", "\"split\" takes left, right, up, or down")]
+    [InlineData("split 1", "\"split\" takes left, right, up, or down, not \"1\"")]
+    [InlineData("paste now", "\"paste\" takes no argument")]
+    [InlineData("go-to-workspace 0", "\"go-to-workspace\" takes a workspace number from 1, or \"last\"")]
+    [InlineData("copy all", "\"copy\" takes nothing or \"if-selection\", not \"all\"")]
     public void ExplainsBadActions(string text, string message)
     {
         Assert.Null(Actions.Parse(text, out var error));
@@ -141,9 +141,9 @@ public class KeysConfigTests
             "ctrl+u" = 3
             """);
         Assert.Contains("config.toml:3: Ctrl+Shift+C is already bound (config.toml:2)", config.Warnings);
-        Assert.Contains("config.toml:4: 'ctrl+a>': a key is missing around '>'", config.Warnings);
-        Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:5: 'hyper+x': unknown key 'hyper'"));
-        Assert.Contains("config.toml:6: unknown action 'teleport'", config.Warnings);
+        Assert.Contains("config.toml:4: \"ctrl+a>\" is missing a key around >", config.Warnings);
+        Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:5: \"hyper+x\" has an unknown key, \"hyper\""));
+        Assert.Contains("config.toml:6: unknown action \"teleport\"", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:7: a key's action is text"));
 
         // The first binding of a chord stands.

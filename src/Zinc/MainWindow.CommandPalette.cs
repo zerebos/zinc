@@ -399,7 +399,7 @@ public sealed partial class MainWindow
         Action(TerminalAction.QuitFresh);
         Action(TerminalAction.ReloadConfig);
         Action(TerminalAction.OpenSettings);
-        commands.Add(new PaletteCommand("Welcome…", null, () => App.Instance.ShowWelcome(firstRun: false)));
+        commands.Add(new PaletteCommand("Welcome", null, () => App.Instance.ShowWelcome(firstRun: false)));
 
         // Profiles start a workspace in the page's place (as picking one on the page does), or a window.
         var profiles = _config.VisibleProfiles.ToList();
@@ -511,7 +511,7 @@ public sealed partial class MainWindow
         Action(TerminalAction.QuitFresh);
         Action(TerminalAction.ReloadConfig);
         Action(TerminalAction.OpenSettings);
-        Custom("Welcome…", () => App.Instance.ShowWelcome(firstRun: false));
+        Custom("Welcome", () => App.Instance.ShowWelcome(firstRun: false));
         if (Log.Enabled && !PointerTrace.Running)
         {
             Custom("Trace the pointer (15 s)", App.Instance.TracePointer); // diagnostics for a flickering pointer shape

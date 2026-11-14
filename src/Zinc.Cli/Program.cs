@@ -123,5 +123,5 @@ internal static class Program
         }
     }
 
-    private static CliReply Garbled() => CliReply.Fail(CliCodes.Failed, "Zinc's answer couldn't be read: is zn older than Zinc?");
+    private static CliReply Garbled() => CliReply.Fail(CliCodes.Failed, "Zinc's answer couldn't be read, which can happen when zn is older than Zinc.");
 }

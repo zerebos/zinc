@@ -44,7 +44,7 @@ public sealed partial class MainWindow
     /// "Set folder…", typed like "New tab in folder…" (relative to where the focused shell is, and ~ is home).
     /// </summary>
     private void AskWorkspaceFolder(WorkspaceTab tab, string? prompt = null) =>
-        AskPaletteArgument(new PaletteArgument(prompt ?? "Folder for this workspace: its new tabs and splits start there",
+        AskPaletteArgument(new PaletteArgument(prompt ?? "Folder for this workspace, where its new tabs and splits start",
             Submit: typed => SetWorkspaceFolder(tab, typed)));
 
     private void SetWorkspaceFolder(WorkspaceTab tab, string typed)
@@ -57,7 +57,7 @@ public sealed partial class MainWindow
         if (folder?.LaunchFor(pane.Command, pane.Control.WslDistro) is not { } launch ||
             launch.WorkingDirectory is { } directory && !Directory.Exists(directory))
         {
-            AskWorkspaceFolder(tab, $"No folder {typed} for {pane.Profile.Name}: try another");
+            AskWorkspaceFolder(tab, $"No folder {typed} for {pane.Profile.Name}. Try another one.");
             return;
         }
 
