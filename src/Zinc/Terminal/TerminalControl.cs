@@ -836,7 +836,7 @@ public sealed partial class TerminalControl : UserControl
         ExitedAndKept?.Invoke(code);
         _session.WriteToScreen(code == 0
             ? "\r\n\e[0;2m[Process exited. Press any key to close.]\e[0m"
-            : $"\r\n\e[0;2m[Process exited with code {code} (0x{code:X8}). Press any key to close.]\e[0m");
+            : $"\r\n\e[0;2m[Process exited with code {ExitCodes.Format(code)}. Press any key to close.]\e[0m");
     }
 
     // Held in a field, because a timer only a local references is collected and stops firing.

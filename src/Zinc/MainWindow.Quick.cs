@@ -384,9 +384,22 @@ public sealed partial class MainWindow
         }
 
         HotkeyNotice.Message =
-            $"{key} is taken by another app (Windows Terminal uses Win+` for its quake mode). " +
+            $"{key} is taken by another app. " + (IsWindowsTerminalsHotkey() ? "Windows Terminal uses Win+` for its quake mode. " : "") +
             "Choose another key in Settings > Quick terminal, or close that app. Zinc tries the key again when you come back to Zinc.";
         HotkeyNotice.IsOpen = true;
+    }
+
+    /// <summary>Whether the quick terminal's hotkey is Win+`, the one Windows Terminal takes for its quake mode.</summary>
+    private bool IsWindowsTerminalsHotkey()
+    {
+        try
+        {
+            return GlobalHotkey.Parse(_config.Global.QuickTerminal.Hotkey) == GlobalHotkey.Parse("win+grave");
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     [StructLayout(LayoutKind.Sequential)]

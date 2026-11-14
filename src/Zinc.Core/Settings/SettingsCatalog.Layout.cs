@@ -12,12 +12,12 @@ public static partial class SettingsCatalog
             },
         new("layout", "Workspaces", "window.sidebar", "Sidebar", "Applies only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice)
             {
-                Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "Slides out when the pointer reaches the window's left edge.")],
+                Choices = [new("Full", "full"), new("Icons only", "rail"), new("Auto-hide", "auto-hide", "The sidebar slides out when the pointer reaches the window's left edge.")],
                 Binding = Bind.Enum<SidebarMode>((c, v) => c with { Sidebar = v }),
             },
         new("layout", "Workspaces", "window.title-bar", "Title bar", "Applies only when \"Workspaces\" is \"In a sidebar\".", SettingKind.Choice)
             {
-                Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "Slides down when the pointer reaches the window's top edge.")],
+                Choices = [new("Shown", "show"), new("Auto-hide", "auto-hide", "The title bar slides down when the pointer reaches the window's top edge.")],
                 Binding = Bind.Enum<TitleBarMode>((c, v) => c with { TitleBar = v }),
             },
         new("layout", "Workspaces", "window.new-workspace-page", "Start page for new workspaces",
@@ -40,8 +40,8 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Where you are", "current", "In the focused terminal's current folder."),
-                    new("In the profile's folder", "profile", "Or in the workspace's folder, when it has one."),
+                    new("Where you are", "current", "Otherwise, a new tab or split starts in the focused terminal's current folder."),
+                    new("In the profile's folder", "profile", "Otherwise, a new tab or split starts in its profile's folder."),
                 ],
                 Binding = Bind.Enum<Terminal.NewTerminalFolder>((c, v) => c with { StartIn = v }),
             },
@@ -51,8 +51,8 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Tabs", "tabs", "A row of tabs. When they don't fit, they shorten, then show only their icons, then fold into a menu."),
-                    new("A menu", "menu", "The shown tab, then a count (\"2 of 5\") that opens a menu of every tab. Switch tabs with the menu or with keys."),
+                    new("Tabs", "tabs", "A pane's header shows a row of tabs. When the tabs don't fit, they shorten, then show only their icons, then fold into a menu."),
+                    new("A menu", "menu", "A pane's header shows the current tab, then a count (\"2 of 5\") that opens a menu of every tab. Switch tabs with the menu or with keys."),
                 ],
                 Binding = Bind.Enum<PaneTabsAs>((c, v) => c with { PaneTabsAs = v }),
             },
@@ -60,8 +60,8 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Automatic", "auto", "On every pane once a workspace is split, and on any pane with two or more tabs."),
-                    new("With several tabs", "with-tabs", "On panes with two or more tabs."),
+                    new("Automatic", "auto", "Every pane gets a header once its workspace is split, and so does any pane with two or more tabs."),
+                    new("With several tabs", "with-tabs", "Only panes with two or more tabs get a header."),
                     new("Always", "always"),
                     new("Never", "never"),
                 ],
@@ -72,10 +72,10 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Always", "always", "On every pane."),
-                    new("Focused pane", "focused", "On the focused pane, and on the others while the pointer is over their header."),
+                    new("Always", "always", "Every pane shows the buttons."),
+                    new("Focused pane", "focused", "The focused pane shows the buttons, and the other panes show them while the pointer is over their header."),
                     new("On hover", "hover",
-                        "On a pane while the pointer is over its header. Touch and pen have no hover. The command palette and a pane's right-click menu have every action."),
+                        "A pane shows the buttons only while the pointer is over its header. Touch and pen have no hover. The command palette and a pane's right-click menu have every action."),
                     new("Hide", "hide"),
                 ],
                 Binding = Bind.Enum<PaneHeaderButtons>((c, v) => c with { PaneHeaderButtons = v }),
@@ -95,8 +95,8 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Ring", "ring", "An accent-colored outline around the focused pane."),
-                    new("Tab accent", "tab-accent", "An accent-colored line along the top of the focused pane."),
+                    new("Ring", "ring", "The focused pane gets an accent-colored outline."),
+                    new("Tab accent", "tab-accent", "The focused pane gets an accent-colored line along its top."),
                     new("None", "none",
                         "Only the dimming of other panes (\"Unfocused panes\") marks the focused pane. With \"Unfocused panes\" at 1, nothing does."),
                 ],

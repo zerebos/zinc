@@ -64,9 +64,9 @@ public class KeysConfigTests
 
     [Theory]
     [InlineData("teleport", "unknown action \"teleport\"")]
-    [InlineData("split sideways", "\"split\" takes left, right, up, or down, not \"sideways\"")]
-    [InlineData("split", "\"split\" takes left, right, up, or down")]
-    [InlineData("split 1", "\"split\" takes left, right, up, or down, not \"1\"")]
+    [InlineData("split sideways", "\"split\" takes \"left\", \"right\", \"up\", or \"down\", not \"sideways\"")]
+    [InlineData("split", "\"split\" takes \"left\", \"right\", \"up\", or \"down\"")]
+    [InlineData("split 1", "\"split\" takes \"left\", \"right\", \"up\", or \"down\", not \"1\"")]
     [InlineData("paste now", "\"paste\" takes no argument")]
     [InlineData("go-to-workspace 0", "\"go-to-workspace\" takes a workspace number from 1, or \"last\"")]
     [InlineData("copy all", "\"copy\" takes nothing or \"if-selection\", not \"all\"")]

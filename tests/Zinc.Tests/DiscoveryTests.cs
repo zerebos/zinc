@@ -61,7 +61,7 @@ public class DiscoveryTests
     [
         new("wsl:Fedora", "Fedora", "wsl.exe --distribution-id {2} --cd ~"),
         new("pwsh", "PowerShell", "pwsh.exe"),
-        new("ssh:buildbox", "SSH - buildbox", "ssh.exe buildbox"),
+        new("ssh:buildbox", "buildbox (SSH)", "ssh.exe buildbox"),
     ];
 
     private static ConfigFile Parse(string text, Func<DiscoverySettings, IReadOnlyList<DiscoveredProfile>>? discover = null) =>
@@ -75,7 +75,7 @@ public class DiscoveryTests
             command = "cmd.exe"
             """);
         Assert.Equal(["work", "wsl:Fedora", "pwsh", "ssh:buildbox"], config.Profiles.Select(p => p.Id));
-        Assert.Equal("SSH - buildbox", config.Profiles[3].Name);
+        Assert.Equal("buildbox (SSH)", config.Profiles[3].Name);
         Assert.Equal("ssh.exe buildbox", config.Profiles[3].Config.Command);
         Assert.Empty(config.Warnings);
     }
@@ -159,7 +159,7 @@ public class DiscoveryTests
         });
 
         Assert.Equal(new DiscoverySettings(Ssh: false, VisualStudio: false), asked);
-        Assert.Contains("config.toml:4: unknown [discover] source teleporter", config.Warnings);
+        Assert.Contains("config.toml:4: unknown [discover] source \"teleporter\"", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:5: [discover] takes"));
     }
 

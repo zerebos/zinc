@@ -28,7 +28,6 @@ namespace Zinc;
 /// </summary>
 internal sealed partial class SettingsWindow : Window
 {
-    private const string DefaultSchemeLabel = "Default (" + ThemeLibrary.ZincScheme + ")";
     private const string BundledFontLabel = BundledFonts.Family + " (included)";
 
     private readonly SettingsWriter _writer;
@@ -413,7 +412,9 @@ internal sealed partial class SettingsWindow : Window
     private void UpdateBanners()
     {
         _problems.IsOpen = _config.HasErrors;
-        _problems.Message = (_config.Warnings.FirstOrDefault() ?? "") + " Nothing is saved from here until the error is fixed.";
+        _problems.Message = _config.FirstError is { } error
+            ? $"{AsSentence(error)} Nothing is saved from here until the error is fixed."
+            : "config.toml has an error. Nothing is saved from here until the error is fixed.";
         UpdateChanges();
     }
 
@@ -850,7 +851,7 @@ internal sealed partial class SettingsWindow : Window
         else
         {
             label.Text = kept > 0
-                ? $"Off. {kept} profile{(kept == 1 ? "" : "s")} you changed can't open until it's on again."
+                ? $"Off. {kept} profile{(kept == 1 ? "" : "s")} you changed can't open until \"{SearchLabel(source)}\" is on again."
                 : _config.ValueOf($"discover.{source}") is not false ? "Nothing found on this PC." : "Off.";
         }
 
@@ -1409,26 +1410,67 @@ internal sealed partial class SettingsWindow : Window
         return string.Join(" ", new[] { setting.Description, detail }.Where(t => !string.IsNullOrEmpty(t)));
     }
 
-    /// <summary>A value as words, for "Inherited from Appearance, where it's 11 pt.".</summary>
+    /// <summary>
+    /// A value as words that read mid-sentence, for "Inherited from Appearance, where it's 11 pt.". Choice labels are
+    /// quoted (<c>"Block"</c>), and an empty value is the setting's own words for its default ("Zinc's yellow").
+    /// </summary>
     private static string Describe(SettingDef setting, object? value) => value switch
     {
         // A color with named values (pane headers), where null is one of those values ("Standard")
         _ when setting.Kind == SettingKind.Color && setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value)) is { } level =>
-            level.Label,
+            ChoiceWords(setting, level),
         null => setting.Kind switch
         {
-            SettingKind.Color => "the scheme's color",
             SettingKind.Font => BundledFonts.Family,
-            SettingKind.Scheme => DefaultSchemeLabel,
+            SettingKind.Scheme => ThemeLibrary.ZincScheme,
+            _ when (setting.DefaultText ?? (setting.PlaceholderIsExample ? null : setting.Placeholder)) is { Length: > 0 } words =>
+                MidSentence(words),
+            SettingKind.Color => "the scheme's color",
             _ => "the default",
         },
         _ when setting.Kind == SettingKind.Choice && setting.Choices.FirstOrDefault(c => SettingsCatalog.Same(c.Value, value)) is { } choice =>
-            choice.Label,
+            ChoiceWords(setting, choice),
         bool b => b ? "on" : "off",
-        string t when setting.Kind == SettingKind.Scheme && ThemeLibrary.TryParsePair(t, out var l, out var d) => $"{d} / {l}",
+        string t when setting.Kind == SettingKind.Scheme && ThemeLibrary.TryParsePair(t, out var l, out var d) =>
+            $"{d} in dark mode and {l} in light mode",
         _ when setting.Kind == SettingKind.Choice => Format(value),
         _ => setting.Unit is { } unit ? $"{Format(value)} {unit}" : Format(value),
     };
+
+    /// <summary>
+    /// A choice's label in quotes, or words of its own for a label that only makes sense on its card, like "Same as
+    /// above" under "Cursor at the prompt".
+    /// </summary>
+    private static string ChoiceWords(SettingDef setting, SettingChoice choice) =>
+        (setting.Key, choice.Value) switch
+        {
+            ("terminal.cursor-style-at-prompt", "same") =>
+                $"the same as \"{SettingsCatalog.Find("terminal.cursor-style")?.Label ?? "Cursor shape"}\"",
+            _ => $"\"{choice.Label}\"",
+        };
+
+    /// <summary>
+    /// A setting's words for its default, made to read mid-sentence. The first letter is lowercased unless the words
+    /// start with a name ("Zinc's yellow", "Windows' accent"), and "Same as the text" gets its article, so it reads
+    /// "the same as the text".
+    /// </summary>
+    private static string MidSentence(string words)
+    {
+        if (words.StartsWith("Zinc", StringComparison.Ordinal) || words.StartsWith("Windows", StringComparison.Ordinal))
+        {
+            return words;
+        }
+
+        var lowered = char.ToLowerInvariant(words[0]) + words[1..];
+        return lowered.StartsWith("same as ", StringComparison.Ordinal) ? "the " + lowered : lowered;
+    }
+
+    /// <summary>An exception's message as a sentence of its own, ending with a period, for "Couldn't save the scheme. {message}".</summary>
+    internal static string AsSentence(string? message)
+    {
+        var text = message?.Trim() ?? "";
+        return text.Length == 0 || text[^1] is '.' or '!' or '?' ? text : text + ".";
+    }
 
     /// <summary>The small arrow beside a setting's name that puts the setting back, shown while the setting is changed.</summary>
     private static Button ResetArrow(string name, string tip)

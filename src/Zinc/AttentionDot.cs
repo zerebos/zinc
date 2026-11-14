@@ -48,7 +48,10 @@ internal static class AttentionWords
         _ => null,
     };
 
-    /// <summary>Several tabs' states, most urgent first: "failed (exit 1)", or "1 failed, 2 finished".</summary>
+    /// <summary>
+    /// Several tabs' states, most urgent first: "failed (exit 1)", or "1 failed, 1 needs you, and 2 finished". Each part
+    /// is a count and a verb, so the list reads as one sentence.
+    /// </summary>
     public static string? Summary(IReadOnlyList<(Attention Attention, int? ExitCode)> tabs)
     {
         var wanting = tabs.Where(t => t.Attention != Attention.None).ToList();
@@ -57,12 +60,20 @@ internal static class AttentionWords
             return wanting.Count == 0 ? null : For(wanting[0].Attention, wanting[0].ExitCode);
         }
 
-        return string.Join(", ", wanting.GroupBy(t => t.Attention).OrderByDescending(g => g.Key).Select(g => g.Key switch
+        var parts = wanting.GroupBy(t => t.Attention).OrderByDescending(g => g.Key).Select(g => (g.Key, Count: g.Count()) switch
         {
-            Attention.Bell => $"{g.Count()} {(g.Count() == 1 ? "needs" : "need")} you",
-            Attention.Notified => $"{g.Count()} {(g.Count() == 1 ? "notification" : "notifications")}",
-            _ => $"{g.Count()} {For(g.Key)}",
-        }));
+            (Attention.Bell, 1) => "1 needs you",
+            (Attention.Bell, var n) => $"{n} need you",
+            (Attention.Notified, 1) => "1 has a notification",
+            (Attention.Notified, var n) => $"{n} have notifications",
+            (var key, var n) => $"{n} {For(key)}",
+        }).ToList();
+        return parts.Count switch
+        {
+            1 => parts[0],
+            2 => $"{parts[0]} and {parts[1]}",
+            _ => string.Join(", ", parts.Take(parts.Count - 1)) + ", and " + parts[^1],
+        };
     }
 
     /// <summary>"Title, failed (exit 1)": an accessible name with the state after the title.</summary>

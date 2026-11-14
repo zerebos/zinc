@@ -25,7 +25,7 @@ public class CliTests
         Assert.Equal("version", Request("version").Cmd);
         Assert.Equal("window new", Request("window", "new").Cmd);
         Assert.Equal("terminal close", Request("terminal", "close").Cmd);
-        Assert.Contains("has no \"split\"", Error("terminal", "split"));
+        Assert.Contains("has no command \"split\"", Error("terminal", "split"));
         Assert.Contains("Unknown command", Error("splat"));
     }
 

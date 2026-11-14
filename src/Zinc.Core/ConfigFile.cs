@@ -70,7 +70,7 @@ public enum ProfileMissing
 public sealed class ConfigFile
 {
     private ConfigFile(Config global, IReadOnlyList<Profile> profiles, Profile defaultProfile, IReadOnlyList<string> warnings,
-        bool hasErrors, string path, Keybindings keybindings, ThemeLibrary themes)
+        bool hasErrors, string? firstError, string path, Keybindings keybindings, ThemeLibrary themes)
     {
         Themes = themes;
         Keybindings = keybindings;
@@ -79,6 +79,7 @@ public sealed class ConfigFile
         DefaultProfile = defaultProfile;
         Warnings = warnings;
         HasErrors = hasErrors;
+        FirstError = firstError;
         Path = path;
     }
 
@@ -87,6 +88,13 @@ public sealed class ConfigFile
     /// keeps the settings in force rather than apply a half-read file (a save mid-edit).
     /// </summary>
     public bool HasErrors { get; }
+
+    /// <summary>
+    /// The first of <see cref="Warnings"/> that is an error, the kind that sets <see cref="HasErrors"/> (TOML that
+    /// doesn't parse, or an included file that can't be read), or null when there's none. A plain warning, like an
+    /// unknown setting, never counts.
+    /// </summary>
+    public string? FirstError { get; }
 
     /// <summary>The color schemes this config can name (its themes folder, then the bundled ones).</summary>
     public ThemeLibrary Themes { get; }
@@ -205,9 +213,13 @@ public sealed class ConfigFile
     /// <summary>Problems found while reading, as "FILE:LINE: message".</summary>
     public IReadOnlyList<string> Warnings { get; }
 
-    /// <summary>The profile with id <paramref name="id"/>, or (for older saved sessions) with that display name.</summary>
+    /// <summary>
+    /// The profile with id <paramref name="id"/>, or (for older saved sessions) with that display name. Discovered SSH
+    /// hosts used to be named "SSH - host", so that name still finds the "host (SSH)" profile.
+    /// </summary>
     public Profile? FindProfile(string id) =>
-        Profiles.FirstOrDefault(p => p.Id == id) ?? Profiles.FirstOrDefault(p => p.Name == id);
+        Profiles.FirstOrDefault(p => p.Id == id) ?? Profiles.FirstOrDefault(p => p.Name == id)
+        ?? (id.StartsWith("SSH - ", StringComparison.Ordinal) ? Profiles.FirstOrDefault(p => p.Id == "ssh:" + id[6..]) : null);
 
     public static string DefaultPath { get; } =
         System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Zinc", "config.toml");
@@ -230,9 +242,9 @@ public sealed class ConfigFile
             // Treated like invalid TOML, so it's reported, and a reload keeps the settings in force (at
             // startup, the defaults) rather than apply a file it couldn't see.
             var defaults = Parse("", path, discover: ProfileDiscovery.Discover);
-            return new ConfigFile(defaults.Global, defaults.Profiles, defaults.DefaultProfile,
-                [$"{System.IO.Path.GetFileName(path)}: couldn't be read ({ex.Message})"], hasErrors: true,
-                path, defaults.Keybindings, defaults.Themes);
+            var error = $"{System.IO.Path.GetFileName(path)}: couldn't be read ({ex.Message})";
+            return new ConfigFile(defaults.Global, defaults.Profiles, defaults.DefaultProfile, [error], hasErrors: true,
+                firstError: error, path, defaults.Keybindings, defaults.Themes);
         }
 
         return Parse(text, path, discover: ProfileDiscovery.Discover);
@@ -302,6 +314,7 @@ public sealed class ConfigFile
         private readonly List<string> _warnings = [];
         private readonly HashSet<string> _files = new(StringComparer.OrdinalIgnoreCase);
         private bool _hasErrors;
+        private string? _firstError;
 
         // [profile.<id>] headers in order, empty ones included, because a bare header places a found
         // profile in the menu without changing it.
@@ -319,7 +332,17 @@ public sealed class ConfigFile
             _hasErrors |= doc.HasErrors;
             foreach (var d in doc.Diagnostics)
             {
-                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{d.Span.Start.Line + 1}: {d.Message}");
+                var message = $"{System.IO.Path.GetFileName(file)}:{d.Span.Start.Line + 1}: {d.Message}";
+                _warnings.Add(message);
+                if (d.Kind == DiagnosticMessageKind.Error)
+                {
+                    _firstError ??= message;
+                }
+            }
+
+            if (doc.HasErrors && _firstError == null && doc.Diagnostics.FirstOrDefault() is { } diagnostic)
+            {
+                _firstError = $"{System.IO.Path.GetFileName(file)}:{diagnostic.Span.Start.Line + 1}: {diagnostic.Message}";
             }
 
             var entries = new List<Entry>();
@@ -355,7 +378,7 @@ public sealed class ConfigFile
                 {
                     if (pattern is not string p)
                     {
-                        _warnings.Add($"{include.Where}: include takes file paths");
+                        _warnings.Add($"{include.Where}: \"include\" takes file paths");
                         continue;
                     }
 
@@ -374,8 +397,10 @@ public sealed class ConfigFile
                         }
                         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                         {
-                            _warnings.Add($"{include.Where}: couldn't read {included} ({ex.Message})");
+                            var message = $"{include.Where}: couldn't read {included} ({ex.Message})";
+                            _warnings.Add(message);
                             _hasErrors = true; // as with a file that isn't valid TOML, keep what's in force
+                            _firstError ??= message;
                             continue;
                         }
 
@@ -439,7 +464,7 @@ public sealed class ConfigFile
             }
             else
             {
-                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{line}: unsupported value for {string.Join('.', path)}");
+                _warnings.Add($"{System.IO.Path.GetFileName(file)}:{line}: unsupported value for \"{string.Join('.', path)}\"");
             }
         }
 
@@ -481,7 +506,7 @@ public sealed class ConfigFile
                         }
                         else
                         {
-                            _warnings.Add($"{e.Where}: default-profile takes a profile id");
+                            _warnings.Add($"{e.Where}: \"default-profile\" takes a profile id");
                         }
 
                         break;
@@ -492,7 +517,7 @@ public sealed class ConfigFile
                         }
                         else
                         {
-                            _warnings.Add($"{e.Where}: profile-order takes a list of profile ids");
+                            _warnings.Add($"{e.Where}: \"profile-order\" takes a list of profile ids");
                         }
 
                         break;
@@ -533,7 +558,7 @@ public sealed class ConfigFile
                         };
                         break;
                     case ["discover", ..]:
-                        _warnings.Add($"{e.Where}: [discover] takes wsl, powershell, cmd, git-bash, msys2, ssh, or visual-studio = true or false");
+                        _warnings.Add($"{e.Where}: [discover] takes \"wsl\", \"powershell\", \"cmd\", \"git-bash\", \"msys2\", \"ssh\", or \"visual-studio\", each true or false");
                         break;
                     case ["environment", _] when e.Value is string:
                         break; // applied below, after the groups
@@ -543,7 +568,7 @@ public sealed class ConfigFile
                     case [var group, _, ..] when Groups.Contains(group):
                         break; // applied below, themes first
                     default:
-                        _warnings.Add($"{e.Where}: unknown setting {e.Key}");
+                        _warnings.Add($"{e.Where}: unknown setting \"{e.Key}\"");
                         break;
                 }
             }
@@ -617,7 +642,7 @@ public sealed class ConfigFile
                         case ["environment", _] when e.Value is string:
                             break; // below, over the global ones
                         default:
-                            _warnings.Add($"{e.Where}: unknown or invalid profile setting {e.Key}");
+                            _warnings.Add($"{e.Where}: unknown or invalid profile setting \"{e.Key}\"");
                             break;
                     }
                 }
@@ -665,11 +690,11 @@ public sealed class ConfigFile
             var defaultProfile = profiles.FirstOrDefault(p => p.Id == defaultId) ?? profiles.FirstOrDefault(p => !p.Hidden) ?? profiles[0];
             if (defaultId != null && defaultProfile.Id != defaultId)
             {
-                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: default-profile \"{defaultId}\" isn't a profile, so Zinc uses \"{defaultProfile.Id}\"");
+                _warnings.Add($"{System.IO.Path.GetFileName(mainPath)}: \"default-profile\" is \"{defaultId}\", which isn't a profile, so Zinc uses \"{defaultProfile.Id}\"");
             }
 
             var keybindings = Keybindings.Configure(keys, _warnings);
-            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, mainPath, keybindings, _themes)
+            return new ConfigFile(global, profiles, defaultProfile, _warnings, _hasErrors, _firstError, mainPath, keybindings, _themes)
             {
                 Files = [.. _files],
                 SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
@@ -702,7 +727,7 @@ public sealed class ConfigFile
 
         private DiscoverySettings Unknown(DiscoverySettings settings, Entry e)
         {
-            _warnings.Add($"{e.Where}: unknown [discover] source {e.Path[1]}");
+            _warnings.Add($"{e.Where}: unknown [discover] source \"{e.Path[1]}\"");
             return settings;
         }
 
@@ -733,7 +758,7 @@ public sealed class ConfigFile
             // When the setting's catalog entry has a binding, the binding reads the TOML value.
             if (e.Path is [var g, var n] && Zinc.Settings.SettingsCatalog.Find($"{g}.{n}") is { Binding: { } binding } setting)
             {
-                return binding.Read(setting, config, e.Value, e.File) ?? Warn(config, e, setting.Expected);
+                return binding.Read(setting, config, e.Value, e.File) ?? Warn(config, e, setting.Expected ?? ChoiceHint(setting));
             }
 
             // One palette entry by number (palette = 1="#ac4242"), as a scheme file writes it.
@@ -766,7 +791,7 @@ public sealed class ConfigFile
                     : Warn(config, e, "a folder or a list of them");
             }
 
-            _warnings.Add($"{e.Where}: unknown setting {e.Key}");
+            _warnings.Add($"{e.Where}: unknown setting \"{e.Key}\"");
             return config;
         }
 
@@ -801,8 +826,29 @@ public sealed class ConfigFile
 
         private Config Warn(Config config, Entry e, string? expected)
         {
-            _warnings.Add($"{e.Where}: ignored {e.Key} = {Show(e.Value)}{(expected != null ? $" (expected {expected})" : "")}");
+            _warnings.Add($"{e.Where}: ignored \"{e.Key}\" = {Show(e.Value)}{(expected != null ? $" (expected {expected})" : "")}");
             return config;
+        }
+
+        /// <summary>
+        /// The values a setting takes, when they're exactly its choices (<c>"block", "bar", or "underline"</c>), for a
+        /// warning about a value that isn't one of them. Null for a setting that also takes other forms, like a color.
+        /// </summary>
+        private static string? ChoiceHint(Zinc.Settings.SettingDef setting)
+        {
+            if (setting.Binding is not { Accepts: [Zinc.Settings.Accepts.ChoiceForm] })
+            {
+                return null;
+            }
+
+            var values = setting.Choices.Where(c => c.Value != null).Select(c => Show(c.Value!)).ToList();
+            return values switch
+            {
+                [] => null,
+                [var one] => one,
+                [var a, var b] => $"{a} or {b}",
+                _ => $"{string.Join(", ", values[..^1])}, or {values[^1]}",
+            };
         }
 
         private static string Show(object value) => value switch

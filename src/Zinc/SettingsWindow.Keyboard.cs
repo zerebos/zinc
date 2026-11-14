@@ -179,6 +179,11 @@ internal sealed partial class SettingsWindow
         var argument = Actions.ArgumentName(family);
         var variants = Actions.Variants(family, profiles);
 
+        // "Another way" alone doesn't say what for, so copy's ways say "another way to copy".
+        var (one, many) = argument == "way"
+            ? ($"way to {title.ToLowerInvariant()}", $"ways to {title.ToLowerInvariant()}")
+            : (argument, argument + "s");
+
         // Sorted in the variants' own order (Right, Down, Left, Up, or 1-9 and then the last), with others after them.
         int Rank(ActionInvocation a) => variants.ToList().FindIndex(v => v.Invocation == a) is var i and >= 0 ? i : int.MaxValue;
         actions = [.. actions.OrderBy(Rank).ThenBy(Actions.Format, StringComparer.Ordinal)];
@@ -208,7 +213,7 @@ internal sealed partial class SettingsWindow
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 8,
-                Children = { new FontIcon { Glyph = AddGlyph, FontSize = 12 }, new TextBlock { Text = $"Add a key for another {argument}" } },
+                Children = { new FontIcon { Glyph = AddGlyph, FontSize = 12 }, new TextBlock { Text = $"Add a key for another {one}" } },
             },
             Margin = new Thickness(folded ? -8 : 16, 2, 0, 0), // in a fold, the icon sits under the labels
             Padding = new Thickness(8, 4, 10, 4),
@@ -216,7 +221,7 @@ internal sealed partial class SettingsWindow
             BorderThickness = new Thickness(0),
             Flyout = CaptureFlyout(first, title, lines, variants),
         };
-        AutomationProperties.SetName(another, $"Add a key to {title} for another {argument}");
+        AutomationProperties.SetName(another, argument == "way" ? $"Add a key for another {one}" : $"Add a key to {title} for another {one}");
         body.Children.Add(another);
         if (!folded)
         {
@@ -225,7 +230,7 @@ internal sealed partial class SettingsWindow
         }
 
         // A long family folds, saying how many it has keys for (open while filtering).
-        name.Children.Insert(1, DescriptionText($"Keys for {actions.Count} {argument}s"));
+        name.Children.Insert(1, DescriptionText($"Keys for {actions.Count} {many}"));
         return Fold($"keys:{family}", title, name, [new Border { Child = body }], open: _keyFilter.Trim().Length > 0);
     }
 
@@ -350,7 +355,7 @@ internal sealed partial class SettingsWindow
                 chord.ToConfig() == null ? ("config.toml has no name for that key, so it can't be saved here.", false, "Add")
                 : keys.StartsSequence(chord) ? ($"{chord} starts key sequences, which you change in config.toml.", false, "Add")
                 : keys.TryGet(chord, out var other) && other == current ? ("Already one of its keys.", false, "Add")
-                : keys.TryGet(chord, out other) ? ($"Used by {Actions.Title(other, PaneTabs)}. \"Replace\" moves the key here.", true, "Replace")
+                : keys.TryGet(chord, out other) ? ($"Used by \"{Actions.Title(other, PaneTabs, KeyProfiles())}\". \"Replace\" moves the key here.", true, "Replace")
                 : ("", true, (object)"Add");
         }
 

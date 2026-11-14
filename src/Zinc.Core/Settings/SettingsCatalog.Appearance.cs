@@ -92,7 +92,7 @@ public static partial class SettingsCatalog
             NullLabel = "Standard",
             Choices =
             [
-                new("Same as the terminal", "terminal", "Hidden tabs get a shade instead, so the shown tab still stands out. Cards have no border."),
+                new("Same as the terminal", "terminal", "The row matches the terminal's background, and hidden tabs get a shade so the shown tab still stands out. Cards then have no border."),
                 new("Subtle", "subtle"),
                 new("Standard", null),
                 new("Strong", "strong"),
@@ -147,7 +147,7 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Same as above", "same"), new("Bar", "bar", "Like a text box."), new("Block", "block"),
+                    new("Same as above", "same"), new("Bar", "bar", "A bar looks like the cursor in a text box."), new("Block", "block"),
                     new("Underline", "underline"), new("Hollow block", "block-hollow"),
                 ],
                 Binding = Bind.Custom((c, v) => v switch
@@ -162,7 +162,7 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Same as Windows", "system", "Follows Windows Settings > Personalization > Colors > Choose your mode."),
+                    new("Same as Windows", "system", "Zinc follows \"Choose your mode\" in Windows Settings > Personalization > Colors."),
                     new("Light", "light"),
                     new("Dark", "dark"),
                 ],
@@ -174,7 +174,7 @@ public static partial class SettingsCatalog
                 Choices =
                 [
                     new("Zinc green", "zinc"),
-                    new("Windows' accent", "windows", "Uses the accent color from Windows Settings > Personalization > Colors."),
+                    new("Windows' accent", "windows", "Zinc uses the accent color from Windows Settings > Personalization > Colors."),
                 ],
                 Binding = Bind.Custom((c, v) => v switch
                 {
@@ -228,7 +228,7 @@ public static partial class SettingsCatalog
             [
                 new("While focused", true, "Shaders in unfocused terminals pause where they are. The text under them still updates."),
                 new("Always", "always", "Every terminal with shaders keeps redrawing, focused or not."),
-                new("Never", false, "They hold still, cursor effects included, and are drawn only when the terminal changes."),
+                new("Never", false, "Animated shaders hold still too, cursor effects included, and redraw only when the terminal changes."),
             ],
             // true and false as booleans or as text, and "always" as text.
             Binding = Bind.Custom((c, v) => (v is string s ? s.Trim().ToLowerInvariant() : v) switch

@@ -306,7 +306,7 @@ public static class Actions
             case Arg.Direction when Word(Arg.Direction, arg) is { } word && Enum.TryParse<PaneDirection>(word, true, out var dir):
                 return new ActionInvocation(def.Action, Direction: dir);
             case Arg.Direction:
-                error = $"\"{name}\" takes left, right, up, or down{(arg.Length > 0 ? $", not \"{arg}\"" : "")}";
+                error = $"\"{name}\" takes \"left\", \"right\", \"up\", or \"down\"{(arg.Length > 0 ? $", not \"{arg}\"" : "")}";
                 return null;
             case Arg.Workspace when Word(Arg.Workspace, arg) != null:
                 return new ActionInvocation(def.Action, -1);
@@ -361,24 +361,30 @@ public static class Actions
 
     /// <summary>
     /// The command palette's title for an invocation (e.g. "Split right", "Focus pane left"). Without tabs inside panes
-    /// (<paramref name="paneTabs"/> false), new-tab is titled for what it does, "New workspace".
+    /// (<paramref name="paneTabs"/> false), new-tab is titled for what it does, "New workspace". With
+    /// <paramref name="profiles"/>, a new tab for a profile id is titled with that profile's name ("New tab: Ubuntu")
+    /// instead of its id, and an id that isn't among them stays as written.
     /// </summary>
-    public static string Title(ActionInvocation invocation, bool paneTabs = true) => invocation.Action switch
-    {
-        TerminalAction.CopyIfSelection => "Copy",
-        TerminalAction.NewTab when !paneTabs => WorkspaceTitle,
-        TerminalAction.NewTabFromProfile =>
-            $"{(paneTabs ? "New tab" : WorkspaceTitle)}: {invocation.Profile ?? $"profile {invocation.Index + 1}"}",
-        _ => Definitions.First(d => d.Action == invocation.Action) switch
+    public static string Title(ActionInvocation invocation, bool paneTabs = true, IEnumerable<(string Id, string Name)>? profiles = null) =>
+        invocation.Action switch
         {
-            { Arg: Arg.Direction } d => $"{d.Title} {invocation.Direction.ToString().ToLowerInvariant()}",
-            { Arg: Arg.Workspace } d => invocation.Index < 0 ? "Go to the last workspace" : $"{d.Title} {invocation.Index + 1}",
-            { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 =>
-                $"{d.Title}: {((SidebarMode)invocation.Index == SidebarMode.AutoHide ? "auto-hide" : "icons only")}",
-            { Arg: Arg.PromptDirection } => invocation.Index < 0 ? "Jump to previous prompt" : "Jump to next prompt",
-            var d => d.Title,
-        },
-    };
+            TerminalAction.CopyIfSelection => "Copy",
+            TerminalAction.NewTab when !paneTabs => WorkspaceTitle,
+            TerminalAction.NewTabFromProfile =>
+                $"{(paneTabs ? "New tab" : WorkspaceTitle)}: {ProfileName(invocation.Profile, profiles) ?? $"profile {invocation.Index + 1}"}",
+            _ => Definitions.First(d => d.Action == invocation.Action) switch
+            {
+                { Arg: Arg.Direction } d => $"{d.Title} {invocation.Direction.ToString().ToLowerInvariant()}",
+                { Arg: Arg.Workspace } d => invocation.Index < 0 ? "Go to the last workspace" : $"{d.Title} {invocation.Index + 1}",
+                { Arg: Arg.OptionalSidebarMode } d when invocation.Index >= 0 =>
+                    $"{d.Title}: {((SidebarMode)invocation.Index == SidebarMode.AutoHide ? "auto-hide" : "icons only")}",
+                { Arg: Arg.PromptDirection } => invocation.Index < 0 ? "Jump to previous prompt" : "Jump to next prompt",
+                var d => d.Title,
+            },
+        };
+
+    private static string? ProfileName(string? id, IEnumerable<(string Id, string Name)>? profiles) =>
+        id == null ? null : profiles?.FirstOrDefault(p => p.Id == id) is { Name: { Length: > 0 } name } ? name : id;
 
     private static string SidebarModeName(int mode) => (SidebarMode)mode == SidebarMode.AutoHide ? "auto-hide" : "rail";
 }

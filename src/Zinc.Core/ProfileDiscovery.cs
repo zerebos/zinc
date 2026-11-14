@@ -37,12 +37,12 @@ public static class ProfileDiscovery
     };
 
     /// <summary>
-    /// The name a search would give profile <paramref name="id"/> ("SSH - buildbox", "Fedora"), for
+    /// The name a search would give profile <paramref name="id"/> ("buildbox (SSH)", "Fedora"), for
     /// one it didn't find this time (not here any more, or its search is off).
     /// </summary>
     public static string NameFor(string id) => id switch
     {
-        _ when id.StartsWith("ssh:", StringComparison.Ordinal) => $"SSH - {id[4..]}",
+        _ when id.StartsWith("ssh:", StringComparison.Ordinal) => $"{id[4..]} (SSH)",
         _ when id.StartsWith("wsl:", StringComparison.Ordinal) => id[4..],
         "pwsh" => "PowerShell",
         "powershell" => "Windows PowerShell",
@@ -237,7 +237,7 @@ public static class ProfileDiscovery
         }
 
         var hosts = SshHosts(File.ReadAllText(config), pattern => ReadIncludes(dir, pattern));
-        return hosts.Select(h => new DiscoveredProfile($"ssh:{h}", $"SSH - {h}", $"ssh.exe {h}"));
+        return hosts.Select(h => new DiscoveredProfile($"ssh:{h}", $"{h} (SSH)", $"ssh.exe {h}"));
     }
 
     /// <summary>Files an ssh <c>Include</c> names (relative to ~/.ssh, where <c>*</c> matches within a folder).</summary>

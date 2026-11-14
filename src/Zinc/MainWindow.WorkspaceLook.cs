@@ -57,7 +57,7 @@ public sealed partial class MainWindow
         if (folder?.LaunchFor(pane.Command, pane.Control.WslDistro) is not { } launch ||
             launch.WorkingDirectory is { } directory && !Directory.Exists(directory))
         {
-            AskWorkspaceFolder(tab, $"No folder {typed} for {pane.Profile.Name}. Try another one.");
+            AskWorkspaceFolder(tab, $"There's no folder \"{typed}\" for {pane.Profile.Name}. Try another one.");
             return;
         }
 

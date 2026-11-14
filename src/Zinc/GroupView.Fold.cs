@@ -58,9 +58,12 @@ internal sealed partial class GroupView
         var others = _order.Where(t => t != _shown).ToList();
         _countText.Text = position;
         _countDot.Show(others.Select(t => t.Attention).DefaultIfEmpty().Max());
+        // The words describe the other tabs, not the shown one, so they get their own sentence that says so.
         var words = AttentionWords.Summary([.. others.Select(t => (t.Attention, t.FailedExit))]);
-        AutomationProperties.SetName(_count, AttentionWords.Name($"Tab {position}", words));
-        ToolTipService.SetToolTip(_count, AttentionWords.ToolTip($"Tab {position}", words));
+        var othersSentence = words == null ? null
+            : others.Count(t => t.Attention != Attention.None) == 1 ? $"Another tab {words}." : $"Other tabs: {words}.";
+        AutomationProperties.SetName(_count, othersSentence == null ? $"Tab {position}" : $"Tab {position}. {othersSentence}");
+        ToolTipService.SetToolTip(_count, othersSentence == null ? $"Tab {position}" : $"Tab {position}\n{othersSentence}");
     }
 
     /// <summary>Fits the tabs in <paramref name="space"/> (theirs and the +'s): shortened, as icons, or folded into the count.</summary>

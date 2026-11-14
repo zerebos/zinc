@@ -133,7 +133,8 @@ public sealed partial class MainWindow
         var lines = config.Warnings.Take(shown).ToList();
         if (config.Warnings.Count > shown)
         {
-            lines.Add($"…and {config.Warnings.Count - shown} more");
+            var more = config.Warnings.Count - shown;
+            lines.Add(more == 1 ? "And 1 more problem." : $"And {more} more problems.");
         }
 
         if (!applied)

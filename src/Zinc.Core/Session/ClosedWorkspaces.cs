@@ -6,15 +6,20 @@ namespace Zinc.Session;
 /// </summary>
 public sealed record ClosedWorkspace(string Name, WorkspaceState State, DateTimeOffset When)
 {
-    /// <summary>What it had, for a chip, such as "3 tabs, split" or "1 tab".</summary>
+    /// <summary>What it had, for a chip, such as "3 tabs, split" or "1 tab", as <see cref="SummaryFor"/> words it with tabs inside panes.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
-    public string Summary
+    public string Summary => SummaryFor(paneTabs: true);
+
+    /// <summary>
+    /// What it had, for a chip. With tabs inside panes (<paramref name="paneTabs"/>) that's "3 tabs, split" or "1 tab".
+    /// Without them, each pane shows one terminal, so it's "3 panes" or "1 pane".
+    /// </summary>
+    public string SummaryFor(bool paneTabs)
     {
-        get
-        {
-            var (panes, tabs) = Count(State.Layout);
-            return $"{tabs} tab{(tabs == 1 ? "" : "s")}{(panes > 1 ? ", split" : "")}";
-        }
+        var (panes, tabs) = Count(State.Layout);
+        return paneTabs
+            ? $"{tabs} tab{(tabs == 1 ? "" : "s")}{(panes > 1 ? ", split" : "")}"
+            : $"{panes} pane{(panes == 1 ? "" : "s")}";
     }
 
     private static (int Panes, int Tabs) Count(LayoutNode node) => node.Pane is { } pane

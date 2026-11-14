@@ -132,9 +132,16 @@ public sealed partial class TerminalControl
             }
         }
 
-        _searchCount!.Text = problem ?? (_searchBox.Text.Length == 0 ? ""
-            : _matches.Count == 0 ? "No results"
-            : CountText());
+        if (problem != null || _searchBox.Text.Length == 0 || _matches.Count == 0)
+        {
+            _searchCount!.Text = problem ?? (_searchBox.Text.Length == 0 ? "" : "No results");
+            AutomationProperties.SetName(_searchCount, _searchCount.Text);
+        }
+        else
+        {
+            ShowCount();
+        }
+
         ToolTipService.SetToolTip(_searchCount, error);
         UpdateSearchRendering();
     }
@@ -172,13 +179,21 @@ public sealed partial class TerminalControl
         }
 
         _currentMatch = (_currentMatch + (older ? -1 : 1) + _matches.Count) % _matches.Count;
-        _searchCount!.Text = CountText();
+        ShowCount();
         ScrollToMatch();
         UpdateSearchRendering();
     }
 
-    // Counted from the newest match, so Enter (upward) counts up.
-    private string CountText() => $"{_matches.Count - _currentMatch}/{_matches.Count}";
+    /// <summary>
+    /// Shows "3/12", counted from the newest match so Enter (upward) counts up. Screen readers get "3 of 12", because
+    /// they read the slash aloud.
+    /// </summary>
+    private void ShowCount()
+    {
+        var at = _matches.Count - _currentMatch;
+        _searchCount!.Text = $"{at}/{_matches.Count}";
+        AutomationProperties.SetName(_searchCount, $"{at} of {_matches.Count}");
+    }
 
     private void ScrollToMatch()
     {

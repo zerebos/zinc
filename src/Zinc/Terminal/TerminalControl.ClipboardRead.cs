@@ -28,8 +28,9 @@ public sealed partial class TerminalControl
         }
 
         var answer = new TaskCompletionSource<ClipboardReadAnswer>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var who = Title.Length > 0 ? Title : "A program";
-        if (!DispatcherQueue.SafeEnqueue(() => ClipboardText.AskToRead(XamlRoot, who, answer)))
+        // The running command names the program ("npm test in this tab asked…"). The tab's title often names a folder
+        // instead, so it isn't used.
+        if (!DispatcherQueue.SafeEnqueue(() => ClipboardText.AskToRead(XamlRoot, RunningCommand?.Text ?? "A program", answer)))
         {
             return false;
         }

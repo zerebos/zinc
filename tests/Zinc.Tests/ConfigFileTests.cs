@@ -180,6 +180,21 @@ public class ConfigFileTests : IDisposable
     }
 
     [Fact]
+    public void AnOldSshProfileNameStillFindsTheHost()
+    {
+        var config = Parse("[profile.\"ssh:buildbox\"]\ncommand = \"ssh.exe buildbox\"");
+        Assert.Equal("ssh:buildbox", config.FindProfile("SSH - buildbox")?.Id);
+    }
+
+    [Fact]
+    public void AWrongChoiceSaysWhatTheSettingTakes()
+    {
+        var config = Parse("[terminal]\ncursor-style = \"beem\"");
+        Assert.Contains(config.Warnings, w => w.Contains("\"terminal.cursor-style\" = \"beem\"") && w.Contains("\"block\"") && w.Contains("or \"block-hollow\""));
+        Assert.Null(config.FirstError); // a wrong value is a warning, not an error
+    }
+
+    [Fact]
     public void ProblemsAreReportedWithLineNumbers()
     {
         var config = Parse("""
@@ -199,11 +214,12 @@ public class ConfigFileTests : IDisposable
             this is not toml
             """);
 
-        Assert.Contains("config.toml:2: ignored font.size = \"huge\"", config.Warnings);
-        Assert.Contains("config.toml:3: unknown setting font.colour", config.Warnings);
+        Assert.Contains("config.toml:2: ignored \"font.size\" = \"huge\"", config.Warnings);
+        Assert.Contains("config.toml:3: unknown setting \"font.colour\"", config.Warnings);
         Assert.Contains("config.toml:9: [window] applies to the whole app, not to one profile", config.Warnings);
-        Assert.Contains("config.toml:10: unknown or invalid profile setting flavor", config.Warnings);
+        Assert.Contains("config.toml:10: unknown or invalid profile setting \"flavor\"", config.Warnings);
         Assert.Contains(config.Warnings, w => w.StartsWith("config.toml:14:")); // a TOML syntax error
+        Assert.StartsWith("config.toml:14:", config.FirstError); // the error, not the plain warnings listed before it
         Assert.DoesNotContain(config.Warnings, w => w.Contains("keys")); // reserved for keybindings
 
         // Everything valid still applies, but the profile's app-wide setting doesn't.

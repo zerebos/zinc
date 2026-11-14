@@ -472,7 +472,7 @@ internal sealed partial class StartPage : UserControl
                         new TextBlock { Text = workspace.Name, MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis },
                         new TextBlock
                         {
-                            Text = $"{workspace.Summary} · closed {Ago(now - workspace.When)}",
+                            Text = $"{workspace.SummaryFor(_profile.Config.PaneTabs)} · closed {Ago(now - workspace.When)}",
                             Opacity = 0.6,
                             FontSize = 12,
                             VerticalAlignment = VerticalAlignment.Center,

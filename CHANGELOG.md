@@ -13,8 +13,11 @@ made from.
 ### Changed
 - Zinc is now licensed under Apache-2.0. `Settings > About > Open-source software` lists Zinc's own license first.
 - The full list of settings and actions is now on [zincterminal.dev](https://zincterminal.dev/docs/config) instead of in the README, and a new `config.toml` points there. `zn`'s message for an unknown action points to `Settings > Keyboard`.
+- Setting descriptions, command palette entries, notifications, config warnings, and `zn`'s messages are worded more clearly. Config warnings quote what you wrote, and a wrong choice lists the values the setting takes.
+- Discovered SSH hosts are named like "prod (SSH)" instead of "SSH - prod". Saved workspaces still find them.
 
 ### Fixed
+- Duplicating a workspace named "api 2" names the copy "api 3" instead of "api 2 2".
 - Terminals could stop updating after a big resize, such as dragging the window to another monitor and snapping it to maximize, when a pane header's title was too long to fit. The window kept resizing, but the terminals kept showing their old picture until you restarted Zinc. With pane tabs on, the same resize could instead leave the header's tab running past the pane's edge, with its × and + out of sight.
 
 ## 0.1.0-dev.428 (2026-10-22)
@@ -23,7 +26,7 @@ made from.
 - Panes now move instead of jumping. They slide into place when you split, close, maximize, or restore them, and when you drop one beside another, into its tabs, or into another window. Turn the animations off with `Settings > Layout > Panes > Pane animations` (`pane-animations` in `[window]`). While "Animation effects" is off in Windows Settings, panes jump into place as before.
 
 ### Changed
-- Setting descriptions, command palette entries, config warnings, and `zn`'s messages are worded more clearly. Config warnings quote names with double quotes.
+- Setting descriptions are worded more clearly.
 - Quick commands like `ls` and `git status` no longer flash in tab labels (with `Folder and command as the title`) or the title bar. A command now shows there, and in pane headers, once it has run for 0.3 seconds. A title the program sets itself still shows right away.
 
 ### Fixed

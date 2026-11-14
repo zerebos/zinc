@@ -121,7 +121,7 @@ public sealed partial class TerminalControl
         panel.Children.Add(rows);
         panel.Children.Add(new TextBlock
         {
-            Text = (next.Count > MaxShown ? $"and {next.Count - MaxShown} more · " : "") + "Esc cancels" +
+            Text = (next.Count > MaxShown ? $"{next.Count - MaxShown} more · " : "") + "Esc cancels" +
                    (pressed.Count == 1 ? $" · {pressed[0]} again types {pressed[0]}" : ""),
             FontSize = 12,
             Opacity = 0.6,

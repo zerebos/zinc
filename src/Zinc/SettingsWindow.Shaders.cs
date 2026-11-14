@@ -88,7 +88,7 @@ internal sealed partial class SettingsWindow
             else
             {
                 var inherited = InheritedShaders();
-                InheritedText(description, setting, inherited.Count == 0 ? "none" : string.Join(", ", inherited.Select(ShaderName)), own != null);
+                InheritedText(description, setting, [.. inherited.Select(ShaderName)], own != null);
             }
 
             summary.Text = files.Count == 0 ? "None" : string.Join(", ", files.Select(ShaderName));
@@ -110,7 +110,7 @@ internal sealed partial class SettingsWindow
                 var loaded = await ShaderLoader.Load(full);
                 if (current == check && loaded.Errors.Count > 0)
                 {
-                    SetText(state, loaded.Errors.Count == 1 ? $"One shader doesn't compile: {loaded.Errors[0]}" : $"{loaded.Errors.Count} shaders don't compile. \"Edit shaders\" shows why.");
+                    SetText(state, loaded.Errors.Count == 1 ? $"One shader doesn't compile. {AsSentence(loaded.Errors[0])}" : $"{loaded.Errors.Count} shaders don't compile. \"Edit shaders\" shows why.");
                     state.Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"];
                 }
             }

@@ -531,7 +531,7 @@ internal sealed partial class SettingsWindow
             catch (Exception ex)
             {
                 Log.Crash("listing color schemes", ex);
-                SetText(status, $"Couldn't list the schemes: {ex.Message}");
+                SetText(status, $"Couldn't list the schemes. {AsSentence(ex.Message)}");
             }
         }
 

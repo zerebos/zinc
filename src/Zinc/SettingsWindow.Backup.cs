@@ -78,7 +78,7 @@ internal sealed partial class SettingsWindow
         catch (Exception ex)
         {
             Log.Write($"backup: export failed: {ex}");
-            ShowBackupStatus($"Couldn't export your settings ({ex.Message.TrimEnd('.', ' ')}). Try saving to another folder.");
+            ShowBackupStatus($"Couldn't export your settings. {AsSentence(ex.Message)} Try saving to another folder.");
         }
     }
 
@@ -131,12 +131,12 @@ internal sealed partial class SettingsWindow
         {
             // The import stopped partway, so some files are the backup's and the rest are not imported.
             Log.Write($"backup: import failed after {ex.Written} files: {ex}");
-            ShowBackupStatus($"The import stopped partway ({ex.Message.TrimEnd('.', ' ')}). Your settings from before are in " + $"{Path.GetFileName(ex.SafetyCopy)}. Import that file to go back.", ex.SafetyCopy);
+            ShowBackupStatus($"The import stopped partway. {AsSentence(ex.Message)} Your settings from before are in " + $"{Path.GetFileName(ex.SafetyCopy)}. Import that file to go back.", ex.SafetyCopy);
         }
         catch (Exception ex)
         {
             Log.Write($"backup: import failed: {ex}");
-            ShowBackupStatus($"Couldn't import the settings ({ex.Message.TrimEnd('.', ' ')}). Nothing was changed. Check that the file can be opened, and try again.");
+            ShowBackupStatus($"Couldn't import the settings. {AsSentence(ex.Message)} Nothing was changed. Check that the file can be opened, and try again.");
         }
     }
 
@@ -150,7 +150,9 @@ internal sealed partial class SettingsWindow
             ? $"Imported {Files(result.Files)}." + (result.Session ? " The windows from the backup open the next time Zinc starts." : "")
             : result.Session ? "Imported the windows from the backup. They open the next time Zinc starts." : "Imported nothing, because the backup has no settings.";
         var skipped = result.Skipped > 0
-            ? $" {Files(result.Skipped)} in the backup {(result.Skipped == 1 ? "wasn't" : "weren't")} restored, because Zinc doesn't use {(result.Skipped == 1 ? "it" : "them")} (from a newer version, or not settings)."
+            ? result.Skipped == 1
+                ? " 1 file in the backup wasn't restored, because Zinc doesn't use it. That file comes from a newer version of Zinc, or it isn't a setting."
+                : $" {Files(result.Skipped)} in the backup weren't restored, because Zinc doesn't use them. Those files come from a newer version of Zinc, or they aren't settings."
             : "";
         return $"{done}{skipped} Your settings from before are in {Path.GetFileName(result.SafetyCopy)}.";
     }
@@ -173,16 +175,18 @@ internal sealed partial class SettingsWindow
         }
 
         var adds = parts.Count > 0
-            ? $" It also adds {JoinAnd(parts)}, which replace any of yours with the same names. The rest of yours stay."
+            ? $" The backup also adds {JoinAnd(parts)}, which replace any of yours with the same names. The rest of yours stay."
             : "";
-        var windows = contents.HasSession && keepsSessions ? " The windows in it open the next time Zinc starts." : "";
-        return $"{from}It replaces your settings. They're saved first, in the backups folder next to config.toml.{adds}{windows}";
+        var windows = contents.HasSession && keepsSessions ? " The windows in the backup open the next time Zinc starts." : "";
+        return $"{from}Importing replaces your settings. They're saved first, in the backups folder next to config.toml.{adds}{windows}";
     }
 
-    private static string JoinAnd(List<string> parts) => parts.Count switch
+    /// <summary>A list in words, with a serial comma: "a", "a and b", "a, b, and c".</summary>
+    private static string JoinAnd(IReadOnlyList<string> parts) => parts.Count switch
     {
+        0 => "",
         1 => parts[0],
         2 => $"{parts[0]} and {parts[1]}",
-        _ => string.Join(", ", parts[..^1]) + ", and " + parts[^1],
+        _ => string.Join(", ", parts.Take(parts.Count - 1)) + ", and " + parts[^1],
     };
 }

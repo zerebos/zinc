@@ -25,8 +25,13 @@ internal enum UpdateStatus
 
     UpToDate,
 
-    /// <summary>The last check or download failed (no network, the address gone), and the next one tries again.</summary>
+    /// <summary>The last check failed (no network, the address gone), and the next one tries again.</summary>
     Failed,
+
+    /// <summary>
+    /// A newer version was found, but its download failed. The next check finds that version again and downloads it.
+    /// </summary>
+    DownloadFailed,
 }
 
 /// <summary>
@@ -93,6 +98,9 @@ internal static class Updater
     private static UpdateInfo? _ready;
     private static DispatcherQueueTimer? _timer;
 
+    /// <summary>Whether the daily check runs (<c>[updates] check</c>), which decides how a failed download says it's retried.</summary>
+    private static bool _checksDaily;
+
     /// <summary>The installer's update manager, or null when this copy can't update.</summary>
     private static UpdateManager? Manager
     {
@@ -151,6 +159,7 @@ internal static class Updater
             return;
         }
 
+        _checksDaily = automatic;
         if (!automatic)
         {
             _timer?.Stop();
@@ -218,7 +227,7 @@ internal static class Updater
         {
             Error = ex.Message;
             Log.Write($"update: failed: {ex.Message}");
-            Set(UpdateStatus.Failed);
+            Set(Status == UpdateStatus.Downloading ? UpdateStatus.DownloadFailed : UpdateStatus.Failed);
         }
     }
 
@@ -255,10 +264,12 @@ internal static class Updater
         UpdateStatus.Checking => "Checking for updates…",
         // No number until there is one, because a server that doesn't say how big a file is (compressed on the fly)
         // leaves Velopack at 0 until the end.
-        UpdateStatus.Downloading => Progress > 0 ? $"Downloading {NewVersion}: {Progress}%" : $"Downloading {NewVersion}…",
-        UpdateStatus.Ready => $"{NewVersion} is ready. It installs when you restart Zinc, or the next time you quit.",
+        UpdateStatus.Downloading => Progress > 0 ? $"Downloading Zinc {NewVersion}: {Progress}%" : $"Downloading Zinc {NewVersion}…",
+        UpdateStatus.Ready => $"Zinc {NewVersion} is ready. It installs when you restart Zinc, or the next time you quit.",
         UpdateStatus.UpToDate => $"Up to date ({CurrentVersion}). Checked {LastChecked:t}.",
-        UpdateStatus.Failed => $"Couldn't check for updates: {Error}",
+        UpdateStatus.Failed => $"Couldn't check for updates. {SettingsWindow.AsSentence(Error)}",
+        UpdateStatus.DownloadFailed => $"Couldn't download Zinc {NewVersion}. {SettingsWindow.AsSentence(Error)} " +
+            (_checksDaily ? "Zinc tries again at the next daily check." : "\"Check for updates\" tries again."),
         _ => "",
     };
 

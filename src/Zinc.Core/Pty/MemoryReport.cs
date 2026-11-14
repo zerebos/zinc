@@ -28,7 +28,9 @@ public sealed record MemoryReport(
     /// <summary>One line for the About row.</summary>
     public string Summary =>
         $"Zinc uses {Mb(PrivateBytes)}, including {Mb(ManagedHeapBytes)} for .NET, across {Plural(Panes, "pane")} in {Plural(Windows, "window")}. " +
-        $"Programs it started use {Mb(ChildBytes)} in {Plural(ChildCount, "process", "processes")}";
+        (ChildCount == 0
+            ? "Zinc hasn't started any programs"
+            : $"Programs it started use {Mb(ChildBytes)} in {Plural(ChildCount, "process", "processes")}");
 
     /// <summary>Everything, for a bug report.</summary>
     public string Text()

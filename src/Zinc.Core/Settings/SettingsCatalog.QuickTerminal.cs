@@ -18,7 +18,7 @@ public static partial class SettingsCatalog
             },
         new("quick", "Placement", "quick-terminal.screen", "Screen", "", SettingKind.Choice)
             {
-                Choices = [new("With the pointer", "mouse", "Opens on the screen the pointer is on."), new("Main", "main", "Always opens on the main screen.")],
+                Choices = [new("With the pointer", "mouse", "The quick terminal opens on the screen the pointer is on."), new("Main", "main", "The quick terminal always opens on the main screen.")],
                 Binding = Bind.Enum<QuickTerminalScreen>((c, v) => Quick(c, q => q with { Screen = v })),
             },
         new("quick", "Placement", "quick-terminal.size", "Size",

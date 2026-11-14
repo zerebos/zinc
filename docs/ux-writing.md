@@ -116,9 +116,9 @@ Errors say what's wrong and what to do, as in "config.toml has an error. Fix it 
 - No period on names, labels, buttons, choice labels, or single-phrase tooltips.
 - A period on descriptions, and on any text of more than one sentence.
 - Colons only introduce a list or code, separate a label from its value ("Color: automatic", "Inherited: 11 pt"), or lead into a reset arrow's destination ("Back to the default: no shaders"). A colon never stands in for "because" or "so", and text never opens with one.
-- No semicolons. Write two sentences instead, as in "Shows a dot on its tab. The taskbar button also flashes if Zinc is in the background."
+- No semicolons. Write two sentences instead, as in "Zinc shows a dot on the pane's tab. The taskbar button also flashes if Zinc is in the background."
 - A comma before the last item in a list of three or more (the serial comma), as in "Tabs, splits, and folders".
-- An ellipsis ends a command that asks for more before it acts, as Windows does ("Browse…", "Workspace folder…"), or shows where text was cut to fit. Never use one as punctuation in a sentence.
+- An ellipsis has three uses, and Windows uses all three. It ends a command that asks for more before it acts ("Browse…", "Workspace folder…"), it ends a status for work that's still going ("Checking for updates…"), and it shows where text was cut to fit. Never use one as punctuation in a sentence.
 - Use straight double quotes for quoting labels and names ("Vintage"), and straight apostrophes (Zinc's). Never use curly quotes, and never use single quotes for quoting. (In this guide, an example that itself contains a quoted label is shown in *italics* instead.)
 - Code, keys, paths, and values appear exactly as typed, never recapitalized, like `config.toml`, Ctrl+A > C, and `C:\Users`.
 - Product text is plain, with no code style. So when a word someone types in config.toml, like an action, a key chord, or a value such as none or last, sits in a sentence where it could read as an ordinary word, put it in double quotes, as in *A key bound to "none" goes to the program instead.* File names, paths, and keyboard shortcuts stay bare, because they can't be misread. Config warnings quote what the person wrote the same way, as in *unknown action "teleport"*.

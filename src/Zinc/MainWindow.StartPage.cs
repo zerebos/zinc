@@ -177,8 +177,12 @@ public sealed partial class MainWindow
 
     /// <summary>
     /// A copy of the whole workspace beside it, as reopening would bring it back, with its splits and tabs (each where its
-    /// shell is now), folder, icon, color, and its name with " 2".
+    /// shell is now), folder, icon, color, and its name with the next number ("api" becomes "api 2", and "api 2" becomes "api 3").
     /// </summary>
+    private static string NextName(string name) =>
+        System.Text.RegularExpressions.Regex.Match(name, @"^(.*\S) (\d+)$") is { Success: true } m && int.TryParse(m.Groups[2].Value, out var n)
+            ? $"{m.Groups[1].Value} {n + 1}" : $"{name} 2";
+
     private void DuplicateWorkspace(WorkspaceTab tab)
     {
         if (SessionLayout.Restore(SessionLayout.Capture(tab.Workspace, DescribeTab), OpenSaved) is not { } workspace)
@@ -188,7 +192,7 @@ public sealed partial class MainWindow
         }
 
         var index = Tabs.TabItems.IndexOf(tab.Item);
-        var copy = AddWorkspace(workspace, tab.CustomTitle is { } title ? $"{title} 2" : null, tab.Color,
+        var copy = AddWorkspace(workspace, tab.CustomTitle is { } title ? NextName(title) : null, tab.Color,
             index < 0 ? null : index + 1, tab.Folder, tab.Icon);
         RefreshWorkspaceList();
         FocusActive(copy);

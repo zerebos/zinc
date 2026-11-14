@@ -270,26 +270,30 @@ internal sealed partial class SettingsWindow
     /// A profile setting's description, which says where its inherited value is set, as a link there
     /// ("Inherited from Appearance, where it's 11 pt."), or that the profile changed it ("Changed here. In Appearance, it's 11 pt.").
     /// </summary>
-    private void InheritedText(TextBlock block, SettingDef setting, string inherited, bool own)
+    private void InheritedText(TextBlock block, SettingDef setting, string inherited, bool own) =>
+        InheritedText(block, setting, own, $", where it's {inherited}.", $", it's {inherited}.");
+
+    /// <summary>
+    /// The same for the inherited shader list: "Inherited from Appearance, which uses crt and bloom." or "Changed here.
+    /// In Appearance, it uses no shaders."
+    /// </summary>
+    private void InheritedText(TextBlock block, SettingDef setting, IReadOnlyList<string> shaders, bool own)
+    {
+        var uses = shaders.Count == 0 ? "no shaders" : JoinAnd(shaders);
+        InheritedText(block, setting, own, $", which uses {uses}.", $", it uses {uses}.");
+    }
+
+    /// <summary>The words after the link: <paramref name="inheritedEnd"/> while inherited, <paramref name="changedEnd"/> once changed.</summary>
+    private void InheritedText(TextBlock block, SettingDef setting, bool own, string inheritedEnd, string changedEnd)
     {
         var section = setting.Section;
         var link = new Hyperlink();
         link.Inlines.Add(new Run { Text = SectionTitle(section) });
         link.Click += (_, _) => GoTo(section, null, setting.Key);
         block.Inlines.Clear();
-        if (own)
-        {
-            block.Inlines.Add(new Run { Text = "Changed here. In " });
-            block.Inlines.Add(link);
-            block.Inlines.Add(new Run { Text = $", it's {inherited}." });
-        }
-        else
-        {
-            block.Inlines.Add(new Run { Text = "Inherited from " });
-            block.Inlines.Add(link);
-            block.Inlines.Add(new Run { Text = $", where it's {inherited}." });
-        }
-
+        block.Inlines.Add(new Run { Text = own ? "Changed here. In " : "Inherited from " });
+        block.Inlines.Add(link);
+        block.Inlines.Add(new Run { Text = own ? changedEnd : inheritedEnd });
         block.Visibility = Visibility.Visible;
     }
 }

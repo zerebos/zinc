@@ -154,8 +154,15 @@ internal static class ShaderLoader
             if (ex is FileNotFoundException or DirectoryNotFoundException && ShaderPaths.IsBundled(file))
             {
                 // A name that's neither yours (shaders\ next to the config) nor Zinc's.
-                var known = string.Join(", ", ShaderPaths.Bundled().Select(s => s.Name));
-                return (null, $"{Path.GetFileNameWithoutExtension(file)}: no shader by that name. Zinc's own are {known}, and yours go in a shaders folder next to config.toml.");
+                var names = ShaderPaths.Bundled().Select(s => $"\"{s.Name}\"").ToList();
+                var known = names.Count switch
+                {
+                    0 => "",
+                    1 => $" Zinc's own is {names[0]}.",
+                    2 => $" Zinc's own are {names[0]} and {names[1]}.",
+                    _ => $" Zinc's own are {string.Join(", ", names[..^1])}, and {names[^1]}.",
+                };
+                return (null, $"\"{Path.GetFileNameWithoutExtension(file)}\": no shader by that name.{known} Yours go in a shaders folder next to config.toml.");
             }
 
             return (null, ex is FileNotFoundException or DirectoryNotFoundException ? $"{name}: no such file ({file})" : $"{name}: couldn't read the file ({ex.Message})");

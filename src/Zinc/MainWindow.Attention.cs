@@ -34,9 +34,10 @@ public sealed partial class MainWindow
 
         Log.Write($"attention: '{command.Text}' {attention} after {took.TotalSeconds:0}s");
         UpdateFocusBorders(tab);
-        // The command, what happened, then where (docs/ux-writing.md): "npm test failed (exit 1)", "In "api", after 3 min".
+        // The command, what happened, then where (docs/ux-writing.md): "npm test failed (exit 1)", "Took 3 minutes in "api"."
+        var where = string.IsNullOrEmpty(tab.Header.Title) ? $"workspace {Tabs.TabItems.IndexOf(tab.Item) + 1}" : $"\"{tab.Header.Title}\"";
         var toast = Alert(global.NotifyCommandFinished, tab, pane,
-            $"{command.Text ?? "A command"} {AttentionWords.For(attention, command.ExitCode)}", $"In \"{tab.Header.Title}\", after {Elapsed(took)}");
+            $"{command.Text ?? "A command"} {AttentionWords.For(attention, command.ExitCode)}", $"Took {Duration(took)} in {where}.");
         if (!toast)
         {
             PlayFinishedSound(global.CommandFinishedSound);
@@ -293,9 +294,9 @@ public sealed partial class MainWindow
     /// <param name="what">What closes, for the button: "tab", "pane", "workspace", "window".</param>
     /// <param name="severalTabs">False for zn: a script gets no question unless a command is running.</param>
     private Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string what, bool severalTabs = true) =>
-        _config.Global.ConfirmClose ? ConfirmClose(panes, "Closing", $"Close {what}", severalTabs) : Task.FromResult(true);
+        _config.Global.ConfirmClose ? ConfirmClose(panes, $"Closing the {what}", $"Close {what}", severalTabs) : Task.FromResult(true);
 
-    /// <param name="doing">What the answer does, as the reason ("Closing", "Quitting").</param>
+    /// <param name="doing">What the answer does, with its object, to start the reason ("Closing the tab", "Quitting Zinc").</param>
     /// <param name="button">The primary button's label, a verb and its object ("Close tab", "Quit Zinc").</param>
     private async Task<bool> ConfirmClose(IEnumerable<TerminalTab> panes, string doing, string button, bool severalTabs = false)
     {
@@ -314,7 +315,7 @@ public sealed partial class MainWindow
         _confirmingClose = true;
         try
         {
-            var list = string.Join("\n", running.Select(c => c.Text ?? "(a command)"));
+            var list = string.Join("\n", running.Select(c => c.Text ?? "A command without a name"));
             var dialog = new ContentDialog
             {
                 XamlRoot = root,
@@ -325,7 +326,7 @@ public sealed partial class MainWindow
             if (running.Count > 0)
             {
                 dialog.Title = running.Count == 1 ? "A command is still running" : $"{running.Count} commands are still running";
-                dialog.Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "it" : "them")}.";
+                dialog.Content = $"{list}\n\n{doing} stops {(running.Count == 1 ? "this command" : $"these {running.Count} commands")}.";
             }
             else
             {
@@ -429,7 +430,7 @@ public sealed partial class MainWindow
     internal Task<bool> ConfirmQuit(IEnumerable<MainWindow> windows, bool restart = false) =>
         !_config.Global.ConfirmQuit ? Task.FromResult(true)
             : ConfirmClose(windows.SelectMany(w => w.AllTabs()).SelectMany(t => t.Workspace.Tabs),
-                restart ? "Restarting" : "Quitting", restart ? "Restart Zinc" : "Quit Zinc");
+                restart ? "Restarting Zinc" : "Quitting Zinc", restart ? "Restart Zinc" : "Quit Zinc");
 
     [StructLayout(LayoutKind.Sequential)]
     private struct FlashInfo

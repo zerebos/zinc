@@ -49,9 +49,9 @@ public static partial class SettingsCatalog
     // A property, not a field, because a field in another partial file could be read before it's set.
     private static SettingChoice[] NotifyChoices =>
     [
-        new("Tab dot", "badge", "Shows a dot on its tab. The taskbar button also flashes if Zinc is in the background."),
-        new("Notification", "toast", "Shows a dot on its tab, and a Windows notification if Zinc is in the background."),
-        new("Always notify", "toast-always", "Shows a Windows notification whenever you aren't looking at that pane, even in Zinc."),
-        new("None", "never", "Shows neither a dot nor a notification."),
+        new("Tab dot", "badge", "Zinc shows a dot on the pane's tab. The taskbar button also flashes if Zinc is in the background."),
+        new("Notification", "toast", "Zinc shows a dot on the pane's tab, and a Windows notification if Zinc is in the background."),
+        new("Always notify", "toast-always", "Zinc shows a Windows notification whenever you aren't looking at the pane, even while you're using Zinc."),
+        new("None", "never", "Zinc shows neither a dot nor a notification."),
     ];
 }

@@ -28,6 +28,28 @@ public sealed partial class MainWindow
     /// <summary>0:38, 12:05, 1:02:03.</summary>
     private static string Elapsed(TimeSpan t) =>
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes}:{t.Seconds:00}";
+
+    /// <summary>
+    /// A duration for a sentence: "38 seconds" under a minute, "12 minutes" under an hour, then "1 hour 5 minutes" or
+    /// "2 hours". Each form drops the smaller unit, rounding down.
+    /// </summary>
+    private static string Duration(TimeSpan t)
+    {
+        static string Count(int n, string unit) => n == 1 ? $"1 {unit}" : $"{n} {unit}s";
+        if (t.TotalMinutes < 1)
+        {
+            return Count(Math.Max(0, t.Seconds), "second");
+        }
+
+        if (t.TotalHours < 1)
+        {
+            return Count(t.Minutes, "minute");
+        }
+
+        var hours = Count((int)t.TotalHours, "hour");
+        return t.Minutes == 0 ? hours : $"{hours} {Count(t.Minutes, "minute")}";
+    }
+
     private StackPanel? _mark;
 
     private FrameworkElement BuildTitleRow()

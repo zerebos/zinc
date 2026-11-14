@@ -104,8 +104,8 @@ internal sealed partial class SettingsWindow
 
         var replaces = _config.Themes.ReplacesBundled(name);
         _page.Children.Add(Note(replaces
-            ? $"Your copy of {name}, used instead of the one Zinc comes with. Every pane using it changes as you edit."
-            : $"Yours, in the themes folder next to config.toml. Every pane using it changes as you edit."));
+            ? $"This is your copy of \"{name}\", which Zinc uses instead of the one it comes with. Every pane that uses this scheme changes as you edit."
+            : "This scheme is yours, in the themes folder next to config.toml. Every pane that uses it changes as you edit."));
 
         var undo = new Button { Content = "Undo changes" };
         undo.Click += (_, _) =>
@@ -123,7 +123,7 @@ internal sealed partial class SettingsWindow
         if (replaces)
         {
             var original = new Button { Content = "Restore the original" };
-            ToolTipService.SetToolTip(original, $"Deletes your copy, so the {name} that comes with Zinc is used again.");
+            ToolTipService.SetToolTip(original, $"Deletes your copy, so the \"{name}\" that comes with Zinc is used again.");
             original.Click += (_, _) =>
             {
                 try
@@ -224,7 +224,7 @@ internal sealed partial class SettingsWindow
         flyout.Opening += (_, _) =>
         {
             intro.Text = sources == null
-                ? $"Makes a copy of {from()} in the themes folder, yours to change as you like."
+                ? $"Makes a copy of \"{from()}\" in the themes folder, yours to change as you like."
                 : "Makes a copy of a scheme in the themes folder, yours to change as you like.";
             if (sources != null)
             {
@@ -252,7 +252,7 @@ internal sealed partial class SettingsWindow
                 var typed = start.Text.Trim();
                 if (names.FirstOrDefault(n => n.Equals(typed, StringComparison.OrdinalIgnoreCase)) is not { } known)
                 {
-                    problem.Text = typed.Length == 0 ? "Pick a scheme to start from." : $"There's no scheme called {typed}.";
+                    problem.Text = typed.Length == 0 ? "Pick a scheme to start from." : $"There's no scheme called \"{typed}\".";
                     problem.Visibility = Visibility.Visible;
                     return;
                 }
@@ -269,7 +269,7 @@ internal sealed partial class SettingsWindow
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                problem.Text = $"Couldn't save the scheme: {ex.Message}";
+                problem.Text = $"Couldn't save the scheme. {AsSentence(ex.Message)}";
                 problem.Visibility = Visibility.Visible;
                 return;
             }

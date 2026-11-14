@@ -21,9 +21,9 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Close if it succeeded", "success", "A failure stays on screen so you can read why. Any key closes it."),
+                    new("Close if it succeeded", "success", "When the program fails, the pane stays open so you can read why. Any key then closes the pane."),
                     new("Always close", "always"),
-                    new("Keep it open", "never", "Any key closes it."),
+                    new("Keep it open", "never", "Any key closes the pane."),
                 ],
                 Binding = Bind.Enum<CloseOnExit>((c, v) => c with { CloseOnExit = v }),
             },
@@ -54,7 +54,7 @@ public static partial class SettingsCatalog
         new("terminal", "Mouse", "terminal.word-boundaries", "Word boundaries",
             "These characters end a word when you double-click. Space and tab always do. When this is empty, Zinc uses the characters shown.", SettingKind.Text)
             {
-                Placeholder = "'\"│`|:;,()[]{}<>$",
+                Placeholder = "'\"│`|:;,()[]{}<>$", DefaultText = "Zinc's own set",
                 // Empty means the built-in set, so it's accepted too.
                 Binding = Bind.Custom((c, v) => v is string s ? c with { WordBoundaries = s.Length > 0 ? s : null } : null, [Accepts.Text()]),
             },
@@ -66,8 +66,8 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Menu", "menu", "Copy, paste, find, the link or command you clicked, split, and close."),
-                    new("Copy or paste", "copy-paste", "Copies a selection, or pastes when there's none."),
+                    new("Menu", "menu", "A right-click opens the menu too. It has copy, paste, find, the link or command you clicked, split, and close."),
+                    new("Copy or paste", "copy-paste", "A right-click copies the selection, or pastes when nothing is selected."),
                     new("Paste", "paste"),
                 ],
                 Binding = Bind.Enum<RightClick>((c, v) => c with { RightClick = v }),
@@ -101,8 +101,8 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<Terminal.PasteWarning>((c, v) => c with { PasteWarning = v }),
                 Choices =
                 [
-                    new("Automatic", "auto", "Warns when the program would take each line as Enter and run it. A program that marks pastes (bracketed paste) gets no warning."),
-                    new("Always", "multiline", "Whenever a paste has more than one line."),
+                    new("Automatic", "auto", "Zinc asks only when the program would take each line as Enter and run it. A program that marks pastes (bracketed paste) gets no warning."),
+                    new("Always", "multiline", "Zinc asks even when the program marks pastes (bracketed paste)."),
                     new("Never", "never"),
                 ],
             },
@@ -124,7 +124,7 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Ask each time", "ask", "Zinc asks whether to allow it once, for the tab, or not at all."),
+                    new("Ask each time", "ask", "Zinc asks whether to let the program read the clipboard once, for the tab, or not at all."),
                     new("Allow", "allow"),
                     new("Deny", "deny"),
                 ],
@@ -142,8 +142,8 @@ public static partial class SettingsCatalog
             {
                 Choices =
                 [
-                    new("Tab dot", "attention", "When you aren't looking at that pane, a dot shows on its tab and the taskbar button flashes."),
-                    new("Flash the pane", "flash", "Marks the tab too."),
+                    new("Tab dot", "attention", "When you aren't looking at the program's pane, a dot shows on the pane's tab and the taskbar button flashes."),
+                    new("Flash the pane", "flash", "The program's pane flashes, and its tab also gets a dot, as with \"Tab dot\"."),
                     new("None", "none"),
                 ],
                 Binding = Bind.Enum<BellMode>((c, v) => c with { Bell = v }),

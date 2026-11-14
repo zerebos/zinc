@@ -18,7 +18,14 @@ public static class CliCommandLine
     /// A command: its thing ("" for the top-level ones), verb, what it does, its arguments and its options.
     /// <paramref name="Positional"/> names its one argument (direction, action, text, title, name, color, icon).
     /// </summary>
-    private sealed record Verb(string Thing, string Name, string Summary, string Usage, string Options, string? Positional = null);
+    /// <summary>
+    /// One command. <see cref="Summary"/> is a fragment with no final period, for the help tables, and
+    /// <see cref="Detail"/> is more sentences that only the command's own help shows.
+    /// </summary>
+    private sealed record Verb(string Thing, string Name, string Summary, string Usage, string Options, string? Positional = null)
+    {
+        public string? Detail { get; init; }
+    }
 
     // Options by name: what each takes and says in help.
     private static readonly Dictionary<string, string> OptionHelp = new()
@@ -70,8 +77,10 @@ public static class CliCommandLine
         new("pane", "close", "Closes a pane and all its terminals (asks first if commands are running)", "zn pane close", Targets + " force"),
         new("terminal", "list", "Terminals: ids, titles, folders, and profiles", "zn terminal list", "json window workspace pane"),
         new("terminal", "new", "Opens a terminal as a new tab in a pane", "zn terminal new", Targets + " profile cwd command"),
-        new("terminal", "send", "Types text into a terminal, with \\r for Enter and \\e for Esc (also \\t, \\n, \\xHH, and \\\\). - reads stdin as is, and -- goes before text that starts with a dash",
-            "zn terminal send TEXT|-", Targets + " paste", "text"),
+        new("terminal", "send", "Types text into a terminal, with \\r for Enter and \\e for Esc", "zn terminal send TEXT|-", Targets + " paste", "text")
+        {
+            Detail = "TEXT can also have \\t, \\n, \\xHH, and \\\\. With - in its place, zn reads stdin as is. Put -- before text that starts with a dash.",
+        },
         new("terminal", "read", "Prints a terminal's screen", "zn terminal read", Targets + " lines ansi"),
         new("terminal", "title", "Names a terminal's tab (\"\" goes back to the program's title)", "zn terminal title TITLE", Targets, "title"),
         new("terminal", "focus", "Shows and focuses a terminal", "zn terminal focus", Targets),
@@ -102,7 +111,7 @@ public static class CliCommandLine
         if (Verbs.FirstOrDefault(v => v.Thing == thing && v.Name == verbName) is not { } verb)
         {
             return thing.Length > 0
-                ? Usage($"zn {thing} has no \"{verbName}\". zn {thing} --help lists what it does.")
+                ? Usage($"zn {thing} has no command \"{verbName}\". zn {thing} --help lists its commands.")
                 : Usage($"Unknown command \"{verbName}\". zn --help lists them.");
         }
 
@@ -457,7 +466,13 @@ public static class CliCommandLine
     private static string VerbHelp(Verb verb)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"{verb.Usage}: {verb.Summary}.");
+        sb.AppendLine(verb.Usage);
+        sb.AppendLine($"{verb.Summary}.");
+        if (verb.Detail != null)
+        {
+            sb.AppendLine(verb.Detail);
+        }
+
         var options = verb.Options.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (options.Length > 0)
         {

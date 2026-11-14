@@ -183,7 +183,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
             return "A name can't have \\ / : * ? \" < > | or a comma.";
         }
 
-        return Find(name) != null ? $"There's a scheme called {name} already." : null;
+        return Find(name) != null ? $"There's a scheme called \"{name}\" already." : null;
     }
 
     /// <summary>

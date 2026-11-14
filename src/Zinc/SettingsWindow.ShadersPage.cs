@@ -80,7 +80,7 @@ internal sealed partial class SettingsWindow
             if (profile != null)
             {
                 var inherited = InheritedShaders();
-                InheritedText(description, setting, inherited.Count == 0 ? "none" : string.Join(", ", inherited.Select(ShaderName)), own != null);
+                InheritedText(description, setting, [.. inherited.Select(ShaderName)], own != null);
             }
 
             rows.Children.Clear();
@@ -491,7 +491,7 @@ internal sealed partial class SettingsWindow
                 catch (Exception ex)
                 {
                     Log.Crash("picking shaders", ex);
-                    Show(error, $"Couldn't open the file picker: {ex.Message}");
+                    Show(error, $"Couldn't open the file picker. {AsSentence(ex.Message)}");
                 }
             };
             menu.Items.Add(addFolder);
@@ -505,7 +505,7 @@ internal sealed partial class SettingsWindow
             foreach (var folder in listed)
             {
                 var name = Path.GetFileName(folder.TrimEnd('\\', '/'));
-                var stop = new MenuFlyoutItem { Text = $"Stop listing {name}", Icon = new FontIcon { Glyph = "" } };
+                var stop = new MenuFlyoutItem { Text = $"Stop listing \"{(name.Length > 0 ? name : folder)}\"", Icon = new FontIcon { Glyph = "" } };
                 ToolTipService.SetToolTip(stop, folder);
                 stop.Click += (_, _) =>
                 {
@@ -544,7 +544,7 @@ internal sealed partial class SettingsWindow
             catch (Exception ex)
             {
                 Log.Crash("listing shaders", ex);
-                Show(status, $"Couldn't list the shaders: {ex.Message}");
+                Show(status, $"Couldn't list the shaders. {AsSentence(ex.Message)}");
             }
         }
 
