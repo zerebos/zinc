@@ -6,10 +6,10 @@ public static partial class SettingsCatalog
     private static SettingDef[] NotificationSettings() =>
     [
         new("notifications", "Long commands", "notify.command-finished", "Long command finishes",
-            "Applies when a long command finishes in a pane you weren't looking at.", SettingKind.Choice)
+            "Says what happens when a long command finishes in a pane you weren't looking at.", SettingKind.Choice)
             { Choices = NotifyChoices, Binding = Bind.Enum<NotifyMode>((c, v) => c with { NotifyCommandFinished = v }) },
         new("notifications", "Long commands", "notify.command-finished-after", "Counts as long after",
-            "Takes seconds, or a time with a unit, like 45s or 2m.", SettingKind.Text)
+            "This is in seconds unless you add a unit, like 45s or 2m.", SettingKind.Text)
             {
                 Placeholder = "10", NumbersAsNumbers = true,
                 Binding = Bind.Custom(
@@ -26,7 +26,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Enum<FinishedSound>((c, v) => c with { CommandFinishedSound = v }),
             },
         new("notifications", "Programs", "notify.programs", "Program notifications",
-            "Applies when a program asks for a notification with OSC 9 or 777, for example when a build script finishes.", SettingKind.Choice)
+            "Says what happens when a program asks for a notification with OSC 9 or 777, for example when a build script finishes.", SettingKind.Choice)
             { Choices = NotifyChoices, Binding = Bind.Enum<NotifyMode>((c, v) => c with { NotifyPrograms = v }) },
         new("notifications", "Dot colors", "notify.finished-color", "Finished",
             "A command finished, or a program sent a notification.", SettingKind.Color)

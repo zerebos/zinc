@@ -173,7 +173,7 @@ public static partial class SettingsCatalog
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.FreeHiddenMemory, (c, v) => c with { FreeHiddenMemory = v }) },
         new("terminal", "Troubleshooting", "window.free-hidden-after", "Free memory after",
-            "The time is in seconds, or has a unit, like 45s or 2m.", SettingKind.Text)
+            "This is in seconds unless you add a unit, like 45s or 2m.", SettingKind.Text)
             {
                 Placeholder = "60", NumbersAsNumbers = true,
                 Binding = Bind.Custom(

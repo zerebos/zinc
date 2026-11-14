@@ -499,7 +499,7 @@ internal sealed partial class SettingsWindow : Window
         AutomationProperties.SetName(image, "Zinc");
         _page.Children.Add(image);
         _page.Children.Add(Row(TerminalSession.Version.Replace("zinc", "Zinc"),
-            "Zinc: what makes ghosts glow in the dark. Built on libghostty, the terminal engine that powers Ghostty. The open-source software Zinc ships is listed below.",
+            "Zinc is a precise, native terminal for Windows, organized around how you work and built on libghostty. Below is Zinc's own license, then the open-source software it includes, each with its license.",
             null));
         _page.Children.Add(Row("Config file", _config.Path, ButtonRow(("Open in editor", OpenConfigFile), ("Open folder", () => Reveal(_config.Path)))));
         _page.Children.Add(Row("Welcome page", "Asks the first-run questions again: how you work, colors and font, and the default shell.",
@@ -664,7 +664,7 @@ internal sealed partial class SettingsWindow : Window
         var refresh = new Button { Content = "Measure again" };
         AutomationProperties.SetName(refresh, "Measure memory again");
         refresh.Click += (_, _) => Render();
-        _page.Children.Add(Row("Memory", report.Summary + ". Most of it is Windows' UI framework, the graphics driver, and your terminals' screens and scrollback.",
+        _page.Children.Add(Row("Memory", report.Summary + ". Most of Zinc's memory goes to Windows' UI framework, the graphics driver, and your terminals' screens and scrollback.",
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { refresh, copy } }));
     }
 
@@ -1409,7 +1409,7 @@ internal sealed partial class SettingsWindow : Window
         return string.Join(" ", new[] { setting.Description, detail }.Where(t => !string.IsNullOrEmpty(t)));
     }
 
-    /// <summary>A value as words, for "Inherited: …".</summary>
+    /// <summary>A value as words, for "Inherited from Appearance, where it's 11 pt.".</summary>
     private static string Describe(SettingDef setting, object? value) => value switch
     {
         // A color with named values (pane headers), where null is one of those values ("Standard")
@@ -1417,7 +1417,7 @@ internal sealed partial class SettingsWindow : Window
             level.Label,
         null => setting.Kind switch
         {
-            SettingKind.Color => "the scheme's",
+            SettingKind.Color => "the scheme's color",
             SettingKind.Font => BundledFonts.Family,
             SettingKind.Scheme => DefaultSchemeLabel,
             _ => "the default",

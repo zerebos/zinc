@@ -127,13 +127,13 @@ public static partial class SettingsCatalog
             { Placeholder = "Zinc's yellow", Binding = Bind.Color((c, v) => c with { SearchBackground = v }) },
         new("appearance", "Readability", "colors.find-highlight-current", "Current match", "Colors the background of the match Find is on.", SettingKind.Color)
             { Placeholder = "Zinc's orange", Binding = Bind.Color((c, v) => c with { SearchSelectedBackground = v }) },
-        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "Applies until a program picks its own shape, as vim's insert mode often does.",
+        new("appearance", "Cursor", "terminal.cursor-style", "Cursor shape", "A program can pick its own shape, as vim's insert mode often does.",
             SettingKind.Choice)
             {
                 Choices = [new("Block", "block"), new("Bar", "bar"), new("Underline", "underline"), new("Hollow block", "block-hollow")],
                 Binding = Bind.Custom((c, v) => CursorStyle(v) is { } style ? c with { CursorStyle = style } : null, [Accepts.Choices]),
             },
-        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "Applies until a program says otherwise.", SettingKind.Toggle)
+        new("appearance", "Cursor", "terminal.cursor-blink", "Blinking cursor", "A program can turn blinking on or off for itself.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.CursorBlink, (c, v) => c with { CursorBlink = v }) },
         new("appearance", "Cursor", "colors.cursor-opacity", "Cursor opacity",
             "At 1, the cursor is solid. Lower values let the character under a block cursor show in its own color.", SettingKind.Number)
@@ -142,7 +142,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Number(c => c.CursorOpacity, (c, v) => c with { CursorOpacity = v }),
             },
         new("appearance", "Cursor", "terminal.cursor-style-at-prompt", "Cursor at the prompt",
-            "Applies while the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
+            "The cursor takes this shape while the shell waits for a command. A program's own cursor still wins. Needs shell integration.",
             SettingKind.Choice)
             {
                 Choices =
@@ -158,7 +158,7 @@ public static partial class SettingsCatalog
                 }, [Accepts.Choices]),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
-            "Applies to Zinc's windows, menus, and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
+            "Sets the look of Zinc's windows, menus, and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
             {
                 Choices =
                 [
@@ -222,7 +222,7 @@ public static partial class SettingsCatalog
                 Binding = Bind.Paths(Shaders.ShaderPaths.Resolve, (c, v) => c with { ShaderFiles = v }),
             },
         new("appearance", "Shaders", "shaders.animation", "Animation",
-            "Applies to animated shaders. The others redraw only when the terminal changes.", SettingKind.Choice)
+            "Says when animated shaders move. The others redraw only when the terminal changes.", SettingKind.Choice)
         {
             Choices =
             [

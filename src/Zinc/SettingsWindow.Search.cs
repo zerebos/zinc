@@ -268,7 +268,7 @@ internal sealed partial class SettingsWindow
 
     /// <summary>
     /// A profile setting's description, which says where its inherited value is set, as a link there
-    /// ("Inherited from Appearance: 11 pt."), or that the profile has its own.
+    /// ("Inherited from Appearance, where it's 11 pt."), or that the profile changed it ("Changed here. In Appearance, it's 11 pt.").
     /// </summary>
     private void InheritedText(TextBlock block, SettingDef setting, string inherited, bool own)
     {
@@ -279,15 +279,15 @@ internal sealed partial class SettingsWindow
         block.Inlines.Clear();
         if (own)
         {
-            block.Inlines.Add(new Run { Text = $"Its own. Everywhere else: {inherited}, set in " });
+            block.Inlines.Add(new Run { Text = "Changed here. In " });
             block.Inlines.Add(link);
-            block.Inlines.Add(new Run { Text = "." });
+            block.Inlines.Add(new Run { Text = $", it's {inherited}." });
         }
         else
         {
             block.Inlines.Add(new Run { Text = "Inherited from " });
             block.Inlines.Add(link);
-            block.Inlines.Add(new Run { Text = $": {inherited}." });
+            block.Inlines.Add(new Run { Text = $", where it's {inherited}." });
         }
 
         block.Visibility = Visibility.Visible;

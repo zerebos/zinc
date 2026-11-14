@@ -23,7 +23,7 @@ public static partial class SettingsCatalog
         new("layout", "Workspaces", "window.new-workspace-page", "Start page for new workspaces",
             "Lets you choose a profile, a folder, and a name when you open a workspace. Enter starts the default profile.", SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.NewWorkspacePage, (c, v) => c with { NewWorkspacePage = v }) },
-        new("layout", "Workspaces", "window.workspace-colors", "Colors for new workspaces", "Applies to new workspaces you don't color yourself.",
+        new("layout", "Workspaces", "window.workspace-colors", "Colors for new workspaces", "New workspaces you don't color yourself take their colors from this.",
             SettingKind.Choice)
             {
                 Choices =

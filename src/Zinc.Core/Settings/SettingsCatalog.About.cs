@@ -6,7 +6,7 @@ public static partial class SettingsCatalog
     private static SettingDef[] AboutSettings() =>
     [
         new("about", "Updates", "updates.check", "Check for updates automatically",
-            "Zinc checks once a day. New versions download in the background, and you choose when to restart. Applies only to Zinc installed with its installer.",
+            "Zinc checks once a day. New versions download in the background, and you choose when to restart. Only a copy installed with Zinc's installer updates itself.",
             SettingKind.Toggle)
             { Binding = Bind.Bool(c => c.UpdateCheck, (c, v) => c with { UpdateCheck = v }) },
         new("about", "Troubleshooting", "debug.logging", "Debug log",

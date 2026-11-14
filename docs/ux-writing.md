@@ -77,7 +77,7 @@ Show instead of describing where you can. A cursor shape comes with its glyph ("
 
 ## State
 
-- Show where a value comes from. A profile's setting reads "Inherited: 11 pt" until the profile has its own value, and then "Its own. Everywhere else: 11 pt". Never make people hover over a disabled control to find out.
+- Show where a value comes from. A profile's setting reads "Inherited from Appearance, where it's 11 pt." until the profile has its own value, and then "Changed here. In Appearance, it's 11 pt." Collapsed groups use the same two words, "Inherited" and "Changed here". Never make people hover over a disabled control to find out.
 - Mark what's changed, and offer the way back in the same place. The reset arrow sits beside a setting's name and appears only while there's something to reset. After a reset, focus moves to the setting's control.
 - When a setting depends on another, disable it instead of hiding it, and say why in its description. Hide only what can't apply on this machine.
 - When something can't be used, name the real cause and whose limit it is. Write "SSH hosts are turned off", not "appears to have been uninstalled".
