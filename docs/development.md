@@ -184,7 +184,7 @@ To make a release:
 
 1. Rename `## Unreleased` in `CHANGELOG.md` to `## <version> (<date>)`, and add a new, empty Unreleased above it. The changelog is for users, newest first, with `### New`, `### Changed`, and `### Fixed` under each version. The test builds from before the first release keep their old headings, `## 0.1.0-dev.N (<date>)`.
 2. Commit that, tag the commit `v<version>`, and push both.
-3. The release workflow (`.github/workflows/release.yml`) builds and tests the tagged commit, packs it with [Velopack](https://velopack.io) and publishes it under the repository's GitHub Releases, marked as a pre-release when the version has an `rc.N` part.
+3. The release workflow (`.github/workflows/release.yml`) builds and tests the tagged commit, packs it with [Velopack](https://velopack.io) and publishes it under the repository's GitHub Releases, marked as a pre-release when the version has a label, like `pre.1` or `rc.1`.
 
 The workflow refuses a tag that doesn't match the version the build works out, a version that isn't above every earlier release, a version with no changelog entry, and a changelog with notes still under Unreleased. The release gets `Zinc-win-Setup.exe` (a per-user install, with no admin prompt), the update packages, `releases.win.json` (what installed copies check once a day), `Zinc-win-Portable.zip`, and `zinc-reference.json` and `config.schema.json` for that version. The .NET runtime and the Windows App SDK are inside, at about 50 MB. Its notes are the version's changelog entry. Started by hand, the workflow is a dry run, which builds and packs the same way and keeps the files with the run for a week, without making a release.
 
@@ -193,8 +193,6 @@ After a release, move `ZincVersion` on to the next version.
 Installed copies update themselves from the releases of the repository that `ZincRepositoryUrl` names in `Directory.Build.props`. A pre-release gets later pre-releases and releases, and a release gets releases only.
 
 `pwsh scripts/release/release.ps1` does the publishing and packing, and runs on your own machine too. `-UpdateSource <address>` builds in a different place for installed copies to look, which is a folder or a web address that holds the folder's contents. `-From <address>` fetches the previous release first, so the new one also gets a small delta package. `scripts/release/package-readme.txt` goes into every install folder and the portable zip as `README.txt`. The script refuses a working tree with uncommitted changes unless you pass `-AllowDirty`. `-PackId Zinc.Test` packs a test package with its own id, so trying an install or an update never touches a real Zinc. Never install a package with the `Zinc` id on a machine where you use Zinc, because it takes over that copy's Start menu shortcut, sign-in entry, and default-terminal registration. Run every `Setup.exe` with `ZINC_CONFIG` set, because the installer starts Zinc when it's done.
-
-`release.ps1 -Publish` uploads to the update feed Zinc used before GitHub Releases. It exists for the last release there, the one that moves earlier test builds over to GitHub.
 
 A published build is trimmed, and a `bin/` build isn't. Reflection over framework types can break only in a publish, so after changing the project files, try a publish rather than a `bin/` build, and check its log for `warning IL`.
 

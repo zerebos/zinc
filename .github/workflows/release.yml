@@ -39,9 +39,6 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # Builds the native DLLs, or restores them from the cache.
-      - uses: ./.github/actions/native-dlls
-
       # The version is the build's own, and a tag that doesn't match it is refused. Such a tag names a version other
       # than ZincVersion, or isn't in the form v<ZincVersion> or v<ZincVersion>-<something>.
       - name: Work out the version
@@ -72,6 +69,10 @@ jobs:
       - name: Check the changelog
         if: github.event_name == 'push'
         run: dotnet run scripts/release/release-notes.cs -- ${{ steps.version.outputs.version }} --check
+
+      # Builds the native DLLs, or restores them from the cache. It comes after the checks above, which don't need
+      # them, so a refused tag doesn't wait for a rebuild.
+      - uses: ./.github/actions/native-dlls
 
       - name: Build
         run: dotnet build Zinc.slnx --no-incremental -warnaserror

@@ -8,5 +8,4 @@ native-src/*/zig-out/
 native-src/*/.zig-cache/
 native-src/*/zig-pkg/
 dist/
-release.local.json
 CLAUDE.local.md

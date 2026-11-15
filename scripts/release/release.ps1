@@ -12,51 +12,31 @@
   the GitHub repository in Directory.Build.props (ZincRepositoryUrl), whose releases hold the updates. Test packages
   (-PackId Zinc.Test) get none and find theirs through ZINC_UPDATE_URL.
 
-  -UpdateUrl is the folder this release is uploaded to and that testers' installed copies still check (the feed
-  from before GitHub Releases). -Publish needs it, to refuse a version that isn't above the one published there.
-
   Deltas need the previous release in -Out. -From fetches it first, from a GitHub repository's releases (the
-  repository's address, with a token in GH_TOKEN when it's private), from the address testers update from (any other
-  https URL) or from a local folder. A repository with no release yet gives none, and the release has no delta.
+  repository's address, with a token in GH_TOKEN when it's private), from a web address that serves release files,
+  or from a local folder. A repository with no release yet gives none, and the release has no delta.
 
   A release is a commit, so a working tree with uncommitted changes is refused (-AllowDirty is for tests). Its
   version is the one the build works out in Directory.Build.props. A commit tagged v<ZincVersion> is a release, one
-  tagged v<ZincVersion>-<something> is a pre-release, and any other commit is a dev build, which -Publish refuses.
+  tagged v<ZincVersion>-<label>.N is a pre-release, and any other commit is a dev build.
 
   Its notes are CHANGELOG.md's entry for its version ("## 0.1.0 (date)"), handed to the installer (a downloaded
-  update shows them under "What's new" in About). -Publish refuses without one, or with anything left under
-  "## Unreleased". Before publishing, rename "## Unreleased" to the version, start a new empty "## Unreleased"
-  above it, commit that, and tag the commit.
-
-  -Publish does the whole thing from release.local.json, in the repo's root and not in git:
-    { "updateUrl": "https://example.com/zinc/",
-      "ftp": "ftp://host/path/to/zinc/",
-      "ftpPin": "sha256//<base64 of the server's public key>" }   (optional, see below)
-  It builds into a fresh dist\release with -UpdateUrl and -From set to updateUrl, then uploads over FTPS with curl,
-  using your login from %USERPROFILE%\.netrc. The server's certificate is checked as usual. With ftpPin, the
-  server's key is checked against the pin instead, so an expired or self-signed certificate still gives an encrypted
-  connection to that server only. A pin breaks at every renewal, so use it only while a host's certificate is broken.
-
-  The upload sends .htaccess (release-htaccess, next to this script), then the new files, then releases.win.json
-  last, under another name and then renamed, so a copy checking mid-upload never sees a release whose files aren't
-  there yet. Packages the new list doesn't mention are deleted from the server.
+  update shows them under "What's new" in About). A build with no entry has no notes. The release workflow checks
+  the changelog itself, and uploads what this script leaves in -Out to the repository's GitHub Releases.
 
 .EXAMPLE
-  pwsh scripts/release/release.ps1 -Publish                                                             # the real thing
-  pwsh scripts/release/release.ps1 -From https://example.com/zinc/                                      # build only
+  pwsh scripts/release/release.ps1 -Out dist/release -From https://github.com/zerebos/zinc               # what the release workflow runs
   pwsh scripts/release/release.ps1 -PackId Zinc.Test -Version 0.1.0-test.1 -AllowDirty -Out C:\Temp\feed  # tests
 #>
 param(
     [string]$Out,
     [string]$From,
     [string]$PackId = 'Zinc',
-    [string]$UpdateUrl,
     [string]$UpdateSource,
     [string]$Version,
     [switch]$AllowDirty,
     # Where shortcuts go at install ('' for none, because test packages must not touch the Start Menu).
     [string]$Shortcuts = 'StartMenuRoot',
-    [switch]$Publish,
     # The changelog the release notes come from (tests give their own).
     [string]$Changelog
 )
@@ -64,16 +44,6 @@ param(
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if (-not $Out) { $Out = Join-Path $repo 'dist\release' }
-
-if ($Publish) {
-    $settingsFile = Join-Path $repo 'release.local.json'
-    if (-not (Test-Path $settingsFile)) { throw "-Publish needs $settingsFile (see this script's help)." }
-    $settings = Get-Content $settingsFile -Raw | ConvertFrom-Json
-    if ($PackId -ne 'Zinc' -or $AllowDirty -or $Version) { throw '-Publish is for real releases: no -PackId, -AllowDirty or -Version.' }
-    $UpdateUrl = $settings.updateUrl
-    $From = $settings.updateUrl
-    if (Test-Path $Out) { Remove-Item $Out -Recurse -Force } # only this release and the one it updates from
-}
 
 New-Item -ItemType Directory -Force $Out | Out-Null
 
@@ -94,34 +64,17 @@ if (-not $Version) {
     if ($LASTEXITCODE -ne 0 -or -not $Version) { throw "Couldn't ask the build for its version." }
     if ($dirty) { $Version += '-dirty' }
 }
-if ($Publish -and $Version -match '-dev\+') {
-    throw "This commit has no version tag, so it would be $Version. Tag it (v<ZincVersion>, or v<ZincVersion>-<label>.N for a pre-release) and run this again."
-}
-
-# ---- a release testers would never get, because it isn't above the one already published ----
-# Velopack only updates to a higher version. Versions compare as SemVer orders them, which compares labels as text,
-# so 0.1.0-pre.1 and 0.1.0-rc.1 are above every 0.1.0-dev.N, and 0.1.0 is above every pre-release of it.
-if ($Publish) {
-    $mine = [semver]$Version.Split('+')[0]
-    $highest = (Invoke-RestMethod "$($UpdateUrl.TrimEnd('/'))/releases.win.json").Assets |
-        ForEach-Object { [semver]$_.Version.Split('+')[0] } | Sort-Object | Select-Object -Last 1
-    if ($highest -and $mine -le $highest) {
-        throw "This would be $mine, but $highest is already published, and testers only update to a higher version. Tag it with a version above $highest."
-    }
-}
 
 # ---- release notes, from the changelog's entry for this version ----
 $notesArgs = @()
 if (-not $Changelog) { $Changelog = Join-Path $repo 'CHANGELOG.md' }
 if ($PackId -eq 'Zinc' -or $PSBoundParameters.ContainsKey('Changelog')) {
-    # release-notes.cs reads the changelog as the app does. With --check it refuses a version that has no entry, or a
-    # changelog with notes left under "## Unreleased". Without --check, a build with no entry has no notes.
+    # release-notes.cs reads the changelog as the app does. A build with no entry gets no notes file.
     $plain = $Version.Split('+')[0]
     $notesFile = Join-Path ([IO.Path]::GetTempPath()) "zinc-release-notes-$plain.md" # not in -Out, because everything there is uploaded
     if (Test-Path $notesFile) { Remove-Item $notesFile }
-    $check = @(if ($Publish) { '--check' }) # @() keeps one item an array, so the splat passes it whole
-    dotnet run (Join-Path $PSScriptRoot 'release-notes.cs') -- $plain --changelog $Changelog --out $notesFile @check
-    if ($LASTEXITCODE -ne 0) { throw 'The changelog is not ready for this release (see above, and this script''s help).' }
+    dotnet run (Join-Path $PSScriptRoot 'release-notes.cs') -- $plain --changelog $Changelog --out $notesFile
+    if ($LASTEXITCODE -ne 0) { throw 'Reading the release notes from the changelog failed (see above).' }
     if (Test-Path $notesFile) { $notesArgs = '--releaseNotes', $notesFile }
 }
 
@@ -155,7 +108,7 @@ try {
     if (Test-Path $state) { Remove-Item $state -Recurse -Force }
     # The publish gets PATH as a fresh terminal has it (from the registry), because an inherited PATH can break VS's
     # vcvarsall.bat or put another `link` ahead of MSVC's, and zn's Native AOT link then fails. The rest of the script
-    # keeps the inherited PATH (curl).
+    # keeps the inherited PATH.
     $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
     $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateSource" 2>&1
     $failed = $LASTEXITCODE -ne 0
@@ -200,43 +153,3 @@ if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed.' }
 Remove-Item $publishDir -Recurse -Force
 
 Get-ChildItem $Out -File | Sort-Object LastWriteTime | ForEach-Object { "{0,-60} {1,8:N1} MB" -f $_.Name, ($_.Length / 1MB) }
-
-if (-not $Publish) { return }
-
-# ---- upload ----
-$ftp = $settings.ftp.TrimEnd('/') + '/'
-$curl = Join-Path $env:SystemRoot 'System32\curl.exe' # Windows' own, whatever else is on PATH
-function Ftp {
-    $trust = if ($settings.ftpPin) { '--insecure', '--pinnedpubkey', $settings.ftpPin } else { @() }
-    $output = & $curl -s -S -n --ssl-reqd @trust --ftp-create-dirs --max-time 900 @args 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "FTP failed ($LASTEXITCODE): $output" }
-    $output
-}
-
-Write-Host "Uploading to $ftp ..."
-$there = @(Ftp --list-only $ftp | ForEach-Object { "$_".Trim() } | Where-Object { $_ -and $_ -notin '.', '..' })
-# Every time, because its rules change now and then.
-Ftp -T (Join-Path $PSScriptRoot 'release-htaccess') "$($ftp).htaccess" | Out-Null
-Write-Host '  .htaccess'
-
-# Files with the same name in every release are always replaced, and packages are uploaded only when they're new.
-$replace = "$PackId-win-Setup.exe", "$PackId-win-Portable.zip", 'assets.win.json', 'RELEASES'
-foreach ($file in Get-ChildItem $Out -File | Where-Object Name -ne 'releases.win.json') {
-    if ($there -contains $file.Name -and $replace -notcontains $file.Name) { continue }
-    Ftp -T $file.FullName $ftp | Out-Null
-    Write-Host ("  {0} ({1:N1} MB)" -f $file.Name, ($file.Length / 1MB))
-}
-
-# The list goes last, and the rename makes it appear in one step.
-Ftp -T (Join-Path $Out 'releases.win.json') "$($ftp)releases.win.json.new" -Q '-RNFR releases.win.json.new' -Q '-RNTO releases.win.json' | Out-Null
-Write-Host '  releases.win.json'
-
-# Packages the new list no longer mentions.
-$listed = (Get-Content (Join-Path $Out 'releases.win.json') -Raw | ConvertFrom-Json).Assets | ForEach-Object FileName
-foreach ($old in $there | Where-Object { $_ -like '*.nupkg' -and $listed -notcontains $_ }) {
-    Ftp --list-only $ftp -Q "-DELE $old" | Out-Null
-    Write-Host "  removed $old"
-}
-
-Write-Host ''
-Write-Host "Published $Version. Installer: $($UpdateUrl.TrimEnd('/'))/$PackId-win-Setup.exe"
