@@ -7,6 +7,8 @@ made from.
 
 ## Unreleased
 
+## 0.1.0-pre.1 (2026-11-14)
+
 ### New
 - A new `config.toml` starts with a `#:schema` line, so editors that read it, like VS Code with Even Better TOML, complete its keys and point out mistakes with no setup.
 
