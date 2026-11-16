@@ -352,8 +352,11 @@ internal sealed class SwapChainSurface
     public void Invalidate()
     {
         _stale = true;
-        if (_closed || _drawQueued)
+        if (_closed || _drawQueued || !CanDraw)
         {
+            // A pane that can't draw does not ask for a frame. The `Loaded` event and `SetWindowHidden(false)` each
+            // draw a frame when the pane shows again. Queuing `DrawWhenQuiet` here would run it over and over while
+            // a hidden tab's program keeps writing, which keeps the UI thread busy.
             return;
         }
 
@@ -368,6 +371,12 @@ internal sealed class SwapChainSurface
         var asked = Stopwatch.GetTimestamp();
         void DrawWhenQuiet()
         {
+            if (!CanDraw)
+            {
+                _drawQueued = false; // the pane was hidden while this waited, and showing it again draws a frame
+                return;
+            }
+
             // A shell answers a key in several reads within a millisecond or so (PowerShell: 7-9). Presenting at the
             // first would show the screen before the letter arrived, and the frame with it would then wait for the
             // next refresh. So this waits until output pauses (QuietFor), at most MaxWait. Other messages run meanwhile.
@@ -391,6 +400,13 @@ internal sealed class SwapChainSurface
 
         Panel.DispatcherQueue.SafeEnqueue(DispatcherQueuePriority.High, DrawWhenQuiet);
     }
+
+    /// <summary>
+    /// Whether a frame drawn now would reach the screen. That needs the panel to be loaded (`TabView` unloads a hidden tab),
+    /// its window to be neither hidden nor minimized, and the swap chain to exist (a hidden tab frees it, and showing the
+    /// tab makes it again).
+    /// </summary>
+    private bool CanDraw => Panel.IsLoaded && !_windowHidden && _chain != null;
 
     /// <summary>How long output must have paused before a frame is presented, and the longest wait for that (ms).</summary>
     private const double QuietFor = 0.5, MaxWait = 3;

@@ -115,6 +115,7 @@ The usual way to hit this is a COM call that pumps, and one hides in font handli
 
 Each pane draws into a `CanvasSwapChain` through `SwapChainSurface`, which presents a frame as soon as the output pauses, at most once per refresh. With `low-latency-drawing = false`, a pane draws into a `CanvasControl` instead, which waits for WinUI's own frame. The pane reaches its surface through the same `Surface` and `Redraw()` in both modes.
 
+- A swap chain pane that can't be seen does not ask for frames. That covers a pane in a hidden tab, one in a hidden or minimized window, and one whose swap chain was freed. When the pane shows again, the panel's `Loaded` event or `SetWindowHidden(false)` draws a frame at once. Anything new that asks for frames has to keep to this, because waiting for quiet output on a pane that never draws keeps the UI thread busy for as long as its program writes.
 - `SetFont` does work that pumps messages, so a frame can start partway through it. The sprite cache remembers the cell metrics it was drawn for and is dropped when they change, so a frame never draws sprites at a stale cell size.
 - A new `CanvasRenderTarget` can hold another target's old pixels, because GPU memory gets recycled. Clear it before drawing into it with normal blending. Otherwise, the glyph atlas can show the previous size's glyphs after a zoom.
 - When glyphs are drawn in one sprite batch, the padding's sub-pixel offset is rounded to 1/64 of a pixel before it becomes part of the atlas key. Without that, floating-point noise makes a new atlas for every window size.
