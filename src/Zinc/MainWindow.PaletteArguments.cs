@@ -35,10 +35,9 @@ public sealed partial class MainWindow
             () => ChooseScheme(tab, pane, profile, name, asDefault), Remember: false)).ToList();
         if (!asDefault && pane.ColorScheme != null)
         {
-            // The scheme the profile's section names, else the global one, as in force for Windows' light or dark mode.
-            var written = (_config.ValueOf(profile.Id, "colors.theme") ?? _config.ValueOf("colors.theme")) as string;
-            var own = written == null ? "The profile's scheme"
-                : $"The profile's scheme ({ThemeLibrary.Resolve(written, ConfigFile.SystemScheme)})";
+            // The scheme the profile's section names, else the global one, as in force for Zinc's light or dark mode.
+            var written = (_config.ValueOf(profile.Id, "colors.theme") ?? _config.ValueOf("colors.theme")) as string ?? ThemeLibrary.ZincPair;
+            var own = $"The profile's scheme ({ThemeLibrary.Resolve(written, _config.Appearance)})";
             choices.Insert(0, new PaletteCommand(own, null, () =>
             {
                 pane.ColorScheme = null;

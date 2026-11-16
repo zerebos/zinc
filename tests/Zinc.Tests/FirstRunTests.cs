@@ -90,6 +90,15 @@ public class FirstRunTests
     }
 
     [Fact]
+    public void ChoosingZincsOwnPairRemovesAWrittenScheme()
+    {
+        // The welcome window hands back null for Zinc's own pair, which is the default.
+        const string existing = "[colors]\ntheme = \"light:Lit Cell Light,dark:Lit Cell\"\n";
+        var text = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null), Read(existing));
+        Assert.DoesNotContain("theme", text);
+    }
+
+    [Fact]
     public void NotificationsAreWrittenOnlyWhenAskedFor()
     {
         var toast = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null, ToastWhenDone: true));

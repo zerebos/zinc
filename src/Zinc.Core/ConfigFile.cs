@@ -179,15 +179,21 @@ public sealed class ConfigFile
     public string? SchemeName { get; private init; }
 
     /// <summary>
-    /// Windows' light/dark mode, which a <c>light:…,dark:…</c> theme follows. The app keeps it
-    /// current (and reloads when it flips); files are read with it unless told otherwise.
+    /// Windows' light or dark mode, which a <c>light:…,dark:…</c> theme follows unless <c>[window] appearance</c> picks a
+    /// side. The app keeps it current, and reloads the config when it flips. Files are read with it unless told otherwise.
     /// </summary>
     public static Zinc.Ghostty.ColorScheme SystemScheme { get; set; } = Zinc.Ghostty.ColorScheme.Dark;
 
-    /// <summary>The scheme this was read for (<see cref="SystemScheme"/> at the time, unless given).</summary>
+    /// <summary>
+    /// Zinc's light or dark mode, which picks the side of a light and dark pair. It's <c>[window] appearance</c> when that
+    /// says light or dark, and otherwise Windows' mode when this was read (<see cref="SystemScheme"/>, unless given).
+    /// </summary>
     public Zinc.Ghostty.ColorScheme Appearance { get; private init; }
 
-    /// <summary>Whether any theme here is a light/dark pair (so a flip of Windows' mode changes colors).</summary>
+    /// <summary>
+    /// Whether a flip of Windows' mode changes colors here, which happens when a light and dark pair is in force (Zinc's
+    /// own counts) and <c>[window] appearance</c> follows Windows.
+    /// </summary>
     public bool FollowsAppearance { get; private init; }
 
     /// <summary>The Windows Terminal defaults with the <c>[keys]</c> table applied.</summary>
@@ -307,6 +313,11 @@ public sealed class ConfigFile
         Zinc.Ghostty.ColorScheme appearance)
     {
         private bool _followsAppearance;
+
+        // The mode that picks the side of a light and dark pair. It's `[window] appearance` when that says light or dark
+        // (and `_modeForced` is set), and otherwise Windows' mode.
+        private Zinc.Ghostty.ColorScheme _mode = appearance;
+        private bool _modeForced;
         private readonly Dictionary<string, IReadOnlyDictionary<string, object>> _profileValues = new();
 
         private readonly List<Entry> _entries = [];
@@ -484,6 +495,14 @@ public sealed class ConfigFile
 
         public ConfigFile Build()
         {
+            // A pair follows Zinc's own light or dark mode, so the terminal matches the window when appearance is forced.
+            if (_entries.LastOrDefault(e => e.Path is ["window", "appearance"])?.Value is string forced &&
+                Config.TryMode<ChromeAppearance>(forced, out var chrome) && chrome != ChromeAppearance.System)
+            {
+                _mode = chrome == ChromeAppearance.Light ? Zinc.Ghostty.ColorScheme.Light : Zinc.Ghostty.ColorScheme.Dark;
+                _modeForced = true;
+            }
+
             string? defaultId = null;
             List<string>? listOrder = null;
             var global = new Config();
@@ -571,6 +590,11 @@ public sealed class ConfigFile
                         _warnings.Add($"{e.Where}: unknown setting \"{e.Key}\"");
                         break;
                 }
+            }
+
+            if (!_entries.Any(e => e.Path is ["colors", "theme"]))
+            {
+                global = ApplyZincPair(global);
             }
 
             global = ApplyGroups(global, _entries.Where(e => e.Path is [var g, _, ..] && Groups.Contains(g)).ToList(), inProfile: false);
@@ -698,7 +722,7 @@ public sealed class ConfigFile
             {
                 Files = [.. _files],
                 SchemeName = _entries.LastOrDefault(e => e.Path is ["colors", "theme"])?.Value as string,
-                Appearance = appearance,
+                Appearance = _mode,
                 FollowsAppearance = _followsAppearance,
                 ProfileValues = _profileValues,
                 GlobalValues = _entries.Where(e => e.Path[0] != "profile")
@@ -798,11 +822,11 @@ public sealed class ConfigFile
         /// <summary>Applies a named color scheme, from a file in the user's themes folder or else a bundled one.</summary>
         private Config ApplyTheme(Config config, string name, Entry at)
         {
-            // For "light:X,dark:Y", apply the side for Windows' current mode. Both sides are checked, so a
+            // For "light:X,dark:Y", apply the side for Zinc's light or dark mode. Both sides are checked, so a
             // typo shows up now rather than when the mode flips.
             if (ThemeLibrary.TryParsePair(name, out var light, out var dark))
             {
-                _followsAppearance = true;
+                _followsAppearance = !_modeForced; // a forced mode doesn't change when Windows flips
                 foreach (var side in new[] { light, dark }.Distinct(StringComparer.OrdinalIgnoreCase))
                 {
                     if (_themes.Find(side) == null)
@@ -811,7 +835,7 @@ public sealed class ConfigFile
                     }
                 }
 
-                var isDark = appearance == Zinc.Ghostty.ColorScheme.Dark;
+                var isDark = _mode == Zinc.Ghostty.ColorScheme.Dark;
                 return (_themes.Apply(config, isDark ? dark : light) ?? config) with { PairedDark = isDark };
             }
 
@@ -822,6 +846,20 @@ public sealed class ConfigFile
 
             _warnings.Add($"{at.Where}: no color scheme named \"{name}\" (looked in {_themes.UserFolder} and the bundled ones)");
             return config;
+        }
+
+        /// <summary>
+        /// Applies Zinc's own schemes where <c>[colors] theme</c> isn't set, which is Lit Cell while Zinc is dark and Lit Cell
+        /// Light while it's light. They're looked up by name, so an edited copy in the user's themes folder applies, and the
+        /// built-in colors stay if their files are missing.
+        /// </summary>
+        private Config ApplyZincPair(Config config)
+        {
+            _followsAppearance = !_modeForced; // a forced mode doesn't change when Windows flips
+            var isDark = _mode == Zinc.Ghostty.ColorScheme.Dark;
+            return _themes.Apply(config, isDark ? ThemeLibrary.ZincScheme : ThemeLibrary.ZincLightScheme) is { } themed
+                ? themed with { PairedDark = isDark }
+                : config;
         }
 
         private Config Warn(Config config, Entry e, string? expected)

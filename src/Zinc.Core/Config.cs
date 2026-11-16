@@ -208,8 +208,8 @@ public enum ShaderAnimation
 }
 
 /// <summary>
-/// Light or dark windows, menus and dialogs (the terminal's colors are the color scheme's). Config:
-/// <c>[window] appearance</c>.
+/// Light or dark windows, menus, and dialogs, and the side of a light and dark color scheme pair the terminal uses.
+/// Config: <c>[window] appearance</c>.
 /// </summary>
 public enum ChromeAppearance
 {

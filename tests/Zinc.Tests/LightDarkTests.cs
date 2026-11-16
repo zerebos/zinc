@@ -79,6 +79,108 @@ public class LightDarkTests
         Assert.False(Read("[colors]\ntheme = \"Night\"\n", ColorScheme.Light).FollowsAppearance);
     }
 
+    // A bundled folder with Zinc's own two schemes, told apart by their backgrounds.
+    private static string ZincThemes()
+    {
+        var dir = Themes();
+        File.WriteAllText(Path.Combine(dir, ThemeLibrary.ZincScheme), "background = #0c110e\nforeground = #cfddd3\n");
+        File.WriteAllText(Path.Combine(dir, ThemeLibrary.ZincLightScheme), "background = #f1f4ef\nforeground = #1b2620\n");
+        return dir;
+    }
+
+    private static ConfigFile ReadWithZincThemes(string toml, ColorScheme appearance) =>
+        ConfigFile.Parse(toml, "config.toml", bundledThemes: ZincThemes(), appearance: appearance);
+
+    [Fact]
+    public void NoSchemeIsZincsOwnPair()
+    {
+        var light = ReadWithZincThemes("", ColorScheme.Light);
+        var dark = ReadWithZincThemes("", ColorScheme.Dark);
+        Assert.True(light.FollowsAppearance);
+        Assert.Equal(0xf1, light.Global.Theme.Background.R);
+        Assert.False(light.Global.IsDark);
+        Assert.Equal(0x0c, dark.Global.Theme.Background.R);
+        Assert.True(dark.Global.IsDark);
+        Assert.Null(light.SchemeName); // nothing is written for it
+        Assert.Empty(light.Warnings);
+    }
+
+    [Fact]
+    public void AProfileWithoutASchemeInheritsZincsOwnPair()
+    {
+        var config = ReadWithZincThemes("[profile.x]\ncommand = \"cmd.exe\"\n", ColorScheme.Light);
+        Assert.Equal(0xf1, config.Profiles.Single(p => p.Id == "x").Config.Theme.Background.R);
+    }
+
+    [Fact]
+    public void AChosenSchemeReplacesZincsOwnPair()
+    {
+        var config = ReadWithZincThemes("[colors]\ntheme = \"Night\"\n", ColorScheme.Light);
+        Assert.False(config.FollowsAppearance);
+        Assert.Equal(0x10, config.Global.Theme.Background.R);
+    }
+
+    [Fact]
+    public void ColorsWrittenWithoutASchemeStillWinOverZincsOwnPair()
+    {
+        var config = ReadWithZincThemes("[colors]\nbackground = \"#ff0000\"\n", ColorScheme.Light);
+        Assert.Equal(0xff, config.Global.Theme.Background.R);
+        Assert.Equal(0x1b, config.Global.Theme.Foreground.R);
+    }
+
+    [Fact]
+    public void DarkWindowsKeepZincsOwnPairDarkInLightMode()
+    {
+        var config = ReadWithZincThemes("[window]\nappearance = \"dark\"\n", ColorScheme.Light);
+        Assert.Equal(0x0c, config.Global.Theme.Background.R);
+        Assert.True(config.Global.IsDark);
+        Assert.Equal(ColorScheme.Dark, config.Appearance);
+        Assert.False(config.FollowsAppearance); // a flip of Windows changes nothing
+    }
+
+    [Fact]
+    public void LightWindowsPickAPairsLightSideInDarkMode()
+    {
+        var config = Read("[window]\nappearance = \"light\"\n[colors]\ntheme = \"light:Paper,dark:Night\"\n", ColorScheme.Dark);
+        Assert.Equal(0xfa, config.Global.Theme.Background.R);
+        Assert.False(config.FollowsAppearance);
+    }
+
+    [Fact]
+    public void SystemAppearanceFollowsWindows()
+    {
+        var config = ReadWithZincThemes("[window]\nappearance = \"system\"\n", ColorScheme.Light);
+        Assert.Equal(0xf1, config.Global.Theme.Background.R);
+        Assert.Equal(ColorScheme.Light, config.Appearance);
+        Assert.True(config.FollowsAppearance);
+    }
+
+    [Fact]
+    public void AProfilesPairFollowsAForcedAppearanceToo()
+    {
+        var config = Read("[window]\nappearance = \"dark\"\n[profile.x]\ncommand = \"cmd.exe\"\ncolors.theme = \"light:Paper,dark:Night\"\n", ColorScheme.Light);
+        Assert.Equal(0x10, config.Profiles.Single(p => p.Id == "x").Config.Theme.Background.R);
+        Assert.False(config.FollowsAppearance);
+    }
+
+    [Fact]
+    public void AnUnknownAppearanceFollowsWindows()
+    {
+        var config = ReadWithZincThemes("[window]\nappearance = \"auto\"\n", ColorScheme.Light);
+        Assert.Equal(0xf1, config.Global.Theme.Background.R);
+        Assert.Equal(ColorScheme.Light, config.Appearance);
+        Assert.True(config.FollowsAppearance);
+    }
+
+    [Theory]
+    [InlineData("light:Lit Cell Light,dark:Lit Cell", true)]
+    [InlineData("dark:lit cell, light:LIT CELL LIGHT", true)]
+    [InlineData("light:Paper,dark:Lit Cell", false)]
+    [InlineData("Lit Cell", false)]
+    [InlineData(null, false)]
+    public void ZincsOwnPairIsRecognizedInAnySpelling(string? value, bool expected) =>
+        Assert.Equal(expected, ThemeLibrary.IsZincPair(value));
+
     private static string Joined(List<byte[]> replies) => string.Concat(replies.Select(Encoding.UTF8.GetString));
 
     [Fact]

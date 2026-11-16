@@ -33,18 +33,9 @@ internal sealed partial class SettingsWindow
         ("selection-foreground", "Selected text", "When this color isn't set, selected text keeps its own color."),
     ];
 
-    /// <summary>
-    /// Opens the editor for scheme <paramref name="name"/>. Null means the default, which becomes "Lit
-    /// Cell" and is named in config.toml so the edited copy is the one used.
-    /// </summary>
-    private void CustomizeScheme(string? name, IReadOnlyList<string> themePath)
+    /// <summary>Opens the editor for scheme <paramref name="name"/>.</summary>
+    private void CustomizeScheme(string name, IReadOnlyList<string> themePath)
     {
-        if (name == null)
-        {
-            name = ThemeLibrary.ZincScheme;
-            Write(themePath, name);
-        }
-
         string? file;
         try
         {
@@ -302,11 +293,13 @@ internal sealed partial class SettingsWindow
     private void UseScheme(IReadOnlyList<string> themePath, string? replacing, string? name)
     {
         var profile = themePath.Count > 2 ? themePath[1] : null;
-        var value = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme");
+        // When neither the profile nor the global settings set a scheme, the value is Zinc's own default pair. So a new
+        // scheme replaces Lit Cell or Lit Cell Light, and the other one stays.
+        var value = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme") ?? ThemeLibrary.ZincPair;
         if (value is string text && ThemeLibrary.TryParsePair(text, out var light, out var dark))
         {
-            // The new scheme takes the side `replacing` is on, or else the dark side. When `name` is null, Lit Cell's
-            // scheme for that side takes its place.
+            // The new scheme takes the side `replacing` is on, or else the dark side. When `name` is null, Zinc's own
+            // scheme for that side (Lit Cell or Lit Cell Light) takes its place.
             if (string.Equals(light, replacing, StringComparison.OrdinalIgnoreCase))
             {
                 light = name ?? ThemeLibrary.ZincLightScheme;
@@ -316,7 +309,8 @@ internal sealed partial class SettingsWindow
                 dark = name ?? ThemeLibrary.ZincScheme;
             }
 
-            Write(themePath, $"light:{light},dark:{dark}");
+            var pair = $"light:{light},dark:{dark}";
+            Write(themePath, profile == null && ThemeLibrary.IsZincPair(pair) ? null : pair); // the global default needs no line
         }
         else
         {

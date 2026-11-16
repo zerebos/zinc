@@ -61,7 +61,7 @@ internal sealed partial class SettingsWindow
 
     // The scheme of the global settings (null) or of a profile, as config.toml has it. The four members below give where
     // it's written, its own value, what it inherits, and what's in force. A null own value means none, which is Zinc's
-    // own globally and the inherited scheme in a profile.
+    // own pair globally and the inherited scheme in a profile.
     private static IReadOnlyList<string> SchemePath(string? profile) => profile == null ? ["colors", "theme"] : ["profile", profile, "colors", "theme"];
 
     private string? OwnScheme(string? profile) => (profile == null ? _config.ValueOf("colors.theme") : _config.ValueOf(profile, "colors.theme")) as string;
@@ -71,11 +71,14 @@ internal sealed partial class SettingsWindow
     private string? ShownScheme(string? profile) => OwnScheme(profile) ?? InheritedScheme(profile);
 
     /// <summary>
-    /// A scheme value's sides. Dark is the scheme, or the dark one of a pair, and null means Zinc's own. Light is the
-    /// light one of a pair, and null means there's no pair.
+    /// A scheme value's sides. Dark is the scheme, or the dark one of a pair. Light is the light one of a pair, and null
+    /// means there's no pair. No value is Zinc's own pair (Lit Cell and Lit Cell Light).
     /// </summary>
-    private static (string? Dark, string? Light) SchemeSides(string? value) =>
-        value != null && ThemeLibrary.TryParsePair(value, out var light, out var dark) ? (dark, light) : (value, null);
+    private static (string Dark, string? Light) SchemeSides(string? value)
+    {
+        value ??= ThemeLibrary.ZincPair;
+        return ThemeLibrary.TryParsePair(value, out var light, out var dark) ? (dark, light) : (value, null);
+    }
 
     private void SchemesPage(string? profile)
     {
@@ -83,8 +86,8 @@ internal sealed partial class SettingsWindow
         var path = SchemePath(profile);
         _page.Children.Add(Note(setting.Description + " Click a scheme in the library to preview it, and click it again to stop."));
 
-        // ---- In use: the scheme, or the pair that follows Windows' light/dark.
-        var reset = ResetArrow(setting.Label, profile == null ? $"Back to Zinc's own: {ThemeLibrary.ZincScheme}" : "Back to the scheme every profile inherits");
+        // ---- In use: the scheme, or the pair that follows light and dark mode.
+        var reset = ResetArrow(setting.Label, profile == null ? $"Back to Zinc's own: {setting.DefaultText}" : "Back to the scheme every profile inherits");
         reset.Click += (_, _) => Write(path, null);
         var description = DescriptionText();
         var inUse = PartTitle("In use");
@@ -98,9 +101,9 @@ internal sealed partial class SettingsWindow
         }
 
         var quiet = false; // showing values, not changing them
-        var (followPanel, follow) = Switch("Follow Windows light and dark mode");
-        _page.Children.Add(CardLayout(new TextBlock { Text = "Follow Windows light and dark mode" }, null,
-            DescriptionText("Uses two schemes, one while Windows is in light mode and one while it's in dark mode."), null, null, followPanel));
+        var (followPanel, follow) = Switch("Follow light and dark mode");
+        _page.Children.Add(CardLayout(new TextBlock { Text = "Follow light and dark mode" }, null,
+            DescriptionText("Uses two schemes, one for light mode and one for dark mode."), null, null, followPanel));
         var slots = new StackPanel { Spacing = 4, Margin = new Thickness(0, 4, 0, 4) };
         _page.Children.Add(slots);
 
@@ -116,7 +119,8 @@ internal sealed partial class SettingsWindow
             {
                 // The scheme in use becomes the dark side, and the light side starts from its counterpart.
                 var light = ThemeLibrary.LightCounterpart(dark, _config.Themes.Names()) ?? ThemeLibrary.ZincLightScheme;
-                Write(path, $"light:{light},dark:{dark ?? ThemeLibrary.ZincScheme}");
+                var pair = $"light:{light},dark:{dark}";
+                Write(path, profile == null && ThemeLibrary.IsZincPair(pair) ? null : pair); // the global default needs no line
             }
             else
             {
@@ -125,10 +129,9 @@ internal sealed partial class SettingsWindow
         };
 
         // A slot shows one scheme in force, with its tile, which names the scheme, and Edit (the cards' pencil) beside it.
-        Border Slot(string label, string about, string? name)
+        Border Slot(string label, string about, string name)
         {
-            var shown = name ?? ThemeLibrary.ZincScheme;
-            var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? TerminalTheme.Default, shown);
+            var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? TerminalTheme.Default, name);
             tile.Width = ControlWidth;
             var edit = new Button
             {
@@ -136,8 +139,8 @@ internal sealed partial class SettingsWindow
                 Padding = new Thickness(9, 8, 9, 8),
                 VerticalAlignment = VerticalAlignment.Stretch,
             };
-            AutomationProperties.SetName(edit, $"Edit {shown}");
-            ToolTipService.SetToolTip(edit, $"Edit {shown}'s colors");
+            AutomationProperties.SetName(edit, $"Edit {name}");
+            ToolTipService.SetToolTip(edit, $"Edit {name}'s colors");
             edit.Click += (_, _) => CustomizeScheme(name, path);
             return CardLayout(new TextBlock { Text = label }, null, DescriptionText(about), null, null,
                 new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Children = { tile, edit } });
@@ -250,7 +253,8 @@ internal sealed partial class SettingsWindow
         {
             var (dark, light) = SchemeSides(ShownScheme(profile));
             _previewedScheme = null; // it's in force now, so the preview shows it anyway
-            Write(path, light == null ? name : forLight ? $"light:{name},dark:{dark}" : $"light:{light},dark:{name}");
+            var value = light == null ? name : forLight ? $"light:{name},dark:{dark}" : $"light:{light},dark:{name}";
+            Write(path, profile == null && ThemeLibrary.IsZincPair(value) ? null : value); // the global default needs no line
         }
 
         void Preview(string name)
@@ -502,12 +506,12 @@ internal sealed partial class SettingsWindow
             slots.Children.Clear();
             if (light == null)
             {
-                slots.Children.Add(Slot(setting.Label, dark == null && profile == null ? "Zinc's own." : "", dark));
+                slots.Children.Add(Slot(setting.Label, "", dark));
             }
             else
             {
-                slots.Children.Add(Slot("Dark scheme", "While Windows is in dark mode.", dark));
-                slots.Children.Add(Slot("Light scheme", "While Windows is in light mode.", light));
+                slots.Children.Add(Slot("Dark scheme", "Used in dark mode.", dark));
+                slots.Children.Add(Slot("Light scheme", "Used in light mode.", light));
             }
         }
 

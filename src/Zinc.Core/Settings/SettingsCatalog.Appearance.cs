@@ -53,7 +53,7 @@ public static partial class SettingsCatalog
             },
         new("appearance", "Colors", "colors.theme", "Color scheme",
             "About 650 schemes are included. Add your own to the themes folder next to config.toml.", SettingKind.Scheme, null)
-            { DefaultText = ThemeLibrary.ZincScheme },
+            { DefaultText = $"{ThemeLibrary.ZincScheme}, or {ThemeLibrary.ZincLightScheme} in light mode" },
         new("appearance", "Colors", "colors.palette-generate", "Match 256 colors to the scheme",
             "Programs that use the extended 256 colors (vim and htop themes) get shades made from the scheme's 16 colors instead of the standard ones.",
             SettingKind.Toggle)
@@ -158,7 +158,7 @@ public static partial class SettingsCatalog
                 }, [Accepts.Choices]),
             },
         new("appearance", "Window", "window.appearance", "Light or dark",
-            "Sets the look of Zinc's windows, menus, and dialogs. The terminal keeps its color scheme. Restart Zinc to apply.", SettingKind.Choice)
+            "Sets the look of Zinc's windows, menus, and dialogs, and which scheme the terminal uses while \"Follow light and dark mode\" is on. The terminal changes right away, and the windows after you restart Zinc.", SettingKind.Choice)
             {
                 Choices =
                 [

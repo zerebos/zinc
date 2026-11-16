@@ -182,7 +182,7 @@ public class ReferenceExportTests
         }
 
         var settings = List("settings").Concat(List("profileFields")).ToDictionary(s => Text(s, "key"));
-        Assert.Equal(ThemeLibrary.ZincScheme, Text(settings["colors.theme"], "defaultText"));
+        Assert.Equal("Lit Cell, or Lit Cell Light in light mode", Text(settings["colors.theme"], "defaultText"));
         Assert.Equal("Symbols Nerd Font, Noto Sans JP", Text(settings["font.fallback"], "example"));
         Assert.Null(settings["font.adjust-cell-height"]["example"]); // its placeholder is the default
         Assert.Null(settings["notify.command-finished-after"]["defaultText"]); // its default says it

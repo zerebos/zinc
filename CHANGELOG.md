@@ -7,6 +7,11 @@ made from.
 
 ## Unreleased
 
+### Changed
+- If you haven't chosen a color scheme, terminals follow Windows' light and dark mode, with Lit Cell while Windows is dark and Lit Cell Light while it's light. Before, they were always Lit Cell. To keep Lit Cell in light mode too, choose it in `Settings > Appearance > Colors > Color scheme`, or set `theme = "Lit Cell"` under `[colors]`.
+- A color scheme that follows light and dark mode now matches Zinc's windows when `Settings > Appearance > Window > Light or dark` is set to Light or Dark. With "Same as Windows", it follows Windows as before.
+- The welcome window's color scheme page starts with "Follow light and dark mode" on, set to Lit Cell and Lit Cell Light. Before, turning that on switched the dark scheme to Catppuccin Mocha.
+
 ### Fixed
 - A terminal you can't see no longer keeps a CPU core busy while its program writes output, like a build or a log. That includes a background tab, a minimized window, and a dismissed quick terminal.
 

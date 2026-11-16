@@ -7,11 +7,22 @@ namespace Zinc;
 /// </summary>
 public sealed class ThemeLibrary(string userFolder, string bundledFolder)
 {
-    /// <summary>Zinc's own scheme, which is in force where none is chosen (<see cref="Terminal.TerminalTheme.Default"/>).</summary>
+    /// <summary>Zinc's own scheme for dark mode, the same colors as <see cref="Terminal.TerminalTheme.Default"/>.</summary>
     public const string ZincScheme = "Lit Cell";
 
     /// <summary>Zinc's own scheme for light mode.</summary>
     public const string ZincLightScheme = "Lit Cell Light";
+
+    /// <summary>
+    /// Zinc's own pair, which is in force where no scheme is chosen, so the terminal follows Zinc's light or dark mode as
+    /// the window does.
+    /// </summary>
+    public const string ZincPair = $"light:{ZincLightScheme},dark:{ZincScheme}";
+
+    /// <summary>Whether <paramref name="value"/> is a pair of Zinc's own two schemes, which is what no value means.</summary>
+    public static bool IsZincPair(string? value) =>
+        value != null && TryParsePair(value, out var light, out var dark) &&
+        light.Equals(ZincLightScheme, StringComparison.OrdinalIgnoreCase) && dark.Equals(ZincScheme, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The library for a config file, which looks in its folder's <c>themes</c>, then in <paramref name="bundledFolder"/>.
@@ -25,7 +36,7 @@ public sealed class ThemeLibrary(string userFolder, string bundledFolder)
     public string BundledFolder => bundledFolder;
 
     /// <summary>
-    /// A theme that follows Windows' light/dark mode, written as Ghostty does:
+    /// A theme that follows light and dark mode, written as Ghostty does:
     /// <c>"light:Catppuccin Latte,dark:Catppuccin Mocha"</c> (in either order, and a missing side uses
     /// the other). False for a plain scheme name.
     /// </summary>

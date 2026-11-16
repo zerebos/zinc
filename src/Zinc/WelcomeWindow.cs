@@ -23,14 +23,13 @@ namespace Zinc;
 /// </summary>
 internal sealed partial class WelcomeWindow : Window
 {
-    private const string DefaultSchemeLabel = "Default (Lit Cell)";
     private const string BundledFontLabel = BundledFonts.Family + " (included)";
 
     private readonly ConfigFile _config;
     private WorkStyle _style;
     private WorkspaceTabs _workspacesOn = WorkspaceTabs.Left;
     private string? _scheme;   // the scheme, or with _follow the dark side
-    private bool _follow;      // follow Windows light/dark, with _light by day and _scheme by night
+    private bool _follow;      // follow light and dark mode, with _light in light mode and _scheme in dark
     private string? _light;
     private bool _toast;       // a Windows notification when a long command finishes out of view
     private string? _font;
@@ -79,8 +78,8 @@ internal sealed partial class WelcomeWindow : Window
         _style = firstRun || global.PaneTabs || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkStyle.Workspaces : WorkStyle.Simple;
         _workspacesOn = firstRun || global.WorkspaceTabs == WorkspaceTabs.Left ? WorkspaceTabs.Left : WorkspaceTabs.Top;
         _font = global.FontFamily == BundledFonts.Family ? null : global.FontFamily;
-        _scheme = config.SchemeName;
-        if (_scheme != null && ThemeLibrary.TryParsePair(_scheme, out var light, out var dark))
+        _scheme = config.SchemeName ?? ThemeLibrary.ZincPair; // no scheme means use Zinc's own pair, which follows light and dark mode
+        if (ThemeLibrary.TryParsePair(_scheme, out var light, out var dark))
         {
             (_follow, _light, _scheme) = (true, light, dark);
         }
@@ -473,11 +472,12 @@ internal sealed partial class WelcomeWindow : Window
     private FrameworkElement LookPage()
     {
         var names = _config.Themes.Names();
-        var schemes = new List<string> { DefaultSchemeLabel };
-        schemes.AddRange(names);
+        string[] zincs = [ThemeLibrary.ZincScheme, ThemeLibrary.ZincLightScheme]; // show ours first
+        var schemes = zincs.Where(z => names.Contains(z, StringComparer.OrdinalIgnoreCase))
+            .Concat(names.Where(n => !zincs.Contains(n, StringComparer.OrdinalIgnoreCase))).ToList();
         var list = new ListView { Height = 390, SelectionMode = ListViewSelectionMode.Single };
         AutomationProperties.SetName(list, "Color schemes");
-        SchemeTiles.ShowAsTiles(list, _config.Themes, DefaultSchemeLabel); // each scheme drawn in its own colors
+        SchemeTiles.ShowAsTiles(list, _config.Themes, null); // each scheme drawn in its own colors
         var search = new TextBox { PlaceholderText = $"Search {names.Count} schemes" };
         AutomationProperties.SetName(search, "Search schemes");
         void Fill()
@@ -489,7 +489,7 @@ internal sealed partial class WelcomeWindow : Window
                 list.Items.Add(name);
             }
 
-            list.SelectedItem = list.Items.FirstOrDefault(i => (string)i == (_scheme ?? DefaultSchemeLabel)) ?? list.Items.FirstOrDefault();
+            list.SelectedItem = list.Items.FirstOrDefault(i => string.Equals((string)i, _scheme, StringComparison.OrdinalIgnoreCase)) ?? list.Items.FirstOrDefault();
         }
 
         search.TextChanged += (_, _) => Fill();
@@ -508,7 +508,7 @@ internal sealed partial class WelcomeWindow : Window
         {
             if (list.SelectedItem is string name)
             {
-                _scheme = name == DefaultSchemeLabel ? null : name;
+                _scheme = name;
                 UpdatePreview();
             }
         };
@@ -528,7 +528,7 @@ internal sealed partial class WelcomeWindow : Window
             UpdatePreview();
         };
 
-        // When following Windows light/dark, the list above picks the dark side and this picker the light side.
+        // When following light and dark mode, the list above picks the dark side and this picker the light side.
         var listLabel = new TextBlock { Text = _follow ? "Dark scheme" : "Scheme", Opacity = 0.8 };
         var lightPicker = new SchemePicker(_config.Themes, names, null, "Light scheme")
         {
@@ -547,23 +547,14 @@ internal sealed partial class WelcomeWindow : Window
             Visibility = _follow ? Visibility.Visible : Visibility.Collapsed,
             Children = { new TextBlock { Text = "Light scheme" }, lightPicker },
         };
-        var follow = new ToggleSwitch { Header = "Follow Windows light and dark mode", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
-        AutomationProperties.SetName(follow, "Follow Windows light and dark mode");
+        var follow = new ToggleSwitch { Header = "Follow light and dark mode", IsOn = _follow, OnContent = "Two schemes", OffContent = "One scheme" };
+        AutomationProperties.SetName(follow, "Follow light and dark mode");
         follow.Toggled += (_, _) =>
         {
             _follow = follow.IsOn;
             if (_follow)
             {
-                // A pair names two schemes, so Zinc's own becomes Catppuccin Mocha, and the light
-                // side starts from the dark one's counterpart.
-                if (_scheme == null && names.FirstOrDefault(n => n == "Catppuccin Mocha") is { } mocha)
-                {
-                    _scheme = mocha;
-                    search.Text = "";
-                    list.SelectedItem = mocha;
-                    list.ScrollIntoView(mocha);
-                }
-
+                // The light side starts from the dark one's counterpart (Lit Cell Light for Lit Cell).
                 _light ??= ThemeLibrary.LightCounterpart(_scheme, names);
                 lightPicker.Show(_light, _light != null);
             }
@@ -612,8 +603,8 @@ internal sealed partial class WelcomeWindow : Window
     /// <summary>A little shell session in the chosen colors and font (a Nerd Font icon included).</summary>
     private void UpdatePreview()
     {
-        // When following Windows, show the side for its current mode.
-        var shownScheme = _follow && ConfigFile.SystemScheme == Zinc.Ghostty.ColorScheme.Light ? _light : _scheme;
+        // With two schemes, show the one for Zinc's light or dark mode, which is Windows' mode unless the config sets it.
+        var shownScheme = _follow && _config.Appearance == Zinc.Ghostty.ColorScheme.Light ? _light : _scheme;
         var theme = (shownScheme is { } name ? _config.Themes.Apply(new Config(), name)?.Theme : null) ?? TerminalTheme.Default;
         Color Ansi(int index) => theme.Palette.TryGetValue(index, out var c) ? ToColor(c) : AnsiDefaults[index];
         _preview.Background = new SolidColorBrush(ToColor(theme.Background));
@@ -842,8 +833,14 @@ internal sealed partial class WelcomeWindow : Window
         }
     }
 
-    private void Save() => Finish(new WelcomeChoices(_style, _workspacesOn,
-        _follow && _scheme != null && _light != null ? $"light:{_light},dark:{_scheme}" : _scheme, _font, _profile, _toast, _paneStyle));
+    private void Save() => Finish(new WelcomeChoices(_style, _workspacesOn, ChosenScheme(), _font, _profile, _toast, _paneStyle));
+
+    // The scheme as config.toml takes it. Zinc's own pair writes no line at all, because it's the default.
+    private string? ChosenScheme()
+    {
+        var value = _follow && _scheme != null && _light != null ? $"light:{_light},dark:{_scheme}" : _scheme;
+        return ThemeLibrary.IsZincPair(value) ? null : value;
+    }
 
     private void Finish(WelcomeChoices? choices)
     {

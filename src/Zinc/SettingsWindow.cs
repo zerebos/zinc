@@ -1349,7 +1349,7 @@ internal sealed partial class SettingsWindow : Window
     /// </summary>
     private Border SchemeCard(SettingDef setting, string? profile)
     {
-        var reset = ResetArrow(setting.Label, profile == null ? "Back to Zinc's own: Lit Cell" : "Back to the scheme every profile inherits");
+        var reset = ResetArrow(setting.Label, profile == null ? $"Back to Zinc's own: {setting.DefaultText}" : "Back to the scheme every profile inherits");
         var description = DescriptionText();
         var tiles = new StackPanel { Spacing = 3 };
         var chevron = new FontIcon { Glyph = ((char)0xE76C).ToString(), FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
@@ -1373,7 +1373,7 @@ internal sealed partial class SettingsWindow : Window
             reset.Visibility = own != null ? Visibility.Visible : Visibility.Collapsed;
             if (profile == null)
             {
-                SetText(description, light != null ? "Follows Windows light and dark mode." : setting.Description);
+                SetText(description, light != null ? "Follows light and dark mode." : setting.Description);
             }
             else
             {
@@ -1427,7 +1427,7 @@ internal sealed partial class SettingsWindow : Window
         null => setting.Kind switch
         {
             SettingKind.Font => BundledFonts.Family,
-            SettingKind.Scheme => ThemeLibrary.ZincScheme,
+            SettingKind.Scheme => setting.DefaultText ?? ThemeLibrary.ZincPair, // scheme names keep their capitals
             _ when (setting.DefaultText ?? (setting.PlaceholderIsExample ? null : setting.Placeholder)) is { Length: > 0 } words =>
                 MidSentence(words),
             SettingKind.Color => "the scheme's color",
@@ -2235,10 +2235,8 @@ internal sealed partial class SettingsWindow : Window
     /// <summary>The colors of the scheme in force for <paramref name="profile"/> (null means the defaults), under Windows' current light or dark mode.</summary>
     private TerminalTheme SchemeTheme(string? profile)
     {
-        var name = (profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme");
-        return name is string n
-            ? SchemeTiles.ThemeOf(_config.Themes, ThemeLibrary.Resolve(n, ConfigFile.SystemScheme)) ?? TerminalTheme.Default
-            : TerminalTheme.Default;
+        var name = ((profile != null ? _config.ValueOf(profile, "colors.theme") : null) ?? _config.ValueOf("colors.theme")) as string ?? ThemeLibrary.ZincPair;
+        return SchemeTiles.ThemeOf(_config.Themes, ThemeLibrary.Resolve(name, _config.Appearance)) ?? TerminalTheme.Default;
     }
 
     private static (FrameworkElement, Action<object?>) FontControl(Action<object?> commit)
