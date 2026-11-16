@@ -14,6 +14,7 @@ made from.
 
 ### Fixed
 - A terminal you can't see no longer keeps a CPU core busy while its program writes output, like a build or a log. That includes a background tab, a minimized window, and a dismissed quick terminal.
+- In `Settings > Appearance > Colors > Color scheme`, a light and dark pair shows both schemes by their full names, like "Lit Cell Light", instead of cutting them short. The dark one comes first, and each name's tooltip says whether it's the dark or the light scheme.
 
 ## 0.1.0-pre.1 (2026-11-14)
 

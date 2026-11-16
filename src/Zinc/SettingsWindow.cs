@@ -1380,18 +1380,27 @@ internal sealed partial class SettingsWindow : Window
                 InheritedText(description, setting, Describe(setting, InheritedScheme(profile)), own != null);
             }
 
-            Border Tile(string? name, string label) =>
-                SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? Zinc.Terminal.TerminalTheme.Default, label);
+            // A pair's tiles show only the names, dark first, because "Dark: " and "Light: " cut most names short. The
+            // tooltips and the button's help text say which side is which.
+            Border Tile(string name, string? side)
+            {
+                var tile = SchemeTiles.Tile(SchemeTiles.ThemeOf(_config.Themes, name) ?? Zinc.Terminal.TerminalTheme.Default, name);
+                if (side != null)
+                {
+                    ToolTipService.SetToolTip(tile, $"{side}: {name}");
+                }
+
+                return tile;
+            }
+
             tiles.Children.Clear();
-            if (light == null)
+            tiles.Children.Add(Tile(dark, light == null ? null : "Dark"));
+            if (light != null)
             {
-                tiles.Children.Add(Tile(dark, dark ?? ThemeLibrary.ZincScheme));
+                tiles.Children.Add(Tile(light, "Light"));
             }
-            else
-            {
-                tiles.Children.Add(Tile(dark, $"Dark: {dark}"));
-                tiles.Children.Add(Tile(light, $"Light: {light}"));
-            }
+
+            AutomationProperties.SetHelpText(open, light == null ? dark : $"Dark: {dark}. Light: {light}.");
         }
 
         reset.Click += (_, _) =>
