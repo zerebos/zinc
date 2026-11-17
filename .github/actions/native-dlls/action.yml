@@ -4,6 +4,11 @@ description: >
   when the build scripts, the Ghostty patches, or the native sources do, so they're built once per such change and
   kept in the cache.
 
+inputs:
+  arch:
+    description: The architecture to build for, `x64` or `arm64`, as `libghostty.ps1 -Arch` takes it.
+    default: x64
+
 runs:
   using: composite
   steps:
@@ -12,7 +17,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: native
-        key: native-x64-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
+        key: native-${{ inputs.arch }}-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
 
     # setup-zig downloads Zig from the community mirrors (because ziglang.org asks CI to) and checks its signature.
     # It's pinned to the commit of v2.2.1 with its own cache off, because the DLLs are cached above.
@@ -26,7 +31,7 @@ runs:
     - name: Build the native DLLs
       if: steps.native.outputs.cache-hit != 'true'
       shell: pwsh
-      run: pwsh scripts/build/libghostty.ps1
+      run: pwsh scripts/build/libghostty.ps1 -Arch ${{ inputs.arch }}
 
     # Saved here, not at the end of the job, so a failing build or test doesn't throw away the DLLs just built.
     - name: Keep the native DLLs

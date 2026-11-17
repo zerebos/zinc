@@ -106,7 +106,7 @@
   </PropertyGroup>
 
   <Target Name="CopyZn" AfterTargets="Build">
-    <MSBuild Projects="$(ZnProject)" Targets="Build" Properties="Configuration=$(Configuration);Platform=x64">
+    <MSBuild Projects="$(ZnProject)" Targets="Build" Properties="Configuration=$(Configuration);Platform=$(Platform)">
       <Output TaskParameter="TargetOutputs" ItemName="_ZnBuilt" />
     </MSBuild>
     <PropertyGroup>
@@ -131,7 +131,7 @@
     <PropertyGroup>
       <_ZnPublishDir>$([MSBuild]::EnsureTrailingSlash('$(PublishDir)'))bin</_ZnPublishDir>
     </PropertyGroup>
-    <Exec Command="dotnet publish &quot;$(ZnProject)&quot; -c $(Configuration) -r win-x64 -p:Platform=x64 -o &quot;$(_ZnPublishDir)&quot; -nologo"
+    <Exec Command="dotnet publish &quot;$(ZnProject)&quot; -c $(Configuration) -r $(RuntimeIdentifier) -p:Platform=$(Platform) -o &quot;$(_ZnPublishDir)&quot; -nologo"
           EnvironmentVariables="PATH=$([MSBuild]::Escape('$(PATH);$(MSBuildProgramFiles32)\Microsoft Visual Studio\Installer'))" />
     <Delete Files="$(_ZnPublishDir)\zn.pdb" />
     <Error Condition="!Exists('$(_ZnPublishDir)\zn.exe')" Text="zn.exe wasn't published into $(_ZnPublishDir)." />
