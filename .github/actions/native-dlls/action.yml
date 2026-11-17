@@ -2,7 +2,8 @@ name: Native DLLs
 description: >
   Puts the native DLLs (libghostty-vt, the sprite rasterizer, the shader translator) in native/. They change only
   when the build scripts, the Ghostty patches, or the native sources do, so they're built once per such change and
-  kept in the cache.
+  kept in the cache. Both architectures are built on an x64 runner, because `zig build` with Zig 0.16 fails with no
+  output on GitHub's ARM64 runner, and cross-building ARM64 from x64 works.
 
 inputs:
   arch:
@@ -16,7 +17,11 @@ runs:
       id: native
       uses: actions/cache/restore@v6
       with:
-        path: native
+        # Caches only this architecture's folder and the headers. A job that builds both architectures has both in
+        # native/, and this keeps the x64 DLLs out of the ARM64 cache and the ARM64 DLLs out of the x64 one.
+        path: |
+          native/${{ inputs.arch }}
+          native/include
         key: native-${{ inputs.arch }}-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
 
     # setup-zig downloads Zig from the community mirrors (because ziglang.org asks CI to) and checks its signature.
@@ -38,5 +43,7 @@ runs:
       if: steps.native.outputs.cache-hit != 'true'
       uses: actions/cache/save@v6
       with:
-        path: native
+        path: |
+          native/${{ inputs.arch }}
+          native/include
         key: ${{ steps.native.outputs.cache-primary-key }}

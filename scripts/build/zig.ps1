@@ -23,7 +23,8 @@ function Invoke-ZigBuild([string]$Folder, [string[]]$Arguments) {
                 Write-Host "Zig couldn't read one of the files it builds, so the build runs again ($($try + 1) of $tries)."
                 continue
             }
-            throw "zig build failed in $Folder."
+            # Show the hex too because a crash shows only as an `NTSTATUS` like `0xC0000005`, with nothing else printed
+            throw ("zig build failed in $Folder, with exit code $LASTEXITCODE (0x{0:X8})." -f $LASTEXITCODE)
         }
     } finally {
         Pop-Location
