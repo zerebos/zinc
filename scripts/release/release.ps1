@@ -8,6 +8,11 @@
   the previous release is there, a delta package with only what changed, releases.win.json (the list a
   running Zinc checks for updates) and Zinc-win-Portable.zip.
 
+  -Arch arm64 builds for ARM64 instead, as its own Velopack channel (win-arm64), so its files have their own names
+  (Zinc-win-arm64-Setup.exe, releases.win-arm64.json) and both architectures fit in one folder and one release. It
+  needs the ARM64 native DLLs (libghostty.ps1 -Arch arm64), and zn's Native AOT link needs Build Tools' ARM64
+  component.
+
   -UpdateSource is built into the release as the address it checks for updates. For a Zinc release it defaults to
   the GitHub repository in Directory.Build.props (ZincRepositoryUrl), whose releases hold the updates. Test packages
   (-PackId Zinc.Test) get none and find theirs through ZINC_UPDATE_URL.
@@ -30,6 +35,10 @@
 #>
 param(
     [string]$Out,
+    # The architecture to build. Each one is its own Velopack channel, so an installed copy only updates to packages
+    # of its own architecture. x64 keeps `win`, the channel every release before ARM64 used, and ARM64 uses `win-arm64`.
+    [ValidateSet('x64', 'arm64')]
+    [string]$Arch = 'x64',
     [string]$From,
     [string]$PackId = 'Zinc',
     [string]$UpdateSource,
@@ -52,8 +61,12 @@ if ($PackId -eq 'Zinc' -and -not $UpdateSource) {
     if (-not $UpdateSource) { throw 'A release needs -UpdateSource, or ZincRepositoryUrl in Directory.Build.props, to know where to look for updates.' }
 }
 
-if (-not (Test-Path (Join-Path $repo 'native\x64\ghostty-vt.dll'))) {
-    throw 'native\x64\ghostty-vt.dll missing: run scripts/build/libghostty.ps1 first.'
+$platform = @{ x64 = 'x64'; arm64 = 'ARM64' }[$Arch]
+$runtime = "win-$Arch"
+$channel = @{ x64 = 'win'; arm64 = 'win-arm64' }[$Arch]
+
+if (-not (Test-Path (Join-Path $repo "native\$Arch\ghostty-vt.dll"))) {
+    throw "native\$Arch\ghostty-vt.dll missing: run scripts/build/libghostty.ps1 -Arch $Arch first."
 }
 
 # ---- version (the one Directory.Build.props works out) ----
@@ -85,32 +98,32 @@ if ($From) {
         # A pre-release's delta is made from the newest release or pre-release, and a release's from the newest release.
         $pre = @(if ($Version.Split('+')[0].Contains('-')) { '--pre' })
         $token = if ($env:GH_TOKEN) { @('--token', $env:GH_TOKEN) } else { @() }
-        dotnet vpk download github --repoUrl $From -o $Out @pre @token
+        dotnet vpk download github --repoUrl $From -o $Out --channel $channel @pre @token
         if ($LASTEXITCODE -ne 0) { Write-Warning "No previous release came from $From, so this release has no delta package." }
     } else {
         $kind = if ($From -match '^https?://') { 'http', '--url' } else { 'local', '--path' }
-        dotnet vpk download $kind[0] $kind[1] $From -o $Out --allowEmptyChannel
+        dotnet vpk download $kind[0] $kind[1] $From -o $Out --channel $channel --allowEmptyChannel
         if ($LASTEXITCODE -ne 0) { throw "Couldn't fetch the previous release from $From." }
     }
 }
 
 # ---- publish ----
-$publishDir = Join-Path $repo "dist\publish-$PackId"
+$publishDir = Join-Path $repo "dist\publish-$PackId-$Arch"
 if (Test-Path $publishDir) { Remove-Item $publishDir -Recurse -Force }
-Write-Host "Publishing $Version ..."
+Write-Host "Publishing $Version for $Arch ..."
 # One publish at a time (any script that publishes into obj\ takes the same mutex), and a full rebuild, because an
 # incremental publish after a framework-dependent one can reuse a zinc.deps.json that names no runtime.
 $inheritedPath = $env:PATH
 $lock = [Threading.Mutex]::new($false, 'Local\ZincPublish')
 try { $null = $lock.WaitOne() } catch [Threading.AbandonedMutexException] { }
 try {
-    $state = Join-Path $repo 'src\Zinc\obj\x64\Release'
+    $state = Join-Path $repo "src\Zinc\obj\$platform\Release"
     if (Test-Path $state) { Remove-Item $state -Recurse -Force }
     # The publish gets PATH as a fresh terminal has it (from the registry), because an inherited PATH can break VS's
     # vcvarsall.bat or put another `link` ahead of MSVC's, and zn's Native AOT link then fails. The rest of the script
     # keeps the inherited PATH.
     $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r win-x64 --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateSource" 2>&1
+    $log = dotnet publish (Join-Path $repo 'src\Zinc\Zinc.csproj') -c Release -r $runtime "-p:Platform=$platform" --self-contained true -o $publishDir -nologo "-p:ZincUpdateUrl=$UpdateSource" 2>&1
     $failed = $LASTEXITCODE -ne 0
 } finally {
     $env:PATH = $inheritedPath
@@ -146,7 +159,7 @@ Write-Host "Packing $PackId $Version ..."
 # The title is what Settings > Apps shows, so a test package shows its own id instead of a second "Zinc".
 $title = if ($PackId -eq 'Zinc') { 'Zinc' } else { $PackId }
 # Packed under the version without the commit's hash. The hash is in the app itself, where About shows it.
-dotnet vpk pack --packId $PackId --packVersion ($Version.Split('+')[0]) --packTitle $title --packAuthors Zinc --runtime win-x64 `
+dotnet vpk pack --packId $PackId --packVersion ($Version.Split('+')[0]) --packTitle $title --packAuthors Zinc --runtime $runtime --channel $channel `
     --packDir $publishDir --mainExe zinc.exe --icon (Join-Path $repo 'src\Zinc\Assets\Zinc.ico') `
     --shortcuts $Shortcuts --outputDir $Out @notesArgs
 if ($LASTEXITCODE -ne 0) { throw 'vpk pack failed.' }

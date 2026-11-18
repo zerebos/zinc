@@ -2,7 +2,10 @@ name: Release
 
 # Pushing a version tag publishes a release. The tag is v<ZincVersion> for a release, or v<ZincVersion>-<label>.N for a
 # pre-release (pre.1, rc.2), with ZincVersion from Directory.Build.props. Run by hand, the workflow is a dry run that
-# builds and packs the same way and keeps the files as an artifact, without making a release.
+# builds and packs the same way and keeps the files as artifacts, without making a release.
+#
+# The jobs run in order: check the tag, build the native DLLs, build, test, and pack each architecture, then publish.
+# Nothing is published until both architectures have passed, so a failed build never leaves a release with only one.
 on:
   push:
     tags: ['v*']
@@ -15,19 +18,27 @@ concurrency:
 permissions:
   contents: write
 
+# Plain `pwsh` fails a step only on its last command's exit code, so a step with several commands could pass after
+# its first one failed. This makes any failing command stop the step.
+defaults:
+  run:
+    shell: pwsh -Command "$ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $true; . '{0}'"
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  GH_TOKEN: ${{ github.token }}
+  REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+
 jobs:
-  release:
-    name: ${{ github.event_name == 'push' && 'Release' || 'Dry run' }}
+  # The checks come first and need no native DLLs, so a refused tag fails in a minute or two.
+  check:
+    name: ${{ github.event_name == 'push' && 'Check the tag' || 'Work out the version' }}
     runs-on: windows-latest
-    timeout-minutes: 60
-    defaults:
-      run:
-        shell: pwsh
-    env:
-      DOTNET_NOLOGO: true
-      DOTNET_CLI_TELEMETRY_OPTOUT: true
-      GH_TOKEN: ${{ github.token }}
-      REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
 
     steps:
       - uses: actions/checkout@v7
@@ -44,7 +55,6 @@ jobs:
       - name: Work out the version
         id: version
         run: |
-          $ErrorActionPreference = 'Stop'
           $version = (dotnet msbuild src/Zinc.Core/Zinc.Core.csproj -nologo -t:ZincGitVersion -getProperty:ZincPackVersion).Trim()
           if ($env:GITHUB_EVENT_NAME -eq 'push' -and "v$version" -ne $env:GITHUB_REF_NAME) {
               throw "The tag is $env:GITHUB_REF_NAME, but this commit builds as $version. A release's tag is v<ZincVersion>, or v<ZincVersion>-<label>.N for a pre-release, with ZincVersion from Directory.Build.props."
@@ -53,14 +63,13 @@ jobs:
           "prerelease=$($version.Contains('-').ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
           "Zinc $version"
 
-      # Installed copies only update to a higher version, so a release has to be above every release before it.
+      # Installed copies only update to a higher version, so a release has to be above every release before it. A
+      # draft doesn't count, because no installed copy has seen it.
       - name: Check the version is above the last release
         if: github.event_name == 'push'
         run: |
-          $ErrorActionPreference = 'Stop'
           $mine = [semver]'${{ steps.version.outputs.version }}'
-          $tags = gh api "repos/$env:GITHUB_REPOSITORY/releases" --paginate --jq '.[].tag_name'
-          if ($LASTEXITCODE -ne 0) { throw "Couldn't list the repository's releases." }
+          $tags = gh api "repos/$env:GITHUB_REPOSITORY/releases" --paginate --jq '.[] | select(.draft | not) | .tag_name'
           $highest = $tags | Where-Object { $_ -match '^v\d' } | ForEach-Object { [semver]$_.Substring(1) } |
               Sort-Object | Select-Object -Last 1
           if ($highest -and $mine -le $highest) { throw "This would be $mine, but $highest is already released." }
@@ -70,46 +79,157 @@ jobs:
         if: github.event_name == 'push'
         run: dotnet run scripts/release/release-notes.cs -- ${{ steps.version.outputs.version }} --check
 
-      # Builds the native DLLs, or restores them from the cache. It comes after the checks above, which don't need
-      # them, so a refused tag doesn't wait for a rebuild.
+  # Both architectures' DLLs are built on x64, as in CI (the native-dlls action says why), and handed to the build
+  # jobs as artifacts.
+  native:
+    name: Native DLLs (${{ matrix.arch }})
+    needs: check
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v7
+
       - uses: ./.github/actions/native-dlls
+        with:
+          arch: ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.arch }}
+          # Without the .pdb files, which are most of the size and which the build doesn't need.
+          path: |
+            native/${{ matrix.arch }}
+            !native/${{ matrix.arch }}/*.pdb
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true  # so a rerun of this job can upload again
+
+  # Each architecture builds and tests on its own kind of runner, so the ARM64 tests run on an ARM64 machine. Each one's packed
+  # files go to the publish job as an artifact, which a dry run keeps for a week.
+  build:
+    name: Build and pack (${{ matrix.arch }})
+    needs: [check, native]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false  # a dry run shows how both architectures did
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-${{ matrix.arch }}
+          path: native/${{ matrix.arch }}
 
       - name: Build
+        if: matrix.arch == 'x64'
         run: dotnet build Zinc.slnx --no-incremental -warnaserror
 
+      # Project by project, because Zinc.slnx maps every project to x64.
+      - name: Build
+        if: matrix.arch == 'arm64'
+        run: |
+          dotnet build src/Zinc/Zinc.csproj -p:Platform=ARM64 --no-incremental -warnaserror
+          dotnet build tests/Zinc.Tests/Zinc.Tests.csproj -p:Platform=ARM64 --no-incremental -warnaserror
+
       - name: Test
+        if: matrix.arch == 'x64'
         run: dotnet test
 
-      # release.ps1 publishes the app, checks the result, and packs it with Velopack. -From fetches the release before
-      # this one, so this one also gets a small package of only what changed.
+      - name: Test
+        if: matrix.arch == 'arm64'
+        run: dotnet test --project tests/Zinc.Tests -p:Platform=ARM64 --no-build
+
+      # release.ps1 publishes the app, checks the result, and packs it with Velopack, on the architecture's own channel.
+      # -From fetches that channel's previous release, so this one also gets a small package of only what changed.
       - name: Pack
         run: |
           dotnet tool restore
-          pwsh scripts/release/release.ps1 -Out dist/release -From $env:REPOSITORY_URL
+          pwsh scripts/release/release.ps1 -Arch ${{ matrix.arch }} -Out dist/release -From $env:REPOSITORY_URL
 
-      # What the website's reference pages and the config schema are made from.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zinc-${{ needs.check.outputs.version }}-${{ matrix.arch }}
+          path: dist/release
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'push' && 1 || 7 }}
+          overwrite: true
+
+      # What the website's reference pages and the config schema are made from. It's the same for both architectures.
       - name: Export the reference
+        if: matrix.arch == 'x64'
         run: dotnet run scripts/dev/export-reference.cs -- --out dist/reference
 
-      - name: Keep the files (dry run)
-        if: github.event_name != 'push'
-        uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7
+        if: matrix.arch == 'x64'
         with:
-          name: zinc-${{ steps.version.outputs.version }}
-          path: |
-            dist/release
-            dist/reference
-          retention-days: 7
+          name: zinc-${{ needs.check.outputs.version }}-reference
+          path: dist/reference
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'push' && 1 || 7 }}
+          overwrite: true
 
+  publish:
+    name: Publish the release
+    if: github.event_name == 'push'
+    needs: [check, build]
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # release-notes.cs builds Zinc.Core, whose build works out the version from git
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: zinc-${{ needs.check.outputs.version }}-x64
+          path: dist/x64
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: zinc-${{ needs.check.outputs.version }}-arm64
+          path: dist/arm64
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: zinc-${{ needs.check.outputs.version }}-reference
+          path: dist/reference
+
+      # Everything goes onto a draft, which is published last. A failure partway leaves a draft that no installed copy
+      # sees, and the run can go again once the draft is deleted. `--merge` adds the ARM64 channel's files to the
+      # draft the x64 upload made. vpk sets the notes only when it makes the release, so they're set again here, from
+      # the changelog.
       - name: Publish the release
-        if: github.event_name == 'push'
         run: |
-          $ErrorActionPreference = 'Stop'
-          $PSNativeCommandUseErrorActionPreference = $true
-          $version = '${{ steps.version.outputs.version }}'
-          $pre = @(if ('${{ steps.version.outputs.prerelease }}' -eq 'true') { '--pre' }) # @() keeps one item an array, so the splat passes it whole
-          dotnet vpk upload github --repoUrl $env:REPOSITORY_URL --token $env:GH_TOKEN --outputDir dist/release `
-              --tag $env:GITHUB_REF_NAME --releaseName "Zinc $version" --publish @pre
-          dotnet run scripts/release/release-notes.cs -- $version --out dist/notes.md
-          gh release edit $env:GITHUB_REF_NAME --notes-file dist/notes.md
+          $version = '${{ needs.check.outputs.version }}'
+          $pre = @(if ('${{ needs.check.outputs.prerelease }}' -eq 'true') { '--pre' }) # @() keeps one item an array, so the splat passes it whole
+          dotnet tool restore
+          dotnet vpk upload github --repoUrl $env:REPOSITORY_URL --token $env:GH_TOKEN --outputDir dist/x64 `
+              --tag $env:GITHUB_REF_NAME --releaseName "Zinc $version" @pre
+          dotnet vpk upload github --repoUrl $env:REPOSITORY_URL --token $env:GH_TOKEN --outputDir dist/arm64 `
+              --channel win-arm64 --tag $env:GITHUB_REF_NAME --merge
           gh release upload $env:GITHUB_REF_NAME dist/reference/zinc-reference.json dist/reference/config.schema.json
+          dotnet run scripts/release/release-notes.cs -- $version --out dist/notes.md
+          gh release edit $env:GITHUB_REF_NAME --notes-file dist/notes.md --draft=false

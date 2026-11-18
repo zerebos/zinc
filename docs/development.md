@@ -4,12 +4,13 @@ This is the guide to building Zinc, running it next to an installed copy, testin
 
 ## What you need
 
-- Windows 10 version 2004 (build 19041) or later, or Windows 11. Zinc builds for x64 only for now, and ARM64 stays out of the solution until there's a `native/arm64` build.
+- Windows 10 version 2004 (build 19041) or later, or Windows 11. Zinc builds and is released for x64 and ARM64 (see "Building for ARM64" below).
 - Git on `PATH`, because the native build fetches Ghostty with it.
 - The .NET 10 SDK.
 - [Zig](https://ziglang.org) 0.16.x on `PATH`, for the native DLLs. It's the version Ghostty requires.
 - PowerShell 7.4 or later (`pwsh`), for the build scripts.
 - For publishing only (a release, or `dotnet publish`), Visual Studio Build Tools with the C++ workload. `zn`, the command-line tool, is compiled with Native AOT, which links with MSVC's linker. Everything else builds without Visual Studio.
+- To publish for ARM64, you also need Build Tools' "MSVC Build Tools for ARM64/ARM64EC" component, which has the ARM64 linker.
 
 ## Building
 
@@ -37,6 +38,18 @@ The app is unpackaged and carries the Windows App SDK with it, so the exe in `sr
 A running `zinc.exe` from `bin/` locks the build output, and the build then fails with MSB3027. Close that copy first. This happens with dev builds only, because an installed Zinc runs from its own folder.
 
 A git worktree has no `native/` folder, because it's build output. Either run the native build in the worktree, or point it at the main checkout's with a junction (`cmd /c mklink /J ..\zinc-feature\native native`). Before removing the worktree, unlink the junction first (`cmd /c rmdir ..\zinc-feature\native`), because `git worktree remove` with the junction in place can delete the real folder's contents through it.
+
+### Building for ARM64
+
+The same steps build for ARM64 from an x64 machine, with the architecture named in each one:
+
+```powershell
+pwsh scripts/build/libghostty.ps1 -Arch arm64
+dotnet build src/Zinc/Zinc.csproj -p:Platform=ARM64
+dotnet build tests/Zinc.Tests/Zinc.Tests.csproj -p:Platform=ARM64
+```
+
+The native DLLs go to `native/arm64`, and the app to `src/Zinc/bin/ARM64/Debug/net10.0-windows10.0.26100.0/win-arm64/zinc.exe`. ARM64 builds go project by project, because `Zinc.slnx` has only x64. Adding ARM64 to the solution would make a plain `dotnet build` pick ARM64, so the solution stays x64 only. An x64 machine can't run ARM64 programs, so the ARM64 tests run only on an ARM64 machine, like CI's ARM64 runner.
 
 ## Running a dev build
 
@@ -97,7 +110,7 @@ Posted input can't do everything a person can. Posted `WM_CHAR`, `WM_KEYDOWN`, a
 
 Your own settings can hide bugs that the defaults show. When a change touches layout or the window's chrome, try it with the defaults and with the settings that change the chrome: `pane-headers` (`auto` and `always`), `pane-gap` (0 and the card look), workspace tabs on top and on the left, and pane tabs on and off.
 
-CI (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests. It builds the native DLLs (cached between runs), builds the solution with warnings as errors, builds the file-based scripts, and runs the tests.
+CI (`.github/workflows/ci.yml`) runs on every push to `main` and on pull requests. It builds the native DLLs (cached between runs), builds the solution with warnings as errors, builds the file-based scripts, and runs the tests. The same job also runs on GitHub's `windows-11-arm` runner, where it builds the app and the tests for ARM64 one project at a time, with warnings as errors, and runs the tests there. It leaves out the scripts, and it gets its native DLLs from an x64 runner, because Zig can't build them on the ARM64 one.
 
 ## Troubleshooting
 
@@ -186,13 +199,15 @@ To make a release:
 2. Commit that, tag the commit `v<version>`, and push both.
 3. The release workflow (`.github/workflows/release.yml`) builds and tests the tagged commit, packs it with [Velopack](https://velopack.io) and publishes it under the repository's GitHub Releases, marked as a pre-release when the version has a label, like `pre.1` or `rc.1`.
 
-The workflow refuses a tag that doesn't match the version the build works out, a version that isn't above every earlier release, a version with no changelog entry, and a changelog with notes still under Unreleased. The release gets `Zinc-win-Setup.exe` (a per-user install, with no admin prompt), the update packages, `releases.win.json` (what installed copies check once a day), `Zinc-win-Portable.zip`, and `zinc-reference.json` and `config.schema.json` for that version. The .NET runtime and the Windows App SDK are inside, at about 50 MB. Its notes are the version's changelog entry. Started by hand, the workflow is a dry run, which builds and packs the same way and keeps the files with the run for a week, without making a release.
+The workflow refuses a tag that doesn't match the version the build works out, a version that isn't above every earlier release, a version with no changelog entry, and a changelog with notes still under Unreleased. The release gets `Zinc-win-Setup.exe` (a per-user install, with no admin prompt), the update packages, `releases.win.json` (what installed copies check once a day), `Zinc-win-Portable.zip`, and `zinc-reference.json` and `config.schema.json` for that version. The .NET runtime and the Windows App SDK are inside, at about 50 MB. Its notes are the version's changelog entry. ARM64 goes into the same release, built and tested on GitHub's `windows-11-arm` runner: `Zinc-win-arm64-Setup.exe`, its update packages, `releases.win-arm64.json`, and `Zinc-win-arm64-Portable.zip`.
+
+Nothing is published until both architectures have passed, so a failed build never leaves a release with only one architecture. The workflow uploads everything to a draft and publishes the draft last. If publishing fails partway, the draft stays behind, where no installed copy sees it. Delete the draft before running the workflow again, because the upload refuses a tag that already has a release. Started by hand, the workflow is a dry run, which builds and packs the same way and keeps the files with the run for a week, without making a release.
 
 After a release, move `ZincVersion` on to the next version.
 
 Installed copies update themselves from the releases of the repository that `ZincRepositoryUrl` names in `Directory.Build.props`. A pre-release gets later pre-releases and releases, and a release gets releases only.
 
-`pwsh scripts/release/release.ps1` does the publishing and packing, and runs on your own machine too. `-UpdateSource <address>` builds in a different place for installed copies to look, which is a folder or a web address that holds the folder's contents. `-From <address>` fetches the previous release first, so the new one also gets a small delta package. `scripts/release/package-readme.txt` goes into every install folder and the portable zip as `README.txt`. The script refuses a working tree with uncommitted changes unless you pass `-AllowDirty`. `-PackId Zinc.Test` packs a test package with its own id, so trying an install or an update never touches a real Zinc. Never install a package with the `Zinc` id on a machine where you use Zinc, because it takes over that copy's Start menu shortcut, sign-in entry, and default-terminal registration. Run every `Setup.exe` with `ZINC_CONFIG` set, because the installer starts Zinc when it's done.
+`pwsh scripts/release/release.ps1` does the publishing and packing, and runs on your own machine too. `-UpdateSource <address>` builds in a different place for installed copies to look, which is a folder or a web address that holds the folder's contents. `-From <address>` fetches the previous release first, so the new one also gets a small delta package. `-Arch arm64` builds for ARM64, as its own Velopack channel, `win-arm64`. x64 stays on `win`. An installed copy checks only its own channel, so it never updates to the other architecture. `scripts/release/package-readme.txt` goes into every install folder and the portable zip as `README.txt`. The script refuses a working tree with uncommitted changes unless you pass `-AllowDirty`. `-PackId Zinc.Test` packs a test package with its own id, so trying an install or an update never touches a real Zinc. Never install a package with the `Zinc` id on a machine where you use Zinc, because it takes over that copy's Start menu shortcut, sign-in entry, and default-terminal registration. Run every `Setup.exe` with `ZINC_CONFIG` set, because the installer starts Zinc when it's done.
 
 A published build is trimmed, and a `bin/` build isn't. Reflection over framework types can break only in a publish, so after changing the project files, try a publish rather than a `bin/` build, and check its log for `warning IL`.
 

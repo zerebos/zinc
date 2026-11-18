@@ -31,7 +31,7 @@ Zinc is in alpha and free. Download the installer from the [latest release](http
 
 ## Installing
 
-Zinc runs on Windows 10 version 2004 (build 19041) or later, and on Windows 11, on x64 PCs. ARM64 isn't built yet.
+Zinc runs on Windows 10 version 2004 (build 19041) or later, and on Windows 11, on x64 and ARM64 PCs. On an ARM64 PC, use `Zinc-win-arm64-Setup.exe` instead of `Zinc-win-Setup.exe`. The ARM64 build is new and has had much less testing than x64.
 
 The installer sets Zinc up for your user only, with no admin prompt. Zinc isn't signed yet, so Windows may show "Windows protected your PC" the first time. Select **More info**, then **Run anyway**. Installed copies update themselves, and you choose when to restart. The portable zip on the same release runs from any folder, without updates.
 
@@ -52,7 +52,6 @@ The default keys follow Windows Terminal's, so `Ctrl+Shift+T` opens a tab and `A
 - Default terminal mode needs Windows Terminal installed (its console host does the other half).
 - Shell integration doesn't reach a bash in WSL whose startup files replace `PROMPT_COMMAND` (a bash started directly, like Git Bash, is fine), elvish inside WSL, YSH, or xonsh. Without Clink, cmd reports no exit codes.
 - Git Bash and MSYS2 programs write to a console a few bytes at a time, so very large colorful output from them is slow in any Windows terminal (native programs and WSL are fine).
-- There's no ARM64 build yet.
 
 ## Building from source
 

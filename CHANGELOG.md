@@ -7,6 +7,9 @@ made from.
 
 ## Unreleased
 
+### New
+- Zinc has an ARM64 build for Windows on Arm PCs, with its own installer (`Zinc-win-arm64-Setup.exe`) and portable zip. It updates itself like the x64 build. The ARM64 build is new, though, and has had much less testing than x64.
+
 ### Changed
 - If you haven't chosen a color scheme, terminals follow Windows' light and dark mode, with Lit Cell while Windows is dark and Lit Cell Light while it's light. Before, they were always Lit Cell. To keep Lit Cell in light mode too, choose it in `Settings > Appearance > Colors > Color scheme`, or set `theme = "Lit Cell"` under `[colors]`.
 - A color scheme that follows light and dark mode now matches Zinc's windows when `Settings > Appearance > Window > Light or dark` is set to Light or Dark. With "Same as Windows", it follows Windows as before.
