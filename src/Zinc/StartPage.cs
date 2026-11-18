@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Zinc.Panes;
@@ -36,7 +37,7 @@ internal sealed partial class StartPage : UserControl
     private readonly Func<string?, string?> _browse;
     private readonly Dictionary<Profile, string?> _distros = [];
 
-    private readonly TextBox _filter = new() { PlaceholderText = "Search profiles and folders, or type a path", Width = 520, HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly TextBox _filter = new() { PlaceholderText = "Search profiles and folders, or type a path" };
     private readonly ListView _profileList = new() { SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _folderList = new() { SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _layoutList = new() { SelectionMode = ListViewSelectionMode.Single };
@@ -62,6 +63,27 @@ internal sealed partial class StartPage : UserControl
     /// <summary>The page's height (in DIPs) below which the Reopen chips keep to one row.</summary>
     private const double ShortPage = 720;
 
+    /// <summary>
+    /// The page's width (in DIPs) below which the layouts show only their pictures, the columns sit closer, and the
+    /// name box is narrower.
+    /// </summary>
+    private const double NarrowPage = 700;
+
+    /// <summary>
+    /// The page's width (in DIPs) below which the "Show this page" box moves under the footer's other controls. The
+    /// footer needs about 840 on one row at 100% text size (the box, the controls, and the page's padding).
+    /// </summary>
+    private const double NarrowFooter = 850;
+
+    private readonly Grid _columns = new() { ColumnSpacing = 40 };
+    private readonly List<(ListViewItem Item, TextBlock Name)> _layoutNames = [];
+    private readonly Grid _footer = new() { ColumnSpacing = 12 };
+
+    /// <summary>The footer's controls, which wrap onto a second row (still on the right) when even the narrow footer is too narrow.</summary>
+    private readonly WrapPanel _footerControls = new() { HorizontalSpacing = 12, VerticalSpacing = 8, AlignRight = true, HorizontalAlignment = HorizontalAlignment.Right };
+    private bool _narrow;
+    private bool _narrowFooter;
+
     public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<string?, string?> browse,
         IReadOnlyList<ClosedWorkspace> closed)
     {
@@ -81,10 +103,10 @@ internal sealed partial class StartPage : UserControl
         _showPage.Checked += (_, _) => ShowPageChanged?.Invoke(true);
         _showPage.Unchecked += (_, _) => ShowPageChanged?.Invoke(false);
 
-        var columns = new Grid { ColumnSpacing = 40 };
+        var columns = _columns;
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 340 });
         columns.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.3, GridUnitType.Star), MaxWidth = 460 });
-        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // layouts: as wide as their names
+        columns.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto }); // layouts: as wide as their names, or their pictures on a narrow page
         columns.Children.Add(Column("Profile", _profileList));
         var folders = Column("Folder", _folderList);
         Grid.SetColumn(folders, 1);
@@ -109,27 +131,31 @@ internal sealed partial class StartPage : UserControl
         };
         _layoutList.DoubleTapped += (_, _) => Start();
 
-        var footer = new Grid { ColumnSpacing = 12, Padding = new Thickness(0, 12, 0, 0), BorderThickness = new Thickness(0, 1, 0, 0),
-            BorderBrush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"] };
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        // The "Show this page" box on the left and the controls on the right, or on a narrow page the controls with the
+        // box under them.
+        var footer = _footer;
+        footer.Padding = new Thickness(0, 12, 0, 0);
+        footer.BorderThickness = new Thickness(0, 1, 0, 0);
+        footer.BorderBrush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"];
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var nameLabel = new TextBlock { Text = "Name", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
+        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        // The label and its box are one piece, so wrapping never puts them on different rows.
+        var named = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 12,
+            Children = { new TextBlock { Text = "Name", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 }, _name },
+        };
+        foreach (var control in new FrameworkElement[] { _iconButton, _colorButton, named, start })
+        {
+            _footerControls.Children.Add(control);
+        }
+
         footer.Children.Add(_showPage);
-        Grid.SetColumn(_iconButton, 2);
-        footer.Children.Add(_iconButton);
-        Grid.SetColumn(_colorButton, 3);
-        footer.Children.Add(_colorButton);
-        Grid.SetColumn(nameLabel, 4);
-        footer.Children.Add(nameLabel);
-        Grid.SetColumn(_name, 5);
-        footer.Children.Add(_name);
-        Grid.SetColumn(start, 6);
-        footer.Children.Add(start);
+        Grid.SetColumn(_footerControls, 1);
+        footer.Children.Add(_footerControls);
         SetUpLookButtons();
 
         var root = new Grid { Padding = new Thickness(48, 28, 48, 16), RowSpacing = 14 };
@@ -152,18 +178,28 @@ internal sealed partial class StartPage : UserControl
                 },
             },
         });
-        Grid.SetRow(_filter, 1);
-        root.Children.Add(_filter);
+        // At most 520 wide, and narrower when the page is.
+        var filterRow = new Grid();
+        filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 520 });
+        filterRow.Children.Add(_filter);
+        Grid.SetRow(filterRow, 1);
+        root.Children.Add(filterRow);
         Grid.SetRow(columns, 2);
         root.Children.Add(columns);
-        if (ReopenRow(closed) is { } reopen)
+        if (ReopenRow(closed) is (Grid reopen, WrapPanel chips))
         {
             Grid.SetRow(reopen, 3);
             root.Children.Add(reopen);
 
-            // On a short page the chips would take the lists' room, so they keep to the row with the label.
-            SizeChanged += (_, e) => reopen.MaxRows = e.NewSize.Height < ShortPage ? 1 : 0;
+            // On a short page the chips would take the lists' room, so they keep to one row.
+            SizeChanged += (_, e) => chips.MaxRows = e.NewSize.Height < ShortPage ? 1 : 0;
         }
+
+        SizeChanged += (_, e) =>
+        {
+            SetNarrow(e.NewSize.Width < NarrowPage);
+            SetNarrowFooter(e.NewSize.Width < NarrowFooter);
+        };
 
         Grid.SetRow(footer, 4);
         root.Children.Add(footer);
@@ -252,6 +288,55 @@ internal sealed partial class StartPage : UserControl
         Grid.SetRow(list, 1);
         column.Children.Add(list);
         return column;
+    }
+
+    /// <summary>
+    /// Fits the page to a narrow width. The layouts keep only their pictures, because their names would take the
+    /// Profile and Folder columns' room. The columns also sit closer, and the name box is narrower.
+    /// </summary>
+    private void SetNarrow(bool narrow)
+    {
+        if (narrow == _narrow)
+        {
+            return;
+        }
+
+        _narrow = narrow;
+        _columns.ColumnSpacing = narrow ? 24 : 40;
+        foreach (var (item, name) in _layoutNames)
+        {
+            name.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+            ToolTipService.SetToolTip(item, narrow ? name.Text : null); // the hidden name
+
+            // A list item is at least 88 wide by default, which would leave a picture alone with a wide gap on its right.
+            if (narrow)
+            {
+                item.MinWidth = 0;
+            }
+            else
+            {
+                item.ClearValue(MinWidthProperty);
+            }
+        }
+
+        _name.Width = narrow ? 140 : 200;
+    }
+
+    /// <summary>
+    /// Moves the "Show this page" box under the footer's other controls, because beside them it would wrap. The row
+    /// spacing is there only then, since a grid adds it even when the second row is empty.
+    /// </summary>
+    private void SetNarrowFooter(bool narrow)
+    {
+        if (narrow == _narrowFooter)
+        {
+            return;
+        }
+
+        _narrowFooter = narrow;
+        _footer.RowSpacing = narrow ? 8 : 0;
+        Grid.SetRow(_showPage, narrow ? 1 : 0);
+        Grid.SetColumn(_footerControls, narrow ? 0 : 1);
     }
 
     private void OnKey(object sender, KeyRoutedEventArgs e)
@@ -418,14 +503,13 @@ internal sealed partial class StartPage : UserControl
 
     private ListViewItem ProfileItem(Profile profile)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
+        var row = new Grid { ColumnSpacing = 10 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.Children.Add(new IconSourceElement { IconSource = ProfileIcons.For(profile), Width = 16, Height = 16 });
-        row.Children.Add(new TextBlock { Text = profile.Name });
-        if (profile == _default)
-        {
-            row.Children.Add(new TextBlock { Text = "default", Opacity = 0.6, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
-        }
-
+        var line = TrimmedLine(profile.Name, profile == _default ? "default" : null, gap: 10);
+        Grid.SetColumn(line, 1);
+        row.Children.Add(line);
         var item = new ListViewItem { Content = row, Tag = profile };
         AutomationProperties.SetName(item, profile.Name);
         return item;
@@ -433,68 +517,101 @@ internal sealed partial class StartPage : UserControl
 
     private static ListViewItem FolderItem(FolderChoice choice)
     {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        row.Children.Add(new TextBlock { Text = choice.Label, TextTrimming = TextTrimming.CharacterEllipsis });
-        if (choice.Detail != null)
-        {
-            row.Children.Add(new TextBlock { Text = choice.Detail, Opacity = 0.6, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
-        }
-
-        var item = new ListViewItem { Content = row, Tag = choice };
+        var item = new ListViewItem { Content = TrimmedLine(choice.Label, choice.Detail, gap: 12), Tag = choice };
         AutomationProperties.SetName(item, choice.Label);
         return item;
     }
 
     /// <summary>
+    /// A text with a smaller, dimmed detail after it, <paramref name="gap"/> DIPs apart, as one line. When the line is
+    /// too long, it's cut short at its end with an ellipsis, so the detail is cut first and then the text.
+    /// </summary>
+    private static TextBlock TrimmedLine(string text, string? detail, double gap)
+    {
+        var line = new TextBlock { TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+        line.Inlines.Add(new Run { Text = text });
+        if (detail != null)
+        {
+            line.Inlines.Add(new Run { Text = "\u2003", FontSize = gap }); // an em space, as wide as its font size
+            // A run has no opacity, so the detail gets the text color at 60%, like the dimmed text elsewhere on the page.
+            var color = ((SolidColorBrush)Application.Current.Resources["TextFillColorPrimaryBrush"]).Color;
+            line.Inlines.Add(new Run
+            {
+                Text = detail,
+                FontSize = 12,
+                Foreground = new SolidColorBrush(color with { A = (byte)(color.A * 0.6) }),
+            });
+        }
+
+        TipWhenTrimmed(line, detail == null ? text : $"{text} · {detail}");
+        return line;
+    }
+
+    /// <summary>Shows <paramref name="full"/> in a tooltip while <paramref name="block"/> is cut short, and none otherwise.</summary>
+    private static void TipWhenTrimmed(TextBlock block, string full) =>
+        block.IsTextTrimmedChanged += (_, _) => ToolTipService.SetToolTip(block, block.IsTextTrimmed ? full : null);
+
+    /// <summary>
     /// The "Reopen" row, with a chip per workspace closed lately (the newest few). Unlike the lists above, a chip
     /// doesn't select. It's a whole workspace already, so it reopens at once. Null when there are none.
     /// </summary>
-    private WrapPanel? ReopenRow(IReadOnlyList<ClosedWorkspace> closed)
+    /// <returns>The row, and the chips' panel inside it.</returns>
+    private (Grid Row, WrapPanel Chips)? ReopenRow(IReadOnlyList<ClosedWorkspace> closed)
     {
         if (closed.Count == 0)
         {
             return null;
         }
 
-        var row = new WrapPanel { HorizontalSpacing = 8, VerticalSpacing = 8 };
+        // The label sits beside the chips instead of among them, so the first chip always shares the label's row (cut short
+        // if it has to be), and wrapped chips line up under the first one.
+        var row = new Grid { ColumnSpacing = 14 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.Children.Add(new TextBlock
         {
             Text = "Reopen",
             FontWeight = FontWeights.SemiBold,
             Opacity = 0.75,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0),
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 5, 0, 0), // centered on the first row of chips
         });
+        var chips = new WrapPanel { HorizontalSpacing = 8, VerticalSpacing = 8 };
+        Grid.SetColumn(chips, 1);
+        row.Children.Add(chips);
         var now = DateTimeOffset.UtcNow;
         foreach (var workspace in closed.Take(5))
         {
+            // Unlike the lists' rows, a chip cuts only its name short and keeps its detail whole, because the detail is
+            // often what tells two chips apart. The grid is left-aligned, so with room to spare its star column is only
+            // as wide as the name, and the detail sits right after it.
+            var content = new Grid { ColumnSpacing = 8, HorizontalAlignment = HorizontalAlignment.Left };
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            var name = new TextBlock { Text = workspace.Name, MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis };
+            TipWhenTrimmed(name, workspace.Name);
+            content.Children.Add(name);
+            var detail = new TextBlock
+            {
+                Text = $"{workspace.SummaryFor(_profile.Config.PaneTabs)} · closed {Ago(now - workspace.When)}",
+                Opacity = 0.6,
+                FontSize = 12,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            Grid.SetColumn(detail, 1);
+            content.Children.Add(detail);
             var chip = new Button
             {
                 CornerRadius = new CornerRadius(14),
                 Padding = new Thickness(12, 4, 12, 5),
-                Content = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 8,
-                    Children =
-                    {
-                        new TextBlock { Text = workspace.Name, MaxWidth = 220, TextTrimming = TextTrimming.CharacterEllipsis },
-                        new TextBlock
-                        {
-                            Text = $"{workspace.SummaryFor(_profile.Config.PaneTabs)} · closed {Ago(now - workspace.When)}",
-                            Opacity = 0.6,
-                            FontSize = 12,
-                            VerticalAlignment = VerticalAlignment.Center,
-                        },
-                    },
-                },
+                Content = content,
             };
             AutomationProperties.SetName(chip, $"Reopen {workspace.Name}");
             chip.Click += (_, _) => Reopen?.Invoke(workspace);
-            row.Children.Add(chip);
+            chips.Children.Add(chip);
         }
 
-        return row;
+        return (row, chips);
     }
 
     /// <summary>
@@ -547,12 +664,15 @@ internal sealed partial class StartPage : UserControl
             : "Color: automatic");
     }
 
-    private static ListViewItem LayoutItem(StartLayout layout)
+    /// <summary>A layout's picture and name. On a narrow page the name hides and a tooltip shows it instead (<see cref="SetNarrow"/>).</summary>
+    private ListViewItem LayoutItem(StartLayout layout)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
         row.Children.Add(Picture(layout));
-        row.Children.Add(new TextBlock { Text = StartLayouts.Title(layout), VerticalAlignment = VerticalAlignment.Center });
+        var name = new TextBlock { Text = StartLayouts.Title(layout), VerticalAlignment = VerticalAlignment.Center };
+        row.Children.Add(name);
         var item = new ListViewItem { Content = row, Tag = layout };
+        _layoutNames.Add((item, name));
         AutomationProperties.SetName(item, StartLayouts.Title(layout));
         return item;
     }
