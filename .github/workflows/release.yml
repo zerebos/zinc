@@ -2,7 +2,7 @@ name: Release
 
 # Pushing a version tag publishes a release. The tag is v<ZincVersion> for a release, or v<ZincVersion>-<label>.N for a
 # pre-release (pre.1, rc.2), with ZincVersion from Directory.Build.props. Run by hand, the workflow is a dry run that
-# builds and packs the same way and keeps the files as artifacts, without making a release.
+# builds and packs the same way, without a delta package, and keeps the files as artifacts, without making a release.
 #
 # The jobs run in order: check the tag, build the native DLLs, build, test, and pack each architecture, then publish.
 # Nothing is published until both architectures have passed, so a failed build never leaves a release with only one.
@@ -15,8 +15,10 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+# Read only, so the build jobs, which run the tests and other people's code (NuGet packages, Zig), can't change the
+# repository. The publish job alone gets write access.
 permissions:
-  contents: write
+  contents: read
 
 # Plain `pwsh` fails a step only on its last command's exit code, so a step with several commands could pass after
 # its first one failed. This makes any failing command stop the step.
@@ -79,118 +81,22 @@ jobs:
         if: github.event_name == 'push'
         run: dotnet run scripts/release/release-notes.cs -- ${{ steps.version.outputs.version }} --check
 
-  # Both architectures' DLLs are built on x64, as in CI (the native-dlls action says why), and handed to the build
-  # jobs as artifacts.
-  native:
-    name: Native DLLs (${{ matrix.arch }})
-    needs: check
-    runs-on: windows-latest
-    timeout-minutes: 30
-    strategy:
-      matrix:
-        arch: [x64, arm64]
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: ./.github/actions/native-dlls
-        with:
-          arch: ${{ matrix.arch }}
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: native-${{ matrix.arch }}
-          # Without the .pdb files, which are most of the size and which the build doesn't need.
-          path: |
-            native/${{ matrix.arch }}
-            !native/${{ matrix.arch }}/*.pdb
-          if-no-files-found: error
-          retention-days: 1
-          overwrite: true  # so a rerun of this job can upload again
-
-  # Each architecture builds and tests on its own kind of runner, so the ARM64 tests run on an ARM64 machine. Each one's packed
-  # files go to the publish job as an artifact, which a dry run keeps for a week.
+  # The native DLLs, then a build, test, and pack of each architecture (build.yml). Its artifacts go to the publish
+  # job, and a dry run keeps them for a week.
   build:
-    name: Build and pack (${{ matrix.arch }})
-    needs: [check, native]
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false  # a dry run shows how both architectures did
-      matrix:
-        include:
-          - arch: x64
-            runner: windows-latest
-          - arch: arm64
-            runner: windows-11-arm
-
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: native-${{ matrix.arch }}
-          path: native/${{ matrix.arch }}
-
-      - name: Build
-        if: matrix.arch == 'x64'
-        run: dotnet build Zinc.slnx --no-incremental -warnaserror
-
-      # Project by project, because Zinc.slnx maps every project to x64.
-      - name: Build
-        if: matrix.arch == 'arm64'
-        run: |
-          dotnet build src/Zinc/Zinc.csproj -p:Platform=ARM64 --no-incremental -warnaserror
-          dotnet build tests/Zinc.Tests/Zinc.Tests.csproj -p:Platform=ARM64 --no-incremental -warnaserror
-
-      - name: Test
-        if: matrix.arch == 'x64'
-        run: dotnet test
-
-      - name: Test
-        if: matrix.arch == 'arm64'
-        run: dotnet test --project tests/Zinc.Tests -p:Platform=ARM64 --no-build
-
-      # release.ps1 publishes the app, checks the result, and packs it with Velopack, on the architecture's own channel.
-      # -From fetches that channel's previous release, so this one also gets a small package of only what changed.
-      - name: Pack
-        run: |
-          dotnet tool restore
-          pwsh scripts/release/release.ps1 -Arch ${{ matrix.arch }} -Out dist/release -From $env:REPOSITORY_URL
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: zinc-${{ needs.check.outputs.version }}-${{ matrix.arch }}
-          path: dist/release
-          if-no-files-found: error
-          retention-days: ${{ github.event_name == 'push' && 1 || 7 }}
-          overwrite: true
-
-      # What the website's reference pages and the config schema are made from. It's the same for both architectures.
-      - name: Export the reference
-        if: matrix.arch == 'x64'
-        run: dotnet run scripts/dev/export-reference.cs -- --out dist/reference
-
-      - uses: actions/upload-artifact@v7
-        if: matrix.arch == 'x64'
-        with:
-          name: zinc-${{ needs.check.outputs.version }}-reference
-          path: dist/reference
-          if-no-files-found: error
-          retention-days: ${{ github.event_name == 'push' && 1 || 7 }}
-          overwrite: true
+    needs: check
+    uses: ./.github/workflows/build.yml
+    with:
+      pack: true
+      version: ${{ needs.check.outputs.version }}
 
   publish:
     name: Publish the release
     if: github.event_name == 'push'
     needs: [check, build]
     runs-on: windows-latest
+    permissions:
+      contents: write  # to make the release
     timeout-minutes: 30
 
     steps:
@@ -219,8 +125,8 @@ jobs:
 
       # Everything goes onto a draft, which is published last. A failure partway leaves a draft that no installed copy
       # sees, and the run can go again once the draft is deleted. `--merge` adds the ARM64 channel's files to the
-      # draft the x64 upload made. vpk sets the notes only when it makes the release, so they're set again here, from
-      # the changelog.
+      # draft the x64 upload made. vpk sets the notes only when it makes the release, so release-page.ps1 sets them
+      # again, from the changelog with a download section above, and labels the files.
       - name: Publish the release
         run: |
           $version = '${{ needs.check.outputs.version }}'
@@ -232,4 +138,5 @@ jobs:
               --channel win-arm64 --tag $env:GITHUB_REF_NAME --merge
           gh release upload $env:GITHUB_REF_NAME dist/reference/zinc-reference.json dist/reference/config.schema.json
           dotnet run scripts/release/release-notes.cs -- $version --out dist/notes.md
-          gh release edit $env:GITHUB_REF_NAME --notes-file dist/notes.md --draft=false
+          pwsh scripts/release/release-page.ps1 -Repo $env:GITHUB_REPOSITORY -Tag $env:GITHUB_REF_NAME -Notes dist/notes.md
+          gh release edit $env:GITHUB_REF_NAME --draft=false

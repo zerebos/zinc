@@ -1,0 +1,157 @@
+name: Build
+
+# The build that CI and the release share. It builds the native DLLs, then builds and tests each architecture on its
+# own kind of runner, so the ARM64 tests run on an ARM64 machine. With `pack`, it also packs each architecture with
+# Velopack and exports the reference, and uploads them as artifacts for the release's publish job.
+on:
+  workflow_call:
+    inputs:
+      pack:
+        description: Also pack each architecture and export the reference, as a release does.
+        type: boolean
+        default: false
+      version:
+        description: The version being packed, which names the artifacts. Needed with `pack`.
+        type: string
+        default: ''
+
+# Plain `pwsh` fails a step only on its last command's exit code, so a step with several commands could pass after
+# its first one failed. This makes any failing command stop the step. A called workflow doesn't get its caller's
+# defaults, so this repeats release.yml's.
+defaults:
+  run:
+    shell: pwsh -Command "$ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $true; . '{0}'"
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # native DLLs for both architectures cross-compiled on x64 (the native-dlls action says why) handed back to build
+  # jobs as artifacts. should be quick with a warm cache hopefully
+  native:
+    name: Native DLLs (${{ matrix.arch }})
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/native-dlls
+        with:
+          arch: ${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.arch }}
+          # exclude the .pdb files which are huge and unnecessary for the build
+          path: |
+            native/${{ matrix.arch }}
+            !native/${{ matrix.arch }}/*.pdb
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true  # so a rerun of this job can upload again
+
+  build:
+    name: ${{ inputs.pack && 'Build and pack' || 'Build and test' }} (${{ matrix.arch }})
+    needs: native
+    if: ${{ !cancelled() }}  # this allows it to run even if the other architecture's DLL build failed
+    runs-on: ${{ matrix.runner }}
+    # Packing publishes the app and links zn with Native AOT, which takes longer than a build.
+    timeout-minutes: ${{ inputs.pack && 60 || matrix.timeout }}
+    strategy:
+      fail-fast: false  # a failure on one architecture won't cancel the other
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            timeout: 30
+          - arch: arm64
+            runner: windows-11-arm
+            timeout: 45  # these runners are slower than the x64 ones
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # fetch the full history to determine the version from commits and tags
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: native-${{ matrix.arch }}
+          path: native/${{ matrix.arch }}
+
+      - name: Build
+        if: matrix.arch == 'x64'
+        run: dotnet build Zinc.slnx --no-incremental -warnaserror
+
+      # Project by project, because Zinc.slnx maps every project to x64. The app's build also builds Core and zn.
+      - name: Build
+        if: matrix.arch == 'arm64'
+        run: |
+          dotnet build src/Zinc/Zinc.csproj -p:Platform=ARM64 --no-incremental -warnaserror
+          dotnet build tests/Zinc.Tests/Zinc.Tests.csproj -p:Platform=ARM64 --no-incremental -warnaserror
+
+      # The file-based scripts use Zinc.Core, so a change there can break them. They're the same on both
+      # architectures, so only x64 builds them. They're built with `TreatWarningsAsErrors`, because a file-based build
+      # refuses -warnaserror.
+      - name: Build the scripts
+        if: matrix.arch == 'x64'
+        run: |
+          dotnet build scripts/dev/vt-bench.cs -p:TreatWarningsAsErrors=true
+          dotnet build scripts/dev/export-reference.cs -p:TreatWarningsAsErrors=true
+          dotnet build scripts/release/release-notes.cs -p:TreatWarningsAsErrors=true
+
+      - name: Test
+        if: matrix.arch == 'x64'
+        run: dotnet test
+
+      - name: Test
+        if: matrix.arch == 'arm64'
+        run: dotnet test --project tests/Zinc.Tests -p:Platform=ARM64 --no-build
+
+      # release.ps1 publishes the app, checks the result, and packs it with Velopack, on the architecture's own channel.
+      # -From fetches that channel's previous release, so this one also gets a small package of only what changed. A dry
+      # run builds a dev version, which is below the last release, and vpk refuses to pack below a release it has
+      # fetched, so a dry run packs without a delta.
+      # Only this step gets the token, which vpk uses to read the releases, so the tests never see it.
+      - name: Pack
+        if: inputs.pack
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          dotnet tool restore
+          $from = @(if ($env:GITHUB_EVENT_NAME -eq 'push') { '-From', $env:REPOSITORY_URL })
+          pwsh scripts/release/release.ps1 -Arch ${{ matrix.arch }} -Out dist/release @from
+
+      # A release's publish job takes the files from here, and a dry run keeps them for a week.
+      - uses: actions/upload-artifact@v7
+        if: inputs.pack
+        with:
+          name: zinc-${{ inputs.version }}-${{ matrix.arch }}
+          path: dist/release
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'push' && 1 || 7 }}
+          overwrite: true
+
+      # What the website's reference pages and the config schema are made from. It's the same for both architectures.
+      - name: Export the reference
+        if: inputs.pack && matrix.arch == 'x64'
+        run: dotnet run scripts/dev/export-reference.cs -- --out dist/reference
+
+      - uses: actions/upload-artifact@v7
+        if: inputs.pack && matrix.arch == 'x64'
+        with:
+          name: zinc-${{ inputs.version }}-reference
+          path: dist/reference
+          if-no-files-found: error
+          retention-days: ${{ github.event_name == 'push' && 1 || 7 }}
+          overwrite: true
