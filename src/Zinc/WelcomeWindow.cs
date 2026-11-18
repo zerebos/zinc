@@ -420,7 +420,8 @@ internal sealed partial class WelcomeWindow : Window
                 var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Height = 14, Padding = new Thickness(5, 0, 5, 0) };
                 header.Children.Add(Block(28, focused ? null : "TextFillColorTertiaryBrush"));
                 header.Children.Add(Block(cards ? 14 : 22, cards ? null : blockKey));
-                pane.Children.Add(new Border { Background = Fill("ControlFillColorDefaultBrush"), Child = header });
+                // A card's header matches its terminal, as the default pane header color does.
+                pane.Children.Add(new Border { Background = cards ? null : Fill("ControlFillColorDefaultBrush"), Child = header });
             }
 
             var lines = new StackPanel { Spacing = 5, Margin = new Thickness(6, 7, 6, 0) };
@@ -441,7 +442,7 @@ internal sealed partial class WelcomeWindow : Window
                 Child = pane,
                 CornerRadius = new CornerRadius(cards ? 6 : 0),
                 BorderThickness = new Thickness(cards ? 2 : 0),
-                BorderBrush = cards && focused ? accent : Fill("ControlFillColorDefaultBrush"),
+                BorderBrush = cards && focused ? accent : cards ? pane.Background : Fill("ControlFillColorDefaultBrush"),
                 Opacity = focused ? 1 : 0.7,
             };
             Grid.SetColumn(host, cards ? i : i * 2);

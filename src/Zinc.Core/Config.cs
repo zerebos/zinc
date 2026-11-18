@@ -712,9 +712,9 @@ public sealed record Config
 
     /// <summary>
     /// How far a made header fill stands from the background, without <see cref="PaneHeaderColor"/>. Config:
-    /// <c>[colors] pane-header</c> = terminal | subtle | auto | strong.
+    /// <c>[colors] pane-header</c> = terminal | subtle | standard | strong.
     /// </summary>
-    public Zinc.Panes.HeaderLevel PaneHeaderLevel { get; init; } = Zinc.Panes.HeaderLevel.Standard;
+    public Zinc.Panes.HeaderLevel PaneHeaderLevel { get; init; } = Zinc.Panes.HeaderLevel.Terminal;
 
     /// <summary>Bold text in palette colors 0-7 shows their bright versions (8-15). Config: <c>[colors] bold-is-bright</c>.</summary>
     public bool BoldIsBright { get; init; }

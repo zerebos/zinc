@@ -3,17 +3,16 @@ using Zinc.Ghostty;
 namespace Zinc.Panes;
 
 /// <summary>
-/// How far a pane header's made fill stands from its terminal (<c>[colors] pane-header</c>: terminal, subtle, auto,
+/// How far a pane header's made fill stands from its terminal (<c>[colors] pane-header</c>: terminal, subtle, standard,
 /// strong; or a color). Its card's border goes one step further (<see cref="PaneCard.EdgeFill(GhosttyColorRgb, GhosttyColorRgb)"/>).
 /// </summary>
 public enum HeaderLevel
 {
-    /// <summary>The terminal's own background (hidden tabs then take the Standard fill).</summary>
+    /// <summary>The default. The terminal's own background (hidden tabs then take the Standard fill).</summary>
     Terminal,
 
     Subtle,
 
-    /// <summary>The default (<c>auto</c>).</summary>
     Standard,
 
     Strong,
@@ -60,14 +59,14 @@ public static class PaneCard
         _ => HeaderContrast,
     };
 
-    /// <summary>A <c>pane-header</c> level by its config name: terminal, subtle, auto (Standard) or strong.</summary>
+    /// <summary>A <c>pane-header</c> level by its config name: terminal, subtle, standard, or strong.</summary>
     public static bool TryLevel(string value, out HeaderLevel level)
     {
         (var known, level) = value switch
         {
             "terminal" => (true, HeaderLevel.Terminal),
             "subtle" => (true, HeaderLevel.Subtle),
-            "auto" => (true, HeaderLevel.Standard),
+            "standard" or "auto" => (true, HeaderLevel.Standard), // auto is its older name
             "strong" => (true, HeaderLevel.Strong),
             _ => (false, HeaderLevel.Standard),
         };

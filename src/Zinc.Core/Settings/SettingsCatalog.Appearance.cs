@@ -84,17 +84,17 @@ public static partial class SettingsCatalog
             SettingKind.Color)
             { Binding = Bind.Color((c, v) => c with { Theme = c.Theme with { SelectionForeground = v } }) },
         // A color, or how far the made fill stands from the background (`HeaderLevel`). The window shows the
-        // choices in a list with "Custom color" last, and null (Standard) is the default.
+        // choices in a list with "Custom color" last.
         new("appearance", "Colors", "colors.pane-header", "Pane headers",
             "Colors the row behind pane titles and tabs. On cards, the border is a step stronger.", SettingKind.Color)
         {
             Placeholder = "From the background",
-            NullLabel = "Standard",
+            NullLabel = "Same as the terminal",
             Choices =
             [
                 new("Same as the terminal", "terminal", "The row matches the terminal's background, and hidden tabs get a shade so the shown tab still stands out. Cards then have no border."),
                 new("Subtle", "subtle"),
-                new("Standard", null),
+                new("Standard", "standard"),
                 new("Strong", "strong"),
             ],
             Binding = Bind.Custom((c, v) => v switch
@@ -103,7 +103,7 @@ public static partial class SettingsCatalog
                 string s when Config.TryColor(s, out var color) =>
                     c with { PaneHeaderColor = color, PaneHeaderLevel = Panes.HeaderLevel.Standard },
                 _ => null,
-            }, [Accepts.Choices, Accepts.Text("^auto$"), Accepts.Color]), // "auto" is Standard, which is written as nothing
+            }, [Accepts.Choices, Accepts.Text("^auto$"), Accepts.Color]), // "auto" is the older name for "standard"
         },
         new("appearance", "Readability", "colors.minimum-contrast", "Minimum contrast",
             "Text that reads poorly against its background turns black or white. 1 turns it off, 4.5 is the usual accessibility level, and 21 makes all text black or white.",

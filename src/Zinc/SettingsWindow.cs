@@ -1856,7 +1856,7 @@ internal sealed partial class SettingsWindow : Window
             }
             else if (current is not string hex || !hex.StartsWith('#'))
             {
-                var level = Zinc.Panes.PaneCard.TryLevel(current as string ?? "auto", out var l) ? l : Zinc.Panes.HeaderLevel.Standard;
+                var level = (current ?? setting.Default) is string name && Zinc.Panes.PaneCard.TryLevel(name, out var l) ? l : Zinc.Panes.HeaderLevel.Standard;
                 var made = SchemeTiles.Hex(SchemeTiles.ToColor(Zinc.Panes.PaneCard.HeaderFill(SchemeTheme(profile).Background, level)));
                 showColor(made);
                 commit(made);
@@ -1868,7 +1868,7 @@ internal sealed partial class SettingsWindow : Window
         {
             current = value;
             var index = value is string hex && hex.StartsWith('#') ? custom
-                : setting.Choices.ToList().FindIndex(c => SettingsCatalog.Same(c.Value, value));
+                : setting.Choices.ToList().FindIndex(c => SettingsCatalog.Same(c.Value, value ?? setting.Default));
             showing = true;
             box.SelectedIndex = index;
             showing = false;
@@ -2019,7 +2019,6 @@ internal sealed partial class SettingsWindow : Window
             {
                 "colors.foreground" => theme.Foreground,
                 "colors.cursor" => theme.Cursor,
-                "colors.pane-header" => Zinc.Panes.PaneCard.HeaderFill(theme.Background),
                 _ => theme.Background,
             });
         }
