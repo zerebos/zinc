@@ -106,6 +106,9 @@
   </PropertyGroup>
 
   <Target Name="CopyZn" AfterTargets="Build">
+    <!-- The app's own restore leaves zn out, because zn isn't a project reference. The restore runs with an extra
+         property, so MSBuild evaluates the project again for the build and sees what the restore wrote. -->
+    <MSBuild Projects="$(ZnProject)" Targets="Restore" Properties="Configuration=$(Configuration);Platform=$(Platform);_ZnRestore=true" />
     <MSBuild Projects="$(ZnProject)" Targets="Build" Properties="Configuration=$(Configuration);Platform=$(Platform)">
       <Output TaskParameter="TargetOutputs" ItemName="_ZnBuilt" />
     </MSBuild>
