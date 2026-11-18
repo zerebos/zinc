@@ -15,7 +15,8 @@ public enum PaneStyleKind
 
 /// <summary>
 /// Settings > Layout > Panes' "Pane style". Compact and Cards each set all five pane settings, and changing any one of
-/// them reads as Custom. Cards' values are the defaults, so choosing Cards writes nothing.
+/// them reads as Custom, except that Cards with headers on <c>auto</c> still reads as Cards. Cards' values are the
+/// defaults, so choosing Cards writes nothing.
 /// </summary>
 public static class PaneStyle
 {
@@ -64,7 +65,7 @@ public static class PaneStyle
         foreach (var style in new[] { PaneStyleKind.Compact, PaneStyleKind.Cards })
         {
             var values = Values(style);
-            if (Keys.All(k => SettingsCatalog.Same(valueOf(k) ?? SettingsCatalog.Find(k)!.Default, values[k])))
+            if (Keys.All(k => Fits(style, k, valueOf(k) ?? SettingsCatalog.Find(k)!.Default, values[k])))
             {
                 return style;
             }
@@ -72,4 +73,13 @@ public static class PaneStyle
 
         return PaneStyleKind.Custom;
     }
+
+    /// <summary>
+    /// Whether <paramref name="value"/> is what <paramref name="style"/> gives <paramref name="key"/>. Cards also takes
+    /// headers on <c>auto</c>, which the welcome page writes for workspaces along the top, where a header on every pane
+    /// would sit right under the workspaces' row.
+    /// </summary>
+    private static bool Fits(PaneStyleKind style, string key, object? value, object preset) =>
+        SettingsCatalog.Same(value, preset)
+        || (style == PaneStyleKind.Cards && key == "window.pane-headers" && SettingsCatalog.Same(value, "auto"));
 }

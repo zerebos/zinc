@@ -174,4 +174,51 @@ public class FirstRunTests
         var same = new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, current.DefaultProfile.Id, PaneStyle: PaneStyleKind.Compact);
         Assert.Equal(compact, FirstRun.Apply(compact, same, current));
     }
+
+    [Fact]
+    public void CardsUnderWorkspacesAlongTheTopShowsHeadersOnlyOnceSplit()
+    {
+        var sidebar = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards));
+        Assert.DoesNotContain("pane-headers", sidebar);
+        Assert.Equal(PaneHeaders.Always, Read(sidebar).Global.PaneHeaders);
+
+        foreach (var choices in new[]
+        {
+            new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, null, PaneStyle: PaneStyleKind.Cards),
+            new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards), // Simple puts the workspaces along the top
+        })
+        {
+            var top = FirstRun.Apply(null, choices);
+            Assert.Equal(PaneHeaders.Auto, Read(top).Global.PaneHeaders);
+            Assert.Equal(6, Read(top).Global.PaneGap);
+        }
+
+        var compact = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, null, PaneStyle: PaneStyleKind.Compact));
+        Assert.Equal(PaneHeaders.WithTabs, Read(compact).Global.PaneHeaders);
+    }
+
+    [Fact]
+    public void CardsAlongTheTopStillReadsAsCardsAndTheSidebarBringsTheHeadersBack()
+    {
+        var top = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, null, PaneStyle: PaneStyleKind.Cards));
+        var current = Read(top);
+        Assert.Equal(PaneStyleKind.Cards, PaneStyle.Of(current.ValueOf));
+
+        // Saving the same choices again leaves the file as it is.
+        var same = new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, PaneStyle: PaneStyleKind.Cards);
+        Assert.Equal(top, FirstRun.Apply(top, same, current));
+
+        var sidebar = FirstRun.Apply(top, same with { WorkspacesOn = WorkspaceTabs.Left }, current);
+        Assert.DoesNotContain("pane-headers", sidebar);
+        Assert.Equal(PaneHeaders.Always, Read(sidebar).Global.PaneHeaders);
+    }
+
+    [Fact]
+    public void ASaveThatChangesNeitherTheStyleNorTheWorkspacesLeavesTheHeadersAlone()
+    {
+        const string existing = "[window]\nworkspace-tabs = \"top\"\n"; // Cards with a header on every pane, chosen in Settings
+        var current = Read(existing);
+        var same = new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, PaneStyle: PaneStyleKind.Cards);
+        Assert.Equal(existing, FirstRun.Apply(existing, same, current));
+    }
 }

@@ -11,6 +11,8 @@ made from.
 - Zinc has an ARM64 build for Windows on Arm PCs, with its own installer (`Zinc-win-arm64-Setup.exe`) and portable zip. It updates itself like the x64 build. The ARM64 build is new, though, and has had much less testing than x64.
 
 ### Changed
+- Zinc's defaults are now workspaces in a sidebar and panes as cards, where every pane has a header, the panes have a gap between them, and the focused one has a ring. Pane headers match the terminal's background by default. A `config.toml` that doesn't set these gets the new look. To go back, choose Compact in `Settings > Layout > Panes > Pane style`, "Along the top" in `Settings > Layout > Workspaces > Workspaces`, and Standard in `Settings > Appearance > Colors > Pane headers`.
+- The welcome window's "How should panes look?" page starts on Cards instead of Compact. If you choose Cards there with the workspaces along the top, pane headers show only once a workspace is split, so a single pane doesn't get a second row under the workspaces.
 - If you haven't chosen a color scheme, terminals follow Windows' light and dark mode, with Lit Cell while Windows is dark and Lit Cell Light while it's light. Before, they were always Lit Cell. To keep Lit Cell in light mode too, choose it in `Settings > Appearance > Colors > Color scheme`, or set `theme = "Lit Cell"` under `[colors]`.
 - A color scheme that follows light and dark mode now matches Zinc's windows when `Settings > Appearance > Window > Light or dark` is set to Light or Dark. With "Same as Windows", it follows Windows as before.
 - The welcome window's color scheme page starts with "Follow light and dark mode" on, set to Lit Cell and Lit Cell Light. Before, turning that on switched the dark scheme to Catppuccin Mocha.

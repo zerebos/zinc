@@ -85,12 +85,31 @@ public static class FirstRun
         }
 
         // A pane style sets its five settings. The default style's values are the defaults, so it removes them.
-        if (choices.PaneStyle is { } style && (current == null || PaneStyle.Of(current.ValueOf) != style))
+        var styleBefore = current == null ? PaneStyle.Default : PaneStyle.Of(current.ValueOf);
+        var styleChanged = choices.PaneStyle is { } chosen && (current == null || styleBefore != chosen);
+        if (choices.PaneStyle is { } style && styleChanged)
         {
             foreach (var (key, value) in PaneStyle.Values(style))
             {
                 var path = key.Split('.');
                 text = style == PaneStyle.Default ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
+            }
+        }
+
+        // With the workspaces along the top, a header on every pane puts a second row right under the workspaces' row.
+        // So Cards there shows headers only once a workspace is split, and moving the workspaces back to the sidebar
+        // gives every pane its header again. A save that changes neither the style nor where the workspaces are leaves
+        // the headers as they are.
+        var tabsChanged = global == null || global.WorkspaceTabs != tabs;
+        if ((choices.PaneStyle ?? styleBefore) == PaneStyleKind.Cards && (styleChanged || tabsChanged))
+        {
+            if (tabs == WorkspaceTabs.Top)
+            {
+                text = ConfigEditor.Set(text, ["window", "pane-headers"], "auto");
+            }
+            else if (global?.PaneHeaders == PaneHeaders.Auto)
+            {
+                text = ConfigEditor.Remove(text, ["window", "pane-headers"]);
             }
         }
 
