@@ -14,6 +14,12 @@ concurrency:
 permissions:
   contents: read
 
+# Plain `pwsh` fails a step only on its last command's exit code, so a step with several commands could pass after
+# its first one failed. This makes any failing command stop the step.
+defaults:
+  run:
+    shell: pwsh -Command "$ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $true; . '{0}'"
+
 jobs:
   # native DLLs for both architectures cross-compiled on x64 handed back to build jobs as artifacts
   # should be quick with a warm cache hopefully
@@ -25,9 +31,6 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x64, arm64]
-    defaults:
-      run:
-        shell: pwsh
 
     steps:
       - uses: actions/checkout@v7
@@ -63,9 +66,6 @@ jobs:
           - arch: arm64
             runner: windows-11-arm
             timeout: 45  # these runners are slower than the x64 ones
-    defaults:
-      run:
-        shell: pwsh
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: true
