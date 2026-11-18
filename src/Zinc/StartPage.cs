@@ -59,6 +59,9 @@ internal sealed partial class StartPage : UserControl
 
     private static readonly FolderChoice Usual = new("Its usual folder", null, null);
 
+    /// <summary>The page's height (in DIPs) below which the Reopen chips keep to one row.</summary>
+    private const double ShortPage = 720;
+
     public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<string?, string?> browse,
         IReadOnlyList<ClosedWorkspace> closed)
     {
@@ -157,6 +160,9 @@ internal sealed partial class StartPage : UserControl
         {
             Grid.SetRow(reopen, 3);
             root.Children.Add(reopen);
+
+            // On a short page the chips would take the lists' room, so they keep to the row with the label.
+            SizeChanged += (_, e) => reopen.MaxRows = e.NewSize.Height < ShortPage ? 1 : 0;
         }
 
         Grid.SetRow(footer, 4);
@@ -231,18 +237,21 @@ internal sealed partial class StartPage : UserControl
         DispatcherQueue.SafeEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () => _filter.Focus(FocusState.Programmatic));
     }
 
-    private static StackPanel Column(string title, ListView list)
+    /// <summary>
+    /// A titled list. The list sits in a star row, so a short window shrinks it and it scrolls, instead of
+    /// being cut off at the bottom.
+    /// </summary>
+    private static Grid Column(string title, ListView list)
     {
         list.MaxHeight = 360;
-        return new StackPanel
-        {
-            Spacing = 6,
-            Children =
-            {
-                new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Opacity = 0.75 },
-                list,
-            },
-        };
+        list.VerticalAlignment = VerticalAlignment.Top;
+        var column = new Grid { RowSpacing = 6 };
+        column.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        column.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        column.Children.Add(new TextBlock { Text = title, FontWeight = FontWeights.SemiBold, Opacity = 0.75 });
+        Grid.SetRow(list, 1);
+        column.Children.Add(list);
+        return column;
     }
 
     private void OnKey(object sender, KeyRoutedEventArgs e)

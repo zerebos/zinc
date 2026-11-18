@@ -18,6 +18,7 @@ made from.
 - The welcome window's color scheme page starts with "Follow light and dark mode" on, set to Lit Cell and Lit Cell Light. Before, turning that on switched the dark scheme to Catppuccin Mocha.
 
 ### Fixed
+- On the new-workspace page in a short window, the Profile, Folder, and Layout lists shrink and scroll instead of being cut off at the bottom. The Reopen chips keep to one row there, so they leave the lists room.
 - A terminal you can't see no longer keeps a CPU core busy while its program writes output, like a build or a log. That includes a background tab, a minimized window, and a dismissed quick terminal.
 - In `Settings > Appearance > Colors > Color scheme`, a light and dark pair shows both schemes by their full names, like "Lit Cell Light", instead of cutting them short. The dark one comes first, and each name's tooltip says whether it's the dark or the light scheme.
 
