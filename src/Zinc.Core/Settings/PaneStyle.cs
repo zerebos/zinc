@@ -3,10 +3,10 @@ namespace Zinc.Settings;
 /// <summary>A pane style, which is a preset over the five pane settings, or Custom when they match neither.</summary>
 public enum PaneStyleKind
 {
-    /// <summary>The built-in defaults, with panes edge to edge and headers only on panes with several tabs.</summary>
+    /// <summary>Panes edge to edge, with headers only on panes with several tabs.</summary>
     Compact,
 
-    /// <summary>Panes as rounded cards with a gap, a header on every pane and a focus ring.</summary>
+    /// <summary>The built-in defaults, with panes as rounded cards with a gap, a header on every pane, and a focus ring.</summary>
     Cards,
 
     /// <summary>Any other mix.</summary>
@@ -15,10 +15,13 @@ public enum PaneStyleKind
 
 /// <summary>
 /// Settings > Layout > Panes' "Pane style". Compact and Cards each set all five pane settings, and changing any one of
-/// them reads as Custom. Compact's values are the defaults, so choosing Compact writes nothing.
+/// them reads as Custom. Cards' values are the defaults, so choosing Cards writes nothing.
 /// </summary>
 public static class PaneStyle
 {
+    /// <summary>The style an empty config has.</summary>
+    public const PaneStyleKind Default = PaneStyleKind.Cards;
+
     /// <summary>The settings a style sets, in the order Settings shows them.</summary>
     public static IReadOnlyList<string> Keys { get; } =
         ["window.pane-headers", "window.pane-header-buttons", "window.pane-gap", "window.pane-gap-edges", "window.pane-focus"];

@@ -296,14 +296,15 @@ public class SettingsWriterTests
     }
 
     [Fact]
-    public void CompactIsTheDefaults()
+    public void TheDefaultStyleIsTheDefaults()
     {
-        foreach (var (key, value) in PaneStyle.Values(PaneStyleKind.Compact))
+        Assert.Equal(PaneStyleKind.Cards, PaneStyle.Default);
+        foreach (var (key, value) in PaneStyle.Values(PaneStyle.Default))
         {
             Assert.True(SettingsCatalog.Same(SettingsCatalog.Find(key)!.Default, value), key);
         }
 
-        Assert.Equal(PaneStyleKind.Compact, PaneStyle.Of(_ => null));
+        Assert.Equal(PaneStyle.Default, PaneStyle.Of(_ => null));
     }
 
     [Fact]
@@ -311,16 +312,16 @@ public class SettingsWriterTests
     {
         var path = TempConfig("# mine\n[window]\npane-tab-strip = \"always\"\n");
         var writer = new SettingsWriter(path);
-        writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Cards)[k])));
+        writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Compact)[k])));
         var file = ConfigFile.Parse(File.ReadAllText(path), "config.toml", "", _ => []);
-        Assert.Equal(PaneStyleKind.Cards, PaneStyle.Of(file.ValueOf));
-        Assert.Equal((PaneHeaders.Always, PaneHeaderButtons.Focused, 6, true, PaneFocus.Ring),
+        Assert.Equal(PaneStyleKind.Compact, PaneStyle.Of(file.ValueOf));
+        Assert.Equal((PaneHeaders.WithTabs, PaneHeaderButtons.Hide, 0, false, PaneFocus.TabAccent),
             (file.Global.PaneHeaders, file.Global.PaneHeaderButtons, file.Global.PaneGap, file.Global.PaneGapEdges, file.Global.PaneFocus));
         Assert.DoesNotContain("pane-tab-strip", File.ReadAllText(path));
-        Assert.Equal(4, writer.ChangeCount()); // pane-tab-strip = "always" already read as pane-headers = "always"
+        Assert.Equal(5, writer.ChangeCount());
 
-        // Compact is the defaults, so choosing it takes every pane key out of the file.
-        writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Compact)[k])));
+        // Cards is the defaults, so choosing it takes every pane key out of the file.
+        writer.Set(PaneStyle.Keys.Select(k => (SettingsCatalog.Find(k)!, (object?)PaneStyle.Values(PaneStyleKind.Cards)[k])));
         Assert.Equal("# mine\n[window]\n", File.ReadAllText(path));
     }
 

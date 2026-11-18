@@ -109,9 +109,9 @@ public class FirstRunTests
         // Reopened, "toast-always" already counts as notifications on, and turning them off removes it.
         const string always = "[notify]\ncommand-finished = \"toast-always\"\n";
         var current = Read(always);
-        Assert.Equal(always, FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, true), current));
+        Assert.Equal(always, FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, current.DefaultProfile.Id, true), current));
         Assert.DoesNotContain("command-finished",
-            FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Top, null, null, current.DefaultProfile.Id, false), current));
+            FirstRun.Apply(always, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, current.DefaultProfile.Id, false), current));
     }
 
     [Theory]
@@ -147,31 +147,31 @@ public class FirstRunTests
     }
 
     [Fact]
-    public void CardsSetsTheFivePaneSettings()
+    public void CompactSetsTheFivePaneSettings()
     {
-        var text = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards));
-        Assert.Equal(PaneStyleKind.Cards, PaneStyle.Of(Read(text).ValueOf));
+        var text = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Compact));
+        Assert.Equal(PaneStyleKind.Compact, PaneStyle.Of(Read(text).ValueOf));
     }
 
     [Fact]
-    public void CompactRemovesThemAndNullLeavesAMixAlone()
+    public void CardsRemovesThemAndNullLeavesAMixAlone()
     {
-        const string existing = "[window]\npane-gap = 6\npane-focus = \"ring\"\n";
+        const string existing = "[window]\npane-gap = 0\npane-focus = \"tab-accent\"\n";
         var current = Read(existing);
-        var compact = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null, PaneStyle: PaneStyleKind.Compact), current);
-        Assert.DoesNotContain("pane-gap", compact);
-        Assert.DoesNotContain("pane-focus", compact);
-        var mixed = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Simple, WorkspaceTabs.Top, null, null, null), current);
-        Assert.Contains("pane-gap = 6", mixed);
-        Assert.Contains("pane-focus = \"ring\"", mixed);
+        var cards = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards), current);
+        Assert.DoesNotContain("pane-gap", cards);
+        Assert.DoesNotContain("pane-focus", cards);
+        var mixed = FirstRun.Apply(existing, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null), current);
+        Assert.Contains("pane-gap = 0", mixed);
+        Assert.Contains("pane-focus = \"tab-accent\"", mixed);
     }
 
     [Fact]
     public void AStyleAlreadyInForceIsntRewritten()
     {
-        var cards = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Cards));
-        var current = Read(cards);
-        var same = new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, current.DefaultProfile.Id, PaneStyle: PaneStyleKind.Cards);
-        Assert.Equal(cards, FirstRun.Apply(cards, same, current));
+        var compact = FirstRun.Apply(null, new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, null, PaneStyle: PaneStyleKind.Compact));
+        var current = Read(compact);
+        var same = new WelcomeChoices(WorkStyle.Workspaces, WorkspaceTabs.Left, null, null, current.DefaultProfile.Id, PaneStyle: PaneStyleKind.Compact);
+        Assert.Equal(compact, FirstRun.Apply(compact, same, current));
     }
 }

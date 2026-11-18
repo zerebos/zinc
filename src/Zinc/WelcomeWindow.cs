@@ -86,9 +86,7 @@ internal sealed partial class WelcomeWindow : Window
 
         _toast = !firstRun && global.NotifyCommandFinished is NotifyMode.Toast or NotifyMode.ToastAlways;
         _profile = config.DefaultProfile.Id;
-        // Compact on first run, because that's the built-in default
-        // TODO: decide if we want card style to be default for new users
-        var paneStyle = firstRun ? PaneStyleKind.Compact : PaneStyle.Of(config.ValueOf);
+        var paneStyle = firstRun ? PaneStyle.Default : PaneStyle.Of(config.ValueOf);
         _paneStyle = paneStyle == PaneStyleKind.Custom ? null : paneStyle;
 
         FrameworkElement style, panes;

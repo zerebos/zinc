@@ -591,22 +591,22 @@ public sealed record Config
     /// Which panes show a header. Config: <c>[window] pane-headers = auto | with-tabs | always | never</c>. The old
     /// <c>pane-tab-strip</c> is read as this key (<see cref="ConfigFile.ReplacedKeys"/>).
     /// </summary>
-    public PaneHeaders PaneHeaders { get; init; }
+    public PaneHeaders PaneHeaders { get; init; } = PaneHeaders.Always;
 
     /// <summary>
     /// Which panes show their header's buttons. Config: <c>[window] pane-header-buttons = always | focused | hover |
     /// hide</c>.
     /// </summary>
-    public PaneHeaderButtons PaneHeaderButtons { get; init; }
+    public PaneHeaderButtons PaneHeaderButtons { get; init; } = PaneHeaderButtons.Focused;
 
     /// <summary>
     /// Pixels between panes. At 0 the panes meet at a divider, a 5 px band with a 1 px line. Config:
     /// <c>[window] pane-gap</c>.
     /// </summary>
-    public int PaneGap { get; init; }
+    public int PaneGap { get; init; } = 6;
 
     /// <summary>The gap at the workspace's outer edges too, split or not. Config: <c>[window] pane-gap-edges</c>.</summary>
-    public bool PaneGapEdges { get; init; }
+    public bool PaneGapEdges { get; init; } = true;
 
     /// <summary>
     /// Panes slide into place when the layout changes (split, close, maximize, moves), unless Windows' Animation effects
@@ -615,13 +615,13 @@ public sealed record Config
     public bool PaneAnimations { get; init; } = true;
 
     /// <summary>How the focused pane is marked. Config: <c>[window] pane-focus = ring | tab-accent | none</c>.</summary>
-    public PaneFocus PaneFocus { get; init; }
+    public PaneFocus PaneFocus { get; init; } = PaneFocus.Ring;
 
     /// <summary>How a pane shows its tabs. Config: <c>[window] pane-tabs-as = tabs | menu</c>.</summary>
     public PaneTabsAs PaneTabsAs { get; init; }
 
     /// <summary>Where a window's workspaces are listed. Config: <c>[window] workspace-tabs = top | left</c> (global).</summary>
-    public WorkspaceTabs WorkspaceTabs { get; init; }
+    public WorkspaceTabs WorkspaceTabs { get; init; } = WorkspaceTabs.Left;
 
     /// <summary>
     /// How Zinc tells you a long command finished out of view. Config: <c>[notify] command-finished = badge | toast |

@@ -33,10 +33,10 @@ internal sealed partial class SettingsWindow
     /// <summary>What a style is, in one sentence (the welcome page's cards say the same).</summary>
     internal static string PaneStyleDetail(PaneStyleKind style) => PaneStyles.First(s => s.Style == style).Detail;
 
-    /// <summary>The Pane style fold's header: the style in force, a dropdown that sets all five, and an arrow back to Compact.</summary>
+    /// <summary>The Pane style fold's header: the style in force, a dropdown that sets all five, and an arrow back to the default style.</summary>
     private FrameworkElement PaneStyleHeader()
     {
-        var reset = ResetArrow("Pane style", "Back to Compact, which removes these settings from config.toml");
+        var reset = ResetArrow("Pane style", "Back to Cards, which removes these settings from config.toml");
         var description = DescriptionText();
         var box = new ComboBox { Width = ControlWidth };
         AutomationProperties.SetName(box, "Pane style");
@@ -71,7 +71,7 @@ internal sealed partial class SettingsWindow
         reset.Click += (_, _) =>
         {
             FocusAfterReset(reset, box);
-            Apply(PaneStyleKind.Compact);
+            Apply(PaneStyle.Default);
         };
 
         void Refresh()
@@ -80,7 +80,7 @@ internal sealed partial class SettingsWindow
             var index = Array.FindIndex(PaneStyles, s => s.Style == style);
             Quietly(() => box.SelectedIndex = index);
             box.PlaceholderText = index < 0 ? "Custom" : "";
-            reset.Visibility = style == PaneStyleKind.Compact ? Visibility.Collapsed : Visibility.Visible;
+            reset.Visibility = style == PaneStyle.Default ? Visibility.Collapsed : Visibility.Visible;
             SetText(description, index < 0 ? "Your own mix of the settings below." : PaneStyles[index].Detail);
         }
 

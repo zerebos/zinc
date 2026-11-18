@@ -64,8 +64,8 @@ public class ConfigTests : IDisposable
     [InlineData("with-tabs", PaneHeaders.WithTabs)]
     [InlineData("always", PaneHeaders.Always)]
     [InlineData("never", PaneHeaders.Never)]
-    [InlineData("1", PaneHeaders.WithTabs)] // not an enum index
-    [InlineData("sometimes", PaneHeaders.WithTabs)]
+    [InlineData("1", PaneHeaders.Always)] // not an enum index, so the default stays
+    [InlineData("sometimes", PaneHeaders.Always)]
     public void ReadsPaneHeaders(string value, PaneHeaders expected) =>
         Assert.Equal(expected, Load($"[window]\npane-headers = \"{value}\"").PaneHeaders);
 
@@ -92,13 +92,14 @@ public class ConfigTests : IDisposable
     }
 
     [Fact]
-    public void ThePaneLookSettingsDefaultToCompact()
+    public void ThePaneLookSettingsDefaultToCards()
     {
         var config = Load("");
-        Assert.Equal(PaneHeaderButtons.Hide, config.PaneHeaderButtons);
-        Assert.Equal(0, config.PaneGap);
-        Assert.False(config.PaneGapEdges);
-        Assert.Equal(PaneFocus.TabAccent, config.PaneFocus);
+        Assert.Equal(PaneHeaders.Always, config.PaneHeaders);
+        Assert.Equal(PaneHeaderButtons.Focused, config.PaneHeaderButtons);
+        Assert.Equal(6, config.PaneGap);
+        Assert.True(config.PaneGapEdges);
+        Assert.Equal(PaneFocus.Ring, config.PaneFocus);
     }
 
     [Theory]
@@ -106,7 +107,7 @@ public class ConfigTests : IDisposable
     [InlineData("focused", PaneHeaderButtons.Focused)]
     [InlineData("hover", PaneHeaderButtons.Hover)]
     [InlineData("hide", PaneHeaderButtons.Hide)]
-    [InlineData("show", PaneHeaderButtons.Hide)] // the name it had before it shipped
+    [InlineData("show", PaneHeaderButtons.Focused)] // the name it had before it shipped, so the default stays
     public void ReadsPaneHeaderButtons(string value, PaneHeaderButtons expected) =>
         Assert.Equal(expected, Load($"[window]\npane-header-buttons = \"{value}\"").PaneHeaderButtons);
 
@@ -114,7 +115,7 @@ public class ConfigTests : IDisposable
     [InlineData("ring", PaneFocus.Ring)]
     [InlineData("tab-accent", PaneFocus.TabAccent)]
     [InlineData("none", PaneFocus.None)]
-    [InlineData("glow", PaneFocus.TabAccent)]
+    [InlineData("glow", PaneFocus.Ring)]
     public void ReadsPaneFocus(string value, PaneFocus expected) =>
         Assert.Equal(expected, Load($"[window]\npane-focus = \"{value}\"").PaneFocus);
 
@@ -129,18 +130,18 @@ public class ConfigTests : IDisposable
     [InlineData("0", 0)]
     [InlineData("6", 6)]
     [InlineData("32", 32)]
-    [InlineData("33", 0)] // too wide: ignored
-    [InlineData("-2", 0)]
-    [InlineData("6.5", 0)]
-    [InlineData("\"6\"", 0)]
+    [InlineData("33", 6)] // too wide, so the default stays
+    [InlineData("-2", 6)]
+    [InlineData("6.5", 6)]
+    [InlineData("\"6\"", 6)]
     public void ReadsPaneGap(string value, int expected) =>
         Assert.Equal(expected, Load($"[window]\npane-gap = {value}").PaneGap);
 
     [Fact]
     public void ReadsPaneGapEdges()
     {
-        Assert.True(Load("[window]\npane-gap-edges = true").PaneGapEdges);
-        Assert.False(Load("[window]\npane-gap-edges = \"yes\"").PaneGapEdges);
+        Assert.False(Load("[window]\npane-gap-edges = false").PaneGapEdges);
+        Assert.True(Load("[window]\npane-gap-edges = \"yes\"").PaneGapEdges); // not a boolean, so the default stays
     }
 
     [Fact]
@@ -171,9 +172,10 @@ public class ConfigTests : IDisposable
     [Fact]
     public void WorkspaceTabsAreTopOrLeft()
     {
-        Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"left\"").WorkspaceTabs);
-        Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"Left\"").WorkspaceTabs);
-        Assert.Equal(WorkspaceTabs.Top, Load("[window]\nworkspace-tabs = \"bottom\"").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Left, Load("").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Top, Load("[window]\nworkspace-tabs = \"top\"").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Top, Load("[window]\nworkspace-tabs = \"Top\"").WorkspaceTabs);
+        Assert.Equal(WorkspaceTabs.Left, Load("[window]\nworkspace-tabs = \"bottom\"").WorkspaceTabs);
     }
 
     [Fact]

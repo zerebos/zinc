@@ -84,13 +84,13 @@ public static class FirstRun
             }
         }
 
-        // A pane style sets its five settings. Compact's are the defaults, so Compact removes them.
+        // A pane style sets its five settings. The default style's values are the defaults, so it removes them.
         if (choices.PaneStyle is { } style && (current == null || PaneStyle.Of(current.ValueOf) != style))
         {
             foreach (var (key, value) in PaneStyle.Values(style))
             {
                 var path = key.Split('.');
-                text = style == PaneStyleKind.Compact ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
+                text = style == PaneStyle.Default ? ConfigEditor.Remove(text, path) : ConfigEditor.Set(text, path, value);
             }
         }
 
