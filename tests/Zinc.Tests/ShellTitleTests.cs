@@ -195,4 +195,18 @@ public class ShellTitleTests
         Assert.Equal(lastOne, ShellTitle.FitFolder(folder, 5, Chars)); // then trimmed at its end
         Assert.Equal("~", ShellTitle.FitFolder("~", 0, Chars));
     }
+
+    [Fact]
+    public void ATitleSetAgainIsTakenAgain()
+    {
+        // The pane counts a title as the running command's own only when it takes one during that command, so the
+        // second command that sets the same title has to get it back too.
+        using var session = new TerminalSession(40, 5, TerminalTheme.Default);
+        session.WriteToScreen("\e]0;Typography Ågj\a");
+        Assert.Equal("Typography Ågj", session.TakeTitle());
+        session.WriteToScreen("\e]0;Typography Ågj\a");
+        Assert.Equal("Typography Ågj", session.TakeTitle());
+        session.WriteToScreen("\e]2;other\a");
+        Assert.Equal("other", session.TakeTitle());
+    }
 }

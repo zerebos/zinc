@@ -705,41 +705,47 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    /// <summary>The title's bytes as last taken (<see cref="TakeTitle"/>).</summary>
+    /// <summary>The title's bytes and text as last taken (<see cref="TakeTitle"/>).</summary>
     private byte[] _titleBytes = [];
+    private string _title = "";
 
     /// <summary>1 while a <see cref="TitleChanged"/> notice waits for <see cref="TakeTitle"/>.</summary>
     private int _titleNoticePending;
 
     /// <summary>
-    /// Takes the title after <see cref="TitleChanged"/>, or null if it's back to what it was last time. Programs can
-    /// retitle themselves thousands of times a second (cmd running a loop under ConPTY puts the command line with its
-    /// counter in the title), and reading each title on the reader thread would cost a string and a UI update apiece.
-    /// So there's one notice until the view takes the title, and the title is read at most once per UI tick. Safe on
-    /// any thread.
+    /// Takes the title after <see cref="TitleChanged"/>, or null once the session is closed. Programs can retitle
+    /// themselves thousands of times a second (cmd running a loop under ConPTY puts the command line with its counter
+    /// in the title), and reading each title on the reader thread would cost a string and a UI update apiece. So
+    /// there's one notice until the view takes the title, and the title is read at most once per UI tick. Safe on any
+    /// thread.
     /// </summary>
+    /// <remarks>
+    /// A title that's the same as last time still comes back, because a program that sets it again makes it that
+    /// program's own. So when a second command sets the title the first one set, the tab shows that title instead of
+    /// the command's text.
+    /// </remarks>
     public string? TakeTitle()
     {
         lock (Lock)
         {
             Volatile.Write(ref _titleNoticePending, 0); // a change after this read sends a new notice
-            return _disposed ? null : ReadTitleIfChanged();
+            return _disposed ? null : ReadTitle();
         }
     }
 
-    private string? ReadTitleIfChanged()
+    private string ReadTitle()
     {
         GhosttyString s;
         var bytes = Native.TerminalGet(_terminal, TerminalData.Title, &s) == GhosttyResult.Success && s.Len > 0
             ? new ReadOnlySpan<byte>((byte*)s.Ptr, (int)s.Len)
             : [];
-        if (bytes.SequenceEqual(_titleBytes))
+        if (!bytes.SequenceEqual(_titleBytes))
         {
-            return null;
+            _titleBytes = bytes.ToArray();
+            _title = Encoding.UTF8.GetString(bytes);
         }
 
-        _titleBytes = bytes.ToArray();
-        return Encoding.UTF8.GetString(bytes);
+        return _title;
     }
 
     private string ReadString(TerminalData what)
