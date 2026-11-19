@@ -22,7 +22,7 @@ Everything else, from the windows and tabs to the settings, is Zinc's own WinUI 
 
 `src/Zinc.Core` holds everything that doesn't need a window, which is also what the tests load.
 
-- `Ghostty/` has the bindings (`Native.cs`, plus `GhosttyKey.g.cs`, which `scripts/build/gen-keys.ps1` generates) and the sprite bindings (`Sprites.cs`).
+- `Ghostty/` has the bindings (`Native.cs`, plus `GhosttyKey.g.cs`, which `scripts/build/gen-keys.ps1` generates), the check that the loaded library is a release the bindings fit (`LibraryVersion.cs`), and the sprite bindings (`Sprites.cs`).
 - `Pty/` has `ConPty.cs` (the pseudoconsole, the child process, and the reader thread), the child's environment, the default terminal, the user's `PATH`, and install cleanup.
 - `Terminal/TerminalSession*.cs` owns one libghostty terminal, its encoders, and its `ConPty`. Around that it handles libghostty's callbacks, color schemes, find, links, prompt clicks, notifications, and the commands it learns about from shell marks.
 - `Terminal/` also has shell integration (`ShellIntegration.cs` and `ShellMarks.cs`, with the scripts in `assets/shell-integration`), where new terminals start (`ShellDirectory`, `WorkspaceFolder`, `NewTerminalStart`), Kitty images, links, file drops, and the benchmark workloads.

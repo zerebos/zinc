@@ -15,7 +15,7 @@ This is the guide to building Zinc, running it next to an installed copy, testin
 ## Building
 
 ```powershell
-# 1. Fetch Ghostty at the pinned commit and build the native DLLs into native/x64
+# 1. Fetch Ghostty at the pinned release and build the native DLLs into native/x64
 pwsh scripts/build/libghostty.ps1
 
 # 2. Build everything
@@ -25,7 +25,7 @@ dotnet build
 dotnet test
 ```
 
-Step 1 builds three DLLs: `ghostty-vt.dll` (Ghostty's terminal core), `zinc-sprite.dll` (Ghostty's built-in glyphs for box drawing, blocks, Powerline, and Braille), and `zinc-shader.dll` (the custom shader translator). They're all built for Zig's `windows-gnu` target, as libghostty's own Windows builds are, so they import only what Windows itself has and Zinc ships no C runtime. The script resets the Ghostty checkout in `external/ghostty` and applies the patches in `patches/ghostty` before every build, so an edit left in the checkout never reaches a build. `external/` and `native/` are build output and stay out of git. You only need to run it again when the Ghostty commit or a patch changes.
+Step 1 builds three DLLs: `ghostty-vt.dll` (Ghostty's terminal core), `zinc-sprite.dll` (Ghostty's built-in glyphs for box drawing, blocks, Powerline, and Braille), and `zinc-shader.dll` (the custom shader translator). They're all built for Zig's `windows-gnu` target, as libghostty's own Windows builds are, so they import only what Windows itself has and Zinc ships no C runtime. The script resets the Ghostty checkout in `external/ghostty` and applies the patches in `patches/ghostty` before every build, so an edit left in the checkout never reaches a build. `external/` and `native/` are build output and stay out of git. You only need to run it again when the pinned release, a patch, or the Zig version changes.
 
 A native dependency added later has to keep that promise, so check what a new DLL imports. Anything beyond the Universal CRT, kernel32, and ntdll is a DLL a fresh Windows may lack. A `windows-msvc` build, for one, imports `vcruntime140.dll`.
 
@@ -160,14 +160,17 @@ Zinc pins a libghostty-vt release. Within a major version, a release only adds f
 4. Run `pwsh scripts/build/gen-keys.ps1`, which regenerates `GhosttyKey.g.cs` from the new key header.
 5. Run `dotnet test`. `AbiTests` fails on any struct, enum, or export that changed. It can't check the arguments of imported functions, though, because the manifest describes types only, so read the header's diff for those. Read the header's comments too, for what a value means, such as what NULL does or a get key's output type. `OpenSourceNoticesTests` fails until the Ghostty entry in `OpenSourceNotices.cs` names the new commit.
 6. Run `dotnet run scripts/dev/vt-bench.cs -- --compare before`.
+7. Check the libraries compiled into `ghostty-vt.dll` against `OpenSourceNotices.cs`. The checkout's `deps/libghostty-vt-third-party.json` lists each one with its version and license. Update the versions, add any new library with its license text in `assets/licenses`, and check whether a library's own license file changed. The sprite DLL's z2d is pinned separately, in `native-src/sprite/build.zig.zon`, to the version Ghostty's `build.zig.zon` names.
 
 The bench makes its workloads (plain text, mixed UTF-8, and styled text) in memory from a fixed seed on every run, so every run and every machine measures the same bytes, and nothing is cached between runs. Each workload gets a warm-up, then the best of seven runs counts. The results go to `dist/bench`, one file per Ghostty commit. Runs vary by about 2% on a quiet machine and about 5% on a busy one, so more than 10% slower is worth a look, after running it once more to be sure.
+
+Steps 1 and 6 compare a saved run with a later one, so they work for any bump, but on a busy machine two runs made at different times can differ by more than the bump does. To compare in one sitting instead, keep a copy of the old DLL and run the bench on the old and new DLLs in turn, a few times each. `--dll <path>` names the DLL to measure, and without it the bench measures the one in `native/x64`. The bench calls libghostty through Zinc's bindings, so after a bump that changes them, the new bench can't load the old DLL. In that case, build the bench before changing anything (`dotnet build scripts/dev/vt-bench.cs -c Release -o <folder>`), and run that earlier build on the old copy.
 
 ## The scripts
 
 | Script | What it's for |
 |:---|:---|
-| `scripts/build/libghostty.ps1` | Fetches Ghostty at the pinned commit, applies the patches, and builds `ghostty-vt.dll`, then runs the next two. |
+| `scripts/build/libghostty.ps1` | Fetches Ghostty at the pinned release tag and commit, applies any patches, and builds `ghostty-vt.dll`, then runs the next two. |
 | `scripts/build/sprites.ps1` | Builds Ghostty's sprite code as `zinc-sprite.dll`, with the C API in `native-src/sprite`. |
 | `scripts/build/shader.ps1` | Builds the GLSL to HLSL shader translator as `zinc-shader.dll`, from `native-src/shader`, glslang, and SPIRV-Cross. |
 | `scripts/build/zig.ps1` | Shared by the three above: the Zig targets and `zig build` with its retry. |

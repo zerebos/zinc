@@ -17,8 +17,12 @@ made from.
 - A color scheme that follows light and dark mode now matches Zinc's windows when `Settings > Appearance > Window > Light or dark` is set to Light or Dark. With "Same as Windows", it follows Windows as before.
 - The welcome window's color scheme page starts with "Follow light and dark mode" on, set to Lit Cell and Lit Cell Light. Before, turning that on switched the dark scheme to Catppuccin Mocha.
 - Clearing the screen at a prompt with Ctrl+L now moves what was on the screen into the scrollback instead of erasing it, as Ghostty does. So does a `clear` that leaves the scrollback alone, like Fedora's. The scrollbar's marks and the bars beside failed commands move with those lines. A `clear` that also clears the scrollback, like bash's and PowerShell's, still erases everything.
+- Zinc takes in a program's output two to almost four times faster, which shows when a program prints a lot, like a build or `cat` on a big file. Zinc now uses libghostty-vt 1.0.1, Ghostty's terminal core, which parses faster and no longer slows down once the scrollback is full.
 
 ### Fixed
+- Zinc no longer crashes when the scrollback drops its oldest lines while the cursor is on them, or when narrowing a pane cuts a wide character in two, like a CJK character or an emoji.
+- Selecting wide characters highlights exactly what gets copied, and a wide character that wrapped onto the next line is copied too.
+- Widening a pane no longer drops accents and other combining marks from lines that rewrap.
 - The new-workspace page fits a small window. In a short window, the Profile, Folder, and Layout lists shrink and scroll instead of being cut off at the bottom, and the Reopen chips keep to one row. In a narrow window, the layouts show only their pictures, with their names in a tooltip, and long names end in "…" instead of being cut off.
 - In a short window, the new-workspace page's heading gets smaller and its intro hides. In a narrow window, the page's "Show this page" box hides, so the controls at the bottom stay on one row and the lists keep their room. You can still turn the page off in `Settings > Layout > Workspaces > Start page for new workspaces`.
 - With workspaces in a sidebar, the command center at the top of a narrow window shrinks instead of running under the minimize, maximize, and close buttons.
