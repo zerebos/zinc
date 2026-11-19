@@ -34,17 +34,19 @@ The voice stays the same everywhere, but the room for it changes with the job.
 
 - **docs/architecture.md and the other "how it works" docs** get the most. They walk through mechanisms, so they can ask the reader's question, show the obvious approach that fails, and allow the occasional aside. The canvas lifetime section is a good model.
 - **docs/development.md** is drier, the way a reference page is drier than a tutorial. Steps and facts come first, with the reason in one clause.
-- **The README** speaks to people who use Zinc, not people who work on it. It's specific and calm, and it follows "The README, the changelog, and release notes" below.
+- **The README** speaks to people who use Zinc, not people who work on it. It's specific and calm, and it follows "The README, the website, the changelog, and release notes" below.
+- **The user guide on zincterminal.dev** is for people using Zinc, so it's closer to the README than to docs/architecture.md. It's task-first and in the second person: what to press or set, then what happens. It has little personality and no internals. Bold what someone clicks or switches, and quote a setting's name only when setting it to a value (set "Reopen windows" to "Start fresh"). Write shortcuts as whole chords, like Alt+Arrow and Ctrl+Wheel.
 - **The changelog** is for users too. Each entry says what changed for them, in a sentence or two, with no story behind it.
 - **Code comments** get almost none. They say what the code does or prevents, and stop.
 - **Commit messages** get none in the subject, and a few plain sentences in the body when the reason isn't obvious.
 
-## The README, the changelog, and release notes
+## The README, the website, the changelog, and release notes
 
-These keep the interface's tone, but their job is different. They explain what Zinc does and why someone might switch to it.
+These keep the interface's tone, but their job is different. They explain what Zinc does and why someone might switch to it. The website means the landing page on zincterminal.dev, and its user guide has its own entry above.
 
 - **Specific over superlative.** Name the detail. "Box drawing meets without seams in any font" beats "beautiful rendering". The interface names the familiar thing instead, and that difference is deliberate.
 - **Calm.** No "blazing", "insanely", or "game-changing".
+- **Headlines can be phrases.** Taglines, page titles, and the lead under a page's main heading can be phrases instead of sentences, like "Every cell, exactly right." The copy under them follows the usual rules.
 - **Honest about limits.** Say plainly what isn't there yet. The interface leaves limits out, but the docs and release notes don't.
 - **Credit Ghostty accurately.** Say "built on libghostty", "uses Ghostty's terminal engine", or "the same core that powers Ghostty". Never say "Ghostty for Windows", "a Ghostty port", or anything that suggests an official Ghostty project.
 - **The name** follows ux-writing.md's [The product's name](ux-writing.md#the-products-name), so it's "Zinc" in prose, never "Zinc Terminal".
