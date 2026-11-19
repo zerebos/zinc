@@ -31,6 +31,15 @@ public class PasteCheckTests
     [InlineData("one\n", 1)]
     public void CountsLines(string text, int lines) => Assert.Equal(lines, PasteCheck.Lines(text));
 
+    [Theory]
+    [InlineData("one\r\ntwo\r\n", false, "one\rtwo\r")]                        // one Enter per line, not two
+    [InlineData("one\ntwo", false, "one\rtwo")]
+    [InlineData("one\rtwo", false, "one\rtwo")]                                  // a lone CR stays
+    [InlineData("one\r\ntwo\r\n", true, "\e[200~one\ntwo\n\e[201~")]
+    [InlineData("tab\there\e", true, "\e[200~tab\there \e[201~")]               // ESC still becomes a space
+    public void PastesEndEachLineOnce(string text, bool bracketed, string expected) =>
+        Assert.Equal(expected, System.Text.Encoding.UTF8.GetString(TerminalSession.EncodePaste(text, bracketed)));
+
     [Fact]
     public void TheSettingsReadBack()
     {

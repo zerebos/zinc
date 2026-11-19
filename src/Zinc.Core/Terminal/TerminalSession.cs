@@ -1060,8 +1060,20 @@ public sealed unsafe partial class TerminalSession : IDisposable
             return;
         }
 
-        var bracketed = (byte)(GetMode(GhosttyMode.BracketedPaste) ? 1 : 0);
-        var data = Encoding.UTF8.GetBytes(text);
+        var encoded = EncodePaste(text, GetMode(GhosttyMode.BracketedPaste));
+        if (encoded.Length > 0)
+        {
+            SendInput(encoded);
+        }
+    }
+
+    /// <summary>The bytes a paste of <paramref name="text"/> sends to the program, or none if encoding fails.</summary>
+    internal static byte[] EncodePaste(string text, bool bracketed)
+    {
+        // The Windows clipboard ends lines with CRLF. libghostty turns each LF into CR when bracketed paste is off,
+        // which would end every line with two Enters. When it's on, libghostty passes CRLF through, and shells read
+        // both bytes as line ends. So a line ends with one LF, as on the other platforms Ghostty runs on.
+        var data = Encoding.UTF8.GetBytes(text.Replace("\r\n", "\n"));
         // Bracketing adds 12 bytes and newline conversion never grows the
         // data, but retry with the reported size rather than rely on that.
         var output = new byte[data.Length + 16];
@@ -1072,7 +1084,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             fixed (byte* pData = data)
             fixed (byte* pOut = output)
             {
-                result = Native.PasteEncode(pData, (nuint)data.Length, bracketed, pOut, (nuint)output.Length, out written);
+                result = Native.PasteEncode(pData, (nuint)data.Length, (byte)(bracketed ? 1 : 0), pOut, (nuint)output.Length, out written);
             }
 
             if (result == GhosttyResult.OutOfSpace)
@@ -1081,12 +1093,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 continue;
             }
 
-            if (result == GhosttyResult.Success)
-            {
-                SendInput(output.AsSpan(0, (int)written));
-            }
-
-            return;
+            return result == GhosttyResult.Success ? output[..(int)written] : [];
         }
     }
 
