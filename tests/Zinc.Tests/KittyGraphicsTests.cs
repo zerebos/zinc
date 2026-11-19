@@ -19,11 +19,25 @@ public class KittyGraphicsTests
     private static string Apc(string control, byte[] payload) =>
         $"\e_G{control};{Convert.ToBase64String(payload)}\e\\";
 
-    private static List<ImagePlacement> Collect(TerminalSession session, bool pixels = true)
+    /// <summary>The images a render state updated from <paramref name="session"/> says to draw now.</summary>
+    private static List<ImageEntry> Images(TerminalSession session)
     {
-        var list = new List<ImagePlacement>();
-        session.CollectImages(list, (_, _) => pixels);
-        return list;
+        Native.RenderStateNew(0, out var state);
+        try
+        {
+            using var list = new ImageList();
+            lock (session.Lock)
+            {
+                Assert.True(session.UpdateRenderState(state));
+                list.Refresh(state);
+            }
+
+            return [.. list.Entries];
+        }
+        finally
+        {
+            Native.RenderStateFree(state);
+        }
     }
 
     [Fact]
@@ -45,14 +59,16 @@ public class KittyGraphicsTests
         session.WriteToScreen("ab");
         session.WriteToScreen(Apc("a=T,f=24,s=2,v=1,i=7,q=2", [255, 0, 0, 0, 255, 0]));
 
-        var p = Assert.Single(Collect(session));
+        var p = Assert.Single(Images(session));
         Assert.Equal((7u, 2, 0), (p.ImageId, p.Col, p.Row));
-        Assert.Equal((2, 1), (p.ImageWidth, p.ImageHeight));
         Assert.Equal((2u, 1u), (p.PixelWidth, p.PixelHeight));
-        Assert.Equal([255, 0, 0, 255, 0, 255, 0, 255], p.Pixels);
+        Assert.Equal((0u, 0u, 2u, 1u), (p.SourceX, p.SourceY, p.SourceWidth, p.SourceHeight));
+        Assert.Equal((ImageLayer.AboveText, 0), (p.Layer, p.Z));
 
-        // Cached by the caller: no pixel copy.
-        Assert.Null(Assert.Single(Collect(session, pixels: false)).Pixels);
+        var pixels = session.CopyImagePixels(7)!;
+        Assert.Equal((2, 1, p.Generation), (pixels.Width, pixels.Height, pixels.Generation));
+        Assert.Equal([255, 0, 0, 255, 0, 255, 0, 255], pixels.Rgba);
+        Assert.Null(session.CopyImagePixels(8));
     }
 
     [Fact]
@@ -62,10 +78,11 @@ public class KittyGraphicsTests
         var png = await EncodePng(2, 1, [10, 20, 30, 255, 200, 100, 0, 128]);
         session.WriteToScreen(Apc("a=T,f=100,i=9,q=2", png));
 
-        var p = Assert.Single(Collect(session));
-        Assert.Equal((2, 1), (p.ImageWidth, p.ImageHeight));
+        Assert.Single(Images(session));
+        var pixels = session.CopyImagePixels(9)!;
+        Assert.Equal((2, 1), (pixels.Width, pixels.Height));
         // The second pixel is half transparent, so it comes back premultiplied.
-        Assert.Equal([10, 20, 30, 255, 100, 50, 0, 128], p.Pixels);
+        Assert.Equal([10, 20, 30, 255, 100, 50, 0, 128], pixels.Rgba);
     }
 
     [Fact]
@@ -73,31 +90,90 @@ public class KittyGraphicsTests
     {
         using var session = NewSession();
         session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=3,q=2", [1, 2, 3]));
-        Assert.Single(Collect(session));
+        Assert.Single(Images(session));
 
         session.WriteToScreen("\r\n\r\n");
         session.ScrollLines(-1); // not scrolled: no scrollback yet
         session.WriteToScreen(string.Concat(Enumerable.Repeat("\r\n", 30)));
-        Assert.Empty(Collect(session)); // scrolled out of the viewport
+        Assert.Empty(Images(session)); // scrolled out of the viewport
 
         session.ScrollViewport(new GhosttyTerminalScrollViewport { Tag = ScrollViewportTag.Top });
-        Assert.Equal(0, Assert.Single(Collect(session)).Row); // back in view from scrollback
+        Assert.Equal(0, Assert.Single(Images(session)).Row); // back in view from scrollback
 
         session.WriteToScreen("\e_Ga=d,d=I,i=3,q=2\e\\"); // (d=A spares it: only deletes what's on screen)
-        Assert.Empty(Collect(session));
+        Assert.Empty(Images(session));
     }
 
     [Fact]
-    public void VirtualPlacementsAreReportedWithTheirGrid()
+    public void PlaceholderCellsBecomeOneEntryForEachRow()
+    {
+        // This is the form yazi uses. It transmits an image of 30x40 pixels with a virtual placement (U=1) of 3x2 cells,
+        // which the image fills exactly at 10x20 pixels a cell. Then it prints the placeholder cells. Their foreground
+        // color names the image (87576 is 0x015618), their underline color names the placement, and their diacritics
+        // give the row and the column. A cell without diacritics continues the cell to its left.
+        using var session = NewSession();
+        session.WriteToScreen(Apc("a=T,U=1,f=24,s=30,v=40,i=87576,p=4,c=3,r=2,q=2", new byte[30 * 40 * 3]));
+        Assert.Empty(Images(session)); // a virtual placement shows only where its cells are
+
+        const string cell = "\U0010EEEE";
+        const string row0 = "̅", row1 = "̍", col0 = "̅";
+        session.WriteToScreen("\e[38;2;1;86;24m\e[58;5;4m");
+        session.WriteToScreen($"{cell}{row0}{col0}{cell}{cell}\r\n{cell}{row1}{col0}{cell}{cell}\e[m");
+
+        var entries = Images(session);
+        Assert.Equal(2, entries.Count);
+        Assert.All(entries, e => Assert.Equal((87576u, ImageLayer.BelowText, -1), (e.ImageId, e.Layer, e.Z)));
+        var (top, bottom) = (entries.Single(e => e.Row == 0), entries.Single(e => e.Row == 1));
+        Assert.Equal((0, 30u, 20u), (top.Col, top.PixelWidth, top.PixelHeight));
+        Assert.Equal((0u, 0u, 30u, 20u), (top.SourceX, top.SourceY, top.SourceWidth, top.SourceHeight));
+        Assert.Equal((0u, 20u, 30u, 20u), (bottom.SourceX, bottom.SourceY, bottom.SourceWidth, bottom.SourceHeight));
+    }
+
+    [Fact]
+    public void LayersFollowTheZIndexAndOrderTheList()
     {
         using var session = NewSession();
-        // yazi's form: transmit and create a virtual placement (U=1) of 3x2 cells.
-        session.WriteToScreen(Apc("a=T,U=1,f=24,s=1,v=1,i=87576,p=4,c=3,r=2,q=2", [9, 9, 9]));
+        session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=1,z=5,q=2", [1, 1, 1]));
+        session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=2,z=-1,q=2", [2, 2, 2]));
+        session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=3,z=-1073741825,q=2", [3, 3, 3]));
+        session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=4,z=0,q=2", [4, 4, 4]));
 
-        var p = Assert.Single(Collect(session));
-        Assert.True(p.Virtual);
-        Assert.Equal((87576u, 4u, 3u, 2u), (p.ImageId, p.PlacementId, p.Columns, p.Rows));
-        Assert.NotNull(p.Pixels);
+        var entries = Images(session);
+        Assert.Equal([3u, 2u, 4u, 1u], entries.Select(e => e.ImageId));
+        Assert.Equal([ImageLayer.BelowBackground, ImageLayer.BelowText, ImageLayer.AboveText, ImageLayer.AboveText],
+            entries.Select(e => e.Layer));
+    }
+
+    [Fact]
+    public void TheListIsReadAgainOnlyWhenItChanged()
+    {
+        using var session = NewSession();
+        Native.RenderStateNew(0, out var state);
+        try
+        {
+            using var list = new ImageList();
+            bool Refresh()
+            {
+                lock (session.Lock)
+                {
+                    session.UpdateRenderState(state);
+                    return list.Refresh(state);
+                }
+            }
+
+            Assert.True(Refresh()); // the first read always reads
+            session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=1,q=2", [1, 1, 1]));
+            Assert.True(Refresh());
+            Assert.Single(list.Entries);
+
+            session.WriteToScreen("plain text");
+            Assert.False(Refresh());
+            Assert.Single(list.Entries);
+        }
+        finally
+        {
+            Native.RenderStateFree(state);
+        }
     }
 
     [Fact]
@@ -108,13 +184,44 @@ public class KittyGraphicsTests
         using var session = NewSession();
         var pixels = new byte[2 * 3 * 4];
         session.WriteToScreen(Apc("a=T,f=32,s=2,v=3,i=1,p=1,q=2", pixels));
-        var first = Assert.Single(Collect(session)).Generation;
+        var first = Assert.Single(Images(session)).Generation;
 
         session.WriteToScreen(Apc("a=T,f=32,s=2,v=3,i=1,p=1,q=2,m=1", pixels[..12]));
-        Assert.Equal(first, Assert.Single(Collect(session)).Generation);
+        Assert.Equal(first, Assert.Single(Images(session)).Generation);
+        Assert.Equal(first, session.CopyImagePixels(1)!.Generation);
 
         session.WriteToScreen(Apc("m=0", pixels[12..]));
-        Assert.NotEqual(first, Assert.Single(Collect(session)).Generation);
+        Assert.NotEqual(first, Assert.Single(Images(session)).Generation);
+    }
+
+    [Fact]
+    public void AnimationsMoveToTheirNextFrame()
+    {
+        // A red root frame and a green second frame, 50 ms each, looping.
+        using var session = NewSession();
+        Assert.Null(session.TickAnimations(0)); // nothing stored yet
+        session.WriteToScreen(Apc("a=T,f=24,s=1,v=1,i=5,q=2", [255, 0, 0]));
+        session.WriteToScreen(Apc("a=f,f=24,s=1,v=1,i=5,z=50,q=2", [0, 255, 0]));
+        Assert.Null(session.TickAnimations(1000)); // stored, but not playing
+
+        session.WriteToScreen("\e_Ga=a,i=5,r=1,z=50,q=2\e\\"); // the root frame's gap
+        session.WriteToScreen("\e_Ga=a,i=5,s=3,v=1,q=2\e\\"); // play, looping forever
+        var first = session.CopyImagePixels(5)!;
+        var now = session.TickAnimations(1000) ?? throw new Xunit.Sdk.XunitException("the animation didn't start");
+        Assert.InRange(now, 1001ul, 1050ul);
+
+        // A tick at the time the previous tick returned shows the next frame, which has a new generation.
+        var generations = new HashSet<ulong> { first.Generation };
+        var reds = new List<byte> { first.Rgba[0] };
+        for (var i = 0; i < 3; i++)
+        {
+            now = session.TickAnimations(now) ?? throw new Xunit.Sdk.XunitException("the animation stopped");
+            var frame = session.CopyImagePixels(5)!;
+            Assert.True(generations.Add(frame.Generation));
+            reds.Add(frame.Rgba[0]);
+        }
+
+        Assert.Equal([255, 0, 255, 0], reds);
     }
 
     [Fact]

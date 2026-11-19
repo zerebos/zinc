@@ -1566,6 +1566,80 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// Copies image <paramref name="imageId"/>'s pixels from the active screen as premultiplied RGBA, or returns null
+    /// when there's no such image or its data hasn't all arrived. Call it under <see cref="Lock"/> right after
+    /// updating a render state, so the pixels are the ones its image list names.
+    /// </summary>
+    public ImagePixels? CopyImagePixels(uint imageId)
+    {
+        lock (Lock)
+        {
+            if (_disposed)
+            {
+                return null;
+            }
+
+            nint graphics;
+            if (Native.TerminalGet(_terminal, TerminalData.KittyGraphics, &graphics) != GhosttyResult.Success)
+            {
+                return null;
+            }
+
+            var image = Native.KittyGraphicsImage(graphics, imageId);
+            uint width, height;
+            ulong generation;
+            KittyImageFormat format;
+            GhosttyString data;
+            if (image == 0 ||
+                Native.KittyImageGet(image, KittyGraphicsImageData.Width, &width) != GhosttyResult.Success ||
+                Native.KittyImageGet(image, KittyGraphicsImageData.Height, &height) != GhosttyResult.Success ||
+                Native.KittyImageGet(image, KittyGraphicsImageData.Generation, &generation) != GhosttyResult.Success ||
+                Native.KittyImageGet(image, KittyGraphicsImageData.Format, &format) != GhosttyResult.Success ||
+                Native.KittyImageGet(image, KittyGraphicsImageData.Pixels, &data) != GhosttyResult.Success)
+            {
+                return null;
+            }
+
+            var count = (long)width * height;
+            if (count * KittyImages.BytesPerPixel(format) > (long)data.Len)
+            {
+                return null;
+            }
+
+            var rgba = KittyImages.ToPremultipliedRgba(format, new ReadOnlySpan<byte>((byte*)data.Ptr, (int)data.Len), (int)count);
+            return new ImagePixels(generation, (int)width, (int)height, rgba);
+        }
+    }
+
+    /// <summary>
+    /// Moves playing Kitty animations to the frame due at <paramref name="nowMs"/>, and returns when the next frame is
+    /// due, or null when nothing is playing. The time is in milliseconds on a clock that only moves forward, the same
+    /// one for every call. Call it once per frame, before updating the render state, so the update sees the new frame.
+    /// </summary>
+    public ulong? TickAnimations(ulong nowMs)
+    {
+        lock (Lock)
+        {
+            if (_disposed)
+            {
+                return null;
+            }
+
+            nint graphics;
+            ulong storageGeneration = 0;
+            if (Native.TerminalGet(_terminal, TerminalData.KittyGraphics, &graphics) != GhosttyResult.Success ||
+                Native.KittyGraphicsGet(graphics, KittyGraphicsData.Generation, &storageGeneration) != GhosttyResult.Success ||
+                storageGeneration == 0)
+            {
+                return null; // nothing was ever stored on this screen
+            }
+
+            ulong next;
+            return Native.KittyAnimationTick(graphics, nowMs, &next) == GhosttyResult.Success ? next : null;
+        }
+    }
+
     public void ClearSelection()
     {
         lock (Lock)
