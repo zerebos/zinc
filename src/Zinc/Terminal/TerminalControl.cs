@@ -109,7 +109,8 @@ public sealed partial class TerminalControl : UserControl
 
     /// <summary>
     /// Its window was hidden or minimized (true), or shown again. While it's hidden, no frames are drawn, and the swap
-    /// chain's memory goes as a hidden tab's does. So the blink stops, and the first frame back starts it again.
+    /// chain's memory is freed, as a hidden tab's is. So the cursor's blink and Kitty animations stop, and the first
+    /// frame drawn after the window shows again starts them again.
     /// </summary>
     public void SetWindowHidden(bool hidden)
     {
@@ -118,6 +119,7 @@ public sealed partial class TerminalControl : UserControl
         {
             _blinkTimer.Stop();
             _blinkOn = true;
+            _animationTimer?.Stop();
         }
         else
         {
@@ -187,7 +189,7 @@ public sealed partial class TerminalControl : UserControl
 
     private HeaderTitle? _shownHeaderTitle;
 
-    // Held in a field, because a timer only a local references is collected and stops firing.
+    // Held in a field, because a timer that only a local variable references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _headerTimer;
 
     private static readonly string UserHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -842,7 +844,7 @@ public sealed partial class TerminalControl : UserControl
             : $"\r\n\e[0;2m[Process exited with code {ExitCodes.Format(code)}. Press any key to close.]\e[0m");
     }
 
-    // Held in a field, because a timer only a local references is collected and stops firing.
+    // Held in a field, because a timer that only a local variable references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _holdTimer;
 
     private Microsoft.UI.Dispatching.DispatcherQueueTimer CreateHoldTimer()
@@ -852,6 +854,37 @@ public sealed partial class TerminalControl : UserControl
         timer.IsRepeating = false;
         timer.OnTick(_ => Redraw());
         return timer;
+    }
+
+    // Held in a field, because a timer that only a local variable references is collected and stops firing.
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _animationTimer;
+
+    /// <summary>The shortest wait for an animation's next frame, about a frame at 120 Hz.</summary>
+    private const int MinAnimationFrameMs = 8;
+
+    /// <summary>
+    /// Asks for one frame when a Kitty animation's next frame is due (<paramref name="due"/>, on
+    /// <see cref="Environment.TickCount64"/>'s clock), or stops asking when nothing plays. A pane that can't be seen
+    /// draws no frames, so the timer fires once at most and isn't set again until the pane draws.
+    /// </summary>
+    private void ScheduleAnimationFrame(long? due)
+    {
+        if (due is not { } at)
+        {
+            _animationTimer?.Stop();
+            return;
+        }
+
+        if (_animationTimer == null)
+        {
+            _animationTimer = DispatcherQueue.CreateTimer();
+            _animationTimer.IsRepeating = false;
+            _animationTimer.OnTick(_ => Redraw());
+        }
+
+        _animationTimer.Stop();
+        _animationTimer.Interval = TimeSpan.FromMilliseconds(Math.Max(at - Environment.TickCount64, MinAnimationFrameMs));
+        _animationTimer.Start();
     }
 
     /// <summary>
@@ -890,6 +923,7 @@ public sealed partial class TerminalControl : UserControl
         _closing.Cancel(); // a clipboard question still open gets no for an answer, and UpdateGrid and UpdateScale stop
         StopShaders();
         _blinkTimer.Stop();
+        _animationTimer?.Stop();
         // The window's events would otherwise reach a closed pane (a monitor change would rerun SetFont on the disposed
         // renderer) and keep it alive for the window's life.
         if (_xamlRoot != null)
@@ -1016,6 +1050,7 @@ public sealed partial class TerminalControl : UserControl
                 System.Diagnostics.Stopwatch.GetElapsedTime(drawn).TotalMilliseconds);
         }
         UpdateBlinkTimer(blinking);
+        ScheduleAnimationFrame(_renderer.NextAnimationFrame);
         UpdateScrollBar(session);
         if (_inputLatency is { } trace)
         {

@@ -9,6 +9,7 @@ made from.
 
 ### New
 - Zinc has an ARM64 build for Windows on Arm PCs, with its own installer (`Zinc-win-arm64-Setup.exe`) and portable zip. It updates itself like the x64 build. The ARM64 build is new, though, and has had much less testing than x64.
+- Animated images sent with the Kitty graphics protocol now play, like a GIF shown with `kitten icat`. An animation in a hidden tab or a minimized window pauses until you can see it again.
 
 ### Changed
 - Zinc's defaults are now workspaces in a sidebar and panes as cards, where every pane has a header, the panes have a gap between them, and the focused one has a ring. Pane headers match the terminal's background by default. A `config.toml` that doesn't set these gets the new look. To go back, choose Compact in `Settings > Layout > Panes > Pane style`, "Along the top" in `Settings > Layout > Workspaces > Workspaces`, and Standard in `Settings > Appearance > Colors > Pane headers`.

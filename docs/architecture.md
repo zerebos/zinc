@@ -90,6 +90,7 @@ ConPTY mostly stays out of the way. These are the places where Zinc's code depen
 - ConPTY doesn't rewrite SGR or SGR-pixel mouse sequences, so they reach WSL byte for byte.
 - `TerminalSession.Resize` resizes libghostty at once, so text reflows live, but tells ConPTY only after 100 ms without another resize. A window drag makes dozens of sizes, and a prompt that redraws on every one (Powerlevel10k, for one) piles up copies of itself. The layout animations skip the wait (`atOnce`), so a program repaints while its pane moves. Tests that check the child's size wait for the settle.
 - Git Bash and MSYS2 programs write one console call per line, so `seq 1 200000` is about 200,000 tiny pipe writes and takes around 10 seconds, with Zinc mostly idle waiting. Programs that write in bulk are fast. Before optimizing the drawing, measure how long the reader waits compared to how long it works.
+- ConPTY passes Kitty graphics sequences through without understanding them. Placing an image moves the cursor past it, unless the program sends `C=1`. That move happens in Zinc's terminal but not in ConPTY's. A Windows console program that reads the cursor from the console, like PSReadLine, then draws at ConPTY's position, where the image started, until the screen clears. WSL programs aren't affected, because they track the cursor themselves.
 
 ## The UI thread and the dispatcher
 
@@ -133,6 +134,8 @@ libghostty works out which Kitty images to draw during each render state update,
 - Images go in three layers: below the cell backgrounds, between the backgrounds and the text, and above the text. A Kitty image's z-index picks its layer, and orders it within the layer.
 - While a program holds the screen (synchronized output), the render state isn't updated, so the images drawn are the ones from when the hold began. No pixels are copied during a hold either, because the program may already have replaced an image. An image that has no bitmap yet shows once the hold ends.
 - A placeholder cell's character, U+10EEEE, isn't drawn as text, because the image list already has an entry for the image that the cell shows.
+- libghostty has no timer for animations. Before each frame's update, the renderer calls `TerminalSession.TickAnimations`, which moves every playing animation to its due frame and says when the next one is due. The pane then sets a one-shot timer for that time, at least 8 ms away, which asks for one more frame. A new animation frame is a new image generation, so the bitmap cache picks it up, and a frame of the same size is written into the existing bitmap.
+- The animation timer keeps to the rule above about panes that can't be seen. Hiding a window stops it, and in a hidden tab it fires once, asks for a frame that never comes, and isn't set again until the pane draws. Animations aren't ticked while a program holds the screen, so they wait for the hold to end.
 
 ## Canvas lifetime
 

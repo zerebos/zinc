@@ -47,7 +47,7 @@ The default keys follow Windows Terminal's, so `Ctrl+Shift+T` opens a tab and `A
 
 ## Known gaps
 
-- Sixel isn't supported, because libghostty has no sixel API. Kitty graphics animations show only their current frame.
+- Sixel isn't supported, because libghostty has no sixel API.
 - Links and URLs continue across rows the terminal wrapped, but a URL an app broke with its own line break (to fit a fixed width, for example) is cut there.
 - Default terminal mode needs Windows Terminal installed (its console host does the other half).
 - Shell integration doesn't reach a bash in WSL whose startup files replace `PROMPT_COMMAND` (a bash started directly, like Git Bash, is fine), elvish inside WSL, YSH, or xonsh. Without Clink, cmd reports no exit codes.

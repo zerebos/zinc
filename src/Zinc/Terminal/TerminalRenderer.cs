@@ -359,9 +359,16 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     /// <summary>The link under the pointer while Ctrl is held, drawn underlined.</summary>
     public LinkMatch? HoverLink { get; set; }
 
+    /// <summary>
+    /// When the next frame of a playing Kitty animation is due, on <see cref="Environment.TickCount64"/>'s clock, or null
+    /// when nothing is playing. Each <see cref="Draw"/> sets it.
+    /// </summary>
+    public long? NextAnimationFrame { get; private set; }
+
     /// <summary>Draws one frame. Returns whether the cursor is visible and blinking.</summary>
     public bool Draw(CanvasDrawingSession ds, TerminalSession session, int rows, CursorPresentation presentation)
     {
+        NextAnimationFrame = null;
         if (!HasResources)
         {
             return false;
@@ -386,6 +393,14 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             lock (_stateLock)
             {
                 var held = session.RenderHeld;
+
+                // Animations move to their due frame before the update, so the update sees it. While the screen is held,
+                // animations aren't ticked, so they stay on their current frame until the first draw after the hold ends.
+                if (!held && session.TickAnimations((ulong)Environment.TickCount64) is { } next)
+                {
+                    NextAnimationFrame = (long)next;
+                }
+
                 if (!held && !session.UpdateRenderState(_renderState))
                 {
                     return false;
@@ -1319,6 +1334,14 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         {
             if (_bitmaps.Remove(id, out var stale))
             {
+                // An animation's next frame, or an image sent again at the same size, reuses the bitmap.
+                if (stale.Bitmap.SizeInPixels is { } size && size.Width == pixels.Width && size.Height == pixels.Height)
+                {
+                    stale.Bitmap.SetPixelBytes(pixels.Rgba);
+                    _bitmaps[id] = (pixels.Generation, stale.Bitmap);
+                    continue;
+                }
+
                 stale.Bitmap.Dispose();
             }
 
