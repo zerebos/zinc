@@ -78,6 +78,7 @@ Zinc builds a libghostty-vt release. Its C ABI is stable within a major version,
 - `ROW_CELLS_DATA_FG_COLOR` and `BG_COLOR` return a resolved RGB value, or `NO_VALUE` for "use the default".
 - A grid ref is only valid until the terminal's next change. So resolving a ref, running a selection gesture, and setting `OPT_SELECTION` all happen under one hold of the lock.
 - `ghostty_paste_encode` changes its input buffer in place.
+- The mouse encoder's `TRACK_LAST_CELL` option forgets the last cell whenever the encoder is synced from the terminal or given a size, which `EncodeMouse` does before every event. So `EncodeMouse` drops repeated motion reports itself, by comparing each one with the last one sent.
 - `ghostty_formatter_format_alloc` can come back with a null pointer and a length of 0, so check before decoding. Copying a selection reads it with `TERMINAL_DATA_SELECTION` and formats it with `FORMATTER_OPT_SELECTION`, under one hold of the lock. HTML output needs the palette extra (`FORMATTER_OPT_EXTRAS`), which writes the `<style>` block that the HTML's colors refer to. `formatter.h` says HTML ignores extras, but it uses this one.
 - Grapheme clustering (mode 2027) is off by default. Zinc turns it on only with the bundled ConPTY, which it creates with `PSEUDOCONSOLE_GLYPH_WIDTH_GRAPHEMES`, so both sides agree on how wide a character is.
 

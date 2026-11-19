@@ -23,6 +23,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private readonly nint _keyEvent;
     private readonly nint _mouseEncoder;
     private readonly nint _mouseEvent;
+    private byte[]? _lastMotionReport; // the last motion report sent, or null after any other mouse event
     private GCHandle _self;
     private ConPty? _pty;
     private GhosttySizeReportSize _size;
@@ -702,41 +703,47 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    /// <summary>The title's bytes as last taken (<see cref="TakeTitle"/>).</summary>
+    /// <summary>The title's bytes and text as last taken (<see cref="TakeTitle"/>).</summary>
     private byte[] _titleBytes = [];
+    private string _title = "";
 
     /// <summary>1 while a <see cref="TitleChanged"/> notice waits for <see cref="TakeTitle"/>.</summary>
     private int _titleNoticePending;
 
     /// <summary>
-    /// Takes the title after <see cref="TitleChanged"/>, or null if it's back to what it was last time. Programs can
-    /// retitle themselves thousands of times a second (cmd running a loop under ConPTY puts the command line with its
-    /// counter in the title), and reading each title on the reader thread would cost a string and a UI update apiece.
-    /// So there's one notice until the view takes the title, and the title is read at most once per UI tick. Safe on
-    /// any thread.
+    /// Takes the title after <see cref="TitleChanged"/>, or null once the session is closed. Programs can retitle
+    /// themselves thousands of times a second (cmd running a loop under ConPTY puts the command line with its counter
+    /// in the title), and reading each title on the reader thread would cost a string and a UI update apiece. So
+    /// there's one notice until the view takes the title, and the title is read at most once per UI tick. Safe on any
+    /// thread.
     /// </summary>
+    /// <remarks>
+    /// A title that's the same as last time still comes back, because a program that sets it again makes it that
+    /// program's own. So when a second command sets the title the first one set, the tab shows that title instead of
+    /// the command's text.
+    /// </remarks>
     public string? TakeTitle()
     {
         lock (Lock)
         {
             Volatile.Write(ref _titleNoticePending, 0); // a change after this read sends a new notice
-            return _disposed ? null : ReadTitleIfChanged();
+            return _disposed ? null : ReadTitle();
         }
     }
 
-    private string? ReadTitleIfChanged()
+    private string ReadTitle()
     {
         GhosttyString s;
         var bytes = Native.TerminalGet(_terminal, TerminalData.Title, &s) == GhosttyResult.Success && s.Len > 0
             ? new ReadOnlySpan<byte>((byte*)s.Ptr, (int)s.Len)
             : [];
-        if (bytes.SequenceEqual(_titleBytes))
+        if (!bytes.SequenceEqual(_titleBytes))
         {
-            return null;
+            _titleBytes = bytes.ToArray();
+            _title = Encoding.UTF8.GetString(bytes);
         }
 
-        _titleBytes = bytes.ToArray();
-        return Encoding.UTF8.GetString(bytes);
+        return _title;
     }
 
     private string ReadString(TerminalData what)
@@ -1005,13 +1012,14 @@ public sealed unsafe partial class TerminalSession : IDisposable
         return result == GhosttyResult.Success ? output[..(int)written].ToArray() : [];
     }
 
-    /// <summary>Encodes a mouse event for the application's active mouse reporting mode.</summary>
+    /// <summary>
+    /// Encodes a mouse event for the application's active mouse reporting mode. Motion that would repeat the last
+    /// motion report, because the pointer stayed in the same cell, encodes nothing.
+    /// </summary>
     public byte[] EncodeMouse(MouseAction action, MouseButton? button, GhosttyMods mods, float xPx, float yPx,
         GhosttyMouseEncoderSize size, bool anyButtonPressed)
     {
         Span<byte> output = stackalloc byte[64];
-        nuint written;
-        GhosttyResult result;
         lock (Lock)
         {
             if (_disposed)
@@ -1019,14 +1027,15 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return [];
             }
 
+            // Syncing from the terminal and setting the size both make libghostty forget the last cell, so its
+            // `TrackLastCell` option can't work here. The sync can't be skipped when the mouse mode looks unchanged,
+            // because the terminal's mode depends on the order the program set and reset the mouse modes in.
+            // So repeated motion reports are dropped below instead.
             Native.MouseEncoderSetFromTerminal(_mouseEncoder, _terminal);
             size.Size = (nuint)sizeof(GhosttyMouseEncoderSize);
             Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.Size, &size);
             var pressed = (byte)(anyButtonPressed ? 1 : 0);
             Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.AnyButtonPressed, &pressed);
-            // Only report motion when the pointer crosses into a new cell.
-            byte trackLastCell = 1;
-            Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.TrackLastCell, &trackLastCell);
 
             Native.MouseEventSetAction(_mouseEvent, action);
             if (button is { } b)
@@ -1041,13 +1050,35 @@ public sealed unsafe partial class TerminalSession : IDisposable
             Native.MouseEventSetMods(_mouseEvent, mods);
             Native.MouseEventSetPosition(_mouseEvent, new GhosttyMousePosition { X = xPx, Y = yPx });
 
+            nuint written;
+            GhosttyResult result;
             fixed (byte* pOut = output)
             {
                 result = Native.MouseEncoderEncode(_mouseEncoder, _mouseEvent, pOut, (nuint)output.Length, out written);
             }
-        }
 
-        return result == GhosttyResult.Success ? output[..(int)written].ToArray() : [];
+            if (result != GhosttyResult.Success)
+            {
+                return [];
+            }
+
+            var report = output[..(int)written];
+            if (action != MouseAction.Motion)
+            {
+                _lastMotionReport = null;
+                return report.ToArray();
+            }
+
+            // A motion report names the cell, the buttons, and the modifiers, so the same bytes again mean the pointer
+            // moved within its cell. SGR-pixels reports carry the pixel, so every move still gets one.
+            if (report.SequenceEqual(_lastMotionReport))
+            {
+                return [];
+            }
+
+            _lastMotionReport = report.ToArray();
+            return _lastMotionReport;
+        }
     }
 
     /// <summary>Pastes text, honoring bracketed paste mode and stripping unsafe control bytes.</summary>
