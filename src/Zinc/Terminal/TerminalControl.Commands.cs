@@ -172,10 +172,13 @@ public sealed partial class TerminalControl
         }
     }
 
-    /// <summary>Scrollbar ticks at each prompt (red for failures) and bars beside failed commands.</summary>
+    /// <summary>
+    /// Scrollbar ticks at each prompt (red for failures) and bars beside failed commands. None while a full-screen
+    /// program's alternate screen shows, because the commands' rows belong to the normal screen.
+    /// </summary>
     private void DrawCommandMarks(CanvasDrawingSession ds, TerminalSession session)
     {
-        if (_config.CommandMarks == CommandMarks.None)
+        if (_config.CommandMarks == CommandMarks.None || session.OnAlternateScreen())
         {
             return;
         }
