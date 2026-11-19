@@ -70,11 +70,18 @@ internal sealed partial class StartPage : UserControl
     private const double NarrowPage = 700;
 
     /// <summary>
-    /// The page's width (in DIPs) below which the "Show this page" box moves under the footer's other controls. The
-    /// footer needs about 840 on one row at 100% text size (the box, the controls, and the page's padding).
+    /// The page's width (in DIPs) below which the "Show this page" box hides, because it no longer fits beside the
+    /// footer's other controls. The footer needs about 840 on one row at 100% text size (the box, the controls, and
+    /// the page's padding). Settings has the same choice, as "Start page for new workspaces".
     /// </summary>
     private const double NarrowFooter = 850;
 
+    /// <summary>The page's height (in DIPs) below which the heading gets smaller and the intro under it hides, to leave room for the lists.</summary>
+    private const double CompactPage = 560;
+
+    private readonly Grid _root = new();
+    private readonly TextBlock _heading = new() { Text = "New workspace", FontWeight = FontWeights.SemiBold };
+    private readonly TextBlock _intro = new() { Opacity = 0.7, TextWrapping = TextWrapping.Wrap };
     private readonly Grid _columns = new() { ColumnSpacing = 40 };
     private readonly List<(ListViewItem Item, TextBlock Name)> _layoutNames = [];
     private readonly Grid _footer = new() { ColumnSpacing = 12 };
@@ -83,6 +90,7 @@ internal sealed partial class StartPage : UserControl
     private readonly WrapPanel _footerControls = new() { HorizontalSpacing = 12, VerticalSpacing = 8, AlignRight = true, HorizontalAlignment = HorizontalAlignment.Right };
     private bool _narrow;
     private bool _narrowFooter;
+    private bool? _compact;
 
     public StartPage(IReadOnlyList<Profile> profiles, Profile defaultProfile, RecentFolders recent, Func<string?, string?> browse,
         IReadOnlyList<ClosedWorkspace> closed)
@@ -131,16 +139,13 @@ internal sealed partial class StartPage : UserControl
         };
         _layoutList.DoubleTapped += (_, _) => Start();
 
-        // The "Show this page" box on the left and the controls on the right, or on a narrow page the controls with the
-        // box under them.
+        // The "Show this page" box on the left and the controls on the right, or on a narrow page the controls alone.
         var footer = _footer;
         footer.Padding = new Thickness(0, 12, 0, 0);
         footer.BorderThickness = new Thickness(0, 1, 0, 0);
         footer.BorderBrush = (Brush)Application.Current.Resources["DividerStrokeColorDefaultBrush"];
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         footer.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        footer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         // The label and its box are one piece, so wrapping never puts them on different rows.
         var named = new StackPanel
         {
@@ -158,26 +163,15 @@ internal sealed partial class StartPage : UserControl
         footer.Children.Add(_footerControls);
         SetUpLookButtons();
 
-        var root = new Grid { Padding = new Thickness(48, 28, 48, 16), RowSpacing = 14 };
+        var root = _root;
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        root.Children.Add(new StackPanel
-        {
-            Spacing = 2,
-            Children =
-            {
-                new TextBlock { Text = "New workspace", FontSize = 26, FontWeight = FontWeights.SemiBold },
-                new TextBlock
-                {
-                    Text = $"Pick a profile, folder, and layout, then press Enter. Enter alone opens {defaultProfile.Name} in its usual folder.",
-                    Opacity = 0.7,
-                    TextWrapping = TextWrapping.Wrap,
-                },
-            },
-        });
+        _intro.Text = $"Pick a profile, folder, and layout, then press Enter. Enter alone opens {defaultProfile.Name} in its usual folder.";
+        root.Children.Add(new StackPanel { Spacing = 2, Children = { _heading, _intro } });
+        SetCompact(false);
         // At most 520 wide, and narrower when the page is.
         var filterRow = new Grid();
         filterRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MaxWidth = 520 });
@@ -199,6 +193,7 @@ internal sealed partial class StartPage : UserControl
         {
             SetNarrow(e.NewSize.Width < NarrowPage);
             SetNarrowFooter(e.NewSize.Width < NarrowFooter);
+            SetCompact(e.NewSize.Height < CompactPage);
         };
 
         Grid.SetRow(footer, 4);
@@ -323,8 +318,8 @@ internal sealed partial class StartPage : UserControl
     }
 
     /// <summary>
-    /// Moves the "Show this page" box under the footer's other controls, because beside them it would wrap. The row
-    /// spacing is there only then, since a grid adds it even when the second row is empty.
+    /// Hides the "Show this page" box, because beside the other controls it would wrap, and under them it would take a
+    /// row from the lists. The controls then move to the star column, where they can wrap on a very narrow page.
     /// </summary>
     private void SetNarrowFooter(bool narrow)
     {
@@ -334,9 +329,23 @@ internal sealed partial class StartPage : UserControl
         }
 
         _narrowFooter = narrow;
-        _footer.RowSpacing = narrow ? 8 : 0;
-        Grid.SetRow(_showPage, narrow ? 1 : 0);
+        _showPage.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
         Grid.SetColumn(_footerControls, narrow ? 0 : 1);
+    }
+
+    /// <summary>Gives a short page a smaller heading with no intro under it, and less space around everything.</summary>
+    private void SetCompact(bool compact)
+    {
+        if (compact == _compact)
+        {
+            return;
+        }
+
+        _compact = compact;
+        _heading.FontSize = compact ? 20 : 26;
+        _intro.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+        _root.Padding = compact ? new Thickness(48, 16, 48, 12) : new Thickness(48, 28, 48, 16);
+        _root.RowSpacing = compact ? 10 : 14;
     }
 
     private void OnKey(object sender, KeyRoutedEventArgs e)

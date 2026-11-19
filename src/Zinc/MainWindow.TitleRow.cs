@@ -130,6 +130,21 @@ public sealed partial class MainWindow
         Grid.SetColumn(center, 1);
         row.Children.Add(center);
 
+        // The command center keeps to the middle column, so in a narrow window it shrinks instead of running under the
+        // window buttons. An empty border fills the column to report its width, which changes with the window and with
+        // the sidebar's mode. Below 280 the palette's shortcut hides, so the tab's title or folder keeps the room that's left.
+        var slot = new Border { Margin = new Thickness(8, 0, 8, 0) };
+        Grid.SetColumn(slot, 1);
+        row.Children.Insert(0, slot);
+        var shortcut = _commandShortcut;
+        slot.SizeChanged += (_, e) =>
+        {
+            var room = e.NewSize.Width;
+            center.MinWidth = Math.Min(280, room);
+            center.MaxWidth = Math.Min(520, room);
+            shortcut.Visibility = room < 280 ? Visibility.Collapsed : Visibility.Visible;
+        };
+
         _refreshClickThrough = KeepClickThrough(center);
         UpdateCommandCenter();
         return row;
