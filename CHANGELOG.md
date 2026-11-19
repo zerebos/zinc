@@ -21,6 +21,7 @@ made from.
 
 ### Fixed
 - Zinc no longer crashes when the scrollback drops its oldest lines while the cursor is on them, or when narrowing a pane cuts a wide character in two, like a CJK character or an emoji.
+- A Kitty graphics image with a negative z-index now shows under the text and over colored cell backgrounds, as the protocol says. Only a z-index below -1,073,741,824 puts an image under the backgrounds.
 - Selecting wide characters highlights exactly what gets copied, and a wide character that wrapped onto the next line is copied too.
 - Widening a pane no longer drops accents and other combining marks from lines that rewrap.
 - Pasting several lines no longer adds a blank line or an extra Enter after each one.

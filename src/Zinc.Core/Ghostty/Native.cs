@@ -212,7 +212,7 @@ public unsafe struct GhosttyRenderStateColors
 /// <summary>
 /// A cell's style as the program set it. Each color is a tag (0 for none, 1 for a palette color, 2 for RGB) and three
 /// bytes, and a palette color's index is the first byte. Renderers get resolved colors from the row-cells API, but
-/// Kitty placeholders need the colors as the program set them.
+/// bold-is-bright needs to know whether the program picked one of the first eight palette colors.
 /// </summary>
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GhosttyStyle
@@ -507,24 +507,7 @@ public struct GhosttySysImage
 
 public enum KittyGraphicsData : int
 {
-    PlacementIterator = 1,
     Generation = 2,
-}
-
-public enum KittyGraphicsPlacementData : int
-{
-    ImageId = 1,
-    PlacementId = 2,
-    IsVirtual = 3,
-    XOffset = 4,
-    YOffset = 5,
-    SourceX = 6,
-    SourceY = 7,
-    SourceWidth = 8,
-    SourceHeight = 9,
-    Columns = 10,
-    Rows = 11,
-    Z = 12,
 }
 
 public enum KittyImageFormat : int
@@ -552,25 +535,6 @@ public enum KittyGraphicsImageData : int
     Pixels = 7,
 
     Generation = 9,
-}
-
-[StructLayout(LayoutKind.Explicit, Size = 56)]
-public struct GhosttyKittyGraphicsPlacementRenderInfo
-{
-    [FieldOffset(0)] public nuint Size;
-    [FieldOffset(8)] public uint PixelWidth;
-    [FieldOffset(12)] public uint PixelHeight;
-    [FieldOffset(16)] public uint GridCols;
-    [FieldOffset(20)] public uint GridRows;
-    [FieldOffset(24)] public int ViewportCol;
-    [FieldOffset(28)] public int ViewportRow;
-    [FieldOffset(32)] public byte ViewportVisible;
-    [FieldOffset(36)] public uint SourceX;
-    [FieldOffset(40)] public uint SourceY;
-    [FieldOffset(44)] public uint SourceWidth;
-    [FieldOffset(48)] public uint SourceHeight;
-
-    public static GhosttyKittyGraphicsPlacementRenderInfo Init() => new() { Size = 56 };
 }
 
 public enum TerminalData : int
@@ -905,22 +869,6 @@ public static unsafe partial class Native
     /// </summary>
     [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_animation_tick")]
     public static partial GhosttyResult KittyAnimationTick(nint graphics, ulong nowMs, ulong* nextMs);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_iterator_new")]
-    public static partial GhosttyResult KittyPlacementIteratorNew(nint allocator, out nint iterator);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_iterator_free")]
-    public static partial void KittyPlacementIteratorFree(nint iterator);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_next")]
-    public static partial byte KittyPlacementNext(nint iterator);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_get")]
-    public static partial GhosttyResult KittyPlacementGet(nint iterator, KittyGraphicsPlacementData data, void* value);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_render_info")]
-    public static partial GhosttyResult KittyPlacementRenderInfo(nint iterator, nint image, nint terminal,
-        GhosttyKittyGraphicsPlacementRenderInfo* info);
 
     // ---- key encoding ----
     [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_new")]

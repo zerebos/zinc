@@ -55,9 +55,6 @@ public class ClosedSessionTests
         session.Search(new Regex("output"), matches);
         Assert.Empty(matches);
 
-        var images = new List<ImagePlacement>();
-        session.CollectImages(images, (_, _) => true);
-        Assert.Empty(images);
         Assert.Null(session.CopyImagePixels(1));
         Assert.Null(session.TickAnimations(0));
     }

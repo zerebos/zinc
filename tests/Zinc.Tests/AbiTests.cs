@@ -51,7 +51,6 @@ public unsafe partial class AbiTests
         [typeof(ClipboardReadResult)] = "GhosttyClipboardReadResult",
         [typeof(SysOption)] = "GhosttySysOption",
         [typeof(KittyGraphicsData)] = "GhosttyKittyGraphicsData",
-        [typeof(KittyGraphicsPlacementData)] = "GhosttyKittyGraphicsPlacementData",
         [typeof(KittyImageFormat)] = "GhosttyKittyImageFormat",
         [typeof(KittyGraphicsImageData)] = "GhosttyKittyGraphicsImageData",
         [typeof(FormatterFormat)] = "GhosttyFormatterFormat",

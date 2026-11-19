@@ -124,6 +124,16 @@ Each pane draws into a `CanvasSwapChain` through `SwapChainSurface`, which prese
 - A character the font lacks is drawn from a color font only when it's an emoji, meaning a pictograph in a wide cell, or a cluster with VS16 (U+FE0F), a zero-width joiner, or a keycap. Otherwise a text-style symbol like ✔ (U+2714) would turn into an emoji, and CJK would come out in an emoji font.
 - Nerd Font icons from an "NF" font overflow their cell on purpose, as they do in Windows Terminal, and the atlas keeps the overhang. The "NFM" variants don't overflow.
 
+### Kitty images
+
+libghostty works out which Kitty images to draw during each render state update, including images that a program shows with Unicode placeholder cells, and `ImageList` reads that list. Each entry is one rectangle of one image, with its place in the viewport, its size, and its layer.
+
+- The list is read again only when the render state's placements generation changes, which it doesn't on most frames.
+- The render state doesn't copy pixels, so the renderer copies an image's pixels (`TerminalSession.CopyImagePixels`) under the terminal's lock, right after the update. It does that only for an image whose bitmap is missing or out of date. Each image has a generation number that changes when its pixels do, and a bitmap remembers the generation it was made from.
+- Images go in three layers: below the cell backgrounds, between the backgrounds and the text, and above the text. A Kitty image's z-index picks its layer, and orders it within the layer.
+- While a program holds the screen (synchronized output), the render state isn't updated, so the images drawn are the ones from when the hold began. No pixels are copied during a hold either, because the program may already have replaced an image. An image that has no bitmap yet shows once the hold ends.
+- A placeholder cell's character, U+10EEEE, isn't drawn as text, because the image list already has an entry for the image that the cell shows.
+
 ## Canvas lifetime
 
 This applies to the fallback drawing path (`low-latency-drawing = false`), where each pane draws into a Win2D `CanvasControl`. The default swap chain path has no `CanvasControl`.

@@ -116,7 +116,7 @@ public class KittyGraphicsTests
         Assert.Empty(Images(session)); // a virtual placement shows only where its cells are
 
         const string cell = "\U0010EEEE";
-        const string row0 = "̅", row1 = "̍", col0 = "̅";
+        const string row0 = "\u0305", row1 = "\u030D", col0 = "\u0305";
         session.WriteToScreen("\e[38;2;1;86;24m\e[58;5;4m");
         session.WriteToScreen($"{cell}{row0}{col0}{cell}{cell}\r\n{cell}{row1}{col0}{cell}{cell}\e[m");
 
@@ -222,6 +222,40 @@ public class KittyGraphicsTests
         }
 
         Assert.Equal([255, 0, 255, 0], reds);
+    }
+
+    [Fact]
+    public void AFileQueryForAPathZincCantOpenFails()
+    {
+        // presenterm in WSL asks whether the terminal can load an image from a file, with a path in WSL's own /tmp, and
+        // it falls back to sending the data only when the terminal says no.
+        using var session = NewSession();
+        var replies = new List<byte[]>();
+        session.PtyReplyObserver = replies.Add;
+        session.WriteToScreen(Apc("f=32,a=q,t=f,i=513988419,s=1,v=1", Encoding.UTF8.GetBytes("/tmp/.tmp4Pt8bU")));
+        var reply = string.Concat(replies.Select(Encoding.UTF8.GetString));
+        Assert.StartsWith("\e_Gi=513988419;", reply);
+        Assert.DoesNotContain(";OK", reply);
+    }
+
+    [Fact]
+    public async Task ImagesSentAsAFilePathAreLoaded()
+    {
+        // fastfetch's kitty-direct and presenterm's kitty-local send a path to a PNG (t=f) instead of its data.
+        using var session = NewSession();
+        var path = Path.Combine(Path.GetTempPath(), $"zinc-kitty-{Guid.NewGuid():N}.png");
+        File.WriteAllBytes(path, await EncodePng(2, 1, [10, 20, 30, 255, 40, 50, 60, 255]));
+        try
+        {
+            session.WriteToScreen(Apc("a=T,f=100,t=f,i=11,q=2", Encoding.UTF8.GetBytes(path)));
+            var entry = Assert.Single(Images(session));
+            Assert.Equal(11u, entry.ImageId);
+            Assert.Equal([10, 20, 30, 255, 40, 50, 60, 255], session.CopyImagePixels(11)!.Rgba);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]
