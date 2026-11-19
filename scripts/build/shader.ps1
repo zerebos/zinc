@@ -8,7 +8,7 @@
   from the source Ghostty pins, because Ghostty's package leaves the HLSL backend out. Both are C++, linked with Zig's
   own static libc++, so the DLL imports only Windows' Universal CRT and KERNEL32.
 
-  Needs Zig 0.16.x on PATH.
+  Needs Zig 0.17.0 on PATH.
 
 .EXAMPLE
   pwsh scripts/build/shader.ps1

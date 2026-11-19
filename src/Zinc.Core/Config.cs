@@ -444,7 +444,7 @@ public sealed record Config
     public bool FocusFollowsMouse { get; init; }
 
     /// <summary>The cursor until a program picks its own. Config: <c>[terminal] cursor-style = block | bar | underline | block-hollow</c>.</summary>
-    public Zinc.Ghostty.TerminalCursorStyle CursorStyle { get; init; } = Zinc.Ghostty.TerminalCursorStyle.Block;
+    public Zinc.Ghostty.CursorStyle CursorStyle { get; init; } = Zinc.Ghostty.CursorStyle.Block;
 
     /// <summary>Whether that cursor blinks. Config: <c>[terminal] cursor-blink = true</c>.</summary>
     public bool CursorBlink { get; init; }
@@ -453,7 +453,7 @@ public sealed record Config
     /// The cursor while a shell waits at its prompt (needs shell integration's marks). Null means the
     /// same as elsewhere. Config: <c>[terminal] cursor-style-at-prompt = same | block | bar | underline | block-hollow</c>.
     /// </summary>
-    public Zinc.Ghostty.TerminalCursorStyle? CursorStyleAtPrompt { get; init; }
+    public Zinc.Ghostty.CursorStyle? CursorStyleAtPrompt { get; init; }
 
     /// <summary>Lines kept above the screen. Config: <c>[terminal] scrollback-lines = 10000</c>.</summary>
     public int ScrollbackLines { get; init; } = DefaultScrollbackLines;

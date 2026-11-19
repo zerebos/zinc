@@ -28,5 +28,5 @@ public sealed class ShaderFrame
 
     public Rect Cursor { get; set; }
     public Color CursorDrawnColor { get; set; }
-    public CursorVisualStyle CursorStyle { get; set; }
+    public CursorStyle CursorStyle { get; set; }
 }

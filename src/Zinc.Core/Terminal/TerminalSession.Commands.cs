@@ -84,8 +84,12 @@ public sealed unsafe partial class TerminalSession
     /// <summary>
     /// Rows were erased, so finished commands whose prompt went with them are gone, failure bars and all. This is checked
     /// now, before the next prompt (often on the same row, because <c>clear</c> puts it at the top) flags that row again.
-    /// A wiped scrollback forgets every finished command, because their rows' places aren't reliable after it. Commands
-    /// still running stay (the <c>clear</c> itself, a nested shell's host), and their D and the next prompt close them.
+    /// A 2J at a prompt moves the screen into the scrollback instead of erasing it, so the prompt rows of the commands on
+    /// that screen survive, and those commands stay. A wiped scrollback forgets every finished command, because the
+    /// positions of their rows aren't reliable after the wipe. A command that's still running, such as a nested shell's
+    /// host, stays for as long as its prompt row does, and its D mark or the next prompt closes it. A running command
+    /// whose row went with the scrollback, like a <c>clear</c> that moved itself there first, is dropped at the next
+    /// <see cref="Prune"/>.
     /// </summary>
     private void NoteErased(Erased erased)
     {
@@ -474,7 +478,7 @@ public sealed unsafe partial class TerminalSession
     /// </summary>
     private bool IsPromptRow(long y)
     {
-        var gridRef = GhosttyGridRef.Init();
+        var gridRef = default(GhosttyGridRef);
         var point = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)y };
         int semantic;
         return Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success &&
@@ -758,9 +762,7 @@ public sealed unsafe partial class TerminalSession
                 return false;
             }
 
-            var selection = GhosttySelection.Init();
-            selection.Start = GhosttyGridRef.Init();
-            selection.End = GhosttyGridRef.Init();
+            var selection = default(GhosttySelection);
             var start = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)first };
             var stop = new GhosttyPoint { Tag = PointTag.Screen, X = (ushort)(cols - 1), Y = (uint)last };
             if (Native.TerminalGridRef(_terminal, start, &selection.Start) != GhosttyResult.Success ||

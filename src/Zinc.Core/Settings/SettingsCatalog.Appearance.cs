@@ -273,8 +273,8 @@ public static partial class SettingsCatalog
             [Accepts.AnyNumber, Accepts.Text()]);
 
     /// <summary>A cursor shape's name, with "block_hollow" taken as "block-hollow" (Ghostty's spelling).</summary>
-    private static Ghostty.TerminalCursorStyle? CursorStyle(object value) =>
-        value is string s && Config.TryMode<Ghostty.TerminalCursorStyle>(s.Replace('_', '-'), out var style) ? style : null;
+    private static Ghostty.CursorStyle? CursorStyle(object value) =>
+        value is string s && Config.TryMode<Ghostty.CursorStyle>(s.Replace('_', '-'), out var style) ? style : null;
 
     /// <summary>
     /// Padding in points: one number for both sides, or two (<c>[left, right]</c>), each from 0 to the setting's

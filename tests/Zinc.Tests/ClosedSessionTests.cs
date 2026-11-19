@@ -81,7 +81,7 @@ public class ClosedSessionTests
         session.ClearSelection();
         session.EndRenderHold();
         session.SetScrollback(100);
-        session.SetCursorDefaults(TerminalCursorStyle.Bar, blink: true);
+        session.SetCursorDefaults(CursorStyle.Bar, blink: true);
         session.SetColorScheme(dark: false);
         session.SetTheme(TerminalTheme.Default);
         session.WriteToScreen("late output");

@@ -89,7 +89,7 @@ public sealed unsafe class SelectionGesture : IDisposable
 
             // Grid refs are untracked and only valid until the next terminal
             // mutation, so resolve, run the gesture and apply it under one lock.
-            var gridRef = GhosttyGridRef.Init();
+            var gridRef = default(GhosttyGridRef);
             var point = new GhosttyPoint { Tag = PointTag.Viewport, X = col, Y = row };
             if (Native.TerminalGridRef(terminal, point, &gridRef) != GhosttyResult.Success)
             {
@@ -110,7 +110,7 @@ public sealed unsafe class SelectionGesture : IDisposable
                 Native.SelectionGestureEventSet(ev, SelectionGestureEventOption.RepeatDistance, &repeatDistancePx);
             }
 
-            var selection = GhosttySelection.Init();
+            var selection = default(GhosttySelection);
             var result = Native.SelectionGestureEvent(_gesture, terminal, ev, &selection);
             if (result == GhosttyResult.Success)
             {

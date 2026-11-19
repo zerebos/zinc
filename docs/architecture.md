@@ -22,7 +22,7 @@ Everything else, from the windows and tabs to the settings, is Zinc's own WinUI 
 
 `src/Zinc.Core` holds everything that doesn't need a window, which is also what the tests load.
 
-- `Ghostty/` has the bindings (`Native.cs`, plus `GhosttyKey.g.cs`, which `scripts/build/gen-keys.ps1` generates) and the sprite bindings (`Sprites.cs`).
+- `Ghostty/` has the bindings (`Native.cs`, plus `GhosttyKey.g.cs`, which `scripts/build/gen-keys.ps1` generates), the check that the loaded library is a release the bindings fit (`LibraryVersion.cs`), and the sprite bindings (`Sprites.cs`).
 - `Pty/` has `ConPty.cs` (the pseudoconsole, the child process, and the reader thread), the child's environment, the default terminal, the user's `PATH`, and install cleanup.
 - `Terminal/TerminalSession*.cs` owns one libghostty terminal, its encoders, and its `ConPty`. Around that it handles libghostty's callbacks, color schemes, find, links, prompt clicks, notifications, and the commands it learns about from shell marks.
 - `Terminal/` also has shell integration (`ShellIntegration.cs` and `ShellMarks.cs`, with the scripts in `assets/shell-integration`), where new terminals start (`ShellDirectory`, `WorkspaceFolder`, `NewTerminalStart`), Kitty images, links, file drops, and the benchmark workloads.
@@ -66,17 +66,19 @@ The reader thread parses on the same thread that reads, so ConPTY and libghostty
 
 ## libghostty-vt
 
-The C API is explicitly unstable, so most of these rules are about keeping the bindings honest.
+Zinc builds a libghostty-vt release. Its C ABI is stable within a major version, because a 1.x release only adds functions, enum values, and fields at the end of sized structs. A binding that doesn't match C still corrupts memory without a word, so most of these rules are about keeping the bindings honest.
 
 - The bindings are checked against the library. Structs are laid out field by field to match C, most with explicit offsets, and C `bool` is mapped to `byte` so the structs stay blittable. `AbiTests` compares the structs and enums with libghostty's own manifest (`ghostty_type_json()`). A struct field that flattens a C union needs `[AbiField("value.coordinate.x")]` so the test can find it. The manifest describes types only, though, so the argument types and order of each imported function aren't checked. The test only confirms each export exists.
-- A struct made with `GHOSTTY_INIT_SIZED` in C needs `.Size = sizeof(struct)` set before any get call.
+- What a value means is in the header's comments, not its types, so read them too. A setter given NULL restores the option's default, which for the scrollback byte limit is 10,000 bytes, so Zinc passes `SIZE_MAX` for no limit. A get call's output type can change while the key stays the same, as `GRAPHEMES_BUF` did when it started taking a `GhosttyCodepointBuffer`.
+- `LibraryVersion.EnsureCompatible` runs before the first terminal is made, and refuses a `ghostty-vt.dll` from another major version or an older minor one.
+- A sized struct (one with a `size` field, made with `GHOSTTY_INIT_SIZED` in C) needs `.Size = sizeof(struct)` set before any get call. Frozen structs, such as `GhosttyStyle`, grid refs, selections, and callback payloads, have no `size` field.
 - `ghostty_terminal_set` takes callbacks and pointers as the value itself, not a pointer to them.
 - A feature does nothing until its callback is installed. Without `OPT_WRITE_PTY`, the terminal answers no queries, and ConPTY waits for a cursor position reply when it starts. Without `OPT_SIZE`, the size reports (XTWINOPS 14, 16, and 18, and the mode 2048 report) go missing, which breaks SGR-pixel mouse reporting in programs that ask for the cell size. When a feature "doesn't work", check the option list in `terminal.h` first.
 - `ghostty_render_state_get(..., ROW_ITERATOR, &iter)` and `row_get(CELLS, &cells)` fill in a handle created beforehand, so pass the address of your existing handle.
-- `ROW_CELLS_DATA_FG_COLOR` and `BG_COLOR` return a resolved RGB value, or `INVALID_VALUE` for "use the default".
+- `ROW_CELLS_DATA_FG_COLOR` and `BG_COLOR` return a resolved RGB value, or `NO_VALUE` for "use the default".
 - A grid ref is only valid until the terminal's next change. So resolving a ref, running a selection gesture, and setting `OPT_SELECTION` all happen under one hold of the lock.
 - `ghostty_paste_encode` changes its input buffer in place.
-- The alloc-style calls (`ghostty_formatter_format_alloc`, `ghostty_terminal_selection_format_alloc`) can come back with a null pointer and a length of 0, so check before decoding.
+- `ghostty_formatter_format_alloc` can come back with a null pointer and a length of 0, so check before decoding. Copying a selection reads it with `TERMINAL_DATA_SELECTION` and formats it with `FORMATTER_OPT_SELECTION`, under one hold of the lock. HTML output needs the palette extra (`FORMATTER_OPT_EXTRAS`), which writes the `<style>` block that the HTML's colors refer to. `formatter.h` says HTML ignores extras, but it uses this one.
 - Grapheme clustering (mode 2027) is off by default. Zinc turns it on only with the bundled ConPTY, which it creates with `PSEUDOCONSOLE_GLYPH_WIDTH_GRAPHEMES`, so both sides agree on how wide a character is.
 
 ## ConPTY

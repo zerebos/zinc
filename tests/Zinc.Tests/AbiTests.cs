@@ -7,8 +7,8 @@ namespace Zinc.Tests;
 
 /// <summary>
 /// Checks the hand-written bindings in Native.cs against the ABI manifest that
-/// libghostty-vt embeds (ghostty_type_json). The C API is unstable, so after bumping
-/// the pinned Ghostty commit this is what turns silent memory corruption into a failure.
+/// libghostty-vt embeds (ghostty_type_json). After bumping the pinned Ghostty commit, this is what turns a
+/// layout change into a failure instead of silent memory corruption. It can't check function arguments.
 /// </summary>
 public unsafe partial class AbiTests
 {
@@ -21,8 +21,7 @@ public unsafe partial class AbiTests
     {
         [typeof(GhosttyResult)] = "GhosttyResult",
         [typeof(GhosttyKey)] = "GhosttyKey",
-        [typeof(CursorVisualStyle)] = "GhosttyRenderStateCursorVisualStyle",
-        [typeof(TerminalCursorStyle)] = "GhosttyTerminalCursorStyle",
+        [typeof(CursorStyle)] = "GhosttyCursorStyle",
         [typeof(ScrollViewportTag)] = "GhosttyTerminalScrollViewportTag",
         [typeof(PointTag)] = "GhosttyPointTag",
         [typeof(KeyAction)] = "GhosttyKeyAction",
@@ -50,9 +49,11 @@ public unsafe partial class AbiTests
         [typeof(SysOption)] = "GhosttySysOption",
         [typeof(KittyGraphicsData)] = "GhosttyKittyGraphicsData",
         [typeof(KittyGraphicsPlacementData)] = "GhosttyKittyGraphicsPlacementData",
-        [typeof(KittyPlacementLayer)] = "GhosttyKittyPlacementLayer",
         [typeof(KittyImageFormat)] = "GhosttyKittyImageFormat",
         [typeof(KittyGraphicsImageData)] = "GhosttyKittyGraphicsImageData",
+        [typeof(FormatterFormat)] = "GhosttyFormatterFormat",
+        [typeof(FormatterOption)] = "GhosttyFormatterOption",
+        [typeof(BuildInfoData)] = "GhosttyBuildInfo",
     };
 
     // Enums that mirror #defines rather than C enums, so the manifest can't describe them.
@@ -127,6 +128,14 @@ public unsafe partial class AbiTests
         var values = Types.GetProperty("GhosttyKey").GetProperty("values").EnumerateObject()
             .Where(p => p.Name != "MAX_VALUE");
         Assert.Equal(values.Count(), Enum.GetValues<GhosttyKey>().Length);
+    }
+
+    [Fact]
+    public void LoadedLibraryIsTheReleaseTheBindingsMatch()
+    {
+        LibraryVersion.EnsureCompatible();
+        Assert.StartsWith($"{LibraryVersion.Major}.{LibraryVersion.Minor}.", LibraryVersion.Version);
+        Assert.DoesNotContain("-", LibraryVersion.Version); // a release, not a "-dev+commit" build of one
     }
 
     [Fact]

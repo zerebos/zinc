@@ -38,20 +38,34 @@ public class ClearedCommandsTests
 
         var commands = session.Commands();
         Assert.DoesNotContain(commands, c => c.Failed);
-        // The clear itself stays (it was running), except after a full reset, which wipes its place too.
-        Assert.Equal(clear == "\ec" ? [null] : ["clear", null], commands.Select(c => c.Text));
+        // The clear itself was running, so it stays while its row does. A 2J at a prompt moves the screen into the
+        // scrollback, so a 3J after it wipes the clear's row too, and so does a full reset. Only ncurses' order, which
+        // wipes the scrollback first, leaves the clear's row alone.
+        Assert.Equal(clear == "\e[3J\e[H\e[2J" ? ["clear", null] : [null], commands.Select(c => c.Text));
     }
 
-    [Theory]
-    [InlineData("\e[H\e[2J")] // Fedora's clear (no E3 in its terminfo), as ConPTY passes it on
-    [InlineData("\e[H\e[J")]
-    public void ClearingTheScreenTakesItsCommandsTheScrollbackKeepsTheRest(string clear)
+    [Fact]
+    public void ClearingTheScreenAtAPromptKeepsItsCommandsInTheScrollback()
     {
-        // libghostty erases the screen in place, so the commands on it go, or their bars would stay beside empty rows.
-        // The ones already scrolled into the scrollback stay, marks and all. The next prompt lands on an erased row
-        // again, which mustn't bring an old command back.
+        // Fedora's clear (no E3 in its terminfo) and Ctrl+L in bash and zsh send a 2J alone. When the last line with
+        // text is a prompt, which includes the command line of the clear that sent it, libghostty moves the screen into
+        // the scrollback instead of erasing it, so its commands stay, marks and all.
         using var session = WithFailures();
-        session.WriteToScreen(Clear(clear));
+        session.WriteToScreen(Clear("\e[H\e[2J"));
+        var scrollback = (long)(session.GetScrollbar().Total - session.GetScrollbar().Len);
+        var failed = session.Commands().Where(c => c.Failed).ToList();
+        Assert.Equal(["false0", "false1", "false2", "false3", "false4", "false5"], failed.Select(c => c.Text));
+        Assert.All(failed, c => Assert.True(c.PromptRow < scrollback));
+    }
+
+    [Fact]
+    public void ErasingTheScreenTakesItsCommandsTheScrollbackKeepsTheRest()
+    {
+        // An erase from the top (ED 0, not ED 2) clears the screen in place, so the commands on it go, or their bars
+        // would stay beside empty rows. The ones already scrolled into the scrollback stay, marks and all. The next
+        // prompt lands on an erased row again, which mustn't bring an old command back.
+        using var session = WithFailures();
+        session.WriteToScreen(Clear("\e[H\e[J"));
         var scrollback = (long)(session.GetScrollbar().Total - session.GetScrollbar().Len);
         var failed = session.Commands().Where(c => c.Failed).ToList();
         Assert.Equal(["false0", "false1", "false2"], failed.Select(c => c.Text));

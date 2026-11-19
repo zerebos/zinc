@@ -2,7 +2,7 @@
     .name = .zinc_shader,
     .version = "0.1.0",
     .fingerprint = 0xb91cf9af2734351,
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         // Ghostty's own package, at the pinned checkout (scripts/build/libghostty.ps1 clones it).
         .glslang = .{ .path = "../../external/ghostty/pkg/glslang", .lazy = true },

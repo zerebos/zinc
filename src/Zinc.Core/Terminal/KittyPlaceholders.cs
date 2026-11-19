@@ -1,3 +1,5 @@
+using Zinc.Ghostty;
+
 namespace Zinc.Terminal;
 
 /// <summary>
@@ -38,11 +40,14 @@ public static partial class KittyPlaceholders
         return new Cell(foregroundId, high, underlineId, row, col);
     }
 
-    /// <summary>An id from a style color: a palette index, or 24-bit RGB as 0xRRGGBB (0 when unset).</summary>
-    public static uint ColorId(int tag, ulong value) => tag switch
+    /// <summary>
+    /// Turns a style color (a GhosttyStyle tag and its three bytes) into an id. The id is the palette index (the first
+    /// byte) for a palette color, 24-bit RGB as 0xRRGGBB for an RGB color, and 0 when the color is unset.
+    /// </summary>
+    public static uint ColorId(int tag, GhosttyColorRgb color) => tag switch
     {
-        1 => (uint)(value & 0xFF), // palette
-        2 => (uint)(((value & 0xFF) << 16) | (value & 0xFF00) | ((value >> 16) & 0xFF)), // rgb bytes r, g, b
+        1 => color.R, // palette
+        2 => ((uint)color.R << 16) | ((uint)color.G << 8) | color.B, // rgb
         _ => 0,
     };
 

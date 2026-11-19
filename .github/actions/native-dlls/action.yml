@@ -2,13 +2,18 @@ name: Native DLLs
 description: >
   Puts the native DLLs (libghostty-vt, the sprite rasterizer, the shader translator) in native/. They change only
   when the build scripts, the Ghostty patches, or the native sources do, so they're built once per such change and
-  kept in the cache. Both architectures are built on an x64 runner, because `zig build` with Zig 0.16 fails with no
+  kept in the cache. Both architectures are built on an x64 runner, because `zig build` with Zig 0.16 failed with no
   output on GitHub's ARM64 runner, and cross-building ARM64 from x64 works.
 
 inputs:
   arch:
     description: The architecture to build for, `x64` or `arm64`, as `libghostty.ps1 -Arch` takes it.
     default: x64
+  zig:
+    description: >
+      The Zig version that builds the DLLs, the one the pinned Ghostty requires. It's part of the cache key, so a new
+      version builds the DLLs again.
+    default: 0.17.0
 
 runs:
   using: composite
@@ -22,7 +27,7 @@ runs:
         path: |
           native/${{ inputs.arch }}
           native/include
-        key: native-${{ inputs.arch }}-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
+        key: native-${{ inputs.arch }}-zig${{ inputs.zig }}-${{ hashFiles('scripts/build/**', 'patches/ghostty/**', 'native-src/**') }}
 
     # setup-zig downloads Zig from the community mirrors (because ziglang.org asks CI to) and checks its signature.
     # It's pinned to the commit of v2.2.1 with its own cache off, because the DLLs are cached above.
@@ -30,7 +35,7 @@ runs:
       if: steps.native.outputs.cache-hit != 'true'
       uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29
       with:
-        version: 0.16.0
+        version: ${{ inputs.zig }}
         use-cache: false
 
     - name: Build the native DLLs

@@ -39,7 +39,7 @@ internal sealed unsafe class RowText
         for (ushort c = 0; c < cols; c++)
         {
             cellStart[c] = text.Length;
-            var gridRef = GhosttyGridRef.Init();
+            var gridRef = default(GhosttyGridRef);
             var point = new GhosttyPoint { Tag = tag, X = c, Y = row };
             nuint len = 0;
             if (Native.TerminalGridRef(terminal, point, &gridRef) == GhosttyResult.Success)

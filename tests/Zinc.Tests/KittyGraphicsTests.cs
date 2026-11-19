@@ -101,21 +101,20 @@ public class KittyGraphicsTests
     }
 
     [Fact]
-    public void AnImageSentAgainIsUnplacedUntilItHasArrived()
+    public void AnImageSentAgainKeepsTheOldOneUntilTheNewOneHasArrived()
     {
-        // The renderer keeps the placements from when a hold began (CaptureHeldFrame) because terminal-browser sends
-        // its whole page as image 1 again on every frame, in chunks, and the live placements have no image until the
-        // last chunk arrives.
+        // terminal-browser sends its whole page as image 1 again on every frame, in chunks. libghostty keeps showing
+        // the old image until the last chunk of the new one arrives, so the page never flashes empty.
         using var session = NewSession();
         var pixels = new byte[2 * 3 * 4];
         session.WriteToScreen(Apc("a=T,f=32,s=2,v=3,i=1,p=1,q=2", pixels));
-        Assert.Single(Collect(session));
+        var first = Assert.Single(Collect(session)).Generation;
 
         session.WriteToScreen(Apc("a=T,f=32,s=2,v=3,i=1,p=1,q=2,m=1", pixels[..12]));
-        Assert.Empty(Collect(session));
+        Assert.Equal(first, Assert.Single(Collect(session)).Generation);
 
         session.WriteToScreen(Apc("m=0", pixels[12..]));
-        Assert.Single(Collect(session));
+        Assert.NotEqual(first, Assert.Single(Collect(session)).Generation);
     }
 
     [Fact]

@@ -5,7 +5,7 @@
 # no C or C++ runtime of its own, and building the DLLs needs no Visual Studio.
 $ZigTargets = @{ x64 = 'x86_64-windows-gnu'; arm64 = 'aarch64-windows-gnu' }
 
-# Runs `zig build` in $Folder. Zig 0.16 on Windows sometimes fails to read a file it compiles or caches ("unable to
+# Runs `zig build` in $Folder. Zig on Windows sometimes fails to read a file it compiles or caches ("unable to
 # load 'verify.zig': Unexpected", or "Constant.cpp:1:1: error: CacheCheckFailed", a different file each time). Each
 # run caches what finished, so running again gets further. A failure like that is retried a few times, and any other
 # failure stops the script.

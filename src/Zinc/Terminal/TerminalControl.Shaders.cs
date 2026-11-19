@@ -126,9 +126,9 @@ public sealed partial class TerminalControl
 
         u.SetCursorStyle(frame.CursorStyle switch
         {
-            CursorVisualStyle.Bar => ShaderUniforms.CursorStyle.Bar,
-            CursorVisualStyle.Underline => ShaderUniforms.CursorStyle.Underline,
-            CursorVisualStyle.BlockHollow => ShaderUniforms.CursorStyle.BlockHollow,
+            CursorStyle.Bar => ShaderUniforms.CursorStyle.Bar,
+            CursorStyle.Underline => ShaderUniforms.CursorStyle.Underline,
+            CursorStyle.BlockHollow => ShaderUniforms.CursorStyle.BlockHollow,
             _ => ShaderUniforms.CursorStyle.Block,
         }, frame.CursorVisible);
         if (frame.CursorDrawn)

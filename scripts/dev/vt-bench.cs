@@ -132,7 +132,8 @@ static unsafe double Measure(byte[] data)
 
             nuint lines = Config.DefaultScrollbackLines;
             Native.TerminalSet(terminal, TerminalOption.ScrollbackMaxLines, &lines);
-            Native.TerminalSet(terminal, TerminalOption.ScrollbackMaxBytes, null); // no byte limit, as in Zinc
+            var noByteLimit = nuint.MaxValue; // no byte limit, as in Zinc
+            Native.TerminalSet(terminal, TerminalOption.ScrollbackMaxBytes, &noByteLimit);
 
             var clock = Stopwatch.StartNew();
             for (var offset = 0; offset < data.Length; offset += Chunk)
