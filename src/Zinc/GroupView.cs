@@ -716,13 +716,17 @@ internal sealed partial class GroupView : Grid
             var room = _text.MaxWidth;
             var lead = title.LeadIsFolder ? ShellTitle.FitFolder(title.Lead, room, TextWidth) : title.Lead;
             _text.Text = lead;
+            var showDetail = false;
             if (title.Detail is { } detail)
             {
                 var left = room - Math.Min(room, TextWidth(lead)) - _detail.Margin.Left;
+                // The detail shows only when at least its start and an ellipsis fit. Otherwise trimming leaves a sliver
+                // of its first letter after the title.
+                showDetail = left >= Math.Min(TextWidth(detail), TextWidth(detail[..Math.Min(3, detail.Length)] + "…"));
                 _detail.Text = title.DetailIsFolder ? ShellTitle.FitFolder(detail, left, TextWidth) : detail;
             }
 
-            _detail.Visibility = title.Detail == null ? Visibility.Collapsed : Visibility.Visible;
+            _detail.Visibility = showDetail ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>What a click does (set by the view), for screen readers selecting it.</summary>

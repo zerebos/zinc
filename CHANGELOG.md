@@ -25,6 +25,7 @@ made from.
 - Widening a pane no longer drops accents and other combining marks from lines that rewrap.
 - Pasting several lines no longer adds a blank line or an extra Enter after each one.
 - Programs that follow the mouse, like file managers and system monitors, hear about it once each time the pointer enters a new cell, instead of on every pixel it moves.
+- A pane header with a long title no longer shows a cut-off letter of the profile name after it.
 - The new-workspace page fits a small window. In a short window, the Profile, Folder, and Layout lists shrink and scroll instead of being cut off at the bottom, and the Reopen chips keep to one row. In a narrow window, the layouts show only their pictures, with their names in a tooltip, and long names end in "…" instead of being cut off.
 - In a short window, the new-workspace page's heading gets smaller and its intro hides. In a narrow window, the page's "Show this page" box hides, so the controls at the bottom stay on one row and the lists keep their room. You can still turn the page off in `Settings > Layout > Workspaces > Start page for new workspaces`.
 - With workspaces in a sidebar, the command center at the top of a narrow window shrinks instead of running under the minimize, maximize, and close buttons.
