@@ -89,9 +89,19 @@ public class SessionTests
         using var s = new TestSession("cmd.exe /d /q /k prompt $G");
         s.WaitForScreen(">");
         s.Session.Resize(57, 21, 8, 16);
-        Thread.Sleep(TerminalSession.PtyResizeSettle * 3); // the shell hears of it once the size settles
-        s.Session.SendInput("mode con\r");
-        s.WaitForScreen(new Regex(@"Columns:\s+57"));
+
+        // The shell hears of the new size once it settles, which a slow machine (CI's ARM64 runner) can take longer
+        // than a fixed wait to get to. So this asks again until the shell reports it, up to the usual timeout.
+        var columns = new Regex(@"Columns:\s+57");
+        var sw = Stopwatch.StartNew();
+        do
+        {
+            Thread.Sleep(TerminalSession.PtyResizeSettle * 3);
+            s.Session.SendInput("mode con\r");
+        }
+        while (!s.ScreenShows(columns, TimeSpan.FromSeconds(1)) && sw.Elapsed < Timeout);
+
+        s.WaitForScreen(columns);
         s.WaitForScreen(new Regex(@"Lines:\s+21"));
     }
 
@@ -312,18 +322,27 @@ public class SessionTests
 
         public void WaitForScreen(Regex pattern)
         {
+            if (!ScreenShows(pattern, Timeout))
+            {
+                Assert.Fail($"'{pattern}' never appeared. Screen:\n{Session.ReadScreenText()}");
+            }
+        }
+
+        /// <summary>Whether <paramref name="pattern"/> appears on the screen within <paramref name="within"/>.</summary>
+        public bool ScreenShows(Regex pattern, TimeSpan within)
+        {
             var sw = Stopwatch.StartNew();
-            while (sw.Elapsed < Timeout)
+            while (sw.Elapsed < within)
             {
                 if (pattern.IsMatch(Session.ReadScreenText()))
                 {
-                    return;
+                    return true;
                 }
 
                 Thread.Sleep(50);
             }
 
-            Assert.Fail($"'{pattern}' never appeared. Screen:\n{Session.ReadScreenText()}");
+            return false;
         }
 
         public void Dispose() => Session.Dispose();
