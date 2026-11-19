@@ -7,7 +7,7 @@
   shader.ps1, which build zinc-sprite.dll and zinc-shader.dll from the same checkout. All three are built for the GNU
   ABI (zig.ps1 says why).
 
-  Needs Zig 0.16.x on PATH.
+  Needs Zig 0.17.0 on PATH.
 
 .EXAMPLE
   pwsh scripts/build/libghostty.ps1
@@ -17,9 +17,10 @@
 param(
     [ValidateSet('x64', 'arm64')]
     [string]$Arch = 'x64',
-    # libghostty-vt's C API is unstable, so bump this deliberately and rerun the tests (AbiTests checks the bindings
-    # in src/Zinc.Core/Ghostty/Native.cs against ghostty_type_json()).
-    [string]$Commit = '6301810a48aaa3426887a4316668f18833a40138'
+    # The commit of a libghostty-vt release tag (vt-1.0.1 here). Within 1.x the C ABI only gains additions, but bump
+    # this deliberately and rerun the tests (AbiTests checks the bindings in src/Zinc.Core/Ghostty/Native.cs against
+    # ghostty_type_json()).
+    [string]$Commit = '108cacb17ed8990840cd14abfce43d8ed8503ca1'
 )
 
 $ErrorActionPreference = 'Stop'

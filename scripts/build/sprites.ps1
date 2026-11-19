@@ -11,7 +11,7 @@
   canvas takes its std.Io from Ghostty's app-wide state (global.zig, which refuses to build outside the app). For the
   build, the canvas uses the wrapper's std.Io instead.
 
-  Needs Zig 0.16.x on PATH.
+  Needs Zig 0.17.0 on PATH.
 
 .EXAMPLE
   pwsh scripts/build/sprites.ps1

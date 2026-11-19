@@ -63,7 +63,7 @@ fn errorText(err: anyerror) ?[*:0]u8 {
         cross_error = null;
         return msg.ptr;
     }
-    const text = alloc.dupeZ(u8, @errorName(err)) catch return null;
+    const text = alloc.dupeSentinel(u8, @errorName(err), 0) catch return null;
     return text.ptr;
 }
 
@@ -83,7 +83,7 @@ fn translate(src: []const u8) ![:0]u8 {
         initialized = true;
     }
 
-    const code = try alloc.dupeZ(u8, src);
+    const code = try alloc.dupeSentinel(u8, src, 0);
     defer alloc.free(code);
     const spirv = try spirvFromGlsl(code);
     defer alloc.free(spirv);
@@ -139,7 +139,7 @@ fn hlslFromSpirv(spirv: []const u32) ![:0]u8 {
     spvc.spvc_context_set_error_callback(ctx, &(struct {
         fn callback(_: ?*anyopaque, msg: [*:0]const u8) callconv(.c) void {
             if (cross_error) |old| alloc.free(old);
-            cross_error = alloc.dupeZ(u8, std.mem.sliceTo(msg, 0)) catch null;
+            cross_error = alloc.dupeSentinel(u8, std.mem.sliceTo(msg, 0), 0) catch null;
         }
     }).callback, null);
 
@@ -160,5 +160,5 @@ fn hlslFromSpirv(spirv: []const u32) ![:0]u8 {
 
     var result: [*:0]const u8 = undefined;
     if (spvc.spvc_compiler_compile(compiler, &result) != spvc.success) return error.SpvcFailed;
-    return try alloc.dupeZ(u8, std.mem.sliceTo(result, 0));
+    return try alloc.dupeSentinel(u8, std.mem.sliceTo(result, 0), 0);
 }
