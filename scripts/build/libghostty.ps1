@@ -38,7 +38,7 @@ if (-not (Test-Path (Join-Path $src '.git'))) {
 $head = & { $PSNativeCommandUseErrorActionPreference = $false; git -C $src rev-parse HEAD 2>$null }
 if ($head -ne $Commit) {
     git -C $src fetch --depth 1 origin $Commit
-    git -C $src checkout -q --detach FETCH_HEAD
+    git -C $src checkout -q --force --detach FETCH_HEAD # --force drops the old pin's applied patches, which would block the switch
 }
 # Ghostty's build names the library's version after the commit's tag (1.0.1 instead of 1.0.1-dev+108cacb), so the tag
 # is fetched too. A tag that points anywhere but the pinned commit stops the build.
