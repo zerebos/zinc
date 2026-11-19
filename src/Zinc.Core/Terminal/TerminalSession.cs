@@ -23,6 +23,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private readonly nint _keyEvent;
     private readonly nint _mouseEncoder;
     private readonly nint _mouseEvent;
+    private byte[]? _lastMotionReport; // the last motion report sent, or null after any other mouse event
     private readonly nint _placements;
     private GCHandle _self;
     private ConPty? _pty;
@@ -1007,13 +1008,14 @@ public sealed unsafe partial class TerminalSession : IDisposable
         return result == GhosttyResult.Success ? output[..(int)written].ToArray() : [];
     }
 
-    /// <summary>Encodes a mouse event for the application's active mouse reporting mode.</summary>
+    /// <summary>
+    /// Encodes a mouse event for the application's active mouse reporting mode. Motion that would repeat the last
+    /// motion report, because the pointer stayed in the same cell, encodes nothing.
+    /// </summary>
     public byte[] EncodeMouse(MouseAction action, MouseButton? button, GhosttyMods mods, float xPx, float yPx,
         GhosttyMouseEncoderSize size, bool anyButtonPressed)
     {
         Span<byte> output = stackalloc byte[64];
-        nuint written;
-        GhosttyResult result;
         lock (Lock)
         {
             if (_disposed)
@@ -1021,14 +1023,15 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return [];
             }
 
+            // Syncing from the terminal and setting the size both make libghostty forget the last cell, so its
+            // `TrackLastCell` option can't work here. The sync can't be skipped when the mouse mode looks unchanged,
+            // because the terminal's mode depends on the order the program set and reset the mouse modes in.
+            // So repeated motion reports are dropped below instead.
             Native.MouseEncoderSetFromTerminal(_mouseEncoder, _terminal);
             size.Size = (nuint)sizeof(GhosttyMouseEncoderSize);
             Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.Size, &size);
             var pressed = (byte)(anyButtonPressed ? 1 : 0);
             Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.AnyButtonPressed, &pressed);
-            // Only report motion when the pointer crosses into a new cell.
-            byte trackLastCell = 1;
-            Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.TrackLastCell, &trackLastCell);
 
             Native.MouseEventSetAction(_mouseEvent, action);
             if (button is { } b)
@@ -1043,13 +1046,35 @@ public sealed unsafe partial class TerminalSession : IDisposable
             Native.MouseEventSetMods(_mouseEvent, mods);
             Native.MouseEventSetPosition(_mouseEvent, new GhosttyMousePosition { X = xPx, Y = yPx });
 
+            nuint written;
+            GhosttyResult result;
             fixed (byte* pOut = output)
             {
                 result = Native.MouseEncoderEncode(_mouseEncoder, _mouseEvent, pOut, (nuint)output.Length, out written);
             }
-        }
 
-        return result == GhosttyResult.Success ? output[..(int)written].ToArray() : [];
+            if (result != GhosttyResult.Success)
+            {
+                return [];
+            }
+
+            var report = output[..(int)written];
+            if (action != MouseAction.Motion)
+            {
+                _lastMotionReport = null;
+                return report.ToArray();
+            }
+
+            // A motion report names the cell, the buttons, and the modifiers, so the same bytes again mean the pointer
+            // moved within its cell. SGR-pixels reports carry the pixel, so every move still gets one.
+            if (report.SequenceEqual(_lastMotionReport))
+            {
+                return [];
+            }
+
+            _lastMotionReport = report.ToArray();
+            return _lastMotionReport;
+        }
     }
 
     /// <summary>Pastes text, honoring bracketed paste mode and stripping unsafe control bytes.</summary>
