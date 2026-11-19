@@ -76,6 +76,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     public TerminalSession(ushort cols, ushort rows, TerminalTheme theme, PaletteGeneration generation = default)
     {
         _generation = generation;
+        LibraryVersion.EnsureCompatible();
         Check(Native.TerminalNew(0, out _terminal, cols, rows));
         _self = GCHandle.Alloc(this);
 
@@ -120,9 +121,11 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
         nuint scrollback = Config.DefaultScrollbackLines;
         Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxLines, &scrollback);
-        // libghostty prunes at whichever limit comes first, and its default byte limit keeps
-        // only about 700 rows of history at 120 columns. Lines are the limit users think in.
-        Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxBytes, null);
+        // libghostty prunes at whichever limit comes first, and its default byte limit keeps about one page of history,
+        // so the byte limit is turned off. Lines are the limit users think in. SIZE_MAX means no limit, while NULL would
+        // restore the default.
+        var noByteLimit = nuint.MaxValue;
+        Native.TerminalSet(_terminal, TerminalOption.ScrollbackMaxBytes, &noByteLimit);
 
         // Kitty graphics are on once storage is allowed. Besides inline data (t=d), programs may
         // name a file to load (t=f, as fastfetch's kitty-direct does) or a temp file we delete after
@@ -447,7 +450,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// <param name="atPrompt">
     /// The shape while the shell waits at its prompt (shell integration's marks say when), or null for the same shape.
     /// </param>
-    public void SetCursorDefaults(TerminalCursorStyle style, bool blink, TerminalCursorStyle? atPrompt = null)
+    public void SetCursorDefaults(CursorStyle style, bool blink, CursorStyle? atPrompt = null)
     {
         lock (Lock)
         {
@@ -456,7 +459,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    private (TerminalCursorStyle Style, bool Blink, TerminalCursorStyle? AtPrompt) _cursorDefaults = (TerminalCursorStyle.Block, false, null);
+    private (CursorStyle Style, bool Blink, CursorStyle? AtPrompt) _cursorDefaults = (CursorStyle.Block, false, null);
 
     /// <summary>
     /// Applies the default cursor for now, which is the prompt's while the shell waits at one, or else the usual. A
@@ -984,7 +987,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return [];
             }
 
-            Native.KeyEncoderSetoptFromTerminal(_keyEncoder, _terminal);
+            Native.KeyEncoderSetFromTerminal(_keyEncoder, _terminal);
             Native.KeyEventSetAction(_keyEvent, action);
             Native.KeyEventSetKey(_keyEvent, key);
             Native.KeyEventSetMods(_keyEvent, mods);
@@ -995,9 +998,9 @@ public sealed unsafe partial class TerminalSession : IDisposable
             fixed (byte* pOut = output)
             {
                 // The event borrows the text pointer, so encode inside the same fixed scope.
-                Native.KeyEventSetUtf8(_keyEvent, utf8Len > 0 ? pText : null, (nuint)utf8Len);
+                Native.KeyEventSetUtf8(_keyEvent, new GhosttyString { Ptr = (nint)pText, Len = (nuint)utf8Len });
                 result = Native.KeyEncoderEncode(_keyEncoder, _keyEvent, pOut, (nuint)output.Length, out written);
-                Native.KeyEventSetUtf8(_keyEvent, null, 0);
+                Native.KeyEventSetUtf8(_keyEvent, default);
             }
         }
 
@@ -1018,14 +1021,14 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return [];
             }
 
-            Native.MouseEncoderSetoptFromTerminal(_mouseEncoder, _terminal);
+            Native.MouseEncoderSetFromTerminal(_mouseEncoder, _terminal);
             size.Size = (nuint)sizeof(GhosttyMouseEncoderSize);
-            Native.MouseEncoderSetopt(_mouseEncoder, MouseEncoderOption.Size, &size);
+            Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.Size, &size);
             var pressed = (byte)(anyButtonPressed ? 1 : 0);
-            Native.MouseEncoderSetopt(_mouseEncoder, MouseEncoderOption.AnyButtonPressed, &pressed);
+            Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.AnyButtonPressed, &pressed);
             // Only report motion when the pointer crosses into a new cell.
             byte trackLastCell = 1;
-            Native.MouseEncoderSetopt(_mouseEncoder, MouseEncoderOption.TrackLastCell, &trackLastCell);
+            Native.MouseEncoderSet(_mouseEncoder, MouseEncoderOption.TrackLastCell, &trackLastCell);
 
             Native.MouseEventSetAction(_mouseEvent, action);
             if (button is { } b)
@@ -1110,7 +1113,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     {
         lock (Lock)
         {
-            return Format(GhosttyFormatterTerminalOptions.Init());
+            return Format(FormatterFormat.Plain, unwrap: false, trim: false);
         }
     }
 
@@ -1128,11 +1131,8 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 return "";
             }
 
-            var options = GhosttyFormatterTerminalOptions.Init();
-            options.Emit = styled ? 1 : 0; // GHOSTTY_FORMATTER_FORMAT_VT : _PLAIN
-            options.Trim = 1;
             // One line per row, scrollback first. The formatter leaves out the blank rows at the bottom.
-            var all = Format(options).Replace("\r\n", "\n").Split('\n');
+            var all = Format(styled ? FormatterFormat.Vt : FormatterFormat.Plain, unwrap: false, trim: true).Replace("\r\n", "\n").Split('\n');
             GhosttyTerminalScrollbar sb;
             Native.TerminalGet(_terminal, TerminalData.Scrollbar, &sb);
             var first = lines is { } n ? Math.Max(0, all.Length - n) : (int)Math.Min((ulong)all.Length, sb.Total - sb.Len);
@@ -1157,10 +1157,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             // Find candidate lines fast in the formatted text (soft wraps joined, so one line per
             // logical line), then map matches to cells on those lines only. Lines are matched
             // without their trailing blanks, so "$" means the end of the text.
-            var options = GhosttyFormatterTerminalOptions.Init();
-            options.Unwrap = 1;
-            options.Trim = 1;
-            var lines = Format(options).Split('\n');
+            var lines = Format(FormatterFormat.Plain, unwrap: true, trim: true).Split('\n');
             ushort cols;
             Native.TerminalGet(_terminal, TerminalData.Cols, &cols);
             GhosttyTerminalScrollbar sb;
@@ -1187,7 +1184,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     private bool IsWrapped(ulong row)
     {
-        var gridRef = GhosttyGridRef.Init();
+        var gridRef = default(GhosttyGridRef);
         var point = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)row };
         byte wrap = 0;
         return Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success &&
@@ -1258,17 +1255,32 @@ public sealed unsafe partial class TerminalSession : IDisposable
         }
     }
 
-    private string Format(GhosttyFormatterTerminalOptions options)
+    /// <summary>
+    /// Formats the screen and its scrollback, or only <paramref name="selection"/> when it's given. Returns "" when the
+    /// session is closed or the formatter fails. Hold the lock, because the selection's grid refs are only valid until
+    /// the terminal changes.
+    /// </summary>
+    private string Format(FormatterFormat emit, bool unwrap, bool trim, GhosttySelection* selection = null)
     {
         if (_disposed ||
-            Native.FormatterTerminalNew(0, out var formatter, _terminal, options) != GhosttyResult.Success)
+            Native.FormatterTerminalNew(0, out var formatter, _terminal) != GhosttyResult.Success)
         {
             return "";
         }
 
         try
         {
-            if (Native.FormatterFormatAlloc(formatter, 0, out var ptr, out var len) != GhosttyResult.Success)
+            byte unwrapValue = unwrap ? (byte)1 : (byte)0, trimValue = trim ? (byte)1 : (byte)0;
+            // HTML needs the palette extra, which writes the palette as the `<style>` block that `ClipboardHtml` resolves
+            // the `var(--vt-palette-N)` colors from. `formatter.h` says HTML ignores extras, but `formatter.zig` uses this
+            // one. VT output gets no extras, so it carries the text's own styles and not the terminal's state.
+            uint extras = emit == FormatterFormat.Html ? 1u : 0; // GHOSTTY_FORMATTER_EXTRA_PALETTE
+            if (Native.FormatterSet(formatter, FormatterOption.Emit, &emit) != GhosttyResult.Success ||
+                Native.FormatterSet(formatter, FormatterOption.Unwrap, &unwrapValue) != GhosttyResult.Success ||
+                Native.FormatterSet(formatter, FormatterOption.Trim, &trimValue) != GhosttyResult.Success ||
+                Native.FormatterSet(formatter, FormatterOption.Extras, &extras) != GhosttyResult.Success ||
+                (selection != null && Native.FormatterSet(formatter, FormatterOption.Selection, selection) != GhosttyResult.Success) ||
+                Native.FormatterFormatAlloc(formatter, 0, out var ptr, out var len) != GhosttyResult.Success)
             {
                 return "";
             }
@@ -1295,7 +1307,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     }
 
     /// <summary>Returns the selected text, or null when nothing is selected.</summary>
-    public string? GetSelectionText() => FormatSelection(0);
+    public string? GetSelectionText() => FormatSelection(FormatterFormat.Plain);
 
     /// <summary>
     /// The selection as HTML for the clipboard (copy with formatting), with its colors and styles, in the terminal's
@@ -1303,7 +1315,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// </summary>
     public string? GetSelectionHtml(string fontFamily, double fontPoints)
     {
-        if (FormatSelection(2) is not { } html)
+        if (FormatSelection(FormatterFormat.Html) is not { } html)
         {
             return null;
         }
@@ -1322,38 +1334,19 @@ public sealed unsafe partial class TerminalSession : IDisposable
         return ClipboardHtml.Make(html, fg, bg, fontFamily, fontPoints);
     }
 
-    /// <summary>The selection in a GhosttyFormatterFormat: 0 plain, 1 VT sequences, 2 HTML.</summary>
-    private string? FormatSelection(int emit)
+    /// <summary>Formats the active selection, unwrapped and trimmed as Ghostty copies it. Returns null when nothing is selected.</summary>
+    private string? FormatSelection(FormatterFormat emit)
     {
         lock (Lock)
         {
-            if (_disposed)
+            GhosttySelection selection;
+            if (_disposed || Native.TerminalGet(_terminal, TerminalData.Selection, &selection) != GhosttyResult.Success)
             {
                 return null;
             }
 
-            var opts = new GhosttyTerminalSelectionFormatOptions
-            {
-                Size = (nuint)sizeof(GhosttyTerminalSelectionFormatOptions),
-                Emit = emit,
-                Unwrap = 1,
-                Trim = 1,
-                Selection = 0,
-            };
-
-            if (Native.TerminalSelectionFormatAlloc(_terminal, 0, opts, out var ptr, out var len) != GhosttyResult.Success)
-            {
-                return null;
-            }
-
-            try
-            {
-                return len == 0 ? null : Encoding.UTF8.GetString(ptr, (int)len);
-            }
-            finally
-            {
-                Native.Free(0, ptr, len);
-            }
+            var text = Format(emit, unwrap: true, trim: true, &selection);
+            return text.Length == 0 ? null : text;
         }
     }
 
@@ -1442,7 +1435,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
     private string? HyperlinkAt(ushort col, ulong row)
     {
-        var gridRef = GhosttyGridRef.Init();
+        var gridRef = default(GhosttyGridRef);
         var point = new GhosttyPoint { Tag = PointTag.Screen, X = col, Y = (uint)row };
         if (Native.TerminalGridRef(_terminal, point, &gridRef) != GhosttyResult.Success)
         {
@@ -1543,22 +1536,20 @@ public sealed unsafe partial class TerminalSession : IDisposable
                 if (needsPixels(imageId, generation))
                 {
                     KittyImageFormat format;
-                    byte* data;
-                    nuint len;
+                    GhosttyString data;
                     if (Native.KittyImageGet(image, KittyGraphicsImageData.Format, &format) != GhosttyResult.Success ||
-                        Native.KittyImageGet(image, KittyGraphicsImageData.DataPtr, &data) != GhosttyResult.Success ||
-                        Native.KittyImageGet(image, KittyGraphicsImageData.DataLen, &len) != GhosttyResult.Success)
+                        Native.KittyImageGet(image, KittyGraphicsImageData.Pixels, &data) != GhosttyResult.Success)
                     {
                         continue; // payload still pending
                     }
 
                     var count = (int)(width * height);
-                    if ((long)count * KittyImages.BytesPerPixel(format) > (long)len)
+                    if ((long)count * KittyImages.BytesPerPixel(format) > (long)data.Len)
                     {
                         continue;
                     }
 
-                    pixels = KittyImages.ToPremultipliedRgba(format, new ReadOnlySpan<byte>(data, (int)len), count);
+                    pixels = KittyImages.ToPremultipliedRgba(format, new ReadOnlySpan<byte>((byte*)data.Ptr, (int)data.Len), count);
                 }
 
                 into.Add(new ImagePlacement(imageId, generation, z, info.ViewportCol, info.ViewportRow, offsetX, offsetY,

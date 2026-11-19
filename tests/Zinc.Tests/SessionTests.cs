@@ -273,7 +273,7 @@ public class SessionTests
         {
             for (ushort x = 0; x < 8; x++)
             {
-                var gridRef = Zinc.Ghostty.GhosttyGridRef.Init();
+                var gridRef = default(Zinc.Ghostty.GhosttyGridRef);
                 var point = new Zinc.Ghostty.GhosttyPoint { Tag = Zinc.Ghostty.PointTag.Viewport, X = x, Y = 0 };
                 Zinc.Ghostty.Native.TerminalGridRef(session.Handle, point, &gridRef);
                 nuint n;

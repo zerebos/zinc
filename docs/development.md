@@ -7,7 +7,7 @@ This is the guide to building Zinc, running it next to an installed copy, testin
 - Windows 10 version 2004 (build 19041) or later, or Windows 11. Zinc builds and is released for x64 and ARM64 (see "Building for ARM64" below).
 - Git on `PATH`, because the native build fetches Ghostty with it.
 - The .NET 10 SDK.
-- [Zig](https://ziglang.org) 0.16.x on `PATH`, for the native DLLs. It's the version Ghostty requires.
+- [Zig](https://ziglang.org) 0.17.0 on `PATH`, for the native DLLs. It's the version Ghostty requires.
 - PowerShell 7.4 or later (`pwsh`), for the build scripts.
 - For publishing only (a release, or `dotnet publish`), Visual Studio Build Tools with the C++ workload. `zn`, the command-line tool, is compiled with Native AOT, which links with MSVC's linker. Everything else builds without Visual Studio.
 - To publish for ARM64, you also need Build Tools' "MSVC Build Tools for ARM64/ARM64EC" component, which has the ARM64 linker.
@@ -29,7 +29,7 @@ Step 1 builds three DLLs: `ghostty-vt.dll` (Ghostty's terminal core), `zinc-spri
 
 A native dependency added later has to keep that promise, so check what a new DLL imports. Anything beyond the Universal CRT, kernel32, and ntdll is a DLL a fresh Windows may lack. A `windows-msvc` build, for one, imports `vcruntime140.dll`.
 
-Zig 0.16 on Windows sometimes fails with "unable to load '<file>': Unexpected". The scripts retry those, because each run caches what it finished and the next one gets further.
+Zig on Windows sometimes fails with "unable to load '<file>': Unexpected". The scripts retry those, because each run caches what it finished and the next one gets further.
 
 The app is unpackaged and carries the Windows App SDK with it, so the exe in `src/Zinc/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/zinc.exe` runs as it is. Add `-c Release` to the build for anything that measures speed.
 
@@ -152,13 +152,13 @@ An action is anything a key can be bound to. It needs an entry in `src/Zinc.Core
 
 ## Bumping Ghostty
 
-Ghostty's C API is explicitly unstable, so a new commit can change structs, enums, and functions under you.
+Zinc pins a libghostty-vt release. Within a major version, a release only adds functions, enum values, and fields at the end of sized structs, so a bump within 1.x needs no binding changes, though new features need new bindings. A new major version can change anything.
 
 1. Run `dotnet run scripts/dev/vt-bench.cs -- --save before`, which records how fast the current DLL parses output.
-2. Change `$Commit` in `scripts/build/libghostty.ps1`. Delete each patch in `patches/ghostty` whose fix the new commit already has (its header says what to look for), and fix up any other that no longer applies. A patch's tests run in the checkout with `zig build test-lib-vt -Dtest-filter=<name>`, because plain `zig build test` needs POSIX headers that Windows doesn't have.
+2. Change `$Tag` and `$Commit` in `scripts/build/libghostty.ps1` together, to a `vt-` release tag and the commit it points at. The script refuses a tag that points elsewhere. When the bindings start using something from a newer minor release, raise `LibraryVersion.Minor` to match. Delete each patch in `patches/ghostty` whose fix the new commit already has (its header says what to look for), and fix up any other that no longer applies. A patch's tests run in the checkout with `zig build test-lib-vt -Dtest-filter=<name>`, because plain `zig build test` needs POSIX headers that Windows doesn't have.
 3. Run `pwsh scripts/build/libghostty.ps1`. It also rebuilds `zinc-sprite.dll` from Ghostty's sprite code, which isn't part of Ghostty's API. If that fails, look at what changed in the sprite code's `Face`, canvas, and `Metrics`. `SpriteTests` pin what Zinc relies on.
 4. Run `pwsh scripts/build/gen-keys.ps1`, which regenerates `GhosttyKey.g.cs` from the new key header.
-5. Run `dotnet test`. `AbiTests` fails on any struct, enum, or export that changed. It can't check the arguments of imported functions, though, because the manifest describes types only, so read the header's diff for those.
+5. Run `dotnet test`. `AbiTests` fails on any struct, enum, or export that changed. It can't check the arguments of imported functions, though, because the manifest describes types only, so read the header's diff for those. Read the header's comments too, for what a value means, such as what NULL does or a get key's output type. `OpenSourceNoticesTests` fails until the Ghostty entry in `OpenSourceNotices.cs` names the new commit.
 6. Run `dotnet run scripts/dev/vt-bench.cs -- --compare before`.
 
 The bench makes its workloads (plain text, mixed UTF-8, and styled text) in memory from a fixed seed on every run, so every run and every machine measures the same bytes, and nothing is cached between runs. Each workload gets a warm-up, then the best of seven runs counts. The results go to `dist/bench`, one file per Ghostty commit. Runs vary by about 2% on a quiet machine and about 5% on a busy one, so more than 10% slower is worth a look, after running it once more to be sure.

@@ -35,11 +35,11 @@ public class TerminalOptionTests
             return Joined(replies);
         }
 
-        session.SetCursorDefaults(Zinc.Ghostty.TerminalCursorStyle.Bar, blink: true);
+        session.SetCursorDefaults(Zinc.Ghostty.CursorStyle.Bar, blink: true);
         Assert.Contains("5 q", CursorReport()); // blinking bar, at once
 
         session.WriteToScreen("\e[2 q"); // a program picks a steady block
-        session.SetCursorDefaults(Zinc.Ghostty.TerminalCursorStyle.Underline, blink: false);
+        session.SetCursorDefaults(Zinc.Ghostty.CursorStyle.Underline, blink: false);
         Assert.Contains("2 q", CursorReport()); // a program's own choice stays
 
         session.WriteToScreen("\e[0 q"); // and its reset goes back to the setting
@@ -59,7 +59,7 @@ public class TerminalOptionTests
             return Joined(replies);
         }
 
-        session.SetCursorDefaults(Zinc.Ghostty.TerminalCursorStyle.Block, blink: false, atPrompt: Zinc.Ghostty.TerminalCursorStyle.Bar);
+        session.SetCursorDefaults(Zinc.Ghostty.CursorStyle.Block, blink: false, atPrompt: Zinc.Ghostty.CursorStyle.Bar);
         Assert.Contains("2 q", CursorReport()); // no prompt yet: the usual block
 
         session.WriteToScreen("\e]133;A\a$ \e]133;B\a");
@@ -142,10 +142,10 @@ public class TerminalOptionTests
 public class TerminalSettingTests
 {
     [Theory]
-    [InlineData("block-hollow", Zinc.Ghostty.TerminalCursorStyle.BlockHollow)]
-    [InlineData("block_hollow", Zinc.Ghostty.TerminalCursorStyle.BlockHollow)] // Ghostty's spelling
-    [InlineData("Bar", Zinc.Ghostty.TerminalCursorStyle.Bar)]
-    public void CursorStylesRead(string value, Zinc.Ghostty.TerminalCursorStyle style) =>
+    [InlineData("block-hollow", Zinc.Ghostty.CursorStyle.BlockHollow)]
+    [InlineData("block_hollow", Zinc.Ghostty.CursorStyle.BlockHollow)] // Ghostty's spelling
+    [InlineData("Bar", Zinc.Ghostty.CursorStyle.Bar)]
+    public void CursorStylesRead(string value, Zinc.Ghostty.CursorStyle style) =>
         Assert.Equal(style, new Config().With("terminal.cursor-style", value)!.CursorStyle);
 
     [Fact]
@@ -183,7 +183,7 @@ public class TerminalSettingTests
     public void DefaultsKeepTodaysBehavior()
     {
         var config = new Config();
-        Assert.Equal((Zinc.Ghostty.TerminalCursorStyle.Block, false), (config.CursorStyle, config.CursorBlink));
+        Assert.Equal((Zinc.Ghostty.CursorStyle.Block, false), (config.CursorStyle, config.CursorBlink));
         Assert.Equal((CloseOnExit.Success, BellMode.Attention, false, true),
             (config.CloseOnExit, config.Bell, config.BellSound, config.ProgramTitles));
         Assert.Same(TerminalTheme.Default, config.Theme); // Lit Cell, selection colors included

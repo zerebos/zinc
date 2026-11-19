@@ -56,7 +56,7 @@ The default keys follow Windows Terminal's, so `Ctrl+Shift+T` opens a tab and `A
 ## Building from source
 
 ```powershell
-pwsh scripts/build/libghostty.ps1   # the native DLLs, which need Zig 0.16
+pwsh scripts/build/libghostty.ps1   # the native DLLs, which need Zig 0.17
 dotnet build
 dotnet test
 ```

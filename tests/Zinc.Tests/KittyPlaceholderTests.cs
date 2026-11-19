@@ -1,3 +1,4 @@
+using Zinc.Ghostty;
 using Zinc.Terminal;
 using static Zinc.Terminal.KittyPlaceholders;
 
@@ -17,9 +18,9 @@ public class KittyPlaceholderTests
     [Fact]
     public void ColorsEncodeIds()
     {
-        Assert.Equal(42u, ColorId(1, 42)); // palette
-        Assert.Equal(0x015618u, ColorId(2, 0x18_56_01)); // rgb bytes r=0x01 g=0x56 b=0x18
-        Assert.Equal(0u, ColorId(0, 123));
+        Assert.Equal(42u, ColorId(1, new GhosttyColorRgb(42, 0, 0))); // palette
+        Assert.Equal(0x015618u, ColorId(2, new GhosttyColorRgb(0x01, 0x56, 0x18))); // rgb
+        Assert.Equal(0u, ColorId(0, new GhosttyColorRgb(123, 0, 0)));
     }
 
     [Fact]

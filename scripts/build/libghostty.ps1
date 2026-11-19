@@ -17,9 +17,10 @@
 param(
     [ValidateSet('x64', 'arm64')]
     [string]$Arch = 'x64',
-    # The commit of a libghostty-vt release tag (vt-1.0.1 here). Within 1.x the C ABI only gains additions, but bump
-    # this deliberately and rerun the tests (AbiTests checks the bindings in src/Zinc.Core/Ghostty/Native.cs against
-    # ghostty_type_json()).
+    # A libghostty-vt release tag and its commit, which are bumped together. Within 1.x the C ABI only gains additions,
+    # but bump them deliberately and rerun the tests (AbiTests checks the bindings in src/Zinc.Core/Ghostty/Native.cs
+    # against ghostty_type_json()).
+    [string]$Tag = 'vt-1.0.1',
     [string]$Commit = '108cacb17ed8990840cd14abfce43d8ed8503ca1'
 )
 
@@ -38,6 +39,14 @@ $head = & { $PSNativeCommandUseErrorActionPreference = $false; git -C $src rev-p
 if ($head -ne $Commit) {
     git -C $src fetch --depth 1 origin $Commit
     git -C $src checkout -q --detach FETCH_HEAD
+}
+# Ghostty's build names the library's version after the commit's tag (1.0.1 instead of 1.0.1-dev+108cacb), so the tag
+# is fetched too. A tag that points anywhere but the pinned commit stops the build.
+$tagged = & { $PSNativeCommandUseErrorActionPreference = $false; git -C $src rev-parse -q --verify "refs/tags/$Tag^{commit}" 2>$null }
+if ($tagged -ne $Commit) {
+    git -C $src fetch --depth 1 origin "+refs/tags/${Tag}:refs/tags/$Tag" # the `+` lets the fetch overwrite a local tag that points elsewhere, so the check below sees the remote's tag
+    $tagged = git -C $src rev-parse "refs/tags/$Tag^{commit}"
+    if ($tagged -ne $Commit) { throw "$Tag points at $tagged, not at the pinned commit $Commit." }
 }
 
 # Apply our fixes that aren't upstream yet (patches/ghostty, where each patch says when to drop it). The sources are

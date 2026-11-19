@@ -177,7 +177,7 @@ public sealed unsafe partial class TerminalSession
 
         public bool IsBlank(int row, int col)
         {
-            var gridRef = GhosttyGridRef.Init();
+            var gridRef = default(GhosttyGridRef);
             var point = new GhosttyPoint { Tag = PointTag.Viewport, X = (ushort)col, Y = (uint)row };
             uint first = 0;
             return Native.TerminalGridRef(terminal, point, &gridRef) != GhosttyResult.Success ||
@@ -194,7 +194,7 @@ public sealed unsafe partial class TerminalSession
 
         private int? Cell(int row, int col, CellData data)
         {
-            var gridRef = GhosttyGridRef.Init();
+            var gridRef = default(GhosttyGridRef);
             var point = new GhosttyPoint { Tag = PointTag.Viewport, X = (ushort)col, Y = (uint)row };
             int value;
             return Native.TerminalGridRef(terminal, point, &gridRef) == GhosttyResult.Success &&
@@ -206,7 +206,7 @@ public sealed unsafe partial class TerminalSession
 
         private T? Row<T>(int row, RowData data) where T : unmanaged
         {
-            var gridRef = GhosttyGridRef.Init();
+            var gridRef = default(GhosttyGridRef);
             var point = new GhosttyPoint { Tag = PointTag.Viewport, X = 0, Y = (uint)row };
             T value;
             return Native.TerminalGridRef(terminal, point, &gridRef) == GhosttyResult.Success &&

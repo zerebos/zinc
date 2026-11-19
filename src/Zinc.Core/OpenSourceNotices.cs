@@ -34,7 +34,7 @@ public static class OpenSourceNotices
             "OFL-1.1", "https://github.com/microsoft/cascadia-code", @"Fonts\LICENSE-CascadiaCode.txt", []),
         new("ConPTY and OpenConsole", "1.24.260710001", "Runs console programs",
             "MIT", "https://github.com/microsoft/terminal", @"Licenses\ConPTY.txt", ["Microsoft.Windows.Console.ConPTY"]),
-        new("Ghostty (libghostty-vt)", "6301810", "Terminal emulation, the built-in glyphs, Kitty image placeholders",
+        new("Ghostty (libghostty-vt)", "108cacb", "Terminal emulation, the built-in glyphs, Kitty image placeholders",
             "MIT", "https://github.com/ghostty-org/ghostty", @"Licenses\Ghostty.txt", []),
         new("glslang", "14.2.0", "Compiles custom shaders",
             "BSD-3-Clause and others", "https://github.com/KhronosGroup/glslang", @"Licenses\glslang.txt", []),
@@ -64,9 +64,9 @@ public static class OpenSourceNotices
         new("Windows App SDK", "2.5", "WinUI: windows, controls, the title bar",
             "Microsoft Software License Terms", "https://github.com/microsoft/windowsappsdk", @"Licenses\WindowsAppSDK.txt",
             ["Microsoft.WindowsAppSDK.WinUI", "Microsoft.WindowsAppSDK.Foundation", "Microsoft.WindowsAppSDK.InteractiveExperiences"]),
-        new("z2d", "0.12.1", "Draws the built-in glyphs, in Ghostty's sprite code",
+        new("z2d", "0.13.2", "Draws the built-in glyphs, in Ghostty's sprite code",
             "MPL-2.0", "https://github.com/vancluever/z2d", @"Licenses\z2d.txt", []),
-        new("Zig standard library", "0.16.0", "Compiled into libghostty-vt, the glyph library, and the shader translator",
+        new("Zig standard library", "0.17.0", "Compiled into libghostty-vt, the glyph library, and the shader translator",
             "MIT", "https://ziglang.org", @"Licenses\Zig.txt", []),
     ];
 

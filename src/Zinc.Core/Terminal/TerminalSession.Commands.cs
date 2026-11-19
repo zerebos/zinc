@@ -474,7 +474,7 @@ public sealed unsafe partial class TerminalSession
     /// </summary>
     private bool IsPromptRow(long y)
     {
-        var gridRef = GhosttyGridRef.Init();
+        var gridRef = default(GhosttyGridRef);
         var point = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)y };
         int semantic;
         return Native.TerminalGridRef(_terminal, point, &gridRef) == GhosttyResult.Success &&
@@ -758,9 +758,7 @@ public sealed unsafe partial class TerminalSession
                 return false;
             }
 
-            var selection = GhosttySelection.Init();
-            selection.Start = GhosttyGridRef.Init();
-            selection.End = GhosttyGridRef.Init();
+            var selection = default(GhosttySelection);
             var start = new GhosttyPoint { Tag = PointTag.Screen, X = 0, Y = (uint)first };
             var stop = new GhosttyPoint { Tag = PointTag.Screen, X = (ushort)(cols - 1), Y = (uint)last };
             if (Native.TerminalGridRef(_terminal, start, &selection.Start) != GhosttyResult.Success ||

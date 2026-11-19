@@ -444,10 +444,9 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
             session.UpdateRenderState(_renderState);
 
-            // The image placements are kept too, because a program that sends an image again under the same id
-            // unplaces the old image until the new one has fully arrived (terminal-browser does this with its page on
-            // every frame), so drawing the live placements would make the image flash away. Pixels aren't copied
-            // here, because the renderer's own cache, which only the UI thread touches, already holds what was drawn.
+            // The image placements are kept too, so the images drawn match the held text instead of whatever the program
+            // has placed partway through the frame it's still writing. Pixels aren't copied here, because the
+            // renderer's own cache, which only the UI thread touches, already holds what was drawn.
             _heldImages.Clear();
             session.CollectImages(_heldImages, static (_, _) => false);
         }
@@ -693,7 +692,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
                 fixed (uint* p = &_codepoints[cp])
                 {
-                    Native.RowCellsGet(_rowCells, RenderStateRowCellsData.GraphemesBuf, p);
+                    var buffer = new GhosttyCodepointBuffer { Ptr = p, Cap = len };
+                    Native.RowCellsGet(_rowCells, RenderStateRowCellsData.GraphemesBuf, &buffer);
                 }
 
                 cell.CpStart = cp;
@@ -715,24 +715,24 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             _placeholders[x] = null;
             var inverse = false;
             uint fgId = 0, underlineId = 0;
-            var (fgTag, fgValue) = (0, 0UL);
+            var (fgTag, fgPalette) = (0, 0); // the style's foreground as the program set it, as a tag and, for a palette color, its index
             byte hasStyling = 0;
             Native.RowCellsGet(_rowCells, RenderStateRowCellsData.HasStyling, &hasStyling);
             if (hasStyling != 0)
             {
-                var style = new GhosttyStyle { Size = (nuint)sizeof(GhosttyStyle) };
+                GhosttyStyle style;
                 Native.RowCellsGet(_rowCells, RenderStateRowCellsData.Style, &style);
-                if (style.Bold != 0) cell.Flags |= CellFlags.Bold;
-                if (style.Italic != 0) cell.Flags |= CellFlags.Italic;
-                if (style.Faint != 0) cell.Flags |= CellFlags.Faint;
-                if (style.Invisible != 0) cell.Flags |= CellFlags.Invisible;
-                if (style.Strikethrough != 0) cell.Flags |= CellFlags.Strikethrough;
-                if (style.Overline != 0) cell.Flags |= CellFlags.Overline;
+                if (style.Bold) cell.Flags |= CellFlags.Bold;
+                if (style.Italic) cell.Flags |= CellFlags.Italic;
+                if (style.Faint) cell.Flags |= CellFlags.Faint;
+                if (style.Invisible) cell.Flags |= CellFlags.Invisible;
+                if (style.Strikethrough) cell.Flags |= CellFlags.Strikethrough;
+                if (style.Overline) cell.Flags |= CellFlags.Overline;
                 cell.Underline = style.Underline;
-                inverse = style.Inverse != 0;
-                fgId = KittyPlaceholders.ColorId(style.FgColorTag, style.FgColorValue);
-                (fgTag, fgValue) = (style.FgColorTag, style.FgColorValue);
-                underlineId = KittyPlaceholders.ColorId(style.UnderlineColorTag, style.UnderlineColorValue);
+                inverse = style.Inverse;
+                fgId = KittyPlaceholders.ColorId(style.FgColorTag, style.FgColor);
+                (fgTag, fgPalette) = (style.FgColorTag, style.FgColor.R);
+                underlineId = KittyPlaceholders.ColorId(style.UnderlineColorTag, style.UnderlineColor);
             }
 
             if (cell.CpLen > 0 && _codepoints[cell.CpStart] == KittyPlaceholders.Placeholder)
@@ -755,9 +755,9 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             // Bold draws palette colors 0-7 in their bright versions, and the default color in bold-color.
             if ((cell.Flags & CellFlags.Bold) != 0)
             {
-                if (fgTag == 1 && (fgValue & 0xFF) < 8 && Config.BoldIsBright)
+                if (fgTag == 1 && fgPalette < 8 && Config.BoldIsBright)
                 {
-                    cell.Fg = _bright[fgValue & 0xFF];
+                    cell.Fg = _bright[fgPalette];
                 }
                 else if (fgTag == 0 && Config.BoldColor is { } bold)
                 {
@@ -1458,7 +1458,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         var width = wide ? 2 * m.Width : m.Width;
         var thin = MathF.Max(1, MathF.Round(m.Scale)) / m.Scale;
 
-        var style = presentation.Focused ? cursor.VisualStyle : CursorVisualStyle.BlockHollow;
+        var style = presentation.Focused ? cursor.VisualStyle : CursorStyle.BlockHollow;
         if (presentation.Focused && cursor.Blinking != 0 && !presentation.BlinkOn)
         {
             return;
@@ -1471,21 +1471,21 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             shaders.CursorDrawnColor = color;
             shaders.Cursor = style switch
             {
-                CursorVisualStyle.Bar => new(left, top, 2 * thin, m.Height),
-                CursorVisualStyle.Underline => new(left, top + m.Height - 2 * thin, width, 2 * thin),
+                CursorStyle.Bar => new(left, top, 2 * thin, m.Height),
+                CursorStyle.Underline => new(left, top + m.Height - 2 * thin, width, 2 * thin),
                 _ => new(left, top, width, m.Height),
             };
         }
 
         switch (style)
         {
-            case CursorVisualStyle.Bar:
+            case CursorStyle.Bar:
                 ds.FillRectangle(left, top, 2 * thin, m.Height, color);
                 break;
-            case CursorVisualStyle.Underline:
+            case CursorStyle.Underline:
                 ds.FillRectangle(left, top + m.Height - 2 * thin, width, 2 * thin, color);
                 break;
-            case CursorVisualStyle.BlockHollow:
+            case CursorStyle.BlockHollow:
                 ds.DrawRectangle(left + thin / 2, top + thin / 2, width - thin, m.Height - thin, color, thin);
                 break;
             default:
