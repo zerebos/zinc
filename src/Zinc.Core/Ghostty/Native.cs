@@ -212,7 +212,7 @@ public unsafe struct GhosttyRenderStateColors
 /// <summary>
 /// A cell's style as the program set it. Each color is a tag (0 for none, 1 for a palette color, 2 for RGB) and three
 /// bytes, and a palette color's index is the first byte. Renderers get resolved colors from the row-cells API, but
-/// Kitty placeholders need the colors as the program set them.
+/// bold-is-bright needs to know whether the program picked one of the first eight palette colors.
 /// </summary>
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GhosttyStyle
@@ -507,24 +507,7 @@ public struct GhosttySysImage
 
 public enum KittyGraphicsData : int
 {
-    PlacementIterator = 1,
     Generation = 2,
-}
-
-public enum KittyGraphicsPlacementData : int
-{
-    ImageId = 1,
-    PlacementId = 2,
-    IsVirtual = 3,
-    XOffset = 4,
-    YOffset = 5,
-    SourceX = 6,
-    SourceY = 7,
-    SourceWidth = 8,
-    SourceHeight = 9,
-    Columns = 10,
-    Rows = 11,
-    Z = 12,
 }
 
 public enum KittyImageFormat : int
@@ -552,25 +535,6 @@ public enum KittyGraphicsImageData : int
     Pixels = 7,
 
     Generation = 9,
-}
-
-[StructLayout(LayoutKind.Explicit, Size = 56)]
-public struct GhosttyKittyGraphicsPlacementRenderInfo
-{
-    [FieldOffset(0)] public nuint Size;
-    [FieldOffset(8)] public uint PixelWidth;
-    [FieldOffset(12)] public uint PixelHeight;
-    [FieldOffset(16)] public uint GridCols;
-    [FieldOffset(20)] public uint GridRows;
-    [FieldOffset(24)] public int ViewportCol;
-    [FieldOffset(28)] public int ViewportRow;
-    [FieldOffset(32)] public byte ViewportVisible;
-    [FieldOffset(36)] public uint SourceX;
-    [FieldOffset(40)] public uint SourceY;
-    [FieldOffset(44)] public uint SourceWidth;
-    [FieldOffset(48)] public uint SourceHeight;
-
-    public static GhosttyKittyGraphicsPlacementRenderInfo Init() => new() { Size = 56 };
 }
 
 public enum TerminalData : int
@@ -602,6 +566,52 @@ public enum RenderStateData : int
     RowIterator = 4,
     Cursor = 18,
     Colors = 19,
+    ImageIterator = 22,
+
+    /// <summary>
+    /// Changes when the image list does (uint64). Compare it only for equality, and only with the last value read from
+    /// the same render state, because it wraps around.
+    /// </summary>
+    ImagePlacementsGeneration = 23,
+}
+
+/// <summary>The protocol an image in the render state's list came from.</summary>
+public enum ImageProtocol : int
+{
+    Kitty = 0,
+}
+
+/// <summary>Where an image is drawn: below the cell backgrounds, between them and the text, or above the text.</summary>
+public enum ImageLayer : int
+{
+    BelowBackground = 0,
+    BelowText = 1,
+    AboveText = 2,
+}
+
+/// <summary>What <c>ghostty_render_state_image_get_multi</c> reads from an image list entry.</summary>
+public enum RenderStateImageData : int
+{
+    Protocol = 1,
+    ImageId = 2,
+    ImageGeneration = 3,
+    Layer = 4,
+    Z = 5,
+
+    /// <summary>The image's left column in the viewport (int32), negative when it starts left of it.</summary>
+    ViewportCol = 6,
+
+    /// <summary>The image's top row in the viewport (int32), negative when it starts above it.</summary>
+    ViewportRow = 7,
+
+    CellOffsetX = 10,
+    CellOffsetY = 11,
+    PixelWidth = 12,
+    PixelHeight = 13,
+    SourceX = 14,
+    SourceY = 15,
+    SourceWidth = 16,
+    SourceHeight = 17,
 }
 
 public enum RenderStateRowData : int
@@ -807,6 +817,19 @@ public static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_get")]
     public static partial GhosttyResult RowGet(nint iterator, RenderStateRowData data, void* value);
 
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_image_iterator_new")]
+    public static partial GhosttyResult ImageIteratorNew(nint allocator, out nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_image_iterator_free")]
+    public static partial void ImageIteratorFree(nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_image_iterator_next")]
+    public static partial byte ImageIteratorNext(nint iterator);
+
+    [LibraryImport(Lib, EntryPoint = "ghostty_render_state_image_get_multi")]
+    public static partial GhosttyResult ImageGetMulti(nint iterator, nuint count, RenderStateImageData* keys, void** values,
+        nuint* written);
+
     [LibraryImport(Lib, EntryPoint = "ghostty_render_state_row_cells_new")]
     public static partial GhosttyResult RowCellsNew(nint allocator, out nint cells);
 
@@ -839,21 +862,13 @@ public static unsafe partial class Native
     [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_image_get")]
     public static partial GhosttyResult KittyImageGet(nint image, KittyGraphicsImageData data, void* value);
 
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_iterator_new")]
-    public static partial GhosttyResult KittyPlacementIteratorNew(nint allocator, out nint iterator);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_iterator_free")]
-    public static partial void KittyPlacementIteratorFree(nint iterator);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_next")]
-    public static partial byte KittyPlacementNext(nint iterator);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_get")]
-    public static partial GhosttyResult KittyPlacementGet(nint iterator, KittyGraphicsPlacementData data, void* value);
-
-    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_placement_render_info")]
-    public static partial GhosttyResult KittyPlacementRenderInfo(nint iterator, nint image, nint terminal,
-        GhosttyKittyGraphicsPlacementRenderInfo* info);
+    /// <summary>
+    /// Moves playing animations to the frame due at <paramref name="nowMs"/>. Success sets <paramref name="nextMs"/> to
+    /// when the next frame is due, on the same clock, and NoValue means nothing is playing. It changes the storage, so
+    /// image handles and pixel pointers from before it are invalid.
+    /// </summary>
+    [LibraryImport(Lib, EntryPoint = "ghostty_kitty_graphics_animation_tick")]
+    public static partial GhosttyResult KittyAnimationTick(nint graphics, ulong nowMs, ulong* nextMs);
 
     // ---- key encoding ----
     [LibraryImport(Lib, EntryPoint = "ghostty_key_encoder_new")]

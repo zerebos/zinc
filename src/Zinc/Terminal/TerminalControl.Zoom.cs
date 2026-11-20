@@ -16,7 +16,7 @@ public sealed partial class TerminalControl
     private TextBlock? _zoomPercent;
     private TextBlock? _zoomPoints;
 
-    // Held in a field, because a timer only a local references is collected and stops firing.
+    // Held in a field, because a timer that only a local variable references is collected and stops firing.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _zoomTimer;
 
     /// <summary>

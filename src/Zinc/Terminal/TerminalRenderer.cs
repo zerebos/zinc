@@ -89,15 +89,11 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
     // Per-row scratch buffers reused across frames.
     private Cell[] _cells = [];
-    private KittyPlaceholders.Cell?[] _placeholders = [];
-    private bool _rowHasPlaceholders;
 
     // The frame's rows, all read before anything is drawn, because the backgrounds go first, as one bitmap
-    // (DrawBackgrounds), then each row's text and the rest. _cells, _placeholders and _rowHasPlaceholders
-    // point at the row being read or drawn. Character data is one buffer for the frame (_codepointsUsed).
+    // (DrawBackgrounds), then each row's text and the rest. _cells points at the row being read or drawn.
+    // Character data is one buffer for the frame (_codepointsUsed).
     private Cell[][] _frameCells = [];
-    private KittyPlaceholders.Cell?[][] _framePlaceholders = [];
-    private bool[] _frameHasPlaceholders = [];
     private int[] _frameCounts = [];
     private int _frameColumns, _columns, _codepointsUsed;
 
@@ -113,22 +109,20 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     private bool _batching;
     private int _gridX, _gridY; // the grid's top-left device pixel (the padding, rounded down)
     private readonly List<(CanvasBitmap Bitmap, Rect Destination, Rect? Source, Vector4 Tint)> _frameSprites = [];
-    private readonly List<KittyPlaceholders.Run> _runs = [];
     private ulong _viewportTop; // screen row at the top of the viewport, this frame
     private uint[] _codepoints = new uint[1024];
     private CanvasGlyph[] _glyphs = [];
 
-    // Kitty graphics: this frame's placements, and one GPU bitmap per image id (with the
-    // image generation it was made from).
-    private readonly List<ImagePlacement> _images = [];
+    // Kitty graphics: the images the render state says to draw (read from the render state under _stateLock), one GPU
+    // bitmap per image id with the image generation it was made from, and the pixels copied this frame for images whose
+    // bitmap is missing or out of date.
+    private readonly ImageList _images = new();
     private readonly Dictionary<uint, (ulong Generation, CanvasBitmap Bitmap)> _bitmaps = new();
-    private readonly HashSet<uint> _pendingImages = [];
-    private readonly Func<uint, ulong, bool> _needsPixels;
+    private readonly List<(uint Id, ImagePixels Pixels)> _newPixels = [];
+    private bool _imagesChanged;
 
     public TerminalRenderer(Config config)
     {
-        _needsPixels = (id, generation) =>
-            (!_bitmaps.TryGetValue(id, out var cached) || cached.Generation != generation) && _pendingImages.Add(id);
         _config = config;
         _fontFamily = config.FontFamily;
         Check(Native.RenderStateNew(0, out _renderState));
@@ -338,7 +332,6 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         {
             _cells = new Cell[cols];
             _glyphs = new CanvasGlyph[cols];
-            _placeholders = new KittyPlaceholders.Cell?[cols];
         }
     }
 
@@ -366,16 +359,22 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
     /// <summary>The link under the pointer while Ctrl is held, drawn underlined.</summary>
     public LinkMatch? HoverLink { get; set; }
 
+    /// <summary>
+    /// When the next frame of a playing Kitty animation is due, on <see cref="Environment.TickCount64"/>'s clock, or null
+    /// when nothing is playing. Each <see cref="Draw"/> sets it.
+    /// </summary>
+    public long? NextAnimationFrame { get; private set; }
+
     /// <summary>Draws one frame. Returns whether the cursor is visible and blinking.</summary>
     public bool Draw(CanvasDrawingSession ds, TerminalSession session, int rows, CursorPresentation presentation)
     {
+        NextAnimationFrame = null;
         if (!HasResources)
         {
             return false;
         }
 
-        _images.Clear();
-        _pendingImages.Clear();
+        _newPixels.Clear();
         lock (session.Lock)
         {
             if (session.IsDisposed)
@@ -391,26 +390,35 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 session.EndRenderHold();
             }
 
-            if (session.RenderHeld)
+            lock (_stateLock)
             {
-                lock (_stateLock)
+                var held = session.RenderHeld;
+
+                // Animations move to their due frame before the update, so the update sees it. While the screen is held,
+                // animations aren't ticked, so they stay on their current frame until the first draw after the hold ends.
+                if (!held && session.TickAnimations((ulong)Environment.TickCount64) is { } next)
                 {
-                    _images.AddRange(_heldImages);
-                }
-            }
-            else
-            {
-                lock (_stateLock)
-                {
-                    if (!session.UpdateRenderState(_renderState))
-                    {
-                        return false;
-                    }
+                    NextAnimationFrame = (long)next;
                 }
 
-                // Under the same lock, so images and text come from the same terminal state.
-                session.CollectImages(_images, _needsPixels);
+                if (!held && !session.UpdateRenderState(_renderState))
+                {
+                    return false;
+                }
+
+                // While the screen is held, the render state isn't updated, so its image list is still the one from when
+                // the hold began, which matches the held text.
+                _imagesChanged |= _images.Refresh(_renderState);
+
+                // Pixels are copied under the terminal's lock, so they're the ones the list names. While the screen is
+                // held, the program may already have replaced an image, so an image without a bitmap waits for the
+                // hold to end.
+                if (!held)
+                {
+                    CopyNewPixels(session);
+                }
             }
+
             _viewportTop = session.GetScrollbar().Offset;
         }
 
@@ -443,17 +451,8 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             }
 
             session.UpdateRenderState(_renderState);
-
-            // The image placements are kept too, so the images drawn match the held text instead of whatever the program
-            // has placed partway through the frame it's still writing. Pixels aren't copied here, because the
-            // renderer's own cache, which only the UI thread touches, already holds what was drawn.
-            _heldImages.Clear();
-            session.CollectImages(_heldImages, static (_, _) => false);
         }
     }
-
-    /// <summary>The image placements when the current hold began (guarded by <see cref="_stateLock"/>).</summary>
-    private readonly List<ImagePlacement> _heldImages = [];
 
     private bool DrawSnapshot(CanvasDrawingSession ds, int rows, CursorPresentation presentation)
     {
@@ -488,7 +487,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
         // A see-through default background (background-opacity) lets the window's backdrop show.
         ds.Clear(Config.BackgroundOpacity < 1 ? Color.FromArgb((byte)(255 * Config.BackgroundOpacity), defaultBg.R, defaultBg.G, defaultBg.B) : defaultBg);
-        DrawImages(ds, rows, belowText: true);
+        DrawImages(ds, rows, ImageLayer.BelowBackground);
 
         var iterator = _rowIterator;
         Native.RenderStateGet(_renderState, RenderStateData.RowIterator, &iterator);
@@ -505,14 +504,13 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         while (Native.RowIteratorNext(_rowIterator) != 0 && read < rows)
         {
             _cells = _frameCells[read];
-            _placeholders = _framePlaceholders[read];
             _frameCounts[read] = ReadRow(defaultFg, defaultBg);
-            _frameHasPlaceholders[read] = _rowHasPlaceholders;
             read++;
         }
 
         if (perf != null) t = perf.Mark(0, t);
         DrawBackgrounds(ds, read, cols);
+        DrawImages(ds, rows, ImageLayer.BelowText); // under find matches too, which draw over the backgrounds
         if (perf != null) t = perf.Mark(1, t);
 
         // Then each row's highlights and text (into the frame's sprite batch where the device can batch sprites), the batch,
@@ -551,17 +549,9 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         {
             var count = _frameCounts[y];
             _cells = _frameCells[y];
-
-            _placeholders = _framePlaceholders[y];
-            _rowHasPlaceholders = _frameHasPlaceholders[y];
             var top = PadTop + y * m.Height;
             DrawMatches(ds, y, count, top);
             if (perf != null) t = perf.Mark(1, t);
-            if (_rowHasPlaceholders)
-            {
-                DrawPlaceholders(ds, count, top);
-            }
-
             DrawText(ds, count, top, y);
             if (perf != null) t = perf.Mark(2, t);
             if (_batching)
@@ -609,7 +599,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
             if (perf != null) t = perf.Mark(3, t);
         }
 
-        DrawImages(ds, rows, belowText: false);
+        DrawImages(ds, rows, ImageLayer.AboveText);
         Native.RenderStateClean(_renderState);
         CursorCell = cursor.ViewportHasValue != 0 ? ((int)cursor.ViewportX, (int)cursor.ViewportY) : null;
         return cursor.Blinking != 0 && cursor.Visible != 0;
@@ -623,6 +613,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         }
 
         _bitmaps.Clear();
+        _images.Dispose();
         ClearSprites();
         _bgBitmap?.Dispose();
         ReleaseAtlas();
@@ -645,7 +636,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         Overline = 32,
         Wide = 64,
         SpacerTail = 128,
-        Placeholder = 256, // a kitty graphics Unicode placeholder, which is an image slice, not text
+        Placeholder = 256, // a Kitty graphics Unicode placeholder, which is part of an image, not text
         Selected = 512, // in the selection (ligatures break at its edges)
     }
 
@@ -662,6 +653,9 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         public readonly int FontVariant => (int)(Flags & (CellFlags.Bold | CellFlags.Italic));
     }
 
+    /// <summary>The character that a Kitty graphics placeholder cell starts with.</summary>
+    private const uint KittyPlaceholder = 0x10EEEE;
+
     private int ReadRow(Color defaultFg, Color defaultBg)
     {
         var cells = _rowCells;
@@ -675,7 +669,6 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
         var x = 0;
         var cp = _codepointsUsed; // the frame's rows share one buffer
-        _rowHasPlaceholders = false;
         while (x < _cells.Length && Native.RowCellsNext(_rowCells) != 0)
         {
             ref var cell = ref _cells[x];
@@ -712,9 +705,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 }
             }
 
-            _placeholders[x] = null;
             var inverse = false;
-            uint fgId = 0, underlineId = 0;
             var (fgTag, fgPalette) = (0, 0); // the style's foreground as the program set it, as a tag and, for a palette color, its index
             byte hasStyling = 0;
             Native.RowCellsGet(_rowCells, RenderStateRowCellsData.HasStyling, &hasStyling);
@@ -730,16 +721,13 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 if (style.Overline) cell.Flags |= CellFlags.Overline;
                 cell.Underline = style.Underline;
                 inverse = style.Inverse;
-                fgId = KittyPlaceholders.ColorId(style.FgColorTag, style.FgColor);
                 (fgTag, fgPalette) = (style.FgColorTag, style.FgColor.R);
-                underlineId = KittyPlaceholders.ColorId(style.UnderlineColorTag, style.UnderlineColor);
             }
 
-            if (cell.CpLen > 0 && _codepoints[cell.CpStart] == KittyPlaceholders.Placeholder)
+            // The image list draws what a placeholder cell stands for, so the cell itself draws nothing.
+            if (cell.CpLen > 0 && _codepoints[cell.CpStart] == KittyPlaceholder)
             {
-                _placeholders[x] = KittyPlaceholders.Parse(_codepoints.AsSpan(cell.CpStart + 1, cell.CpLen - 1), fgId, underlineId);
                 cell.Flags |= CellFlags.Placeholder;
-                _rowHasPlaceholders = true;
             }
 
             GhosttyColorRgb rgb;
@@ -827,14 +815,11 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         rows = Math.Max(rows, _frameCells.Length);
         cols = Math.Max(cols, _frameColumns);
         _frameCells = new Cell[rows][];
-        _framePlaceholders = new KittyPlaceholders.Cell?[rows][];
         for (var y = 0; y < rows; y++)
         {
             _frameCells[y] = new Cell[cols];
-            _framePlaceholders[y] = new KittyPlaceholders.Cell?[cols];
         }
 
-        _frameHasPlaceholders = new bool[rows];
         _frameCounts = new int[rows];
         _frameColumns = cols;
     }
@@ -1322,35 +1307,64 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
 
     // ---- kitty graphics ----
 
-    private void UpdateImageCache(ICanvasResourceCreator device)
+    /// <summary>
+    /// Copies the pixels of each listed image whose bitmap is missing or from another image generation. The caller holds
+    /// the terminal's lock and has just updated the render state.
+    /// </summary>
+    private void CopyNewPixels(TerminalSession session)
     {
-        foreach (var p in _images)
+        foreach (var entry in _images.Entries)
         {
-            if (p.Pixels is { } pixels)
+            if ((_bitmaps.TryGetValue(entry.ImageId, out var cached) && cached.Generation == entry.Generation) ||
+                _newPixels.Exists(p => p.Id == entry.ImageId))
             {
-                if (_bitmaps.Remove(p.ImageId, out var stale))
-                {
-                    stale.Bitmap.Dispose();
-                }
+                continue;
+            }
 
-                // 96 DPI gives one bitmap DIP per image pixel, so source rects are in pixels.
-                var bitmap = CanvasBitmap.CreateFromBytes(device, pixels, p.ImageWidth, p.ImageHeight,
-                    DirectXPixelFormat.R8G8B8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
-                _bitmaps[p.ImageId] = (p.Generation, bitmap);
+            if (session.CopyImagePixels(entry.ImageId) is { } pixels)
+            {
+                _newPixels.Add((entry.ImageId, pixels));
             }
         }
+    }
 
-        // Drop images no longer placed on screen (deleted, or scrolled out of view).
-        if (_bitmaps.Count > 0)
+    private void UpdateImageCache(ICanvasResourceCreator device)
+    {
+        foreach (var (id, pixels) in _newPixels)
         {
-            foreach (var id in _bitmaps.Keys.Where(id => !_images.Exists(p => p.ImageId == id)).ToList())
+            if (_bitmaps.Remove(id, out var stale))
+            {
+                // An animation's next frame, or an image sent again at the same size, reuses the bitmap.
+                if (stale.Bitmap.SizeInPixels is { } size && size.Width == pixels.Width && size.Height == pixels.Height)
+                {
+                    stale.Bitmap.SetPixelBytes(pixels.Rgba);
+                    _bitmaps[id] = (pixels.Generation, stale.Bitmap);
+                    continue;
+                }
+
+                stale.Bitmap.Dispose();
+            }
+
+            // 96 DPI gives one bitmap DIP per image pixel, so source rects are in pixels.
+            var bitmap = CanvasBitmap.CreateFromBytes(device, pixels.Rgba, pixels.Width, pixels.Height,
+                DirectXPixelFormat.R8G8B8A8UIntNormalized, 96, CanvasAlphaMode.Premultiplied);
+            _bitmaps[id] = (pixels.Generation, bitmap);
+        }
+
+        _newPixels.Clear();
+
+        // Drop the bitmaps of images that left the list (deleted, or scrolled out of view).
+        if (_imagesChanged && _bitmaps.Count > 0)
+        {
+            var entries = _images.Entries;
+            foreach (var id in _bitmaps.Keys.Where(id => !entries.Any(e => e.ImageId == id)).ToList())
             {
                 _bitmaps.Remove(id, out var gone);
                 gone.Bitmap.Dispose();
             }
         }
 
-        _images.Sort((a, b) => a.Z.CompareTo(b.Z));
+        _imagesChanged = false;
     }
 
     /// <summary>Highlights find results on viewport row <paramref name="y"/>, under the text.</summary>
@@ -1385,46 +1399,30 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
         }
     }
 
-    /// <summary>Draws the image slices this row's placeholder cells stand for.</summary>
-    private void DrawPlaceholders(CanvasDrawingSession ds, int count, float top)
-    {
-        var m = Metrics;
-        _runs.Clear();
-        KittyPlaceholders.Runs(_placeholders.AsSpan(0, count), _runs);
-        foreach (var run in _runs)
-        {
-            // The run's virtual placement, which is the one it names, or else the image's first.
-            var placement = _images.Find(p => p.Virtual && p.ImageId == run.ImageId &&
-                                              (run.PlacementId == 0 || p.PlacementId == run.PlacementId));
-            if (!placement.Virtual || !_bitmaps.TryGetValue(run.ImageId, out var entry) ||
-                KittyPlaceholders.Geometry(run, placement.ImageWidth, placement.ImageHeight, placement.Columns,
-                    placement.Rows, m.WidthPx, m.HeightPx) is not { } slice)
-            {
-                continue;
-            }
-
-            var dest = new Rect(PadLeft + run.X * m.Width + slice.OffsetX / m.Scale, top + slice.OffsetY / m.Scale,
-                slice.DestWidth / m.Scale, slice.DestHeight / m.Scale);
-            ds.DrawImage(entry.Bitmap, dest, new Rect(slice.SourceX, slice.SourceY, slice.SourceWidth, slice.SourceHeight));
-        }
-    }
-
     /// <summary>
-    /// Draws placements below the text (negative z) or above it, clipped to the grid rows.
-    /// Below-text images go under all rows (so under cell backgrounds that set a color too).
+    /// Draws one layer's images, in z order, clipped to the grid's rows. An image with no bitmap yet (its pixels were
+    /// still arriving, or the screen is held) is left out until it has one.
     /// </summary>
-    private void DrawImages(CanvasDrawingSession ds, int rows, bool belowText)
+    private void DrawImages(CanvasDrawingSession ds, int rows, ImageLayer layer)
     {
-        if (_images.Count == 0)
+        var entries = _images.Entries;
+        var first = 0;
+        while (first < entries.Count && entries[first].Layer < layer)
+        {
+            first++;
+        }
+
+        if (first == entries.Count || entries[first].Layer != layer)
         {
             return;
         }
 
         var m = Metrics;
         using var clip = ds.CreateLayer(1f, new Rect(0, PadTop, 100_000, rows * m.Height));
-        foreach (var p in _images)
+        for (var i = first; i < entries.Count && entries[i].Layer == layer; i++)
         {
-            if (p.Virtual || (p.Z < 0) != belowText || !_bitmaps.TryGetValue(p.ImageId, out var entry))
+            var p = entries[i];
+            if (!_bitmaps.TryGetValue(p.ImageId, out var cached))
             {
                 continue;
             }
@@ -1434,7 +1432,7 @@ public sealed unsafe partial class TerminalRenderer : IDisposable
                 PadTop + p.Row * m.Height + p.OffsetY / m.Scale,
                 p.PixelWidth / m.Scale,
                 p.PixelHeight / m.Scale);
-            ds.DrawImage(entry.Bitmap, dest, new Rect(p.SourceX, p.SourceY, p.SourceWidth, p.SourceHeight));
+            ds.DrawImage(cached.Bitmap, dest, new Rect(p.SourceX, p.SourceY, p.SourceWidth, p.SourceHeight));
         }
     }
 

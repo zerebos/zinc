@@ -7,23 +7,6 @@ using Windows.Storage.Streams;
 
 namespace Zinc.Terminal;
 
-/// <summary>
-/// One kitty graphics placement to draw this frame, in viewport terms: the image's top-left
-/// is at cell (<see cref="Col"/>, <see cref="Row"/>) (the row may be negative when scrolled
-/// partly off the top) plus a pixel offset, scaled to <see cref="PixelWidth"/> ×
-/// <see cref="PixelHeight"/> from the given source rectangle. A <see cref="Virtual"/>
-/// placement has no position: placeholder cells in the text show it, fitted to its
-/// <see cref="Columns"/> × <see cref="Rows"/> grid (see <see cref="KittyPlaceholders"/>).
-/// </summary>
-public readonly record struct ImagePlacement(
-    uint ImageId, ulong Generation, int Z,
-    int Col, int Row, uint OffsetX, uint OffsetY,
-    uint PixelWidth, uint PixelHeight,
-    uint SourceX, uint SourceY, uint SourceWidth, uint SourceHeight,
-    int ImageWidth, int ImageHeight,
-    byte[]? Pixels,
-    bool Virtual = false, uint PlacementId = 0, uint Columns = 0, uint Rows = 0);
-
 /// <summary>Kitty graphics support: the PNG decoder libghostty calls, and pixel conversion.</summary>
 public static unsafe class KittyImages
 {

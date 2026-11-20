@@ -30,7 +30,7 @@ internal sealed class SwapChainSurface
     public static TimeSpan? FreeHiddenAfter { get; set; } = TimeSpan.FromSeconds(60);
 
     // Started when the panel unloads. If it's still hidden when this fires, the memory goes. It's kept in a field,
-    // because a timer only a local references would be collected and never fire.
+    // because a timer that only a local variable references would be collected and never fire.
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _freeTimer;
 
     /// <summary>

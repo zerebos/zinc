@@ -91,6 +91,7 @@ ConPTY mostly stays out of the way. These are the places where Zinc's code depen
 - ConPTY doesn't rewrite SGR or SGR-pixel mouse sequences, so they reach WSL byte for byte.
 - `TerminalSession.Resize` resizes libghostty at once, so text reflows live, but tells ConPTY only after 100 ms without another resize. A window drag makes dozens of sizes, and a prompt that redraws on every one (Powerlevel10k, for one) piles up copies of itself. The layout animations skip the wait (`atOnce`), so a program repaints while its pane moves. Tests that check the child's size wait for the settle.
 - Git Bash and MSYS2 programs write one console call per line, so `seq 1 200000` is about 200,000 tiny pipe writes and takes around 10 seconds, with Zinc mostly idle waiting. Programs that write in bulk are fast. Before optimizing the drawing, measure how long the reader waits compared to how long it works.
+- ConPTY passes Kitty graphics sequences through without understanding them. Placing an image moves the cursor past it, unless the program sends `C=1`. That move happens in Zinc's terminal but not in ConPTY's. A Windows console program that reads the cursor from the console, like PSReadLine, then draws at ConPTY's position, where the image started, until the screen clears. WSL programs aren't affected, because they track the cursor themselves.
 
 ## The UI thread and the dispatcher
 
@@ -124,6 +125,18 @@ Each pane draws into a `CanvasSwapChain` through `SwapChainSurface`, which prese
 - When glyphs are drawn in one sprite batch, the padding's sub-pixel offset is rounded to 1/64 of a pixel before it becomes part of the atlas key. Without that, floating-point noise makes a new atlas for every window size.
 - A character the font lacks is drawn from a color font only when it's an emoji, meaning a pictograph in a wide cell, or a cluster with VS16 (U+FE0F), a zero-width joiner, or a keycap. Otherwise a text-style symbol like ✔ (U+2714) would turn into an emoji, and CJK would come out in an emoji font.
 - Nerd Font icons from an "NF" font overflow their cell on purpose, as they do in Windows Terminal, and the atlas keeps the overhang. The "NFM" variants don't overflow.
+
+### Kitty images
+
+libghostty works out which Kitty images to draw during each render state update, including images that a program shows with Unicode placeholder cells, and `ImageList` reads that list. Each entry is one rectangle of one image, with its place in the viewport, its size, and its layer.
+
+- The list is read again only when the render state's placements generation changes, which it doesn't on most frames.
+- The render state doesn't copy pixels, so the renderer copies an image's pixels (`TerminalSession.CopyImagePixels`) under the terminal's lock, right after the update. It does that only for an image whose bitmap is missing or out of date. Each image has a generation number that changes when its pixels do, and a bitmap remembers the generation it was made from.
+- Images go in three layers: below the cell backgrounds, between the backgrounds and the text, and above the text. A Kitty image's z-index picks its layer, and orders it within the layer.
+- While a program holds the screen (synchronized output), the render state isn't updated, so the images drawn are the ones from when the hold began. No pixels are copied during a hold either, because the program may already have replaced an image. An image that has no bitmap yet shows once the hold ends.
+- A placeholder cell's character, U+10EEEE, isn't drawn as text, because the image list already has an entry for the image that the cell shows.
+- libghostty has no timer for animations. Before each frame's update, the renderer calls `TerminalSession.TickAnimations`, which moves every playing animation to its due frame and says when the next one is due. The pane then sets a one-shot timer for that time, at least 8 ms away, which asks for one more frame. A new animation frame is a new image generation, so the bitmap cache picks it up, and a frame of the same size is written into the existing bitmap.
+- The animation timer keeps to the rule above about panes that can't be seen. Hiding a window stops it, and in a hidden tab it fires once, asks for a frame that never comes, and isn't set again until the pane draws. Animations aren't ticked while a program holds the screen, so they wait for the hold to end.
 
 ## Canvas lifetime
 
