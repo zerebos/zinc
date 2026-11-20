@@ -64,6 +64,8 @@ The tests that need Windows fail there (the registry, `cmd.exe`, and the sprite 
 
 `scripts/dev/check-windows.sh` compile-checks the Windows build from the same machine: `Zinc.Core` and the tests for the Windows SDK, and the app's C#. It can't run any of it, and it can't see the XAML, so a change still needs a real build and `dotnet test` on Windows before it's done.
 
+[portability.md](portability.md) says what runs off Windows today and what's left.
+
 ## Running a dev build
 
 Zinc allows one running copy per session file, and a second launch hands its command line to the copy that's already running. So a dev build started with your normal settings opens a window inside your installed Zinc instead of starting. Give every dev run its own config file:
