@@ -106,7 +106,7 @@ public sealed partial class TerminalControl
         {
             // Typing in the find box, where only our own shortcut applies (Find again refocuses the box).
             var chord = Keyboard.State.Capture();
-            if (_keybindings.TryGet(new KeyChord(e.Key, chord.Ctrl, chord.Alt, chord.Shift), out var own) &&
+            if (_keybindings.TryGet(new KeyChord((KeyCode)e.Key, chord.Ctrl, chord.Alt, chord.Shift), out var own) &&
                 own.Action == TerminalAction.Find)
             {
                 OpenSearch();
@@ -138,7 +138,7 @@ public sealed partial class TerminalControl
 
         var status = e.KeyStatus;
         var state = Keyboard.State.Capture();
-        var pressed = new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift);
+        var pressed = new KeyChord((KeyCode)e.Key, state.Ctrl, state.Alt, state.Shift);
 
         // A key sequence's leader, or a key after it (see TerminalControl.Sequences.cs).
         if (HandleSequenceKey(pressed, status.WasKeyDown, session) is not (KeyStep.NotMine or KeyStep.PassThrough))
@@ -174,7 +174,7 @@ public sealed partial class TerminalControl
         }
 
         var press = new KeyPress(
-            KeyMap.FromScanCode(status.ScanCode, status.IsExtendedKey, e.Key),
+            KeyMap.FromScanCode(status.ScanCode, status.IsExtendedKey, (KeyCode)e.Key),
             status.WasKeyDown,
             state.Shift, state.Ctrl, state.Alt, state.Mods,
             state.Translate((uint)vk, status.ScanCode),
@@ -238,7 +238,7 @@ public sealed partial class TerminalControl
 
         var status = e.KeyStatus;
         var state = Keyboard.State.Capture();
-        var key = KeyMap.FromScanCode(status.ScanCode, status.IsExtendedKey, e.Key);
+        var key = KeyMap.FromScanCode(status.ScanCode, status.IsExtendedKey, (KeyCode)e.Key);
         var bytes = session.EncodeKey(KeyAction.Release, key, state.Mods, GhosttyMods.None, null, 0);
         if (bytes.Length > 0)
         {

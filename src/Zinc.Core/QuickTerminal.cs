@@ -1,5 +1,5 @@
 using System.Globalization;
-using Windows.System;
+using Zinc.Input;
 
 namespace Zinc;
 
@@ -221,7 +221,7 @@ public sealed class QuickTerminalSizes
 }
 
 /// <summary>A system-wide hotkey, made of RegisterHotKey modifiers plus a virtual key.</summary>
-public readonly record struct GlobalHotkey(uint Modifiers, VirtualKey Key)
+public readonly record struct GlobalHotkey(uint Modifiers, KeyCode Key)
 {
     // RegisterHotKey's MOD_* flags.
     public const uint Alt = 0x1, Control = 0x2, Shift = 0x4, Win = 0x8, NoRepeat = 0x4000;

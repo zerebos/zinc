@@ -1,5 +1,4 @@
 using Zinc.Panes;
-using Windows.System;
 
 namespace Zinc.Input;
 
@@ -112,28 +111,28 @@ public readonly record struct ActionInvocation(TerminalAction Action, int Index 
 }
 
 /// <summary>A key plus exact modifier state, parsed from Windows Terminal-style names ("ctrl+shift+c").</summary>
-public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool Alt = false, bool Shift = false)
+public readonly record struct KeyChord(KeyCode Key, bool Ctrl = false, bool Alt = false, bool Shift = false)
 {
     // VK_OEM_PLUS / VK_OEM_MINUS: the '=' and '-' keys on US layouts, which Windows
     // Terminal calls "plus" and "minus".
-    private const VirtualKey OemPlus = (VirtualKey)0xBB, OemMinus = (VirtualKey)0xBD, OemComma = (VirtualKey)0xBC;
+    private const KeyCode OemPlus = (KeyCode)0xBB, OemMinus = (KeyCode)0xBD, OemComma = (KeyCode)0xBC;
 
     // VK_OEM_3: the `/~ key on US layouts ("grave" in Ghostty, "`" in Windows Terminal).
-    private const VirtualKey OemGrave = (VirtualKey)0xC0;
+    private const KeyCode OemGrave = (KeyCode)0xC0;
 
     // For each key, the first name here that starts with a letter is the one ToConfig writes (and the reference
     // lists), and the others are aliases. So reordering an entry changes what config.toml and the reference say.
-    private static readonly Dictionary<string, VirtualKey> Names = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, KeyCode> Names = new(StringComparer.OrdinalIgnoreCase)
     {
         ["plus"] = OemPlus, ["minus"] = OemMinus, ["comma"] = OemComma, [","] = OemComma, ["grave"] = OemGrave, ["grave_accent"] = OemGrave, ["`"] = OemGrave,
-        ["numpad_plus"] = VirtualKey.Add, ["numpad_minus"] = VirtualKey.Subtract,
-        ["tab"] = VirtualKey.Tab, ["enter"] = VirtualKey.Enter, ["space"] = VirtualKey.Space,
-        ["esc"] = VirtualKey.Escape, ["escape"] = VirtualKey.Escape, ["backspace"] = VirtualKey.Back,
-        ["insert"] = VirtualKey.Insert, ["delete"] = VirtualKey.Delete,
-        ["home"] = VirtualKey.Home, ["end"] = VirtualKey.End,
-        ["pgup"] = VirtualKey.PageUp, ["pageup"] = VirtualKey.PageUp,
-        ["pgdn"] = VirtualKey.PageDown, ["pagedown"] = VirtualKey.PageDown,
-        ["up"] = VirtualKey.Up, ["down"] = VirtualKey.Down, ["left"] = VirtualKey.Left, ["right"] = VirtualKey.Right,
+        ["numpad_plus"] = KeyCode.Add, ["numpad_minus"] = KeyCode.Subtract,
+        ["tab"] = KeyCode.Tab, ["enter"] = KeyCode.Enter, ["space"] = KeyCode.Space,
+        ["esc"] = KeyCode.Escape, ["escape"] = KeyCode.Escape, ["backspace"] = KeyCode.Back,
+        ["insert"] = KeyCode.Insert, ["delete"] = KeyCode.Delete,
+        ["home"] = KeyCode.Home, ["end"] = KeyCode.End,
+        ["pgup"] = KeyCode.PageUp, ["pageup"] = KeyCode.PageUp,
+        ["pgdn"] = KeyCode.PageDown, ["pagedown"] = KeyCode.PageDown,
+        ["up"] = KeyCode.Up, ["down"] = KeyCode.Down, ["left"] = KeyCode.Left, ["right"] = KeyCode.Right,
     };
 
     /// <summary>Display form, e.g. "Ctrl+Shift+T" or "Alt+Shift+Plus".</summary>
@@ -145,12 +144,12 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
             OemMinus => "Minus",
             OemComma => ",",
             OemGrave => "`",
-            VirtualKey.Add => "Numpad Plus",
-            VirtualKey.Subtract => "Numpad Minus",
-            VirtualKey.PageUp => "PgUp",
-            VirtualKey.PageDown => "PgDn",
-            >= VirtualKey.Number0 and <= VirtualKey.Number9 => ((char)('0' + (Key - VirtualKey.Number0))).ToString(),
-            >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 => $"Numpad {Key - VirtualKey.NumberPad0}",
+            KeyCode.Add => "Numpad Plus",
+            KeyCode.Subtract => "Numpad Minus",
+            KeyCode.PageUp => "PgUp",
+            KeyCode.PageDown => "PgDn",
+            >= KeyCode.Number0 and <= KeyCode.Number9 => ((char)('0' + (Key - KeyCode.Number0))).ToString(),
+            >= KeyCode.NumberPad0 and <= KeyCode.NumberPad9 => $"Numpad {Key - KeyCode.NumberPad0}",
             _ => Key.ToString(),
         };
         return (Ctrl ? "Ctrl+" : "") + (Alt ? "Alt+" : "") + (Shift ? "Shift+" : "") + name;
@@ -165,10 +164,10 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
         var key = Key;
         var name = key switch
         {
-            >= VirtualKey.A and <= VirtualKey.Z => ((char)('a' + (Key - VirtualKey.A))).ToString(),
-            >= VirtualKey.Number0 and <= VirtualKey.Number9 => ((char)('0' + (Key - VirtualKey.Number0))).ToString(),
-            >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 => $"numpad{Key - VirtualKey.NumberPad0}",
-            >= VirtualKey.F1 and <= VirtualKey.F24 => $"f{Key - VirtualKey.F1 + 1}",
+            >= KeyCode.A and <= KeyCode.Z => ((char)('a' + (Key - KeyCode.A))).ToString(),
+            >= KeyCode.Number0 and <= KeyCode.Number9 => ((char)('0' + (Key - KeyCode.Number0))).ToString(),
+            >= KeyCode.NumberPad0 and <= KeyCode.NumberPad9 => $"numpad{Key - KeyCode.NumberPad0}",
+            >= KeyCode.F1 and <= KeyCode.F24 => $"f{Key - KeyCode.F1 + 1}",
             _ => Names.FirstOrDefault(n => n.Value == key && char.IsLetter(n.Key[0])).Key,
         };
         return name == null ? null : (Ctrl ? CtrlName + Separator : "") + (Alt ? AltName + Separator : "") + (Shift ? ShiftName + Separator : "") + name;
@@ -190,10 +189,10 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
     {
         get
         {
-            var keys = Enumerable.Range(0, 26).Select(i => VirtualKey.A + i)
-                .Concat(Enumerable.Range(0, 10).Select(i => VirtualKey.Number0 + i))
-                .Concat(Enumerable.Range(0, 10).Select(i => VirtualKey.NumberPad0 + i))
-                .Concat(Enumerable.Range(0, 24).Select(i => VirtualKey.F1 + i))
+            var keys = Enumerable.Range(0, 26).Select(i => KeyCode.A + i)
+                .Concat(Enumerable.Range(0, 10).Select(i => KeyCode.Number0 + i))
+                .Concat(Enumerable.Range(0, 10).Select(i => KeyCode.NumberPad0 + i))
+                .Concat(Enumerable.Range(0, 24).Select(i => KeyCode.F1 + i))
                 .Concat(Names.Values.Distinct());
             foreach (var key in keys)
             {
@@ -207,7 +206,7 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
     public static KeyChord Parse(string text)
     {
         bool ctrl = false, alt = false, shift = false;
-        VirtualKey? key = null;
+        KeyCode? key = null;
         foreach (var part in text.Split(Separator, StringSplitOptions.TrimEntries))
         {
             switch (part.ToLowerInvariant())
@@ -228,7 +227,7 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
         return new KeyChord(key ?? throw new FormatException($"\"{text}\" has no key"), ctrl, alt, shift);
     }
 
-    private static VirtualKey? ParseKey(string name)
+    private static KeyCode? ParseKey(string name)
     {
         if (Names.TryGetValue(name, out var named))
         {
@@ -237,22 +236,22 @@ public readonly record struct KeyChord(VirtualKey Key, bool Ctrl = false, bool A
 
         if (name.Length == 1 && char.IsAsciiLetter(name[0]))
         {
-            return VirtualKey.A + (char.ToUpperInvariant(name[0]) - 'A');
+            return KeyCode.A + (char.ToUpperInvariant(name[0]) - 'A');
         }
 
         if (name.Length == 1 && char.IsAsciiDigit(name[0]))
         {
-            return VirtualKey.Number0 + (name[0] - '0');
+            return KeyCode.Number0 + (name[0] - '0');
         }
 
         if (name.StartsWith("numpad", StringComparison.OrdinalIgnoreCase) && name.Length == 7 && char.IsAsciiDigit(name[6]))
         {
-            return VirtualKey.NumberPad0 + (name[6] - '0');
+            return KeyCode.NumberPad0 + (name[6] - '0');
         }
 
         if (name.Length is 2 or 3 && (name[0] is 'f' or 'F') && int.TryParse(name[1..], out var f) && f is >= 1 and <= 24)
         {
-            return VirtualKey.F1 + (f - 1);
+            return KeyCode.F1 + (f - 1);
         }
 
         return null;

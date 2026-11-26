@@ -1,5 +1,4 @@
 using Zinc.Ghostty;
-using Windows.System;
 
 namespace Zinc.Input;
 
@@ -122,7 +121,7 @@ public static class KeyMap
         }
     }
 
-    public static GhosttyKey FromScanCode(uint scanCode, bool extended, VirtualKey vk)
+    public static GhosttyKey FromScanCode(uint scanCode, bool extended, KeyCode vk)
     {
         if (scanCode is > 0 and < 0x80)
         {
@@ -133,30 +132,34 @@ public static class KeyMap
             }
         }
 
-        return FromVirtualKey(vk);
+        return FromKeyCode(vk);
     }
 
-    private static GhosttyKey FromVirtualKey(VirtualKey vk) => vk switch
+    /// <summary>
+    /// The key for a virtual-key code alone. It can't tell the layout-independent keys apart (the punctuation keys), so
+    /// it's what <see cref="FromScanCode"/> falls back to, and all there is on a platform without Windows' scan codes.
+    /// </summary>
+    public static GhosttyKey FromKeyCode(KeyCode vk) => vk switch
     {
-        >= VirtualKey.A and <= VirtualKey.Z => GhosttyKey.A + (vk - VirtualKey.A),
-        >= VirtualKey.Number0 and <= VirtualKey.Number9 => GhosttyKey.Digit0 + (vk - VirtualKey.Number0),
-        >= VirtualKey.NumberPad0 and <= VirtualKey.NumberPad9 => GhosttyKey.Numpad0 + (vk - VirtualKey.NumberPad0),
-        >= VirtualKey.F1 and <= VirtualKey.F24 => GhosttyKey.F1 + (vk - VirtualKey.F1),
-        VirtualKey.Enter => GhosttyKey.Enter,
-        VirtualKey.Tab => GhosttyKey.Tab,
-        VirtualKey.Back => GhosttyKey.Backspace,
-        VirtualKey.Escape => GhosttyKey.Escape,
-        VirtualKey.Space => GhosttyKey.Space,
-        VirtualKey.Left => GhosttyKey.ArrowLeft,
-        VirtualKey.Right => GhosttyKey.ArrowRight,
-        VirtualKey.Up => GhosttyKey.ArrowUp,
-        VirtualKey.Down => GhosttyKey.ArrowDown,
-        VirtualKey.Home => GhosttyKey.Home,
-        VirtualKey.End => GhosttyKey.End,
-        VirtualKey.PageUp => GhosttyKey.PageUp,
-        VirtualKey.PageDown => GhosttyKey.PageDown,
-        VirtualKey.Insert => GhosttyKey.Insert,
-        VirtualKey.Delete => GhosttyKey.Delete,
+        >= KeyCode.A and <= KeyCode.Z => GhosttyKey.A + (vk - KeyCode.A),
+        >= KeyCode.Number0 and <= KeyCode.Number9 => GhosttyKey.Digit0 + (vk - KeyCode.Number0),
+        >= KeyCode.NumberPad0 and <= KeyCode.NumberPad9 => GhosttyKey.Numpad0 + (vk - KeyCode.NumberPad0),
+        >= KeyCode.F1 and <= KeyCode.F24 => GhosttyKey.F1 + (vk - KeyCode.F1),
+        KeyCode.Enter => GhosttyKey.Enter,
+        KeyCode.Tab => GhosttyKey.Tab,
+        KeyCode.Back => GhosttyKey.Backspace,
+        KeyCode.Escape => GhosttyKey.Escape,
+        KeyCode.Space => GhosttyKey.Space,
+        KeyCode.Left => GhosttyKey.ArrowLeft,
+        KeyCode.Right => GhosttyKey.ArrowRight,
+        KeyCode.Up => GhosttyKey.ArrowUp,
+        KeyCode.Down => GhosttyKey.ArrowDown,
+        KeyCode.Home => GhosttyKey.Home,
+        KeyCode.End => GhosttyKey.End,
+        KeyCode.PageUp => GhosttyKey.PageUp,
+        KeyCode.PageDown => GhosttyKey.PageDown,
+        KeyCode.Insert => GhosttyKey.Insert,
+        KeyCode.Delete => GhosttyKey.Delete,
         _ => GhosttyKey.Unidentified,
     };
 }

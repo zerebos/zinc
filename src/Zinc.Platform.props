@@ -1,0 +1,14 @@
+<!--
+  Which platform a project builds for. ZincWindows is true on Windows, where everything targets the Windows SDK as
+  before. Anywhere else, the projects that can (Zinc.Core and the tests) build for plain .NET instead.
+
+  `-p:ZincWindows=true` on another OS compiles the Windows build there, which checks that it still compiles. It
+  can't run, and the app's own project still needs Windows for its XAML and resources.
+-->
+<Project>
+  <PropertyGroup>
+    <ZincWindows Condition="'$(ZincWindows)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">true</ZincWindows>
+    <ZincWindows Condition="'$(ZincWindows)' == ''">false</ZincWindows>
+    <EnableWindowsTargeting Condition="'$(ZincWindows)' == 'true'">true</EnableWindowsTargeting>
+  </PropertyGroup>
+</Project>

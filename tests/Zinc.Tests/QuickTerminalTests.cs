@@ -1,4 +1,4 @@
-using Windows.System;
+using Zinc.Input;
 using static Zinc.QuickTerminalLayout;
 
 namespace Zinc.Tests;
@@ -74,11 +74,11 @@ public class QuickTerminalTests
     }
 
     [Theory]
-    [InlineData("win+grave", GlobalHotkey.Win, (VirtualKey)0xC0)]
-    [InlineData("win+`", GlobalHotkey.Win, (VirtualKey)0xC0)]
-    [InlineData("ctrl+alt+t", GlobalHotkey.Control | GlobalHotkey.Alt, VirtualKey.T)]
-    [InlineData("super+shift+space", GlobalHotkey.Win | GlobalHotkey.Shift, VirtualKey.Space)]
-    public void ParsesHotkeys(string text, uint mods, VirtualKey key)
+    [InlineData("win+grave", GlobalHotkey.Win, (KeyCode)0xC0)]
+    [InlineData("win+`", GlobalHotkey.Win, (KeyCode)0xC0)]
+    [InlineData("ctrl+alt+t", GlobalHotkey.Control | GlobalHotkey.Alt, KeyCode.T)]
+    [InlineData("super+shift+space", GlobalHotkey.Win | GlobalHotkey.Shift, KeyCode.Space)]
+    public void ParsesHotkeys(string text, uint mods, KeyCode key)
     {
         Assert.Equal(new GlobalHotkey(mods, key), GlobalHotkey.Parse(text));
     }

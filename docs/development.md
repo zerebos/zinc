@@ -51,6 +51,21 @@ dotnet build tests/Zinc.Tests/Zinc.Tests.csproj -p:Platform=ARM64
 
 The native DLLs go to `native/arm64`, and the app to `src/Zinc/bin/ARM64/Debug/net10.0-windows10.0.26100.0/win-arm64/zinc.exe`. ARM64 builds go project by project, because `Zinc.slnx` has only x64. Adding ARM64 to the solution would make a plain `dotnet build` pick ARM64, so the solution stays x64 only. An x64 machine can't run ARM64 programs, so the ARM64 tests run only on an ARM64 machine, like CI's ARM64 runner.
 
+### Off Windows
+
+Zinc only runs on Windows, but part of it builds on macOS and Linux, which is enough to work on `Zinc.Core` there. `src/Zinc.Platform.props` decides it: on Windows every project targets the Windows SDK, and anywhere else `Zinc.Core` and the tests build for plain .NET.
+
+```sh
+scripts/build/macos.sh         # libghostty-vt and the PTY helper, into native/macos-arm64
+dotnet test --project tests/Zinc.Tests
+```
+
+The tests that need Windows fail there (the registry, `cmd.exe`, and the sprite and shader DLLs, which aren't built for other platforms yet). About 1,600 of the 1,730 pass on macOS, so compare a run against one from before your change instead of expecting a clean pass.
+
+`scripts/dev/check-windows.sh` compile-checks the Windows build from the same machine: `Zinc.Core` and the tests for the Windows SDK, and the app's C#. It can't run any of it, and it can't see the XAML, so a change still needs a real build and `dotnet test` on Windows before it's done.
+
+[portability.md](portability.md) says what runs off Windows today and what's left.
+
 ## Running a dev build
 
 Zinc allows one running copy per session file, and a second launch hands its command line to the copy that's already running. So a dev build started with your normal settings opens a window inside your installed Zinc instead of starting. Give every dev run its own config file:
@@ -175,6 +190,7 @@ Steps 1 and 6 compare a saved run with a later one, so they work for any bump, b
 | `scripts/build/shader.ps1` | Builds the GLSL to HLSL shader translator as `zinc-shader.dll`, from `native-src/shader`, glslang, and SPIRV-Cross. |
 | `scripts/build/zig.ps1` | Shared by the three above: the Zig targets and `zig build` with its retry. |
 | `scripts/build/gen-keys.ps1` | Regenerates `GhosttyKey.g.cs` from libghostty's key header. |
+| `scripts/dev/check-windows.sh` | Compile-checks the Windows build on macOS or Linux. It runs nothing. |
 | `scripts/dev/vt-bench.cs` | Measures how fast `ghostty-vt.dll` parses output, before and after a Ghostty bump. |
 | `scripts/dev/export-reference.cs` | Writes `zinc-reference.json` (settings, actions, notices) and `config.schema.json` for the website. |
 | `scripts/dev/update-themes.ps1` | Refreshes the bundled color schemes in `assets/themes` from iTerm2-Color-Schemes. Check the diff before committing. |

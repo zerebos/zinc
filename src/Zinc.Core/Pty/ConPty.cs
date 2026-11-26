@@ -9,7 +9,7 @@ namespace Zinc.Pty;
 /// A child process attached to a Windows pseudoconsole (ConPTY).
 /// Output is delivered on a dedicated reader thread via <see cref="OutputReceived"/>.
 /// </summary>
-public sealed unsafe partial class ConPty : IDisposable
+public sealed unsafe partial class ConPty : IPty
 {
     private readonly nint _hpc;
     private readonly SafeFileHandle _inputWrite;

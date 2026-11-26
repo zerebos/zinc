@@ -14,6 +14,7 @@ public class SessionTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(15);
 
+#if WINDOWS
     [Fact]
     public void BundledConptyIsDeployed()
     {
@@ -21,6 +22,7 @@ public class SessionTests
         // ConPty silently falls back to the much slower inbox ConPTY.
         Assert.True(ConPty.UsesBundledConpty);
     }
+#endif
 
     [Fact]
     public void AProgramThatDoesNotExistFailsToStartAndLeavesTheSessionUsable()

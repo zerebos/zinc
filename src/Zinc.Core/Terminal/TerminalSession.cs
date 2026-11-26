@@ -25,7 +25,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     private readonly nint _mouseEvent;
     private byte[]? _lastMotionReport; // the last motion report sent, or null after any other mouse event
     private GCHandle _self;
-    private ConPty? _pty;
+    private IPty? _pty;
     private GhosttySizeReportSize _size;
     private bool _titleDirty;
     private bool _pwdDirty;
@@ -111,7 +111,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
 
         ApplyTheme(theme);
 
-        if (ConPty.UsesBundledConpty)
+        if (PseudoTerminal.MeasuresGraphemes)
         {
             // The bundled ConPTY measures widths by grapheme cluster, so we do the same
             // and emoji sequences (ZWJ, flags, skin tones) occupy matching cells.
@@ -200,7 +200,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
             child[name] = value;
         }
 
-        Attach(new ConPty(commandLine, workingDirectory, (short)cols, (short)rows, child));
+        Attach(PseudoTerminal.Start(commandLine, workingDirectory, (short)cols, (short)rows, child));
         _ptySentSize = ((short)cols, (short)rows); // (a handed-over console's size is unknown, so Attach leaves it unset)
     }
 
@@ -208,7 +208,7 @@ public sealed unsafe partial class TerminalSession : IDisposable
     /// Takes a console Zinc didn't start (one handed over as the default terminal) and starts
     /// reading it. Resize the session after, so its program learns the pane's size.
     /// </summary>
-    public void Attach(ConPty pty)
+    public void Attach(IPty pty)
     {
         _pty = pty;
         _pty.OutputReceived += OnPtyOutput;
