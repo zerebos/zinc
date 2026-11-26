@@ -1,9 +1,13 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+#if WINDOWS
 using System.Runtime.InteropServices.WindowsRuntime;
+#endif
 using Zinc.Ghostty;
+#if WINDOWS
 using Windows.Graphics.Imaging;
 using Windows.Storage.Streams;
+#endif
 
 namespace Zinc.Terminal;
 
@@ -51,6 +55,7 @@ public static unsafe class KittyImages
     /// <summary>Decodes a PNG to straight-alpha RGBA with Windows Imaging Component.</summary>
     public static (uint Width, uint Height, byte[] Rgba) DecodePng(byte[] png)
     {
+#if WINDOWS
         // Called on the PTY reader thread (MTA), where blocking on WinRT async is fine.
         using var stream = new InMemoryRandomAccessStream();
         stream.WriteAsync(png.AsBuffer()).AsTask().GetAwaiter().GetResult();
@@ -59,6 +64,9 @@ public static unsafe class KittyImages
         var pixels = decoder.GetPixelDataAsync(BitmapPixelFormat.Rgba8, BitmapAlphaMode.Straight, new BitmapTransform(),
             ExifOrientationMode.IgnoreExifOrientation, ColorManagementMode.DoNotColorManage).AsTask().GetAwaiter().GetResult();
         return (decoder.PixelWidth, decoder.PixelHeight, pixels.DetachPixelData());
+#else
+        throw new PlatformNotSupportedException("Spike: PNG decoding isn't ported.");
+#endif
     }
 
     /// <summary>
