@@ -2,7 +2,6 @@ using System.Runtime.InteropServices;
 using Zinc.Ghostty;
 using Zinc.Input;
 using Zinc.Terminal;
-using Windows.System;
 
 namespace Zinc.Tests;
 
@@ -487,14 +486,14 @@ public class KeyMapTests
     [InlineData(0x38, true, GhosttyKey.AltRight)]
     public void ScanCodesMapToPhysicalKeys(uint scan, bool extended, GhosttyKey expected)
     {
-        Assert.Equal(expected, KeyMap.FromScanCode(scan, extended, VirtualKey.None));
+        Assert.Equal(expected, KeyMap.FromScanCode(scan, extended, KeyCode.None));
     }
 
     [Fact]
     public void VirtualKeyFallbackWithoutScanCode()
     {
-        Assert.Equal(GhosttyKey.Q, KeyMap.FromScanCode(0, false, VirtualKey.Q));
-        Assert.Equal(GhosttyKey.F13, KeyMap.FromScanCode(0, false, VirtualKey.F13));
-        Assert.Equal(GhosttyKey.ArrowLeft, KeyMap.FromScanCode(0, false, VirtualKey.Left));
+        Assert.Equal(GhosttyKey.Q, KeyMap.FromScanCode(0, false, KeyCode.Q));
+        Assert.Equal(GhosttyKey.F13, KeyMap.FromScanCode(0, false, KeyCode.F13));
+        Assert.Equal(GhosttyKey.ArrowLeft, KeyMap.FromScanCode(0, false, KeyCode.Left));
     }
 }

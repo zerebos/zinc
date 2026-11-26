@@ -1,7 +1,6 @@
 using Zinc.Ghostty;
 using Zinc.Input;
 using Zinc.Panes;
-using Windows.System;
 
 namespace Zinc.Tests;
 
@@ -98,18 +97,18 @@ public class KeyDecisionTests
 public class KeybindingTests
 {
     [Theory]
-    [InlineData("ctrl+shift+c", VirtualKey.C, true, false, true)]
-    [InlineData("Ctrl+V", VirtualKey.V, true, false, false)]
-    [InlineData("alt+shift+d", VirtualKey.D, false, true, true)]
-    [InlineData("shift+pgup", VirtualKey.PageUp, false, false, true)]
-    [InlineData("ctrl+plus", (VirtualKey)0xBB, true, false, false)]
-    [InlineData("ctrl+numpad_minus", VirtualKey.Subtract, true, false, false)]
-    [InlineData("ctrl+shift+1", VirtualKey.Number1, true, false, true)]
-    [InlineData("ctrl+numpad0", VirtualKey.NumberPad0, true, false, false)]
-    [InlineData("alt+left", VirtualKey.Left, false, true, false)]
-    [InlineData("shift+f11", VirtualKey.F11, false, false, true)]
-    [InlineData("ctrl+tab", VirtualKey.Tab, true, false, false)]
-    public void ParsesChords(string text, VirtualKey key, bool ctrl, bool alt, bool shift)
+    [InlineData("ctrl+shift+c", KeyCode.C, true, false, true)]
+    [InlineData("Ctrl+V", KeyCode.V, true, false, false)]
+    [InlineData("alt+shift+d", KeyCode.D, false, true, true)]
+    [InlineData("shift+pgup", KeyCode.PageUp, false, false, true)]
+    [InlineData("ctrl+plus", (KeyCode)0xBB, true, false, false)]
+    [InlineData("ctrl+numpad_minus", KeyCode.Subtract, true, false, false)]
+    [InlineData("ctrl+shift+1", KeyCode.Number1, true, false, true)]
+    [InlineData("ctrl+numpad0", KeyCode.NumberPad0, true, false, false)]
+    [InlineData("alt+left", KeyCode.Left, false, true, false)]
+    [InlineData("shift+f11", KeyCode.F11, false, false, true)]
+    [InlineData("ctrl+tab", KeyCode.Tab, true, false, false)]
+    public void ParsesChords(string text, KeyCode key, bool ctrl, bool alt, bool shift)
     {
         Assert.Equal(new KeyChord(key, ctrl, alt, shift), KeyChord.Parse(text));
     }

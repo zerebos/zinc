@@ -1,6 +1,5 @@
 using Zinc.Input;
 using Zinc.Panes;
-using Windows.System;
 
 namespace Zinc.Tests;
 
@@ -116,8 +115,8 @@ public class KeysConfigTests
         var keys = config.Keybindings;
         Assert.Empty(config.Warnings);
 
-        Assert.False(keys.TryGet(new KeyChord(VirtualKey.W, Ctrl: true, Shift: true), out _));
-        Assert.True(keys.TryGet(new KeyChord(VirtualKey.W, Ctrl: true), out var close));
+        Assert.False(keys.TryGet(new KeyChord(KeyCode.W, Ctrl: true, Shift: true), out _));
+        Assert.True(keys.TryGet(new KeyChord(KeyCode.W, Ctrl: true), out var close));
         Assert.Equal(TerminalAction.CloseTab, close.Action);
         Assert.True(keys.TryGet(KeyChord.Parse("alt+shift+plus"), out var split));
         Assert.Equal(PaneDirection.Down, split.Direction);

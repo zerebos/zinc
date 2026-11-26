@@ -410,7 +410,7 @@ internal sealed partial class SettingsWindow
             }
 
             bool Down(VirtualKey k) => InputKeyboardSource.GetKeyStateForCurrentThread(k).HasFlag(CoreVirtualKeyStates.Down);
-            var chord = new KeyChord(key, Down(VirtualKey.Control), Down(VirtualKey.Menu), Down(VirtualKey.Shift));
+            var chord = new KeyChord((KeyCode)key, Down(VirtualKey.Control), Down(VirtualKey.Menu), Down(VirtualKey.Shift));
             if (chord is { Ctrl: false, Alt: false, Shift: false } && key is VirtualKey.Escape)
             {
                 flyout.Hide();

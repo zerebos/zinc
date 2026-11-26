@@ -313,7 +313,7 @@ public sealed partial class MainWindow : Window
         }
 
         var state = Keyboard.State.Capture();
-        if (!(state.Ctrl || state.Alt) || !_keybindings.TryGet(new KeyChord(e.Key, state.Ctrl, state.Alt, state.Shift), out var invocation))
+        if (!(state.Ctrl || state.Alt) || !_keybindings.TryGet(new KeyChord((KeyCode)e.Key, state.Ctrl, state.Alt, state.Shift), out var invocation))
         {
             return;
         }
