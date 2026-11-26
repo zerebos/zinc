@@ -51,7 +51,7 @@ check() {
     if [ -n "$found" ] || [ ! -s "$assembly" ]; then
         failed=1
         echo "$name: FAILED (full log: $work/$name.log)"
-        [ -z "$found" ] || printf '%s\n' "$found" | head -40
+        [ -z "$found" ] || printf '%s\n' "$found" | head -8
     else
         echo "$name: compiles for Windows"
     fi

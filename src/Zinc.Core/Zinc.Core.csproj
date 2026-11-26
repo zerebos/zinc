@@ -18,8 +18,9 @@
     <TargetPlatformMinVersion />
   </PropertyGroup>
 
-  <!-- Spike: each platform compiles its own PTY. -->
+  <!-- Each platform compiles its own PTY (Pty/IPty.cs). -->
   <ItemGroup>
+    <Compile Remove="Pty\PosixPty.cs" Condition="'$(ZincWindows)' == 'true'" />
     <Compile Remove="Posix\**" Condition="'$(ZincWindows)' == 'true'" />
     <Compile Remove="Pty\ConPty.cs" Condition="'$(ZincWindows)' != 'true'" />
   </ItemGroup>

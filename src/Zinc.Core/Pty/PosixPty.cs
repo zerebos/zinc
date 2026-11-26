@@ -4,10 +4,10 @@ using System.Text;
 namespace Zinc.Pty;
 
 /// <summary>
-/// Spike: a child process on a POSIX pseudoterminal. It keeps ConPty's name and members so TerminalSession compiles
-/// unchanged. A real port would put both behind one interface.
+/// A child process on a POSIX pseudoterminal (macOS and Linux). <c>libzinc-pty</c> does the fork and exec, because a
+/// .NET process can't fork safely from managed code. Output is delivered on a dedicated reader thread.
 /// </summary>
-public sealed unsafe partial class ConPty : IDisposable
+public sealed unsafe partial class PosixPty : IPty
 {
     private const string Lib = "zinc-pty";
     private readonly int _master;
@@ -17,16 +17,11 @@ public sealed unsafe partial class ConPty : IDisposable
 
     public int ProcessId { get; }
 
-    /// <summary>Always true here, which turns grapheme clustering (mode 2027) on, as Ghostty does on macOS.</summary>
-    public static bool UsesBundledConpty => true;
-
-    public string? ProgramPath => null;
-
     public event Action<ReadOnlySpan<byte>>? OutputReceived;
 
     public event Action<uint>? Exited;
 
-    public ConPty(string commandLine, string? workingDirectory, short cols, short rows,
+    public PosixPty(string commandLine, string? workingDirectory, short cols, short rows,
         IReadOnlyDictionary<string, string?>? environment = null)
     {
         var args = Split(commandLine);
